@@ -10,8 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Onion Architecture Skeleton (.NET 10):**
   - `src/Domain`: Zero-dependency domain model containing pure entities, value objects, and scoring logic.
   - `src/Application`: MediatR CQRS orchestration shell with dependency injection registration.
-  - `src/DataAccess`: Dedicated EF Core 10 data access layer (AppDbContext, Entity Configurations, Migrations).
+  - `src/DataAccess`: Dedicated EF Core data access layer targeting PostgreSQL 16+ via Npgsql (AppDbContext, Entity Configurations, Migrations).
   - `src/Infrastructure`: HttpClientFactory (Last.fm, ListenBrainz), email delivery, and in-memory caching.
+- **PostgreSQL DataAccess Layer & Migrations:**
+  - `AppDbContext` targeting PostgreSQL 16+ with `IAppDbContext` abstraction and `IDataProtectionKeyContext` for at-rest token protection.
+  - Automatic UTC timestamp tracking (`CreatedAt` and `LastModifiedAt`) for all `IAuditableEntity` models in `SaveChangesAsync`.
+  - Global query filter for soft-deleted `User` entities (`!u.IsDeleted`).
+  - Robust entity configurations mapping all 8 domain models, enum string conversions, value object conversions (`IsoWeek`, `ScoreBreakdown` stored as `jsonb`), and cascade rules.
+  - Repository interfaces (`IUserRepository`, `IWeeklyDigestRepository`, `ITasteSignalRepository`, `ITrackRepository`) in `Application` and implementations in `DataAccess`.
+  - Initial EF Core migration (`InitialCreate`) with PostgreSQL snapshot.
+  - Test suite (`tests/DataAccess.Tests`) with 11 tests verifying model configuration, soft-deletes, relationships, audit timestamps, and architectural isolation.
   - `src/Web`: Lightweight ASP.NET Core presentation composition root.
   - `src/Worker`: Dedicated background service composition root for scheduled batch processing.
   - `tests/Domain.Tests`: Unit test project referencing Domain.

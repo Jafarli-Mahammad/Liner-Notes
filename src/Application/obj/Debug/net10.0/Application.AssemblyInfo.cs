@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LinerNotes.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1e4b0f307f7a37bc26a8e088db7c21221d0cb20e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+acf6935eacef80b0be11497aaa71fb9e2fc4d17f")]
 [assembly: System.Reflection.AssemblyProductAttribute("LinerNotes.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LinerNotes.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

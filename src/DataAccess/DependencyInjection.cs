@@ -1,4 +1,7 @@
+using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.DataAccess.Persistence;
+using LinerNotes.DataAccess.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,14 +15,24 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Data Source=linernotes.db";
+            ?? "Host=localhost;Database=linernotes;Username=linernotes_user;Password=postgres";
 
         services.AddDbContext<AppDbContext>(options =>
         {
-            // Default in-memory/sqlite provider setup placeholder for V1
-            // Provider (Npgsql or Sqlite) can be configured via connection string
-            options.UseSqlite(connectionString);
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+            });
         });
+
+        // Register IAppDbContext abstraction
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // Register repository implementations
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
+        services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
+        services.AddScoped<ITrackRepository, TrackRepository>();
 
         return services;
     }

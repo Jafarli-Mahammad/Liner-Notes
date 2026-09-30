@@ -16,3 +16,5 @@
 /home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/obj/Debug/net10.0/refint/LinerNotes.DataAccess.dll
 /home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/obj/Debug/net10.0/LinerNotes.DataAccess.pdb
 /home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/obj/Debug/net10.0/ref/LinerNotes.DataAccess.dll
+/home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/bin/Debug/net10.0/LinerNotes.DataAccess.runtimeconfig.json
+/home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/obj/Debug/net10.0/DataAccess.genruntimeconfig.cache

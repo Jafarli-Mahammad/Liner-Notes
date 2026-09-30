@@ -25,9 +25,12 @@ IGNORE_PATTERNS = [
     "*.lock", "*-lock.json", "*-lock.yaml", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.lock",
     "packages.lock.json", "*.min.js", "*.min.css", "*.map", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.gif",
     "*.ico", "*.wasm", "*.dll", "*.exe", "*.so", "*.dylib", "*.db", "*.sqlite", "*.log", "*.suo",
-    "*.DotSettings.user", "*.DotSettings", ".idea/*", ".vscode/*", "zap-report.html", "codebase-memory.db",
-    "*.nupkg", "obj/*", "bin/*"
+    "*.DotSettings.user", "*.DotSettings", "*.nupkg", "*.Designer.cs", "*.pdb", "dotnet-tools.json"
 ]
+
+IGNORE_DIRECTORIES = {
+    "bin", "obj", ".idea", ".vscode", ".git", "node_modules", ".system_generated"
+}
 
 # ANSI Colors
 CYAN = "\033[96m"
@@ -40,9 +43,13 @@ RESET = "\033[0m"
 
 
 def is_ignored(filename: str) -> bool:
-    basename = os.path.basename(filename)
+    normalized = filename.replace("\\", "/").strip("/")
+    parts = normalized.split("/")
+    if any(part in IGNORE_DIRECTORIES for part in parts):
+        return True
+    basename = os.path.basename(normalized)
     for pattern in IGNORE_PATTERNS:
-        if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(basename, pattern):
+        if fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(basename, pattern):
             return True
     return False
 

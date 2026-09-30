@@ -8,6 +8,8 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
+        builder.ToTable("Users");
+
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Email)
@@ -20,6 +22,27 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.TimeZone)
             .IsRequired()
             .HasMaxLength(64);
+
+        builder.Property(u => u.DeliveryDay)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .IsRequired();
+
+        builder.Property(u => u.DeliveryHourUtc)
+            .IsRequired();
+
+        builder.Property(u => u.NextDigestAt);
+
+        // Index on NextDigestAt for fast worker batch polling (NextDigestAt <= UtcNow)
+        builder.HasIndex(u => u.NextDigestAt);
+
+        builder.Property(u => u.IsDeleted)
+            .IsRequired();
+
+        builder.Property(u => u.CreatedAt)
+            .IsRequired();
+
+        builder.Property(u => u.LastModifiedAt);
 
         builder.HasMany(u => u.Connections)
             .WithOne()

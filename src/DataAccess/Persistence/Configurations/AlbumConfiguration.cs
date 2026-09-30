@@ -8,6 +8,8 @@ public sealed class AlbumConfiguration : IEntityTypeConfiguration<Album>
 {
     public void Configure(EntityTypeBuilder<Album> builder)
     {
+        builder.ToTable("Albums");
+
         builder.HasKey(a => a.Id);
 
         builder.Property(a => a.Title)
@@ -21,6 +23,13 @@ public sealed class AlbumConfiguration : IEntityTypeConfiguration<Album>
         builder.Property(a => a.Mbid)
             .HasMaxLength(64);
 
+        builder.Property(a => a.ArtistId);
+
         builder.HasIndex(a => a.Mbid);
+
+        builder.HasOne<Artist>()
+            .WithMany()
+            .HasForeignKey(a => a.ArtistId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

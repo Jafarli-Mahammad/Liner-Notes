@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Git pre-commit hook to trigger Qwen2.5-Coder AI QA & Security Reviewers
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+QA_SCRIPT="$REPO_ROOT/scripts/git-qa-reviewer.py"
+SECURITY_SCRIPT="$REPO_ROOT/scripts/git-security-reviewer.py"
+
+# 1. Run QA Review (Quality, Logic, Performance via Qwen2.5)
+if [ -f "$QA_SCRIPT" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+        python3 "$QA_SCRIPT"
+        QA_EXIT=$?
+        if [ $QA_EXIT -ne 0 ]; then
+            exit $QA_EXIT
+        fi
+    fi
+fi
+
+# 2. Run Security Review (Vulnerabilities, Auth, Secrets via Qwen2.5)
+if [ -f "$SECURITY_SCRIPT" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+        python3 "$SECURITY_SCRIPT"
+        SEC_EXIT=$?
+        if [ $SEC_EXIT -ne 0 ]; then
+            exit $SEC_EXIT
+        fi
+    fi
+fi
+
+exit 0
+

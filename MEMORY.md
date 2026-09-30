@@ -45,6 +45,8 @@ Decisions (with reasons)
 [stated] Scoring lives in Domain, not Presentation: it must be pure and unit-testable. (2026-09-28)
 [stated] No SignalR unless a real-time requirement appears; weekly email has no live component. (2026-09-28)
 [stated] Target PostgreSQL 16+ via Npgsql for DataAccess layer and EF Core migrations, matching compose.yaml and production spec. (2026-09-30)
+[stated] Name the deterministic recommendation scorer & feedback re-ranking engine "Residue". (2026-10-01)
+[stated] Incorporate 3 core V1 pillars: 1-click deep links (YouTube/Spotify/Bandcamp/Apple Music), hybrid onboarding (Last.fm/ListenBrainz sync or manual seeds), and 3-5 pick high-precision batches. (2026-10-01)
 Gotchas and corrections
 [stated] Onion architecture project layout: src/Domain, src/Application, src/Infrastructure, src/Web, src/Worker, and tests/, targeting .NET 10 / ASP.NET Core 10. (2026-09-30)
 [verified] In bash, quote '/clp:NoSummary;ErrorsOnly' to prevent semicolon from splitting commands. (2026-09-30)

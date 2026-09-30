@@ -24,7 +24,8 @@ Phase 3: ListenBrainz
 Verify current endpoints, auth, rate limits, terms
 ListenBrainz client behind the same abstraction
 Decide primary upstream and blending (see Open decisions)
-Phase 4: Domain scorer
+Phase 4: Domain scorer ("Residue" Engine)
+Name: "Residue" (pure deterministic recommendation and feedback re-ranking engine)
 Tag-overlap similarity
 Popularity penalty
 Novelty penalty/boost
@@ -35,7 +36,7 @@ Unit tests (mandatory)
 Benchmark seed set (metal, hip-hop, electronic, jazz, pop, indie, classical, regional)
 Phase 5: Accounts and taste seeding
 ASP.NET Identity + hardening (Data Protection, anti-forgery, auth rate limiting)
-Taste seeding flow (see Open decisions)
+Taste seeding flow (Hybrid onboarding: Last.fm/ListenBrainz sync + manual 3–5 seed artists/tags fallback)
 Phase 6: Feedback
 Like / dislike / comment per recommendation
 Persistence
@@ -45,6 +46,7 @@ Verify current free/low-cost email options
 Weekly digest generation (MediatR command)
 Email sender implementation
 Unsubscribe in every message, no tracking pixels
+Zero-friction listening: Direct deep-links for every pick (YouTube, Spotify, Bandcamp, Apple Music)
 Phase 8: Your data + explanations
 "Your data" page reflecting what is actually stored
 Versioned JSON export schema + documentation
@@ -56,14 +58,20 @@ Dockerize, CD pipeline
 Honest cost estimate
 Phase 10: Public release
 README states exactly what it does and what it builds on
-Copy reviewed for overclaims (no "new algorithm")
+Copy reviewed for overclaims (no "new algorithm", clearly attributes candidates to Last.fm/ListenBrainz with deterministic "Residue" scoring)
 Privacy copy matches what the code stores
 Open decisions (raise when relevant, don't decide silently)
-Taste seeding: Last.fm username, ListenBrainz username, manual artist picks, or a combination, and the privacy implications of each
+Taste seeding: Hybrid approach (Last.fm/ListenBrainz sync + manual 3–5 artist picks fallback) to eliminate the cold-start trap
 Primary upstream in V1 and how to blend both
 Project name, branding, license
 Email provider and hosting (verify first)
 ML.NET matrix factorization: V2 only, and only with real feedback data
+
+Core Product & Retention Pillars (V1 Guidelines)
+1. **Zero-Friction Listening (The "Copy-Paste" Problem)**: Every pick in the email and web UI must feature direct 1-click deep-links (YouTube, Spotify, Bandcamp, Apple Music search links) so users don't have to manually search in streaming apps.
+2. **Hybrid Onboarding (The Cold-Start Problem)**: Allow power users to connect existing Last.fm / ListenBrainz profiles, while offering casual users a simple 3–5 seed artist/tag selector to start discovering immediately.
+3. **High-Precision Batches (Weekly Retention)**: Limit weekly discovery batches to 3–5 high-confidence picks to avoid overwhelm and recommendation misses, paired with effortless 1-click feedback (thumbs up / thumbs down / "already know this").
+
 Ideas parking lot
 
 Not in V1. Add anything that comes up mid-build, one line each, with the date.
@@ -73,3 +81,4 @@ Log
 Short dated entries for decisions and notable changes (mirrors CHANGELOG for user-visible ones).
 - 2026-09-30: Solution skeleton set up (Onion architecture: Domain, Application, Infrastructure, Web, Worker, tests). Pure deterministic recommendation scorer with 4 components, score breakdown, and benchmark fixture implemented. Ready for developer review.
 - 2026-09-30: DataAccessLayer finished: PostgreSQL 16+ (via Npgsql) configured, AppDbContext with IAppDbContext, IDataProtectionKeyContext, automatic audit timestamps, complete entity configurations, repositories (User, WeeklyDigest, TasteSignal, Track), InitialCreate migration generated, and 11 unit/model tests passing.
+- 2026-10-01: Named the deterministic recommendation & feedback re-ranking engine "Residue". Added 3 core product pillars to PROGRESS.md (Zero-Friction Deep Links, Hybrid Onboarding, and 3-5 Track High-Precision Batches).

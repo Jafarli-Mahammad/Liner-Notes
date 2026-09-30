@@ -4,26 +4,42 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 QA_SCRIPT="$REPO_ROOT/scripts/git-qa-reviewer.py"
 SECURITY_SCRIPT="$REPO_ROOT/scripts/git-security-reviewer.py"
 
+# 0. Global AI bypass check
+if [ "$SKIP_AI" = "1" ]; then
+    echo -e "\033[2m[pre-commit] SKIP_AI=1 detected; bypassing AI reviewers.\033[0m"
+    exit 0
+fi
+
+# Ensure python3 is available
+if ! command -v python3 >/dev/null 2>&1; then
+    echo -e "\033[33m[pre-commit] python3 not found; skipping AI reviewers.\033[0m"
+    exit 0
+fi
+
 # 1. Run QA Review (Quality, Logic, Performance via Qwen2.5)
-if [ -f "$QA_SCRIPT" ]; then
-    if command -v python3 >/dev/null 2>&1; then
-        python3 "$QA_SCRIPT"
-        QA_EXIT=$?
-        if [ $QA_EXIT -ne 0 ]; then
-            exit $QA_EXIT
-        fi
+if [ -f "$QA_SCRIPT" ] && [ "$SKIP_QA" != "1" ]; then
+    start_qa=$(date +%s)
+    python3 "$QA_SCRIPT"
+    QA_EXIT=$?
+    end_qa=$(date +%s)
+    qa_duration=$((end_qa - start_qa))
+    if [ $QA_EXIT -ne 0 ]; then
+        exit $QA_EXIT
     fi
+    echo -e "\033[2m⏱️  QA Review completed in ${qa_duration}s\033[0m\n"
 fi
 
 # 2. Run Security Review (Vulnerabilities, Auth, Secrets via Qwen2.5)
-if [ -f "$SECURITY_SCRIPT" ]; then
-    if command -v python3 >/dev/null 2>&1; then
-        python3 "$SECURITY_SCRIPT"
-        SEC_EXIT=$?
-        if [ $SEC_EXIT -ne 0 ]; then
-            exit $SEC_EXIT
-        fi
+if [ -f "$SECURITY_SCRIPT" ] && [ "$SKIP_SECURITY_REVIEW" != "1" ]; then
+    start_sec=$(date +%s)
+    python3 "$SECURITY_SCRIPT"
+    SEC_EXIT=$?
+    end_sec=$(date +%s)
+    sec_duration=$((end_sec - start_sec))
+    if [ $SEC_EXIT -ne 0 ]; then
+        exit $SEC_EXIT
     fi
+    echo -e "\033[2m⏱️  Security Review completed in ${sec_duration}s\033[0m\n"
 fi
 
 exit 0

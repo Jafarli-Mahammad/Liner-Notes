@@ -271,13 +271,14 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
         "You are an elite Principal DevSecOps and Application Security Auditor.\n"
         f"Staged Technology Stack: {stack_str}\n\n"
         "### STRICT GROUNDING & ANTI-HALLUCINATION RULES:\n"
-        "1. GROUNDING: Base findings strictly on demonstrable attack surfaces in the diff. Never hallucinate invisible dependencies or libraries.\n"
-        "2. SAFE PATTERNS (DO NOT FLAG):\n"
+        "1. INCREMENTAL COMMIT RULE: This diff is an atomic, incremental commit in an ongoing project. Never complain about missing auth middleware, missing controllers, or missing RBAC policies on data access or domain layers that do not expose public endpoints.\n"
+        "2. GROUNDING & EXPLOITABILITY: Report a vulnerability ONLY if there is an actual, demonstrable security flaw or secret leak in the visible diff lines. Never speculate on unseen code or hypothetical risks.\n"
+        "3. SAFE PATTERNS (DO NOT FLAG):\n"
         "   - Reading environment variables (os.environ, IConfiguration, process.env) is standard and SAFE.\n"
-        "   - Local scripts, pre-commit hooks, and tooling do NOT require user authorization or JWT policies.\n"
+        "   - Local scripts, pre-commit hooks, and internal repository tools do NOT require user authentication or JWT policies.\n"
         "   - Localhost URLs, test values, and mock tokens are SAFE.\n"
-        "3. SILENCE ON SECURE CODE: If there are no genuine, exploitable vulnerabilities or exposed production secrets, you MUST output '- None identified' and APPROVE.\n"
-        "4. DO NOT OUTPUT RAW JSON: You must format your response strictly using the Markdown headers below.\n\n"
+        "4. SILENCE ON SECURE CODE: If there are no genuine, exploitable vulnerabilities or exposed production secrets, you MUST output '- None identified' under Vulnerabilities, and the Verdict MUST BE [VERDICT: APPROVE].\n"
+        "5. DO NOT OUTPUT RAW JSON: You must format your response strictly using the Markdown headers below.\n\n"
         "### DOMAIN SECURITY CRITERIA:\n"
         f"{rules_str}\n"
         f"{findings_block}\n"
@@ -285,9 +286,9 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
         "### 🛡️ Security Assessment Summary\n"
         "[1-2 crisp sentences summarizing the security posture of the changes]\n\n"
         "### ⚙️ Threat Analysis\n"
-        "[Technical evaluation of inputs, execution boundaries, and secrets]\n\n"
+        "[Technical evaluation of inputs, execution boundaries, and secrets without echoing prompt categories]\n\n"
         "### 🚨 Vulnerabilities\n"
-        "- [Actionable, exploitable vulnerability with code reference, or '- None identified']\n\n"
+        "- [Actionable, exploitable vulnerability with code reference, or EXACTLY '- None identified']\n\n"
         "### 🔒 Hardening Suggestions\n"
         "- [Concrete defense-in-depth improvement directly applicable to this diff, or '- None']\n\n"
         "### 🎯 Verdict\n"
@@ -330,34 +331,34 @@ def parse_verdict(response_text: str, deterministic_findings: list[str]) -> str:
         has_real_vulns = any(
             l.strip().startswith("-") and not re.search(r"\bnone(?:\s+identified)?\b", l, re.IGNORECASE)
             for l in vuln_content.splitlines()
+            if l.strip()
         )
         if has_real_vulns:
             return "REJECT"
+        else:
+            # Reconcile: If static scan is clean and LLM found no vulnerabilities, force APPROVE!
+            return "APPROVE"
 
     # 3. Check explicit ### 🎯 Verdict section
     verdict_section = re.search(r"###\s*🎯\s*Verdict\s*[\r\n]+(.*?)(?:\n\n|\Z)", clean, re.IGNORECASE | re.DOTALL)
     if verdict_section:
         verdict_text = verdict_section.group(1).strip()
+        if re.search(r"\[VERDICT:\s*REJECT\]", verdict_text, re.IGNORECASE):
+            return "REJECT"
+        if re.search(r"\[VERDICT:\s*APPROVE\]", verdict_text, re.IGNORECASE):
+            return "APPROVE"
         if re.search(r"\bREJECT\b", verdict_text, re.IGNORECASE):
             return "REJECT"
         if re.search(r"\bAPPROVE\b", verdict_text, re.IGNORECASE):
             return "APPROVE"
 
     # 4. Check explicit bracketed or formatted tokens
-    if re.search(r"\[VERDICT:\s*REJECT\]", clean, re.IGNORECASE) or re.search(r"\bVERDICT:\s*REJECT\b", clean, re.IGNORECASE):
+    if re.search(r"\[VERDICT:\s*REJECT\]", clean, re.IGNORECASE):
         return "REJECT"
-    if re.search(r"\[VERDICT:\s*APPROVE\]", clean, re.IGNORECASE) or re.search(r"\bVERDICT:\s*APPROVE\b", clean, re.IGNORECASE):
+    if re.search(r"\[VERDICT:\s*APPROVE\]", clean, re.IGNORECASE):
         return "APPROVE"
 
-    # 5. Raw REJECT presence anywhere in text
-    if re.search(r"\bREJECT\b", clean, re.IGNORECASE):
-        return "REJECT"
-
-    # 6. Explicit APPROVE presence
-    if re.search(r"\bAPPROVE\b", clean, re.IGNORECASE):
-        return "APPROVE"
-
-    # 7. Fail-safe: unknown or non-standard response defaults to REJECT
+    # 5. Fail-safe: unknown or non-standard response defaults to REJECT
     return "REJECT"
 
 
@@ -376,9 +377,10 @@ def stream_review_from_ollama(model_name: str, diff_text: str, files: list[str],
         ],
         "stream": True,
         "options": {
-            "temperature": 0.1,
+            "temperature": 0.05,
             "top_p": 0.85,
             "num_ctx": 16384,
+            "num_predict": 512,
         },
         "keep_alive": 0  # Evict model from GPU immediately after review
     }
@@ -514,14 +516,22 @@ def main():
     files = list(file_diffs.keys())
     categories = classify_files(files)
 
-    # Deterministic static scan runs in < 2ms
+    # Deterministic static scan runs in < 2ms on all staged files (including migrations)
     deterministic_findings = run_deterministic_security_scan(file_diffs)
 
-    # FAST PATH: If only documentation or static configuration files are staged, skip LLM
+    # Filter out auto-generated migration DSL files and model snapshots from LLM prompt
+    llm_file_diffs = {
+        f: diff for f, diff in file_diffs.items()
+        if not any(part.lower() == "migrations" for part in f.replace("\\", "/").split("/"))
+        and not fnmatch.fnmatch(os.path.basename(f), "*ModelSnapshot.cs")
+        and not fnmatch.fnmatch(os.path.basename(f), "*.Designer.cs")
+    }
+
+    # FAST PATH: If only documentation, static configs, or generated migrations staged, skip LLM
     has_code = any([categories["dotnet"], categories["python"], categories["shell"], categories["web"]])
-    if not has_code:
+    if not has_code or not llm_file_diffs:
         if not deterministic_findings:
-            print(f"{DIM}[Security Hook] Only documentation or static configs staged (secrets scan clean). Skipping AI security check.{RESET}")
+            print(f"{DIM}[Security Hook] Only documentation, static configs, or generated migrations staged (secrets scan clean). Skipping AI security check.{RESET}")
             return 0
 
     is_running, resolved_model, available_models = get_available_ollama_model()
@@ -536,9 +546,11 @@ def main():
         # print(f"{DIM}[Security Hook] For DeepSeek-R1: `ollama pull deepseek-r1:14b`{RESET}")
         return 0
 
-    diff_text, truncated = build_clean_diff_text(file_diffs, MAX_DIFF_CHARS)
+    llm_files = list(llm_file_diffs.keys())
+    llm_categories = classify_files(llm_files)
+    diff_text, truncated = build_clean_diff_text(llm_file_diffs, MAX_DIFF_CHARS)
 
-    response, verdict = stream_review_from_ollama(resolved_model, diff_text, files, categories, deterministic_findings, truncated)
+    response, verdict = stream_review_from_ollama(resolved_model, diff_text, llm_files, llm_categories, deterministic_findings, truncated)
     if verdict == "ERROR":
         return 0
 

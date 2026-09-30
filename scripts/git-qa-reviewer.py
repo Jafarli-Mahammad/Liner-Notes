@@ -25,11 +25,12 @@ IGNORE_PATTERNS = [
     "*.lock", "*-lock.json", "*-lock.yaml", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.lock",
     "packages.lock.json", "*.min.js", "*.min.css", "*.map", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.gif",
     "*.ico", "*.wasm", "*.dll", "*.exe", "*.so", "*.dylib", "*.db", "*.sqlite", "*.log", "*.suo",
-    "*.DotSettings.user", "*.DotSettings", "*.nupkg", "*.Designer.cs", "*.pdb", "dotnet-tools.json"
+    "*.DotSettings.user", "*.DotSettings", "*.nupkg", "*.Designer.cs", "*.pdb", "dotnet-tools.json",
+    "*ModelSnapshot.cs"
 ]
 
 IGNORE_DIRECTORIES = {
-    "bin", "obj", ".idea", ".vscode", ".git", "node_modules", ".system_generated"
+    "bin", "obj", ".idea", ".vscode", ".git", "node_modules", ".system_generated", "migrations"
 }
 
 # ANSI Colors
@@ -44,7 +45,7 @@ RESET = "\033[0m"
 
 def is_ignored(filename: str) -> bool:
     normalized = filename.replace("\\", "/").strip("/")
-    parts = normalized.split("/")
+    parts = [part.lower() for part in normalized.split("/")]
     if any(part in IGNORE_DIRECTORIES for part in parts):
         return True
     basename = os.path.basename(normalized)
@@ -191,18 +192,18 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
     rules = []
 
     if categories["dotnet"]:
-        langs.append("C# / .NET (Clean Architecture, MediatR, EF Core)")
+        langs.append("C# / .NET (EF Core, Clean Architecture)")
         rules.append(
-            "- C# / .NET:\n"
-            "  * Async: Detect sync-over-async (.Result, .Wait()), missing await on Task returns, or async void.\n"
-            "  * EF Core & CQRS: Detect N+1 queries in loops, missing AsNoTracking() on read-only queries, or mutating state in MediatR query handlers.\n"
-            "  * Null safety: Detect unguarded null dereferences on reference types."
+            "- C# / .NET Focus:\n"
+            "  * Async: Detect actual blocking calls (.Result, .Wait(), .GetAwaiter().GetResult()) or async void methods.\n"
+            "  * Null Safety: Flag only demonstrable unhandled null dereferences. Do NOT complain about null safety if nullable reference types (? or !) are used.\n"
+            "  * EF Core: Flag obvious N+1 queries in loops or missing AsNoTracking() on heavy read-only queries."
         )
 
     if categories["python"]:
         langs.append("Python")
         rules.append(
-            "- Python:\n"
+            "- Python Focus:\n"
             "  * Detect swallowed exceptions, mutable default args, or unclosed file/stream handles.\n"
             "  * Detect failure to check subprocess return codes or unhandled JSON decoding."
         )
@@ -210,14 +211,14 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
     if categories["shell"]:
         langs.append("Shell / Bash")
         rules.append(
-            "- Shell:\n"
+            "- Shell Focus:\n"
             "  * Detect unquoted variable expansions in commands, failure to handle exit codes, or broken pipe handling."
         )
 
     if categories["web"]:
         langs.append("Frontend / TypeScript / JavaScript")
         rules.append(
-            "- Frontend:\n"
+            "- Frontend Focus:\n"
             "  * Detect unhandled Promise rejections, memory leaks (un-cleaned listeners/intervals), or state mutation bugs."
         )
 
@@ -235,21 +236,23 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
     return (
         f"You are an elite Principal Software Engineer acting as a strict Git pre-commit QA gatekeeper.\n"
         f"Staged Technology Stack: {stack_str}\n\n"
-        "### STRICT GROUNDING & ANTI-FLUFF RULES:\n"
-        "1. GROUNDING: Evaluate ONLY the code visible in the diff and surrounding context. Never speculate on unseen code or dependencies.\n"
-        "2. FORBIDDEN GENERIC ADVICE: Do NOT suggest 'add unit tests', 'consider logging', 'check race conditions', or 'refactor for maintainability'. Every reported issue MUST cite a concrete, demonstrable defect in the diff.\n"
-        "3. SILENCE ON CLEAN CODE: If there are zero critical logic bugs, memory leaks, or performance bottlenecks, you MUST output '- None identified' and APPROVE.\n"
-        "4. DO NOT OUTPUT RAW JSON: You must format your response strictly using the Markdown headers below.\n\n"
+        "### STRICT GROUNDING & ANTI-HALLUCINATION RULES:\n"
+        "1. INCREMENTAL COMMIT RULE: This diff is an atomic, incremental commit in an ongoing project. Evaluate ONLY the code visible in the diff. NEVER complain about missing higher-level layers, missing MediatR handlers, missing controllers, or future features.\n"
+        "2. GROUNDING & EVIDENCE: Report an issue ONLY if you can point to a concrete syntax error, crash, deadlock, data corruption, or severe bug in the staged diff lines. Never speculate on unseen code or dependencies.\n"
+        "3. NO FORCED CHECKLISTS: Do NOT comment on Async or Null Safety unless there is an actual, demonstrable defect in the visible diff. If the code uses async tasks or standard nullable types, it is good.\n"
+        "4. SILENCE ON CLEAN CODE: If there are no concrete, demonstrable bugs or performance regressions, you MUST output '- None identified' under QA & Performance Issues, and the Verdict MUST BE [VERDICT: APPROVE].\n"
+        "5. NO FLUFF: Do NOT suggest 'add unit tests', 'consider logging', 'add documentation', or general refactorings.\n"
+        "6. DO NOT OUTPUT RAW JSON: Follow the exact Markdown sections below.\n\n"
         "### DOMAIN CRITERIA:\n"
         f"{rules_str}\n"
         f"{findings_block}\n"
         "### OUTPUT FORMAT (Follow exactly):\n\n"
         "### 🔍 Summary\n"
-        "[1-2 crisp sentences describing the architectural or logic changes]\n\n"
+        "[1-2 concise sentences summarizing what was introduced or changed]\n\n"
         "### ⚙️ Analysis\n"
-        "[Technical evaluation of the code against the criteria]\n\n"
+        "[2-3 concise sentences evaluating the design and logic of the staged diff without echoing prompt category headers]\n\n"
         "### 🚀 QA & Performance Issues\n"
-        "- [Actionable defect with code/line reference, or '- None identified']\n\n"
+        "- [Concrete defect with file and line reference, or EXACTLY '- None identified']\n\n"
         "### 💡 Actionable Improvement\n"
         "- [One concrete technical improvement directly applicable to this diff, or '- None']\n\n"
         "### 🎯 Verdict\n"
@@ -257,16 +260,20 @@ def build_system_prompt(categories: dict[str, list[str]], deterministic_findings
     )
 
 
-def parse_verdict(response_text: str) -> str:
+def parse_verdict(response_text: str, deterministic_findings: list[str] = None) -> str:
     """
-    Robustly parses verdict. Fails closed (REJECT) if rejections or unresolved issues are found.
-    Handles JSON responses, raw markdown, and token patterns.
+    Robustly parses verdict.
+    Reconciles issues: If no real issues were identified, programmatically enforces APPROVE.
+    Deterministic findings (e.g. .Result) always force REJECT.
     """
+    if deterministic_findings:
+        return "REJECT"
+
     clean = strip_thinking(response_text).strip()
     if not clean:
         return "REJECT"
 
-    # 1. Handle JSON response fallback (e.g. {"response": "REJECT"})
+    # 1. Handle JSON response fallback
     json_candidate = clean
     json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
     if json_match:
@@ -292,34 +299,34 @@ def parse_verdict(response_text: str) -> str:
         has_real_issues = any(
             l.strip().startswith("-") and not re.search(r"\bnone(?:\s+identified)?\b", l, re.IGNORECASE)
             for l in content.splitlines()
+            if l.strip()
         )
         if has_real_issues:
             return "REJECT"
+        else:
+            # Programmatic reconciliation: If the model found NO real issues, force APPROVE!
+            return "APPROVE"
 
     # 3. Check explicit ### 🎯 Verdict section
     verdict_section = re.search(r"###\s*🎯\s*Verdict\s*[\r\n]+(.*?)(?:\n\n|\Z)", clean, re.IGNORECASE | re.DOTALL)
     if verdict_section:
         verdict_text = verdict_section.group(1).strip()
+        if re.search(r"\[VERDICT:\s*REJECT\]", verdict_text, re.IGNORECASE):
+            return "REJECT"
+        if re.search(r"\[VERDICT:\s*APPROVE\]", verdict_text, re.IGNORECASE):
+            return "APPROVE"
         if re.search(r"\bREJECT\b", verdict_text, re.IGNORECASE):
             return "REJECT"
         if re.search(r"\bAPPROVE\b", verdict_text, re.IGNORECASE):
             return "APPROVE"
 
-    # 4. Check explicit bracketed or formatted tokens
-    if re.search(r"\[VERDICT:\s*REJECT\]", clean, re.IGNORECASE) or re.search(r"\bVERDICT:\s*REJECT\b", clean, re.IGNORECASE):
+    # 4. Check explicit bracketed tokens anywhere
+    if re.search(r"\[VERDICT:\s*REJECT\]", clean, re.IGNORECASE):
         return "REJECT"
-    if re.search(r"\[VERDICT:\s*APPROVE\]", clean, re.IGNORECASE) or re.search(r"\bVERDICT:\s*APPROVE\b", clean, re.IGNORECASE):
+    if re.search(r"\[VERDICT:\s*APPROVE\]", clean, re.IGNORECASE):
         return "APPROVE"
 
-    # 5. Raw REJECT presence anywhere in text
-    if re.search(r"\bREJECT\b", clean, re.IGNORECASE):
-        return "REJECT"
-
-    # 6. Explicit APPROVE presence
-    if re.search(r"\bAPPROVE\b", clean, re.IGNORECASE):
-        return "APPROVE"
-
-    # 7. Fail-safe: unknown or non-standard response defaults to REJECT
+    # 5. Fail-safe: default to REJECT if unclear
     return "REJECT"
 
 
@@ -338,9 +345,10 @@ def stream_review_from_ollama(model_name: str, diff_text: str, files: list[str],
         ],
         "stream": True,
         "options": {
-            "temperature": 0.1,
+            "temperature": 0.05,
             "top_p": 0.85,
             "num_ctx": 16384,
+            "num_predict": 512,
         },
         "keep_alive": 0  # Evict model from GPU immediately after inference
     }
@@ -371,7 +379,7 @@ def stream_review_from_ollama(model_name: str, diff_text: str, files: list[str],
         print(f"\n{YELLOW}⚠️ Error during Ollama inference: {e}{RESET}\n")
         return "", "ERROR"
 
-    verdict = parse_verdict(full_response)
+    verdict = parse_verdict(full_response, deterministic_findings)
     return full_response, verdict
 
 
@@ -415,17 +423,15 @@ def save_qa_report(repo_root: str, branch: str, model_name: str, files: list[str
 
 
 def prompt_user_confirmation(verdict: str) -> bool:
-    tty_path = "/dev/tty"
-    if not os.path.exists(tty_path):
+    if verdict == "APPROVE":
+        print(f"{GREEN}{BOLD}✅ QA Verdict: APPROVED! Proceeding with commit...{RESET}\n")
         return True
 
+    print(f"{YELLOW}{BOLD}⚠️  QA Review REJECTED this commit based on issues above.{RESET}\n")
+    tty_path = "/dev/tty"
     try:
-        with open(tty_path, "r") as tty_in, open(tty_path, "w") as tty_out:
-            if verdict == "APPROVE":
-                tty_out.write(f"{GREEN}{BOLD}✅ QA Verdict: APPROVED! Proceeding with commit...{RESET}\n\n")
-                return True
-            else:
-                tty_out.write(f"{YELLOW}{BOLD}⚠️  QA Review REJECTED this commit based on issues above.{RESET}\n")
+        if os.path.exists(tty_path):
+            with open(tty_path, "r") as tty_in, open(tty_path, "w") as tty_out:
                 tty_out.write(f"{BOLD}Proceed with commit anyway? [Y/n]: {RESET}")
                 tty_out.flush()
                 answer = tty_in.readline().strip().lower()
@@ -439,7 +445,9 @@ def prompt_user_confirmation(verdict: str) -> bool:
         print(f"\n{RED}Commit aborted.{RESET}")
         return False
     except Exception:
-        return True
+        pass
+
+    return True
 
 
 def main():

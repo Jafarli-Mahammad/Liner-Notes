@@ -7,7 +7,7 @@ namespace LinerNotes.Domain.Taste;
 /// An atomic, provenance-tagged record representing a discrete taste signal for a user.
 /// Stored verbatim to satisfy transparency, "your data" exports, and privacy-first deletion.
 /// </summary>
-public sealed class TasteSignal : BaseEntity, IAuditableEntity
+public sealed class TasteSignal : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public TasteTargetType TargetType { get; private set; }
@@ -16,8 +16,6 @@ public sealed class TasteSignal : BaseEntity, IAuditableEntity
     public double Weight { get; private set; }
     public TasteSignalSource Source { get; private set; }
     public string Context { get; private set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? LastModifiedAt { get; set; }
 
     // Parameterless constructor for EF Core
     private TasteSignal()

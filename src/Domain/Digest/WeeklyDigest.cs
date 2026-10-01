@@ -9,7 +9,7 @@ namespace LinerNotes.Domain.Digest;
 /// A personalized weekly music discovery digest for a subscriber.
 /// Enforces idempotent weekly batch delivery: a user cannot receive multiple digests for the same ISO week.
 /// </summary>
-public sealed class WeeklyDigest : BaseEntity, IAuditableEntity
+public sealed class WeeklyDigest : AuditableEntity
 {
     private readonly List<WeeklyRecommendation> _recommendations = new();
 
@@ -21,8 +21,6 @@ public sealed class WeeklyDigest : BaseEntity, IAuditableEntity
     public DigestStatus Status { get; private set; } = DigestStatus.Pending;
     public DateTime? SentAt { get; private set; }
     public string? ErrorMessage { get; private set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? LastModifiedAt { get; set; }
 
     public IReadOnlyCollection<WeeklyRecommendation> Recommendations => _recommendations.AsReadOnly();
 

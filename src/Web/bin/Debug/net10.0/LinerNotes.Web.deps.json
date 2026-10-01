@@ -21,6 +21,14 @@
           "LinerNotes.Web.dll": {}
         }
       },
+      "Dapper/2.1.35": {
+        "runtime": {
+          "lib/net7.0/Dapper.dll": {
+            "assemblyVersion": "2.0.0.0",
+            "fileVersion": "2.1.35.13827"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "runtime": {
           "lib/net6.0/Humanizer.dll": {
@@ -54,6 +62,17 @@
         },
         "runtime": {
           "lib/net9.0/Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.dll": {
+            "assemblyVersion": "9.0.2.0",
+            "fileVersion": "9.0.225.6704"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Identity.EntityFrameworkCore/9.0.2": {
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Relational": "9.0.2"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll": {
             "assemblyVersion": "9.0.2.0",
             "fileVersion": "9.0.225.6704"
           }
@@ -513,9 +532,11 @@
       },
       "LinerNotes.DataAccess/1.0.0": {
         "dependencies": {
+          "Dapper": "2.1.35",
           "LinerNotes.Application": "1.0.0",
           "LinerNotes.Domain": "1.0.0",
           "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "9.0.2",
+          "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "9.0.2",
           "Microsoft.EntityFrameworkCore": "9.0.2",
           "Microsoft.EntityFrameworkCore.Relational": "9.0.2",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "9.0.4"
@@ -585,6 +606,13 @@
       "serviceable": false,
       "sha512": ""
     },
+    "Dapper/2.1.35": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-YKRwjVfrG7GYOovlGyQoMvr1/IJdn+7QzNXJxyMh0YfFF5yvDmTYaJOVYWsckreNjGsGSEtrMTpnzxTUq/tZQw==",
+      "path": "dapper/2.1.35",
+      "hashPath": "dapper.2.1.35.nupkg.sha512"
+    },
     "Humanizer.Core/2.14.1": {
       "type": "package",
       "serviceable": true,
@@ -612,6 +640,13 @@
       "sha512": "sha512-L1YLgh2niYjddOeJt2eGX5nGYqhN0f6fbyKrK+qPXpEYvvNdo0tqgwnSvbc+/G465x/zyelLm1wOY0DMneuvCw==",
       "path": "microsoft.aspnetcore.dataprotection.entityframeworkcore/9.0.2",
       "hashPath": "microsoft.aspnetcore.dataprotection.entityframeworkcore.9.0.2.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Identity.EntityFrameworkCore/9.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pWTIxKXMGmrTLPovVJDmkToemQU1/ovgB4LhKa+VfoZJ8nKYwIoBI/mMM5JOwJpLGX73a6kw7W8wIc69gvZwRQ==",
+      "path": "microsoft.aspnetcore.identity.entityframeworkcore/9.0.2",
+      "hashPath": "microsoft.aspnetcore.identity.entityframeworkcore.9.0.2.nupkg.sha512"
     },
     "Microsoft.Bcl.AsyncInterfaces/7.0.0": {
       "type": "package",

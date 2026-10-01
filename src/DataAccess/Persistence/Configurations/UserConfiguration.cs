@@ -1,3 +1,4 @@
+using LinerNotes.DataAccess.IdentityEntities;
 using LinerNotes.Domain.Digest;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -42,7 +43,11 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CreatedAt)
             .IsRequired();
 
+        builder.Property(u => u.CreatedBy);
         builder.Property(u => u.LastModifiedAt);
+        builder.Property(u => u.LastModifiedBy);
+        builder.Property(u => u.DeletedAt);
+        builder.Property(u => u.DeletedBy);
 
         builder.HasMany(u => u.Connections)
             .WithOne()
@@ -52,6 +57,12 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasMany(u => u.TasteSignals)
             .WithOne()
             .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 1:1 Identity link to ApplicationUser
+        builder.HasOne<ApplicationUser>()
+            .WithOne()
+            .HasForeignKey<User>(u => u.Id)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

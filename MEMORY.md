@@ -47,9 +47,11 @@ Decisions (with reasons)
 [stated] Target PostgreSQL 16+ via Npgsql for DataAccess layer and EF Core migrations, matching compose.yaml and production spec. (2026-09-30)
 [stated] Name the deterministic recommendation scorer & feedback re-ranking engine "Residue". (2026-10-01)
 [stated] Incorporate 3 core V1 pillars: 1-click deep links (YouTube/Spotify/Bandcamp/Apple Music), hybrid onboarding (Last.fm/ListenBrainz sync or manual seeds), and 3-5 pick high-precision batches. (2026-10-01)
+[stated] Link ApplicationUser (Identity) 1:1 by Id to Domain User, keeping Domain pure and hosting DataContext (IdentityDbContext) with generic AsyncRepository and UnitOfWork in DataAccess. (2026-10-02)
 Gotchas and corrections
 [stated] Onion architecture project layout: src/Domain, src/Application, src/Infrastructure, src/Web, src/Worker, and tests/, targeting .NET 10 / ASP.NET Core 10. (2026-09-30)
 [verified] In bash, quote '/clp:NoSummary;ErrorsOnly' to prevent semicolon from splitting commands. (2026-09-30)
+[verified] In EF Core with NoTracking by default, detached entities passed to Remove/Edit must inspect ChangeTracker.Entries before attaching to prevent identity map conflicts with previously tracked instances. (2026-10-02)
 <!-- Add dated one-liners as they happen. -->
 Environment and constraints
 [stated] Near-zero budget: cheap VPS or free tiers, SQLite or small Postgres. Verify current pricing before recommending. (2026-09-28)

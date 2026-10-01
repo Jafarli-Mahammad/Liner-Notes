@@ -6,7 +6,7 @@ namespace LinerNotes.Domain.Digest;
 /// <summary>
 /// Record linking a user account with an external music provider (Last.fm, ListenBrainz).
 /// </summary>
-public sealed class UserMusicConnection : BaseEntity, IAuditableEntity
+public sealed class UserMusicConnection : AuditableEntity
 {
     public Guid UserId { get; private set; }
     public MusicServiceType ServiceType { get; private set; }
@@ -14,8 +14,6 @@ public sealed class UserMusicConnection : BaseEntity, IAuditableEntity
     public string? EncryptedToken { get; private set; }
     public DateTime? LastSyncedAt { get; private set; }
     public bool IsActive { get; private set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? LastModifiedAt { get; set; }
 
     // Parameterless constructor for EF Core
     private UserMusicConnection()

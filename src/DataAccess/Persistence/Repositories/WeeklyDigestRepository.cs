@@ -1,21 +1,23 @@
 using LinerNotes.Application.Common.Interfaces.Repositories;
+using LinerNotes.DataAccess.Core;
+using LinerNotes.DataAccess.DataContexts;
 using LinerNotes.Domain.Digest;
 using Microsoft.EntityFrameworkCore;
 
 namespace LinerNotes.DataAccess.Persistence.Repositories;
 
-public sealed class WeeklyDigestRepository : IWeeklyDigestRepository
+/// <summary>
+/// Repository managing WeeklyDigest aggregates and recommendation snapshots.
+/// </summary>
+public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWeeklyDigestRepository
 {
-    private readonly AppDbContext _context;
-
-    public WeeklyDigestRepository(AppDbContext context)
+    public WeeklyDigestRepository(DataContext context) : base(context)
     {
-        _context = context;
     }
 
     public async Task<WeeklyDigest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.WeeklyDigests
+        return await DataContext.WeeklyDigests
             .Include(d => d.Recommendations)
                 .ThenInclude(r => r.Track)
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
@@ -23,7 +25,7 @@ public sealed class WeeklyDigestRepository : IWeeklyDigestRepository
 
     public async Task<WeeklyDigest?> GetByUserIdAndWeekAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default)
     {
-        return await _context.WeeklyDigests
+        return await DataContext.WeeklyDigests
             .Include(d => d.Recommendations)
                 .ThenInclude(r => r.Track)
             .FirstOrDefaultAsync(d => d.UserId == userId && d.Week == week, cancellationToken);
@@ -31,7 +33,7 @@ public sealed class WeeklyDigestRepository : IWeeklyDigestRepository
 
     public async Task<IReadOnlyList<WeeklyDigest>> GetRecentDigestsForUserAsync(Guid userId, int count, CancellationToken cancellationToken = default)
     {
-        return await _context.WeeklyDigests
+        return await DataContext.WeeklyDigests
             .Include(d => d.Recommendations)
                 .ThenInclude(r => r.Track)
             .Where(d => d.UserId == userId)
@@ -42,17 +44,12 @@ public sealed class WeeklyDigestRepository : IWeeklyDigestRepository
 
     public async Task<bool> ExistsForUserAndWeekAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default)
     {
-        return await _context.WeeklyDigests
+        return await DataContext.WeeklyDigests
             .AnyAsync(d => d.UserId == userId && d.Week == week, cancellationToken);
-    }
-
-    public async Task AddAsync(WeeklyDigest digest, CancellationToken cancellationToken = default)
-    {
-        await _context.WeeklyDigests.AddAsync(digest, cancellationToken);
     }
 
     public void Update(WeeklyDigest digest)
     {
-        _context.WeeklyDigests.Update(digest);
+        DataContext.WeeklyDigests.Update(digest);
     }
 }

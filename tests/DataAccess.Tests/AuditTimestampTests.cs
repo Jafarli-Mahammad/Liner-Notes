@@ -54,6 +54,7 @@ public sealed class AuditTimestampTests
 
         var beforeUpdate = DateTime.UtcNow.AddSeconds(-1);
         toUpdate.UpdateSchedule(DigestDeliveryDay.Monday, 10, "Europe/Berlin");
+        updateContext.Users.Update(toUpdate);
         await updateContext.SaveChangesAsync();
         var afterUpdate = DateTime.UtcNow.AddSeconds(1);
 

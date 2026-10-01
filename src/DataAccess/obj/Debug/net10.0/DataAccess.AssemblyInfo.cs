@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LinerNotes.DataAccess")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+acf6935eacef80b0be11497aaa71fb9e2fc4d17f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+377888f13bcb0877cb3f89fb8e7c5eac7b94ba10")]
 [assembly: System.Reflection.AssemblyProductAttribute("LinerNotes.DataAccess")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LinerNotes.DataAccess")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

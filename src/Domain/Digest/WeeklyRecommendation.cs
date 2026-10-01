@@ -9,7 +9,7 @@ namespace LinerNotes.Domain.Digest;
 /// An individual recommended track within a weekly digest.
 /// Persists the complete, structured ScoreBreakdown to ensure explainability is reconstructable verbatim.
 /// </summary>
-public sealed class WeeklyRecommendation : BaseEntity, IAuditableEntity
+public sealed class WeeklyRecommendation : AuditableEntity
 {
     public Guid WeeklyDigestId { get; private set; }
     public Guid UserId { get; private set; }
@@ -19,8 +19,6 @@ public sealed class WeeklyRecommendation : BaseEntity, IAuditableEntity
     public UserFeedback Feedback { get; private set; } = UserFeedback.None;
     public string? FeedbackComment { get; private set; }
     public DateTime? FeedbackGivenAt { get; private set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? LastModifiedAt { get; set; }
 
     // Parameterless constructor for EF Core
     private WeeklyRecommendation()

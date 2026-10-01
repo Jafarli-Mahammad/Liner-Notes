@@ -7,7 +7,7 @@ namespace LinerNotes.Domain.Digest;
 /// <summary>
 /// Aggregate root representing an individual Liner Notes subscriber.
 /// </summary>
-public sealed class User : BaseEntity, IAuditableEntity
+public sealed class User : AuditableEntity
 {
     private readonly List<UserMusicConnection> _connections = new();
     private readonly List<TasteSignal> _tasteSignals = new();
@@ -17,9 +17,6 @@ public sealed class User : BaseEntity, IAuditableEntity
     public DigestDeliveryDay DeliveryDay { get; private set; }
     public int DeliveryHourUtc { get; private set; }
     public DateTime? NextDigestAt { get; private set; }
-    public bool IsDeleted { get; private set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? LastModifiedAt { get; set; }
 
     public IReadOnlyCollection<UserMusicConnection> Connections => _connections.AsReadOnly();
     public IReadOnlyCollection<TasteSignal> TasteSignals => _tasteSignals.AsReadOnly();

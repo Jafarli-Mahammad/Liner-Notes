@@ -8,5 +8,7 @@ public interface IWeeklyDigestRepository : IAsyncRepository<WeeklyDigest>
     Task<WeeklyDigest?> GetByUserIdAndWeekAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WeeklyDigest>> GetRecentDigestsForUserAsync(Guid userId, int count, CancellationToken cancellationToken = default);
     Task<bool> ExistsForUserAndWeekAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default);
+    Task<WeeklyRecommendation?> GetRecommendationByIdAsync(Guid recommendationId, Guid userId, CancellationToken cancellationToken = default);
     void Update(WeeklyDigest digest);
+    void UpdateRecommendation(WeeklyRecommendation recommendation);
 }

@@ -2,7 +2,7 @@ PROGRESS.md
 
 Roadmap and status for V1. Tick a box only after the developer has confirmed it works. After each phase: review together before moving on.
 
-Current phase: 0 (naming/branding, in progress outside the repo)
+Current phase: 1
 
 Phase 0: Name and branding
 Project name
@@ -96,6 +96,10 @@ Whether user feedback modifies only future ranking, or also alters the persisten
 Whether weekly digest recommendations are generated once and persisted, or regenerated when the user opens the site.
 Retention period for raw listening/feedback events versus derived TasteSignals.
 Whether candidate metadata is snapshotted at recommendation time or always resolved from current upstream data.
+ Multi-point recommendation feedback: Replace the coarse Like / Dislike model with a 10-point preference scale for more granular feedback. Keep “Already Know” as a separate 11th choice, since familiarity should not be interpreted as dislike.
+ Guest-first entry experience: Do not make registration the first interaction. New visitors should enter through a clean, polished discovery UI that provides useful content immediately. Account creation should be an optional upgrade rather than a gate. Exact UI to be designed later.
+ Pre-recommendation taste profile: Before a new user enters the Residue recommendation flow, collect lightweight initial taste signals such as preferred genres, artists/bands, favorite music, and related preferences. Exact questions and weighting to be designed later.
+ Progressive personalization: Initial onboarding should collect enough information to make the first recommendation useful without becoming a lengthy questionnaire. Additional taste information should be gathered progressively through interaction with Residue.
 
 * Artist discovery notifications — notify verified artists when their music generates meaningful aggregate discovery through the service; never expose individual listener identities or let artist participation influence Residue ranking — 2026-10-01
 
@@ -110,3 +114,4 @@ Short dated entries for decisions and notable changes (mirrors CHANGELOG for use
 - 2026-09-30: DataAccessLayer finished: PostgreSQL 16+ (via Npgsql) configured, AppDbContext with IAppDbContext, IDataProtectionKeyContext, automatic audit timestamps, complete entity configurations, repositories (User, WeeklyDigest, TasteSignal, Track), InitialCreate migration generated, and 11 unit/model tests passing.
 - 2026-10-01: Named the deterministic recommendation & feedback re-ranking engine "Residue". Added 3 core product pillars to PROGRESS.md (Zero-Friction Deep Links, Hybrid Onboarding, and 3-5 Track High-Precision Batches).
 - 2026-10-02: Integrated DataContext with ASP.NET Core Identity (ApplicationUser in identity schema linked 1:1 to Domain User), generic AsyncRepository<T>, UnitOfWork, DapperPagedRepositoryBase, comprehensive audit trail with soft-delete interceptor in SaveChangesAsync, and NoTracking + SplitQuery EF Core patterns. 43 tests passing.
+- 2026-10-02: ApplicationLayer completed: MediatR 12.4+ CQRS architecture with open generic ValidationBehavior pipeline, FluentValidation validators (enforcing 3-5 hybrid onboarding seeds, delivery schedules, feedback), AutoMapper profiles + zero-allocation MappingExtensions, immutable DTO records (Subscribers, Taste, Digests, GDPR Data Export), and tests/Application.Tests test suite. All 75 tests passing across solution.

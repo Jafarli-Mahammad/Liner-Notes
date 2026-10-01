@@ -48,8 +48,20 @@ public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWee
             .AnyAsync(d => d.UserId == userId && d.Week == week, cancellationToken);
     }
 
+    public async Task<WeeklyRecommendation?> GetRecommendationByIdAsync(Guid recommendationId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DataContext.WeeklyRecommendations
+            .Include(r => r.Track)
+            .FirstOrDefaultAsync(r => r.Id == recommendationId && r.UserId == userId, cancellationToken);
+    }
+
     public void Update(WeeklyDigest digest)
     {
         DataContext.WeeklyDigests.Update(digest);
+    }
+
+    public void UpdateRecommendation(WeeklyRecommendation recommendation)
+    {
+        DataContext.WeeklyRecommendations.Update(recommendation);
     }
 }

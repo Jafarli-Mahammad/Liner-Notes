@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Repository interfaces (`IUserRepository`, `IWeeklyDigestRepository`, `ITasteSignalRepository`, `ITrackRepository`) in `Application` and implementations in `DataAccess`.
   - Initial EF Core migration (`InitialCreate`) with PostgreSQL snapshot.
   - Test suite (`tests/DataAccess.Tests`) with 11 tests verifying model configuration, soft-deletes, relationships, audit timestamps, and architectural isolation.
-  - `src/Web`: Lightweight ASP.NET Core presentation composition root.
+  - `src/Presentation`: Lightweight ASP.NET Core presentation composition root (renamed from `src/Web`).
   - `src/Worker`: Dedicated background service composition root for scheduled batch processing.
   - `tests/Domain.Tests`: Unit test project referencing Domain.
 - **Pure Deterministic Recommendation Scorer (`RecommendationScorer`):**

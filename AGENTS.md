@@ -9,11 +9,11 @@ Structure (Onion; dependencies point inward only)
 - src/Application/ (LinerNotes.Application): MediatR commands/queries + interfaces (IRecommendationSource, IEmailSender, repositories). Orchestration only.
 - src/DataAccess/ (LinerNotes.DataAccess): EF Core (AppDbContext, Entity Configurations, Migrations).
 - src/Infrastructure/ (LinerNotes.Infrastructure): Last.fm/ListenBrainz HTTP clients (HttpClientFactory), email sender, in-memory caching.
-- src/Web/ (LinerNotes.Web): thin ASP.NET Core host. Endpoints, auth wiring, DI root, UI. No scoring logic, no direct upstream API calls.
+- src/Presentation/ (LinerNotes.Presentation): thin ASP.NET Core host. Endpoints, auth wiring, DI root, UI. No scoring logic, no direct upstream API calls.
 - src/Worker/ (LinerNotes.Worker): weekly batch (digest generation + email). Second composition root over the same core.
 - tests/Domain.Tests/ (LinerNotes.Domain.Tests): Domain scorer tests (mandatory); benchmark seed set fixture; architectural validation.
 Conventions
-C# / .NET, EF Core 8, MediatR, async all the way. CQRS handlers, repository interfaces.
+C# / .NET, EF Core 10, MediatR, async all the way. CQRS handlers, repository interfaces.
 Scoring weights are configuration, never hard-coded.
 Every recommendation persists its score breakdown. Explanations come from that data, never generated text.
 Last.fm and ListenBrainz must stay swappable behind the provider abstraction. Upstream terms changes must not touch Domain or Application.

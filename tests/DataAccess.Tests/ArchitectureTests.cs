@@ -14,6 +14,7 @@ public sealed class ArchitectureTests
         var forbiddenPrefixes = new[]
         {
             "LinerNotes.Web",
+            "LinerNotes.Presentation",
             "LinerNotes.Worker"
         };
 

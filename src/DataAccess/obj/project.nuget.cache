@@ -1,10 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "k2NmOad8/Nc=",
+  "dgSpecHash": "WcgaZuy/jGg=",
   "success": true,
   "projectFilePath": "/home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/DataAccess.csproj",
   "expectedPackageFiles": [
+    "/home/mahammadjafarli/.nuget/packages/automapper/13.0.1/automapper.13.0.1.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/dapper/2.1.35/dapper.2.1.35.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/fluentvalidation/11.11.0/fluentvalidation.11.11.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/fluentvalidation.dependencyinjectionextensions/11.11.0/fluentvalidation.dependencyinjectionextensions.11.11.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/mediatr/12.4.1/mediatr.12.4.1.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
@@ -36,5 +39,18 @@
     "/home/mahammadjafarli/.nuget/packages/system.composition.runtime/7.0.0/system.composition.runtime.7.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition.typedparts/7.0.0/system.composition.typedparts.7.0.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'AutoMapper' 13.0.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x",
+      "projectPath": "/home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/DataAccess.csproj",
+      "warningLevel": 1,
+      "filePath": "/home/mahammadjafarli/source/repos/Liner Notes/src/DataAccess/DataAccess.csproj",
+      "libraryId": "AutoMapper",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }

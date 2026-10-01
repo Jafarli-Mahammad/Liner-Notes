@@ -7,5 +7,6 @@ public enum UserFeedback
 {
     None = 0,
     Liked = 1,
-    Disliked = 2
+    Disliked = 2,
+    AlreadyKnown = 3
 }

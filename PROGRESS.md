@@ -72,6 +72,33 @@ Core Product & Retention Pillars (V1 Guidelines)
 2. **Hybrid Onboarding (The Cold-Start Problem)**: Allow power users to connect existing Last.fm / ListenBrainz profiles, while offering casual users a simple 3–5 seed artist/tag selector to start discovering immediately.
 3. **High-Precision Batches (Weekly Retention)**: Limit weekly discovery batches to 3–5 high-confidence picks to avoid overwhelm and recommendation misses, paired with effortless 1-click feedback (thumbs up / thumbs down / "already know this").
 
+ Additional V1 notes
+Recommendation provenance: Store the upstream source(s), source identifiers, retrieval time, and Residue version for every recommendation so a pick can always be reconstructed and explained later.
+Deterministic reproducibility: Given the same user taste snapshot, candidate set, configuration, and Residue version, the same recommendation result should be reproducible.
+Data minimization: Before adding any user-facing feature, define the minimum data required to implement it; do not collect behavioral events merely because they may become useful later.
+Privacy-safe telemetry: Separate product telemetry from personalization data. Operational/product metrics should not silently become recommendation signals.
+Recommendation lifecycle: Store recommendation status explicitly (Generated, Shown, Interacted, Dismissed, Expired) so feedback and digest behavior are not inferred from ambiguous timestamps.
+Already-known suppression: Treat “already know this” as a first-class feedback signal distinct from dislike; suppressing familiar artists should not teach Residue that the artist is disliked.
+Candidate diversity: Prevent weekly batches from collapsing into near-duplicates of the same artist, tag cluster, or upstream source.
+Upstream isolation: A recommendation source outage or API policy change must degrade the system gracefully without changing the Domain layer.
+Source attribution: Keep attribution/provenance attached to candidate data rather than rebuilding it from memory at presentation time.
+Configuration versioning: Persist the effective Residue configuration/version used for a recommendation so score explanations remain valid after weight changes.
+Email idempotency: Weekly digest generation/sending must be safe to retry without sending duplicate digests.
+Unsubscribe enforcement: Unsubscribed users must be excluded at query time, not merely filtered immediately before sending.
+Ideas parking lot
+Privacy-preserving aggregate community statistics — 2026-10-01
+Import/export taste profile independent of account identity — 2026-10-01
+Recommendation source health/status page — 2026-10-01
+User-facing recommendation history and “why this was shown” timeline — 2026-10-01
+Per-source confidence / freshness metadata — 2026-10-01
+Open decisions
+Whether user feedback modifies only future ranking, or also alters the persistent TasteSignal representation.
+Whether weekly digest recommendations are generated once and persisted, or regenerated when the user opens the site.
+Retention period for raw listening/feedback events versus derived TasteSignals.
+Whether candidate metadata is snapshotted at recommendation time or always resolved from current upstream data.
+
+* Artist discovery notifications — notify verified artists when their music generates meaningful aggregate discovery through the service; never expose individual listener identities or let artist participation influence Residue ranking — 2026-10-01
+
 Ideas parking lot
 
 Not in V1. Add anything that comes up mid-build, one line each, with the date.

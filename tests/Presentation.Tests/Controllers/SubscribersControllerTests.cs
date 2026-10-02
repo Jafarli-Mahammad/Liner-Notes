@@ -17,6 +17,7 @@ public class SubscribersControllerTests
 {
     private readonly ISender _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly IAuthService _authService;
     private readonly SubscribersController _controller;
     private readonly Guid _testUserId = Guid.NewGuid();
 
@@ -24,9 +25,10 @@ public class SubscribersControllerTests
     {
         _mediator = Substitute.For<ISender>();
         _currentUser = Substitute.For<ICurrentUserService>();
+        _authService = Substitute.For<IAuthService>();
         _currentUser.UserId.Returns(_testUserId);
 
-        _controller = new SubscribersController();
+        _controller = new SubscribersController(_authService);
 
         var services = new ServiceCollection();
         services.AddSingleton(_mediator);
@@ -70,6 +72,7 @@ public class SubscribersControllerTests
         var result = await _controller.DeleteAccount(CancellationToken.None);
 
         Assert.IsType<NoContentResult>(result);
+        await _authService.Received(1).DeleteUserAsync(_testUserId);
     }
 
     [Fact]

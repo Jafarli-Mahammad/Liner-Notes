@@ -47,6 +47,10 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
 
         if (_tasteSignalRepository is not null)
         {
+            // Idempotent signal replacement: purge existing signals for this recommendation to prevent signal accumulation or contradiction
+            var contextPrefix = $"rec:{recommendation.Id}";
+            await _tasteSignalRepository.DeleteSignalsByContextPrefixAsync(request.UserId, contextPrefix, cancellationToken);
+
             var signals = new List<TasteSignal>();
             var artistName = recommendation.Track.ArtistName;
             var trackKey = recommendation.Track.TrackKey;
@@ -60,7 +64,7 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                     artistName,
                     weight,
                     TasteSignalSource.RecommendationLike,
-                    $"Liked recommendation #{recommendation.Rank}: {recommendation.Track.Title}"));
+                    $"{contextPrefix} - Liked recommendation #{recommendation.Rank}: {recommendation.Track.Title}"));
 
                 if (recommendation.ScoreBreakdown?.MatchedTags is not null)
                 {
@@ -72,7 +76,7 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                             matchedTag.TagName,
                             weight * 0.5,
                             TasteSignalSource.RecommendationLike,
-                            $"Nudged tag from liked recommendation #{recommendation.Rank}"));
+                            $"{contextPrefix} - Nudged tag from liked recommendation #{recommendation.Rank}"));
                     }
                 }
             }
@@ -85,7 +89,7 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                     trackKey,
                     -penalty,
                     TasteSignalSource.RecommendationDislike,
-                    $"Disliked recommendation #{recommendation.Rank}: {recommendation.Track.Title}"));
+                    $"{contextPrefix} - Disliked recommendation #{recommendation.Rank}: {recommendation.Track.Title}"));
             }
             else if (request.Feedback == UserFeedback.AlreadyKnown)
             {
@@ -95,14 +99,14 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                     trackKey,
                     0.0,
                     TasteSignalSource.RecommendationAlreadyKnown,
-                    $"Marked familiar: {recommendation.Track.Title} by {artistName}"));
+                    $"{contextPrefix} - Marked familiar: {recommendation.Track.Title} by {artistName}"));
                 signals.Add(new TasteSignal(
                     request.UserId,
                     TasteTargetType.Artist,
                     artistName,
                     0.0,
                     TasteSignalSource.RecommendationAlreadyKnown,
-                    $"Marked artist familiar: {artistName}"));
+                    $"{contextPrefix} - Marked artist familiar: {artistName}"));
             }
 
             if (signals.Count > 0)

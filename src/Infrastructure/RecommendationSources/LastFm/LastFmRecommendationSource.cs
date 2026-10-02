@@ -60,40 +60,27 @@ public sealed class LastFmRecommendationSource : IRecommendationSource
                     var topTracks = await _apiClient.GetArtistTopTracksAsync(similar.Name, 2, cancellationToken)
                         .ConfigureAwait(false);
 
-                    if (topTracks.Count == 0)
+                    foreach (var track in topTracks)
                     {
-                        // Fallback placeholder track if no top tracks returned
-                        string key = $"{similar.Name.ToLowerInvariant()}:top-pick";
+                        string key = !string.IsNullOrEmpty(track.Mbid)
+                            ? $"mbid:{track.Mbid.ToLowerInvariant()}"
+                            : $"{similar.Name.ToLowerInvariant()}:{track.Name.ToLowerInvariant()}";
+
                         if (seenKeys.Add(key))
                         {
                             candidates.Add(new RawCandidateTrack(
-                                Title: $"{similar.Name} Top Pick",
+                                Title: track.Name,
                                 ArtistName: similar.Name,
-                                Mbid: similar.Mbid,
+                                Mbid: track.Mbid,
                                 UpstreamScore: matchScore,
                                 SourceId: "lastfm:artist.getsimilar"));
                         }
                     }
-                    else
-                    {
-                        foreach (var track in topTracks)
-                        {
-                            string key = !string.IsNullOrEmpty(track.Mbid)
-                                ? $"mbid:{track.Mbid.ToLowerInvariant()}"
-                                : $"{similar.Name.ToLowerInvariant()}:{track.Name.ToLowerInvariant()}";
-
-                            if (seenKeys.Add(key))
-                            {
-                                candidates.Add(new RawCandidateTrack(
-                                    Title: track.Name,
-                                    ArtistName: similar.Name,
-                                    Mbid: track.Mbid ?? similar.Mbid,
-                                    UpstreamScore: matchScore,
-                                    SourceId: "lastfm:artist.getsimilar"));
-                            }
-                        }
-                    }
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -144,6 +131,10 @@ public sealed class LastFmRecommendationSource : IRecommendationSource
                             SourceId: "lastfm:tag.gettoptracks"));
                     }
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

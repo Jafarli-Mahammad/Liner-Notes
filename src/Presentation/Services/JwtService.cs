@@ -18,7 +18,11 @@ public sealed class JwtService : IJwtService
 
     public JwtService(IOptions<JwtOptions> jwtOptions)
     {
-        _jwtOptions = jwtOptions.Value;
+        _jwtOptions = jwtOptions?.Value ?? throw new ArgumentNullException(nameof(jwtOptions));
+        if (string.IsNullOrWhiteSpace(_jwtOptions.SecretKey) || Encoding.UTF8.GetByteCount(_jwtOptions.SecretKey) < 32)
+        {
+            throw new InvalidOperationException("Jwt:SecretKey configuration is missing or must be at least 32 bytes (256 bits).");
+        }
     }
 
     public string GenerateAccessToken(

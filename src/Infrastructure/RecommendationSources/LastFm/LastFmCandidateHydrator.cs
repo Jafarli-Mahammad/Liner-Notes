@@ -110,6 +110,10 @@ public sealed class LastFmCandidateHydrator : ICandidateHydrator
                 var candidate = new CandidateTrack(track, tagVector, popularity);
                 result.Add(candidate);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to hydrate candidate track '{Title}' by '{Artist}'", raw.Title, raw.ArtistName);

@@ -4,6 +4,25 @@ All notable changes to the Liner Notes project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1] - 2026-10-02
+
+### Security & Hardening
+- **Secret Zeroization & JWT Validation (P0/Finding 1):** Removed hardcoded development JWT signing key from committed `appsettings.json` and eliminated fallback signing keys. Enforced strict 256-bit (>= 32-byte) key validation in `DependencyInjection` and `JwtService`, backed by .NET user-secrets.
+- **Refresh Token Validation & Rotation (P1/Finding 2):** Bound refresh tokens to user identity using ASP.NET Core Identity authentication tokens (`UserManager.SetAuthenticationTokenAsync`/`GetAuthenticationTokenAsync`). Enforced strict verification on `/api/auth/refresh` and automatic token rotation.
+- **Atomic Registration & Rollback (P1/Finding 3):** Added compensating rollback to `AuthController.Register` to purge orphaned Identity credentials if domain subscriber registration or taste seeding fails.
+- **Anti-XSS Protection (P1 & P2/Findings 12 & 13):** Added `escapeHtml` sanitization to all track metadata (title, artist, album) in `app.js` and migrated raw JSON export viewer from `innerHTML` to safe DOM `textContent`.
+- **Export Authorization (P1/Finding 6):** Enforced authentication verification on `/api/export/my-data` and refactored client export download to use authenticated `Bearer` token requests with blob streaming.
+- **Identity Cleanup on Account Deletion (P1/Finding 9):** Coordinated deletion of ASP.NET Core Identity credentials when purging subscriber profiles via `DELETE /api/subscribers/me`.
+
+### Fixed & Improved
+- **EF Core Database Migration (P1/Finding 4):** Generated and verified migration `AddRatingToWeeklyRecommendation` adding the `Rating` column to `WeeklyRecommendations`.
+- **JSON Enum Binding (P1/Finding 5):** Added `JsonStringEnumConverter` to `UserFeedback` and controller JSON options to reliably bind feedback strings (`Liked`, `Disliked`, `AlreadyKnown`).
+- **Data Integrity in Upstream Mapping (P1/Findings 7 & 8):** Prevented artist MBID propagation onto track identifiers and eliminated placeholder/invented songs when upstream results are empty.
+- **Idempotent Feedback & Contradiction Resolution (P1/Findings 10 & 11):** Purged existing signals before writing updated preferences, preventing duplicate signal accumulation and teaching conflicting tastes.
+- **Digest Contract Alignment (P2/Finding 14):** Aligned frontend DTO mapping with backend schema (`noveltyBoost`, `matchedTags`, `tagName`, `feedback`, `rating`).
+- **Memory Cache Bounding (P2/Finding 15):** Capped in-memory cache size (`SizeLimit = 10,000`, `CompactionPercentage = 0.20`) with explicit entry size weights (`Size = 1`).
+- **Deterministic Cancellation (P2/Finding 16):** Propagated `OperationCanceledException` across candidate discovery and hydration to prevent returning partial recommendation results upon cancellation.
+
 ## [0.4.0] - 2026-10-02
 
 ### Added

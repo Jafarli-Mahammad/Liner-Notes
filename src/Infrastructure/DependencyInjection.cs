@@ -12,7 +12,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddMemoryCache();
+        // Bound upstream cache to prevent unbounded growth and process memory exhaustion
+        services.AddMemoryCache(options =>
+        {
+            options.SizeLimit = 10_000;
+            options.CompactionPercentage = 0.20;
+        });
 
         // Bind Last.fm Options
         services.Configure<LastFmOptions>(configuration.GetSection(LastFmOptions.SectionName));

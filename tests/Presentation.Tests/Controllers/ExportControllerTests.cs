@@ -93,4 +93,16 @@ public class ExportControllerTests
         Assert.Contains("attachment", header);
         Assert.Contains(_testUserId.ToString(), header);
     }
+
+    [Fact]
+    public async Task ExportMyData_Unauthenticated_ReturnsUnauthorized()
+    {
+        _currentUser.UserId.Returns(Guid.Empty);
+
+        var result = await _controller.ExportMyData(download: false, CancellationToken.None);
+
+        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+        var problem = Assert.IsType<ProblemDetails>(unauthorizedResult.Value);
+        Assert.Equal(StatusCodes.Status401Unauthorized, problem.Status);
+    }
 }

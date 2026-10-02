@@ -24,10 +24,12 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
-        // Fallback default key if none configured for dev
-        if (string.IsNullOrWhiteSpace(jwtOptions.SecretKey))
+        // Enforce required secure key
+        if (string.IsNullOrWhiteSpace(jwtOptions.SecretKey) || Encoding.UTF8.GetByteCount(jwtOptions.SecretKey) < 32)
         {
-            jwtOptions.SecretKey = "LinerNotes_Super_Secret_Development_Key_For_Jwt_Authentication_Must_Be_Long_Enough!";
+            throw new InvalidOperationException(
+                "Jwt:SecretKey configuration is missing or insufficiently secure (must be at least 32 bytes / 256 bits). " +
+                "Provide a secure key via user-secrets (dotnet user-secrets set \"Jwt:SecretKey\" \"<key>\") or environment variable \"Jwt__SecretKey\".");
         }
 
         // 2. Core Presentation Services

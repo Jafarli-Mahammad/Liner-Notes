@@ -142,4 +142,99 @@ public class AuthControllerTests
         var problem = Assert.IsType<ProblemDetails>(unauthorizedResult.Value);
         Assert.Equal(StatusCodes.Status401Unauthorized, problem.Status);
     }
+
+    [Fact]
+    public async Task Register_WhenDomainRegistrationFails_PerformsCompensatingRollback()
+    {
+        var request = new RegisterRequest(
+            UserName: "failinguser",
+            Email: "fail@example.com",
+            Password: "password123",
+            TimeZone: "UTC",
+            DeliveryDay: DigestDeliveryDay.Sunday,
+            DeliveryHourUtc: 8);
+
+        var userId = Guid.NewGuid();
+        _authService.RegisterAsync(request.UserName, request.Email, request.Password)
+            .Returns(userId);
+
+        _mediator.Send(Arg.Any<RegisterSubscriberCommand>(), Arg.Any<CancellationToken>())
+            .Returns<SubscriberDto>(_ => throw new InvalidOperationException("Database constraint error"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _controller.Register(request, CancellationToken.None));
+
+        await _authService.Received(1).DeleteUserAsync(userId);
+    }
+
+    [Fact]
+    public async Task Refresh_ValidRefreshToken_RotatesAndReturnsOk()
+    {
+        var userId = Guid.NewGuid();
+        var claims = new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId.ToString()),
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "testuser")
+        };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+        _jwtService.GetPrincipalFromExpiredToken("valid-expired-access-token")
+            .Returns(principal);
+
+        _authService.ValidateRefreshTokenAsync(userId, "valid-refresh-token")
+            .Returns(true);
+
+        var subscriberDto = new SubscriberDto(
+            Id: userId,
+            Email: "test@example.com",
+            TimeZone: "UTC",
+            DeliveryDay: DigestDeliveryDay.Sunday,
+            DeliveryHourUtc: 8,
+            NextDigestAt: null,
+            CreatedAt: DateTime.UtcNow);
+
+        _mediator.Send(Arg.Is<GetSubscriberProfileQuery>(q => q.UserId == userId), Arg.Any<CancellationToken>())
+            .Returns(subscriberDto);
+
+        _jwtService.GenerateAccessToken(userId, "testuser", "test@example.com")
+            .Returns("new-access-token");
+        _jwtService.GenerateRefreshToken()
+            .Returns("new-refresh-token");
+
+        var request = new RefreshTokenRequest("valid-expired-access-token", "valid-refresh-token");
+        var result = await _controller.Refresh(request, CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<AuthResponse>(okResult.Value);
+        Assert.Equal("new-access-token", response.AccessToken);
+        Assert.Equal("new-refresh-token", response.RefreshToken);
+
+        await _authService.Received(1).StoreRefreshTokenAsync(userId, "new-refresh-token");
+    }
+
+    [Fact]
+    public async Task Refresh_InvalidRefreshToken_ReturnsUnauthorized()
+    {
+        var userId = Guid.NewGuid();
+        var claims = new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId.ToString())
+        };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+        _jwtService.GetPrincipalFromExpiredToken("valid-expired-access-token")
+            .Returns(principal);
+
+        _authService.ValidateRefreshTokenAsync(userId, "invalid-refresh-token")
+            .Returns(false);
+
+        var request = new RefreshTokenRequest("valid-expired-access-token", "invalid-refresh-token");
+        var result = await _controller.Refresh(request, CancellationToken.None);
+
+        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+        var problem = Assert.IsType<ProblemDetails>(unauthorizedResult.Value);
+        Assert.Equal(StatusCodes.Status401Unauthorized, problem.Status);
+    }
 }

@@ -12,4 +12,7 @@ public interface IAuthService
     Task<(Guid UserId, string UserName, string Email)?> GetUserInfoByNameAsync(string userName);
     Task<(bool Succeeded, string[] Errors)> ResetPasswordAsync(string email, string token, string newPassword);
     Task<bool> AddToRoleAsync(Guid userId, string role);
+    Task<bool> ValidateRefreshTokenAsync(Guid userId, string refreshToken);
+    Task StoreRefreshTokenAsync(Guid userId, string refreshToken);
+    Task<bool> DeleteUserAsync(Guid userId);
 }

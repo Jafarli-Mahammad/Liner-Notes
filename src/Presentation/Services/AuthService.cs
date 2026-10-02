@@ -117,4 +117,39 @@ public sealed class AuthService : IAuthService
         var result = await _userManager.AddToRoleAsync(user, role);
         return result.Succeeded;
     }
+
+    public async Task StoreRefreshTokenAsync(Guid userId, string refreshToken)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            throw new InvalidOperationException($"User with ID '{userId}' not found.");
+        }
+
+        await _userManager.SetAuthenticationTokenAsync(user, "LinerNotes", "RefreshToken", refreshToken);
+    }
+
+    public async Task<bool> ValidateRefreshTokenAsync(Guid userId, string refreshToken)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return false;
+        }
+
+        var storedToken = await _userManager.GetAuthenticationTokenAsync(user, "LinerNotes", "RefreshToken");
+        return !string.IsNullOrEmpty(storedToken) && string.Equals(storedToken, refreshToken, StringComparison.Ordinal);
+    }
+
+    public async Task<bool> DeleteUserAsync(Guid userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return false;
+        }
+
+        var result = await _userManager.DeleteAsync(user);
+        return result.Succeeded;
+    }
 }

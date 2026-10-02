@@ -8,6 +8,16 @@ const state = {
   activeTab: 'discovery'
 };
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const sampleGuestPicks = [
   {
     id: "00000000-0000-0000-0000-000000000001",
@@ -89,31 +99,36 @@ function renderScoreBreakdown(item) {
           <span class="val" style="color: var(--accent-primary);">${item.score ? item.score.toFixed(3) : '0.000'}</span>
         </div>
       </div>
-      ${item.topTags ? `<div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Matched tags: ${item.topTags.join(', ')}</div>` : ''}
+      ${item.topTags ? `<div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Matched tags: ${item.topTags.map(escapeHtml).join(', ')}</div>` : ''}
     </div>
   `;
 }
 
 function renderTrackCard(track, isGuest = false) {
+  const safeId = escapeHtml(track.id);
+  const safeTitle = escapeHtml(track.title);
+  const safeArtist = escapeHtml(track.artist);
+  const safeAlbum = escapeHtml(track.album || '');
+
   return `
-    <div class="card" id="card-${track.id}">
+    <div class="card" id="card-${safeId}">
       <div class="card-header">
         <div>
-          <div class="card-title">${track.title}</div>
-          <div class="track-artist">${track.artist}</div>
-          <div class="track-meta">${track.album || ''}</div>
+          <div class="card-title">${safeTitle}</div>
+          <div class="track-artist">${safeArtist}</div>
+          <div class="track-meta">${safeAlbum}</div>
         </div>
       </div>
       ${buildDeepLinks(track.artist, track.title)}
       ${renderScoreBreakdown(track)}
       <div class="feedback-actions">
-        <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" onclick="submitFeedback('${track.id}', 'Liked', null, ${isGuest})">
+        <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'Liked', null, ${isGuest})">
           👍 Like
         </button>
-        <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" onclick="submitFeedback('${track.id}', 'Disliked', null, ${isGuest})">
+        <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'Disliked', null, ${isGuest})">
           👎 Dislike
         </button>
-        <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" onclick="submitFeedback('${track.id}', 'AlreadyKnown', null, ${isGuest})">
+        <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'AlreadyKnown', null, ${isGuest})">
           🎧 Already Know This
         </button>
       </div>
@@ -122,7 +137,7 @@ function renderTrackCard(track, isGuest = false) {
         ${[1,2,3,4,5,6,7,8,9,10].map(r => `
           <button type="button" class="btn-rating-num ${track.rating === r ? 'active' : ''}" 
                   style="padding: 2px 7px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: ${track.rating === r ? 'var(--accent-primary)' : 'var(--bg-secondary)'}; color: ${track.rating === r ? '#fff' : 'var(--text-color)'}; cursor: pointer;"
-                  onclick="submitFeedback('${track.id}', '${r >= 7 ? 'Liked' : (r <= 3 ? 'Disliked' : 'None')}', ${r}, ${isGuest})">${r}</button>
+                  onclick="submitFeedback('${safeId}', '${r >= 7 ? 'Liked' : (r <= 3 ? 'Disliked' : 'None')}', ${r}, ${isGuest})">${r}</button>
         `).join('')}
       </div>
     </div>
@@ -172,19 +187,20 @@ async function loadDiscovery() {
       score: r.scoreBreakdown?.finalScore || 0,
       tagScore: r.scoreBreakdown?.tagSimilarityScore || 0,
       popularityPenalty: r.scoreBreakdown?.popularityPenalty || 0,
-      noveltyBoost: r.scoreBreakdown?.noveltyScore || 0,
-      topTags: (r.scoreBreakdown?.topMatchedTags || []).map(t => t.tag),
-      feedback: r.userFeedback
+      noveltyBoost: r.scoreBreakdown?.noveltyBoost || 0,
+      topTags: (r.scoreBreakdown?.matchedTags || []).map(t => t.tagName),
+      feedback: r.feedback,
+      rating: r.rating
     }));
 
     container.innerHTML = `
       <div style="margin-bottom: 1rem; color: var(--text-muted);">
-        Showing Weekly Digest for <strong>${digest.week || digest.isoWeek}</strong> (${items.length} picks)
+        Showing Weekly Digest for <strong>${escapeHtml(digest.week)}</strong> (${items.length} picks)
       </div>
       ${items.map(p => renderTrackCard(p, false)).join('')}
     `;
   } catch (err) {
-    container.innerHTML = `<p style="color: var(--accent-danger);">Error loading digest: ${err.message}</p>`;
+    container.innerHTML = `<p style="color: var(--accent-danger);">Error loading digest: ${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -334,12 +350,12 @@ async function loadYourData() {
     container.innerHTML = `
       <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <strong>Export Version:</strong> ${data.exportVersion} | 
-          <strong>Generated:</strong> ${new Date(data.exportedAtUtc).toLocaleString()}
+          <strong>Export Version:</strong> ${escapeHtml(data.exportVersion)} | 
+          <strong>Generated:</strong> ${escapeHtml(new Date(data.exportedAtUtc).toLocaleString())}
         </div>
         <button class="btn-primary" onclick="downloadExport()">Download JSON Export</button>
       </div>
-      <pre class="json-dump">${JSON.stringify(data, null, 2)}</pre>
+      <pre id="json-dump-pre" class="json-dump"></pre>
       <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
         <h4>Danger Zone</h4>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
@@ -348,14 +364,35 @@ async function loadYourData() {
         <button class="btn-danger" onclick="deleteAccount()">Delete My Account</button>
       </div>
     `;
+
+    const pre = document.getElementById('json-dump-pre');
+    if (pre) {
+      pre.textContent = JSON.stringify(data, null, 2);
+    }
   } catch (err) {
-    container.innerHTML = `<p style="color: var(--accent-danger);">Error: ${err.message}</p>`;
+    container.innerHTML = `<p style="color: var(--accent-danger);">Error: ${escapeHtml(err.message)}</p>`;
   }
 }
 
-function downloadExport() {
+async function downloadExport() {
   if (!state.token) return;
-  window.open(`${API_BASE}/export/my-data?download=true`, '_blank');
+  try {
+    const res = await fetch(`${API_BASE}/export/my-data?download=true`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    if (!res.ok) throw new Error('Failed to retrieve authenticated export file');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `linernotes-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  } catch (err) {
+    alert('Export download failed: ' + err.message);
+  }
 }
 
 async function deleteAccount() {

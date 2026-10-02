@@ -21,10 +21,14 @@ builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddPresentation(builder.Configuration);
 
-// Add Controllers with RFC 7807 global exception filter
+// Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ApiExceptionFilterAttribute>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 // CORS for web client access

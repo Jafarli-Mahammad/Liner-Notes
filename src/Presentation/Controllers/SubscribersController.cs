@@ -1,6 +1,7 @@
 using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Application.Features.Subscribers.Commands.DeleteUserAccount;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
+using LinerNotes.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,12 @@ namespace LinerNotes.Presentation.Controllers;
 [Authorize]
 public sealed class SubscribersController : ApiControllerBase
 {
+    private readonly IAuthService _authService;
+
+    public SubscribersController(IAuthService authService)
+    {
+        _authService = authService;
+    }
     /// <summary>
     /// Gets the current subscriber's profile and discovery settings.
     /// </summary>
@@ -55,6 +62,9 @@ public sealed class SubscribersController : ApiControllerBase
                 Status = StatusCodes.Status404NotFound
             });
         }
+
+        // Irreversibly delete Identity credentials alongside domain profile
+        await _authService.DeleteUserAsync(CurrentUser.UserId);
 
         return NoContent();
     }

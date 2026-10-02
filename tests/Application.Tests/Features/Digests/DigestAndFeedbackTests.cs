@@ -215,6 +215,11 @@ public class DigestAndFeedbackTests
         Assert.Equal(9, recommendation.Rating);
         Assert.Equal(UserFeedback.Liked, recommendation.Feedback);
 
+        await tasteRepo.Received(1).DeleteSignalsByContextPrefixAsync(
+            userId,
+            $"rec:{recId}",
+            Arg.Any<CancellationToken>());
+
         await tasteRepo.Received(1).AddRangeAsync(
             Arg.Is<IEnumerable<LinerNotes.Domain.Taste.TasteSignal>>(signals =>
                 signals.Any(s => s.TargetType == TasteTargetType.Artist && s.TargetValue == "Joy Division") &&

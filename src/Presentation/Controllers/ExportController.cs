@@ -23,7 +23,26 @@ public sealed class ExportController : ApiControllerBase
         [FromQuery] bool download = false,
         CancellationToken cancellationToken = default)
     {
+        if (CurrentUser.UserId == Guid.Empty)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Unauthorized",
+                Detail = "Authentication is required to export personal data.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
         var export = await Mediator.Send(new GetUserDataExportQuery(CurrentUser.UserId), cancellationToken);
+        if (export is null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Not Found",
+                Detail = "No subscriber data was found to export.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
 
         if (download)
         {

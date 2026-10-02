@@ -92,7 +92,11 @@ public sealed class LastFmApiClient : ILastFmApiClient
             CacheResult(cacheKey, result);
             return result;
         }
-        catch (Exception ex) when (IsTransientOrNetwork(ex) && _options.Mode == LastFmClientMode.Hybrid)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsTransientOrNetwork(ex, cancellationToken) && _options.Mode == LastFmClientMode.Hybrid)
         {
             _logger.LogWarning(ex, "Failed to call Last.fm artist.getsimilar for {Artist}; falling back to fixture.", artistName);
             return LastFmFixtureProvider.GetSimilarArtists(artistName).Take(limit).ToList();
@@ -157,7 +161,11 @@ public sealed class LastFmApiClient : ILastFmApiClient
             CacheResult(cacheKey, result);
             return result;
         }
-        catch (Exception ex) when (IsTransientOrNetwork(ex) && _options.Mode == LastFmClientMode.Hybrid)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsTransientOrNetwork(ex, cancellationToken) && _options.Mode == LastFmClientMode.Hybrid)
         {
             _logger.LogWarning(ex, "Failed to call Last.fm artist.gettoptags for {Artist}; falling back to fixture.", artistName);
             return LastFmFixtureProvider.GetArtistTopTags(artistName).Take(limit).ToList();
@@ -222,7 +230,11 @@ public sealed class LastFmApiClient : ILastFmApiClient
             CacheResult(cacheKey, result);
             return result;
         }
-        catch (Exception ex) when (IsTransientOrNetwork(ex) && _options.Mode == LastFmClientMode.Hybrid)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsTransientOrNetwork(ex, cancellationToken) && _options.Mode == LastFmClientMode.Hybrid)
         {
             _logger.LogWarning(ex, "Failed to call Last.fm artist.gettoptracks for {Artist}; falling back to fixture.", artistName);
             return LastFmFixtureProvider.GetArtistTopTracks(artistName).Take(limit).ToList();
@@ -286,7 +298,11 @@ public sealed class LastFmApiClient : ILastFmApiClient
             CacheResult(cacheKey, result);
             return result;
         }
-        catch (Exception ex) when (IsTransientOrNetwork(ex) && _options.Mode == LastFmClientMode.Hybrid)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsTransientOrNetwork(ex, cancellationToken) && _options.Mode == LastFmClientMode.Hybrid)
         {
             _logger.LogWarning(ex, "Failed to call Last.fm tag.gettoptracks for {Tag}; falling back to fixture.", tag);
             return LastFmFixtureProvider.GetTagTopTracks(tag).Take(limit).ToList();
@@ -336,13 +352,19 @@ public sealed class LastFmApiClient : ILastFmApiClient
         var cacheEntryOptions = new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(_options.CacheDurationHours),
-            SlidingExpiration = TimeSpan.FromHours(4)
+            SlidingExpiration = TimeSpan.FromHours(4),
+            Size = 1
         };
         _cache.Set(key, value, cacheEntryOptions);
     }
 
-    private static bool IsTransientOrNetwork(Exception ex) =>
-        ex is HttpRequestException or TimeoutException or TaskCanceledException;
+    private static bool IsTransientOrNetwork(Exception ex, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return false;
+
+        return ex is HttpRequestException or TimeoutException;
+    }
 
     private static LastFmArtistSummary? ParseArtistSummary(JsonElement element)
     {

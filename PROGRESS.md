@@ -62,7 +62,7 @@ Copy reviewed for overclaims (no "new algorithm", clearly attributes candidates 
 Privacy copy matches what the code stores
 Open decisions (raise when relevant, don't decide silently)
 Taste seeding: Hybrid approach (Last.fm/ListenBrainz sync + manual 3–5 artist picks fallback) to eliminate the cold-start trap
-Primary upstream in V1 and how to blend both
+Primary upstream in V1: Resolved (2026-10-02) -> Last.fm as primary candidate source in Phase 2, keeping ListenBrainz swappable behind IRecommendationSource in Phase 3
 Project name, branding, license
 Email provider and hosting (verify first)
 ML.NET matrix factorization: V2 only, and only with real feedback data
@@ -71,6 +71,24 @@ Core Product & Retention Pillars (V1 Guidelines)
 1. **Zero-Friction Listening (The "Copy-Paste" Problem)**: Every pick in the email and web UI must feature direct 1-click deep-links (YouTube, Spotify, Bandcamp, Apple Music search links) so users don't have to manually search in streaming apps.
 2. **Hybrid Onboarding (The Cold-Start Problem)**: Allow power users to connect existing Last.fm / ListenBrainz profiles, while offering casual users a simple 3–5 seed artist/tag selector to start discovering immediately.
 3. **High-Precision Batches (Weekly Retention)**: Limit weekly discovery batches to 3–5 high-confidence picks to avoid overwhelm and recommendation misses, paired with effortless 1-click feedback (thumbs up / thumbs down / "already know this").
+
+Residue Candidate Ingestion & Scoring Pipeline (Approach 1: Separated Assembly Line)
+1. **User Taste Materialization (`ITasteProfileMaterializer`)**:
+   - Fetches the user's persisted `TasteSignal` entities (seed artists, seed tags, feedback history).
+   - Collapses signals into a normalized `WeightedTagVector`, `FamiliarArtistNames`, and `RejectedArtistNames` to build an active `UserTasteProfile`.
+2. **Candidate Discovery (`IRecommendationSource`)**:
+   - Input: User's top seed artists/tags.
+   - Action: `LastFmRecommendationSource` calls `artist.getSimilar` and `tag.getTopTracks` behind a Token Bucket rate limiter (max 4 req/sec, compliant with fair-use) with polite response caching.
+   - Output: Raw candidates (`RawCandidateTrack(string Title, string ArtistName, string? Mbid, double UpstreamScore)`).
+3. **Candidate Tag Hydration & Enrichment (`ICandidateHydrator`)**:
+   - Resolves genre/style tags for candidate artists/tracks from cached `artist.getTopTags` responses.
+   - Constructs a domain `CandidateTrack` populated with its `WeightedTagVector` and normalized `GlobalPopularity` (0.0–1.0).
+4. **Pure Residue Scoring & Ranking (`RecommendationScorer`)**:
+   - Runs deterministic 4-part scoring (Cosine similarity, Popularity penalty, Novelty boost, Feedback penalty).
+   - Produces an explainable `ScoreBreakdown` per pick.
+   - Deterministically ranks candidates and extracts the top 3–5 high-precision picks for the weekly digest.
+5. **Persistence & Provenance**:
+   - Saves the chosen recommendations in `WeeklyDigest` with stored `ScoreBreakdown`, upstream source ID, timestamp, and Residue version (`"residue-v1"`).
 
  Additional V1 notes
 Recommendation provenance: Store the upstream source(s), source identifiers, retrieval time, and Residue version for every recommendation so a pick can always be reconstructed and explained later.
@@ -115,3 +133,5 @@ Short dated entries for decisions and notable changes (mirrors CHANGELOG for use
 - 2026-10-01: Named the deterministic recommendation & feedback re-ranking engine "Residue". Added 3 core product pillars to PROGRESS.md (Zero-Friction Deep Links, Hybrid Onboarding, and 3-5 Track High-Precision Batches).
 - 2026-10-02: Integrated DataContext with ASP.NET Core Identity (ApplicationUser in identity schema linked 1:1 to Domain User), generic AsyncRepository<T>, UnitOfWork, DapperPagedRepositoryBase, comprehensive audit trail with soft-delete interceptor in SaveChangesAsync, and NoTracking + SplitQuery EF Core patterns. 43 tests passing.
 - 2026-10-02: ApplicationLayer completed: MediatR 12.4+ CQRS architecture with open generic ValidationBehavior pipeline, FluentValidation validators (enforcing 3-5 hybrid onboarding seeds, delivery schedules, feedback), AutoMapper profiles + zero-allocation MappingExtensions, immutable DTO records (Subscribers, Taste, Digests, GDPR Data Export), and tests/Application.Tests test suite. All 75 tests passing across solution.
+- 2026-10-02: PresentationLayer completed: ASP.NET Core 10 composition root with JWT Bearer authentication, Identity integration, RFC 7807 ProblemDetails filter, controllers (Auth, Subscribers, Taste, Digests, Export), OpenAPI/Swagger, HealthChecks, guest-first web dashboard in wwwroot (1-click deep links, score breakdown inspector, taste seeding, GDPR data export), and tests/Presentation.Tests test suite. All 100 tests passing across solution.
+- 2026-10-02: Architecture decision finalized for Residue pipeline: Adopted Approach 1 (Separated Assembly Line: Taste Materializer -> IRecommendationSource [Last.fm primary in Phase 2, ListenBrainz swappable in Phase 3] -> ICandidateHydrator with cached tag vectors -> pure RecommendationScorer.Rank -> WeeklyDigest).

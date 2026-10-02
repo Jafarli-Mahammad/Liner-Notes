@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liner Notes — Transparent Music Discovery</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span>🎵 Liner Notes</span>
+      <span class="badge">V1 Beta</span>
+    </div>
+    <nav>
+      <button id="nav-discovery" class="active" onclick="switchTab('discovery')">Weekly Discovery</button>
+      <button id="nav-seeding" onclick="switchTab('seeding')">Taste Seeding</button>
+      <button id="nav-your-data" onclick="switchTab('your-data')">Your Data & Privacy</button>
+      <button id="nav-auth" onclick="switchTab('auth')">Account</button>
+    </nav>
+    <div class="auth-badge" id="auth-status"></div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>Your Taste, Explained and Owned by You</h1>
+      <p>A weekly music discovery digest where every pick shows exactly why it was chosen. Anti-popularity scoring, 1-click deep-links, and complete data sovereignty.</p>
+    </div>
+
+    <!-- Discovery Tab -->
+    <section id="tab-discovery" class="tab-pane active">
+      <div id="discovery-container"></div>
+    </section>
+
+    <!-- Taste Seeding Tab (Hybrid Onboarding) -->
+    <section id="tab-seeding" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Hybrid Taste Seeding</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Select 3–5 initial seed tags and/or artists to calibrate our deterministic Residue recommendation engine without the cold-start trap.
+            </p>
+          </div>
+          <span id="seed-count" style="font-weight: 600; color: var(--accent-primary);">0 / 3–5 seeds selected</span>
+        </div>
+
+        <div class="form-group">
+          <label>Popular Taste Tags (Click to toggle)</label>
+          <div class="tag-cloud">
+            <button type="button" class="tag-btn" data-tag="post-punk" onclick="toggleTag('post-punk')">post-punk</button>
+            <button type="button" class="tag-btn" data-tag="trip-hop" onclick="toggleTag('trip-hop')">trip-hop</button>
+            <button type="button" class="tag-btn" data-tag="shoegaze" onclick="toggleTag('shoegaze')">shoegaze</button>
+            <button type="button" class="tag-btn" data-tag="krautrock" onclick="toggleTag('krautrock')">krautrock</button>
+            <button type="button" class="tag-btn" data-tag="idm" onclick="toggleTag('idm')">idm</button>
+            <button type="button" class="tag-btn" data-tag="ambient" onclick="toggleTag('ambient')">ambient</button>
+            <button type="button" class="tag-btn" data-tag="synthwave" onclick="toggleTag('synthwave')">synthwave</button>
+            <button type="button" class="tag-btn" data-tag="math rock" onclick="toggleTag('math rock')">math rock</button>
+            <button type="button" class="tag-btn" data-tag="dreampop" onclick="toggleTag('dreampop')">dreampop</button>
+            <button type="button" class="tag-btn" data-tag="dark ambient" onclick="toggleTag('dark ambient')">dark ambient</button>
+            <button type="button" class="tag-btn" data-tag="anatolian rock" onclick="toggleTag('anatolian rock')">anatolian rock</button>
+            <button type="button" class="tag-btn" data-tag="jazz fusion" onclick="toggleTag('jazz fusion')">jazz fusion</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="seed-artists">Favorite Artists (Optional, comma-separated)</label>
+          <input type="text" id="seed-artists" placeholder="e.g. Aphex Twin, Slowdive, Massive Attack">
+        </div>
+
+        <button class="btn-primary" onclick="submitSeeds()">Save Seeds & Calibrate Profile</button>
+      </div>
+    </section>
+
+    <!-- Your Data Tab -->
+    <section id="tab-your-data" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Your Stored Data (GDPR Portability & Transparency)</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              We believe in total transparency. Every atomic taste signal, account setting, and generated recommendation stored in our database is inspectable and exportable below verbatim.
+            </p>
+          </div>
+        </div>
+        <div id="export-container"></div>
+      </div>
+    </section>
+
+    <!-- Auth Tab -->
+    <section id="tab-auth" class="tab-pane">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <!-- Register -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 1rem;">Join Liner Notes</div>
+          <form onsubmit="handleRegister(event)">
+            <div class="form-group">
+              <label for="reg-username">Username</label>
+              <input type="text" id="reg-username" required placeholder="e.g. audiophile99">
+            </div>
+            <div class="form-group">
+              <label for="reg-email">Email Address</label>
+              <input type="email" id="reg-email" required placeholder="you@domain.com">
+            </div>
+            <div class="form-group">
+              <label for="reg-password">Password</label>
+              <input type="password" id="reg-password" required minlength="6" placeholder="At least 6 characters">
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
+          </form>
+        </div>
+
+        <!-- Login -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 1rem;">Subscriber Sign In</div>
+          <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label for="login-email">Email Address</label>
+              <input type="email" id="login-email" required placeholder="you@domain.com">
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" required placeholder="Your password">
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Liner Notes 🎵 &bull; Open-source music discovery &bull; <a href="/swagger" target="_blank" style="color: var(--accent-primary); text-decoration: none;">Interactive OpenAPI Docs</a></p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -4,6 +4,34 @@ All notable changes to the Liner Notes project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-10-02
+
+### Added
+- **ASP.NET Core Presentation Layer (`src/Presentation`):**
+  - Lightweight composition root wiring Onion Architecture layers (`Application`, `DataAccess`, `Infrastructure`, `Presentation`).
+  - ASP.NET Core Identity integration with `ApplicationUser` in `identity` schema, authenticated via JWT Bearer tokens with configurable `JwtOptions`.
+  - Concrete service implementations:
+    - `CurrentUserService` providing authenticated user context and claims extraction.
+    - `JwtService` generating cryptographically signed access and refresh tokens.
+    - `AuthService` handling user registration, password verification, and credentials management.
+  - RFC 7807 compliant `ApiExceptionFilterAttribute` mapping `ValidationException` (400), `NotFoundException` (404), `UnauthorizedAccessException` (401), and `InvalidOperationException` (400) to standard `ProblemDetails`.
+  - Feature-complete REST API controllers:
+    - `AuthController`: register, login, refresh token, and authenticated profile (`/api/auth/me`).
+    - `SubscribersController`: subscriber profile resolution and GDPR account deletion (`DELETE /api/subscribers/me`).
+    - `TasteController`: hybrid onboarding taste profile seeding (3-5 seed tags/artists) and atomic taste signal inspection.
+    - `DigestsController`: latest weekly digest retrieval and 1-click sentiment feedback (`Liked`, `Disliked`, `AlreadyKnown`).
+    - `ExportController`: complete GDPR verbatim JSON data export (`/api/export/my-data`).
+  - Single unified OpenAPI / Swagger UI (`/swagger`) with JWT Bearer security scheme.
+  - Health checks endpoint (`/health`) with EF Core `DataContext` connectivity verification.
+  - Guest-first discovery and subscriber dashboard in `wwwroot/`:
+    - Responsive dark-mode interface with zero-friction 1-click streaming deep-links (YouTube, Spotify, Bandcamp, Apple Music).
+    - Stored Residue score breakdown inspector displaying tag overlap, anti-popularity penalty, and novelty boost.
+    - Interactive 3-5 seed tag/artist selector for cold-start onboarding.
+    - "Your Data" viewer and 1-click JSON export.
+- **Presentation Test Suite (`tests/Presentation.Tests`):**
+  - 25 unit and controller tests verifying exception filtering, JWT token lifecycle, claims principal extraction, and controller contracts.
+  - Total solution test suite now stands at 100 passing tests across Domain, Application, DataAccess, and Presentation.
+
 ## [0.1.0] - 2026-09-30
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "ntJdnSWgQZc=",
+  "dgSpecHash": "GkDHagxaCkw=",
   "success": true,
   "projectFilePath": "/home/mahammadjafarli/source/repos/Liner Notes/src/Presentation/Presentation.csproj",
   "expectedPackageFiles": [
@@ -11,6 +11,7 @@
     "/home/mahammadjafarli/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/mediatr/12.4.1/mediatr.12.4.1.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.2/microsoft.aspnetcore.authentication.jwtbearer.9.0.2.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.aspnetcore.dataprotection.entityframeworkcore/9.0.2/microsoft.aspnetcore.dataprotection.entityframeworkcore.9.0.2.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.aspnetcore.identity.entityframeworkcore/9.0.2/microsoft.aspnetcore.identity.entityframeworkcore.9.0.2.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.bcl.asyncinterfaces/7.0.0/microsoft.bcl.asyncinterfaces.7.0.0.nupkg.sha512",
@@ -27,17 +28,31 @@
     "/home/mahammadjafarli/.nuget/packages/microsoft.entityframeworkcore.analyzers/9.0.2/microsoft.entityframeworkcore.analyzers.9.0.2.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.entityframeworkcore.design/9.0.2/microsoft.entityframeworkcore.design.9.0.2.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.entityframeworkcore.relational/9.0.2/microsoft.entityframeworkcore.relational.9.0.2.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.extensions.apidescription.server/6.0.5/microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/microsoft.extensions.dependencymodel/9.0.2/microsoft.extensions.dependencymodel.9.0.2.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.extensions.diagnostics.healthchecks.entityframeworkcore/9.0.2/microsoft.extensions.diagnostics.healthchecks.entityframeworkcore.9.0.2.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.abstractions/8.5.0/microsoft.identitymodel.abstractions.8.5.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.jsonwebtokens/8.5.0/microsoft.identitymodel.jsonwebtokens.8.5.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.logging/8.5.0/microsoft.identitymodel.logging.8.5.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.protocols/8.0.1/microsoft.identitymodel.protocols.8.0.1.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.protocols.openidconnect/8.0.1/microsoft.identitymodel.protocols.openidconnect.8.0.1.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.identitymodel.tokens/8.5.0/microsoft.identitymodel.tokens.8.5.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/microsoft.openapi/1.6.22/microsoft.openapi.1.6.22.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/npgsql/9.0.3/npgsql.9.0.3.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/npgsql.entityframeworkcore.postgresql/9.0.4/npgsql.entityframeworkcore.postgresql.9.0.4.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/swashbuckle.aspnetcore/7.2.0/swashbuckle.aspnetcore.7.2.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/swashbuckle.aspnetcore.swagger/7.2.0/swashbuckle.aspnetcore.swagger.7.2.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/swashbuckle.aspnetcore.swaggergen/7.2.0/swashbuckle.aspnetcore.swaggergen.7.2.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/swashbuckle.aspnetcore.swaggerui/7.2.0/swashbuckle.aspnetcore.swaggerui.7.2.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.codedom/6.0.0/system.codedom.6.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition/7.0.0/system.composition.7.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition.attributedmodel/7.0.0/system.composition.attributedmodel.7.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition.convention/7.0.0/system.composition.convention.7.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition.hosting/7.0.0/system.composition.hosting.7.0.0.nupkg.sha512",
     "/home/mahammadjafarli/.nuget/packages/system.composition.runtime/7.0.0/system.composition.runtime.7.0.0.nupkg.sha512",
-    "/home/mahammadjafarli/.nuget/packages/system.composition.typedparts/7.0.0/system.composition.typedparts.7.0.0.nupkg.sha512"
+    "/home/mahammadjafarli/.nuget/packages/system.composition.typedparts/7.0.0/system.composition.typedparts.7.0.0.nupkg.sha512",
+    "/home/mahammadjafarli/.nuget/packages/system.identitymodel.tokens.jwt/8.5.0/system.identitymodel.tokens.jwt.8.5.0.nupkg.sha512"
   ],
   "logs": [
     {

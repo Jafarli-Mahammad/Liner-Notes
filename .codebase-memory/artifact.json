@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "ab8cf674a7245a82a90fdd476ae75549a7163596",
+    "indexed_at": "2026-10-01T21:50:59Z",
+    "project": "LinerNotes",
+    "nodes": 1616,
+    "edges": 5619,
+    "original_size": 5242880,
+    "compressed_size": 879058,
+    "compression_level": 9
+}

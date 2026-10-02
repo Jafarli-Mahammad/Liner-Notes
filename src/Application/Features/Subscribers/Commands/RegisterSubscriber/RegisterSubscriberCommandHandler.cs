@@ -40,7 +40,8 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
             email: request.Email,
             timeZone: request.TimeZone,
             deliveryDay: request.DeliveryDay,
-            deliveryHourUtc: request.DeliveryHourUtc);
+            deliveryHourUtc: request.DeliveryHourUtc,
+            id: request.UserId);
 
         // Calculate initial next digest delivery slot
         var initialDelivery = DateTime.UtcNow.Date.AddDays(7).AddHours(request.DeliveryHourUtc);

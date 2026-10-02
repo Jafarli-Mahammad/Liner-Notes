@@ -36,6 +36,8 @@ public sealed class WeeklyRecommendationConfiguration : IEntityTypeConfiguration
             .HasMaxLength(32)
             .IsRequired();
 
+        builder.Property(r => r.Rating);
+
         builder.Property(r => r.FeedbackComment)
             .HasMaxLength(1000);
 

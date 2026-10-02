@@ -10,4 +10,5 @@ public record RecordRecommendationFeedbackCommand(
     Guid RecommendationId,
     Guid UserId,
     UserFeedback Feedback,
-    string? Comment = null) : IRequest<bool>;
+    string? Comment = null,
+    int? Rating = null) : IRequest<bool>;

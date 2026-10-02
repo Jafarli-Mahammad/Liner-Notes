@@ -20,5 +20,9 @@ public sealed class RecordRecommendationFeedbackCommandValidator : AbstractValid
 
         RuleFor(x => x.Comment)
             .MaximumLength(1000).WithMessage("Feedback comment cannot exceed 1000 characters.");
+
+        RuleFor(x => x.Rating)
+            .InclusiveBetween(1, 10).When(x => x.Rating.HasValue)
+            .WithMessage("Rating must be between 1 and 10.");
     }
 }

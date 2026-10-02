@@ -10,7 +10,8 @@ namespace LinerNotes.Presentation.Controllers;
 
 public sealed record RecordFeedbackRequest(
     UserFeedback Feedback,
-    string? Comment = null);
+    string? Comment = null,
+    int? Rating = null);
 
 /// <summary>
 /// Endpoints for inspecting weekly digests, recommended tracks, and submitting 1-click feedback.
@@ -42,7 +43,7 @@ public sealed class DigestsController : ApiControllerBase
     }
 
     /// <summary>
-    /// Records 1-click feedback (Liked, Disliked, AlreadyKnown) on a recommended track.
+    /// Records 1-click feedback (Liked, Disliked, AlreadyKnown, or 1-10 granular rating) on a recommended track.
     /// </summary>
     [HttpPost("recommendations/{recommendationId:guid}/feedback")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -58,7 +59,8 @@ public sealed class DigestsController : ApiControllerBase
             RecommendationId: recommendationId,
             UserId: CurrentUser.UserId,
             Feedback: request.Feedback,
-            Comment: request.Comment);
+            Comment: request.Comment,
+            Rating: request.Rating);
 
         var succeeded = await Mediator.Send(command, cancellationToken);
         if (!succeeded)

@@ -111,11 +111,11 @@ public sealed class RecommendationScorer
 
     private static double DetermineFeedbackPenalty(CandidateTrack candidate, UserTasteProfile userTaste)
     {
-        if (userTaste.IsTrackRejected(candidate.Track.TrackKey) ||
-            userTaste.IsArtistRejected(candidate.Track.ArtistName))
-        {
+        if (userTaste.IsTrackRejected(candidate.Track.TrackKey))
             return 1.0;
-        }
+
+        if (userTaste.IsArtistRejected(candidate.Track.ArtistName))
+            return 0.7;
 
         return 0.0;
     }

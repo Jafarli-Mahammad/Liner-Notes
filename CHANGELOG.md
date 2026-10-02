@@ -4,6 +4,46 @@ All notable changes to the Liner Notes project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-10-02
+
+### Added
+- **Upstream Recommendation Source Abstractions (Phase 2):**
+  - Added `IRecommendationSource` contract (`GetCandidatesByArtistsAsync`, `GetCandidatesByTagsAsync`) in `src/Application`.
+  - Added `ICandidateHydrator` contract (`HydrateCandidateAsync`, `HydrateCandidatesBatchAsync`) in `src/Application`.
+  - Added immutable record `RawCandidateTrack` holding unhydrated candidate metadata and upstream match scores.
+- **Last.fm Client Subsystem & Infrastructure:**
+  - Implemented typed `LastFmApiClient` using `HttpClientFactory` and identifiable `User-Agent`.
+  - Built thread-safe `LastFmRateLimiter` implementing token-bucket pacing (4 requests/sec max) complying with Last.fm's fair-use limits.
+  - Implemented in-memory response caching adhering to Last.fm's 100 MB reasonable usage cap and HTTP caching terms.
+  - Implemented **Hybrid Fixture Fallback Mode** (`LastFmClientMode.Hybrid`): automatically queries live Last.fm APIs when an API key is present and gracefully falls back to deterministic offline fixtures (`LastFmFixtureProvider`) when offline, rate-limited, or in CI environments.
+  - Implemented `LastFmRecommendationSource` and `LastFmCandidateHydrator` with logarithmic listener popularity normalization and stoplist tag noise filtering.
+  - Wired Last.fm subsystem in `src/Infrastructure/DependencyInjection.cs`.
+- **Infrastructure Test Suite (`tests/Infrastructure.Tests`):**
+  - Created new test project with 15 passing tests covering rate limiting, caching, HTTP fakes (`MockHttpMessageHandler`), error handling (HTTP 429), and candidate hydration.
+  - Solution test suite expanded to 186 passing tests with 100% pass rate.
+- **Founder Seeds Coverage Spike:**
+  - Executed live coverage probe against Last.fm for the 6 founder taste clusters (Jakuzi, Son Feci Bisiklet, Hotline Miami, Dying Light, ULTRAKILL, Hades).
+  - Generated comprehensive findings report in `docs/coverage-spike-founder-seeds.md`.
+
+## [0.3.0] - 2026-10-02
+
+### Added
+- **Granular Feedback & Preference Scaling (Phase 6):**
+  - Added optional 1–10 preference rating scale alongside `Liked`, `Disliked`, and `AlreadyKnown` feedback on `WeeklyRecommendation`.
+  - Closed feedback loop in `RecordRecommendationFeedbackCommandHandler`: recording feedback now automatically generates provenance-tagged `TasteSignal` entries that nudge tag weights for future weeks.
+  - Added `TasteSignalSource.RecommendationAlreadyKnown` and `TasteSignalSource.RecommendationRating` enum flags.
+  - Added interactive 1–10 rating bar to web dashboard in `wwwroot/app.js`.
+  - Added 64 new unit and integration tests across Domain, DataAccess, Application, and Presentation test suites. Total passing test suite expanded from 107 to 171 tests (0 failures, 0 skipped).
+  - Generated comprehensive requirement-driven test cases document `tests/liner-notes-comprehensive-test-cases.md` covering functional, edge cases, error handling, and state transitions.
+
+### Changed
+- **Residue Scorer ("Prism") Feedback Granularity:**
+  - Updated `RecommendationScorer.DetermineFeedbackPenalty` to distinguish specific track rejection (1.0 penalty) from artist rejection (0.7 penalty), preventing single-track dislikes from permanently banning an entire artist.
+- **Copy & Provenance Hardening:**
+  - Removed overclaiming language ("anti-algorithmic") in favor of "transparent scoring with popularity-bias control".
+  - Clarified streaming links as direct 1-click search links rather than authenticated API URIs.
+  - Established engine version codenames: Residue V1 "Prism" and Residue V2 "Resonance".
+
 ## [0.2.0] - 2026-10-02
 
 ### Added

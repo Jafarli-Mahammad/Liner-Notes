@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("linernotes-secrets-app-v1")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("LinerNotes.Worker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ab8cf674a7245a82a90fdd476ae75549a7163596")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3b72c0f06fb71b2bf0e3b2aa987559093bda5031")]
 [assembly: System.Reflection.AssemblyProductAttribute("LinerNotes.Worker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LinerNotes.Worker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

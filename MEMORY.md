@@ -49,6 +49,9 @@ Decisions (with reasons)
 [stated] Incorporate 3 core V1 pillars: 1-click deep links (YouTube/Spotify/Bandcamp/Apple Music), hybrid onboarding (Last.fm/ListenBrainz sync or manual seeds), and 3-5 pick high-precision batches. (2026-10-01)
 [stated] Link ApplicationUser (Identity) 1:1 by Id to Domain User, keeping Domain pure and hosting DataContext (IdentityDbContext) with generic AsyncRepository and UnitOfWork in DataAccess. (2026-10-02)
 [stated] Implement Last.fm as primary candidate source in Phase 2, keeping ListenBrainz swappable behind IRecommendationSource in Phase 3. (2026-10-02)
+[stated] Name Residue V1 "Prism" (pure deterministic mathematical angle scoring) and V2 "Resonance" (collaborative filtering); include granular 1–10 feedback and "already known" suppression in V1. (2026-10-02)
+[stated] Adopt Approach 1 (Separated Assembly Line pipeline) for taste materialization, candidate discovery, tag hydration, and pure Residue scoring. (2026-10-02)
+[stated] Use Hybrid mode for Last.fm client subsystem with seamless offline fixture fallback for offline dev/tests and live network when API key is set. (2026-10-02)
 Gotchas and corrections
 [stated] Onion architecture project layout: src/Domain, src/Application, src/Infrastructure, src/Presentation (was src/Web), src/Worker, and tests/, targeting .NET 10 / ASP.NET Core 10. (2026-09-30)
 [verified] In bash, quote '/clp:NoSummary;ErrorsOnly' to prevent semicolon from splitting commands. (2026-09-30)
@@ -56,6 +59,8 @@ Gotchas and corrections
 [verified] AutoMapper 13.0.1 is required for .NET 10 preview builds as 14+ introduces package dependency conflicts. (2026-10-02)
 [verified] MediatR 12.4 open generic pipeline behavior AddOpenBehavior(typeof(ValidationBehavior<,>)) integrates cleanly with FluentValidation in .NET 10. (2026-10-02)
 [verified] Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore package is required for AddDbContextCheck<DataContext> in ASP.NET Core 10. (2026-10-02)
+[verified] Last.fm API Terms of Service enforces 100MB usage cap and mandatory caching (Clause 4.3.4), requiring TokenBucket rate limiter (4 req/sec) and IMemoryCache with sliding expiration. (2026-10-02)
+[verified] Last.fm founder seeds coverage spike verified live: Turkish alternative and game soundtracks (Hotline Miami, Dying Light, ULTRAKILL, Hades) return dense candidate sets with minimal tag noise. (2026-10-02)
 <!-- Add dated one-liners as they happen. -->
 Environment and constraints
 [stated] Near-zero budget: cheap VPS or free tiers, SQLite or small Postgres. Verify current pricing before recommending. (2026-09-28)

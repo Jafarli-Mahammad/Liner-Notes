@@ -71,4 +71,26 @@ public class ExportControllerTests
         Assert.Equal("1.0.0", data.ExportVersion);
         Assert.Equal("export@example.com", data.Subscriber.Email);
     }
+
+    [Fact]
+    public async Task ExportMyData_WithDownloadTrue_SetsAttachmentHeader()
+    {
+        var exportDto = new UserDataExportDto(
+            ExportVersion: "1.0.0",
+            ExportedAtUtc: DateTime.UtcNow,
+            Subscriber: new SubscriberDto(_testUserId, "test@test.com", "UTC", DigestDeliveryDay.Sunday, 8, null, DateTime.UtcNow),
+            Connections: Array.Empty<UserMusicConnectionExportDto>(),
+            TasteSignals: Array.Empty<TasteSignalDto>(),
+            Digests: Array.Empty<WeeklyDigestDto>());
+
+        _mediator.Send(Arg.Any<GetUserDataExportQuery>(), Arg.Any<CancellationToken>())
+            .Returns(exportDto);
+
+        var result = await _controller.ExportMyData(download: true, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var header = _controller.Response.Headers["Content-Disposition"].ToString();
+        Assert.Contains("attachment", header);
+        Assert.Contains(_testUserId.ToString(), header);
+    }
 }

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <RootNamespace>LinerNotes.Presentation</RootNamespace>
     <AssemblyName>LinerNotes.Presentation</AssemblyName>
+    <UserSecretsId>linernotes-secrets-app-v1</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

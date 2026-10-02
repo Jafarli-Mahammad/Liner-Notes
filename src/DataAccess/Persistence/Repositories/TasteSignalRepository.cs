@@ -31,6 +31,9 @@ public sealed class TasteSignalRepository : AsyncRepository<TasteSignal>, ITaste
     public async Task DeleteSignalsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var signals = await DataContext.TasteSignals.Where(s => s.UserId == userId).ToListAsync(cancellationToken);
-        DataContext.TasteSignals.RemoveRange(signals);
+        foreach (var signal in signals)
+        {
+            Remove(signal);
+        }
     }
 }

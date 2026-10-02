@@ -17,6 +17,7 @@ public sealed class WeeklyRecommendation : AuditableEntity
     public int Rank { get; private set; }
     public ScoreBreakdown ScoreBreakdown { get; private set; }
     public UserFeedback Feedback { get; private set; } = UserFeedback.None;
+    public int? Rating { get; private set; }
     public string? FeedbackComment { get; private set; }
     public DateTime? FeedbackGivenAt { get; private set; }
 
@@ -51,9 +52,13 @@ public sealed class WeeklyRecommendation : AuditableEntity
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void RecordFeedback(UserFeedback feedback, string? comment = null)
+    public void RecordFeedback(UserFeedback feedback, string? comment = null, int? rating = null)
     {
+        if (rating.HasValue && (rating.Value < 1 || rating.Value > 10))
+            throw new ArgumentOutOfRangeException(nameof(rating), "Rating must be between 1 and 10.");
+
         Feedback = feedback;
+        Rating = rating;
         FeedbackComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
         FeedbackGivenAt = DateTime.UtcNow;
         LastModifiedAt = DateTime.UtcNow;

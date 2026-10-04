@@ -28,7 +28,6 @@ Decide primary upstream and blending (see Open decisions)
 Phase 4: Domain scorer ("Residue: Prism" Engine)
 Name: Residue V1 "Prism" (pure deterministic recommendation and feedback re-ranking engine; V2 codenamed "Resonance")
 Tag-overlap similarity
-Popularity penalty
 Novelty penalty/boost
 Feedback adjustment
 Configurable weights
@@ -74,7 +73,7 @@ Core Product & Retention Pillars (V1 Guidelines)
 1. **Zero-Friction Listening (The "Copy-Paste" Problem)**: Every pick in the email and web UI must feature direct 1-click deep-links (YouTube, Spotify, Bandcamp, Apple Music search links) so users don't have to manually search in streaming apps.
 2. **Hybrid Onboarding (The Cold-Start Problem)**: Allow power users to connect existing Last.fm / ListenBrainz profiles, while offering casual users a simple 3–5 seed artist/tag selector to start discovering immediately.
 3. **High-Precision Batches (Weekly Retention)**: Limit weekly discovery batches to 3–5 high-confidence picks to avoid overwhelm and recommendation misses, paired with effortless 1-click feedback (thumbs up / thumbs down / "already know this").
-4. **Fit Over Fame (Anti-Popularity-Bias without Anti-Popular)**: Accuracy of fit comes first. Popular songs are welcome when they genuinely fit the user's taste; popularity is a soft, configurable penalty, never a filter. The product never claims to measure "talent" (it cannot be computed) and never uses it in copy.
+4. **Fit Over Fame**: Accuracy of fit comes first. Songs are recommended strictly because they genuinely fit the user's taste profile; V1 is popularity-neutral. The product never claims to measure "talent" (it cannot be computed) and never uses it in copy.
 
 Founder Taste Notes (reference user zero, 2026-10-02)
 His own words, summarized. This is the first real test case for Residue.
@@ -101,9 +100,9 @@ Residue Candidate Ingestion & Scoring Pipeline (Approach 1: Separated Assembly L
    - Output: Raw candidates (`RawCandidateTrack(string Title, string ArtistName, string? Mbid, double UpstreamScore)`).
 3. **Candidate Tag Hydration & Enrichment (`ICandidateHydrator`)**:
    - Resolves genre/style tags for candidate artists/tracks from cached `artist.getTopTags` responses.
-   - Constructs a domain `CandidateTrack` populated with its `WeightedTagVector` and normalized `GlobalPopularity` (0.0–1.0).
+   - Constructs a domain `CandidateTrack` populated with its `WeightedTagVector`.
 4. **Pure Residue Scoring & Ranking (`RecommendationScorer`)**:
-   - Runs deterministic 4-part scoring (Cosine similarity, Popularity penalty, Novelty boost, Feedback penalty).
+   - Runs deterministic 3-part scoring (Cosine similarity, Novelty boost, Feedback adjustment).
    - Produces an explainable `ScoreBreakdown` per pick.
    - Deterministically ranks candidates and extracts the top 3–5 high-precision picks for the weekly digest.
 5. **Persistence & Provenance**:
@@ -138,7 +137,6 @@ Whether candidate metadata is snapshotted at recommendation time or always resol
  Pre-recommendation taste profile: Before a new user enters the Residue recommendation flow, collect lightweight initial taste signals such as preferred genres, artists/bands, favorite music, and related preferences. Exact questions and weighting to be designed later.
  Progressive personalization: Initial onboarding should collect enough information to make the first recommendation useful without becoming a lengthy questionnaire. Additional taste information should be gathered progressively through interaction with Residue.
  Taste profile shape: single blended WeightedTagVector vs several taste clusters scored by best match (see Founder Taste Notes). Decide before the Phase 4 scorer is finalized.
- Popularity handling: fixed soft penalty vs a per-user setting vs reserved slots in the 3-5 picks (e.g. at least one well-known pick that fits). Decide after the benchmark seeds show how the penalty behaves.
  Email feedback UX: Pillar 3 says 1-click thumbs up / thumbs down / already know, Phase 6 says 10-point scale plus already know. These disagree; decide what the email offers versus what the web UI offers.
 
 * Artist discovery notifications — notify verified artists when their music generates meaningful aggregate discovery through the service; never expose individual listener identities or let artist participation influence Residue ranking — 2026-10-01
@@ -160,6 +158,7 @@ Short dated entries for decisions and notable changes (mirrors CHANGELOG for use
 - 2026-10-02: Named Residue V1 "Prism" (pure deterministic mathematical angle scorer) and Residue V2 "Resonance" (collaborative/ML wave engine). Promoted Granular Feedback (10-point scale + distinct "Already Know" option) into V1 Phase 6 scope.
 - 2026-10-02: Comprehensive test suite implemented and verified: added 64 new unit and repository tests (domain catalog, value objects, taste profile math, repository operations, exception mappings, export headers). Total test count increased to 171 tests across 4 test projects with 100% pass rate. Generated structured test case documentation in `tests/liner-notes-comprehensive-test-cases.md`.
 - 2026-10-02: Advanced roadmap to Phase 2 (Upstream abstraction + Last.fm client).
-- 2026-10-02: Added Founder Taste Notes, Pillar 4 (Fit Over Fame), Phase 2 coverage spike, founder benchmark seeds, and three open decisions (taste profile shape, popularity handling, email feedback UX). Marked the 4 req/sec limit as provisional until the Last.fm terms check.
+- 2026-10-02: Added Founder Taste Notes, Pillar 4 (Fit Over Fame), Phase 2 coverage spike, founder benchmark seeds, and open decisions (taste profile shape, email feedback UX). Marked the 4 req/sec limit as provisional until the Last.fm terms check.
 - 2026-10-02: Completed Phase 2 (Upstream abstraction + Last.fm client subsystem). Verified Last.fm terms of service against live site. Created IRecommendationSource and ICandidateHydrator abstractions in Application. Implemented LastFmApiClient with TokenBucketRateLimiter (4 req/sec), IMemoryCache (<100MB cap compliance), and hybrid offline fixture fallback in Infrastructure. Stored Last.fm API credentials in .NET user secrets (zero secrets in git). Created tests/Infrastructure.Tests with 15 passing tests (total passing test suite now 186 tests). Executed live coverage spike across all 6 founder seed clusters, confirming dense candidate graphs and verifying tag noise mitigation in docs/coverage-spike-founder-seeds.md. Ready for developer review.
 - 2026-10-02: Resolved all 16 PR #1 review findings across security, data consistency, and API contracts. Zeroized hardcoded JWT secrets and enforced 256-bit key validation. Bound refresh tokens to user identity with rotation and added atomic registration rollback. Fixed XSS vectors via DOM textContent and HTML escaping. Added EF Core migration for Rating column. Capped memory cache growth (SizeLimit = 10,000) and eliminated placeholder tracks and artist MBID propagation. Ensured idempotent feedback writes and deterministic cancellation. All 190 tests passing.
+- 2026-10-02: Removed the popularity penalty from V1 scoring; V1 is popularity-neutral. Revisit only if benchmark results show picks collapsing into globally famous artists.

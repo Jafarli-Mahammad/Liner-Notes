@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — renewal
+
+- Reconciled project documentation with popularity-neutral V1 and explicit approval gates.
+- Qualified earlier coverage, delivery, export and privacy claims; previous release entries below are historical assertions, not current verification.
+
 All notable changes to the Liner Notes project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).

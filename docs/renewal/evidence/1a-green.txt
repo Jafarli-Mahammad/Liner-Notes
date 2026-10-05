@@ -1,0 +1,1 @@
+PASS renewal_docs: decisions, gates, removed content, and qualified README

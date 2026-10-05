@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/mahammadjafarli/source/repos/Liner Notes/scripts/checks/renewal_docs.py", line 6, in <module>
+    assert 'Founder Taste Notes' not in progress, 'Personal taste notes remain in progress'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Personal taste notes remain in progress

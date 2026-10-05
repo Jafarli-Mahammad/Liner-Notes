@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Database configuration must now be supplied explicitly; removed the built-in password fallback.
+
 - Reconciled project documentation with popularity-neutral V1 and explicit approval gates.
 - Qualified earlier coverage, delivery, export and privacy claims; previous release entries below are historical assertions, not current verification.
 

@@ -3,7 +3,7 @@
 ## Current state and next step
 - Authorized: **Phase 1 only**, separate local commit sets on `Prism`.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: PR 1A documentation reconciliation; security fixes follow with red/green checks.
+- Active step: PR 1B configuration verified; authentication regressions next.
 - No implementation is developer confirmed. Verification is not confirmation.
 - Schema/migrations, API/export changes, dependencies/framework/CI, test removal or weakening,
   module deletion, history rewrites, pushing, merging and irreversible actions need separate approval.
@@ -46,7 +46,7 @@ Docker/deployment §13; hardening §15. CI is not explicitly specified.
 | PR / local commit-set identifier | Concern | Status | Evidence | Developer confirmation |
 |---|---|---|---|---|
 | 1A / renewal-1a | Progress/specification/copy reconciliation | verified—awaiting confirmation | [1A](docs/renewal/phase-1-evidence.md#1a) | pending |
-| 1B / renewal-1b | Secret defaults and rotation instructions | not started | — | pending |
+| 1B / renewal-1b | Secret defaults and rotation instructions | verified—awaiting confirmation | [1B](docs/renewal/phase-1-evidence.md#1b) | pending |
 | 1C / renewal-1c | Refresh storage, expiry, rotation, replay | not started | — | pending |
 | 1D / renewal-1d | Login lockout and abuse throttling | not started | — | pending |
 | 1E / renewal-1e | Atomic registration and rollback | not started | — | pending |

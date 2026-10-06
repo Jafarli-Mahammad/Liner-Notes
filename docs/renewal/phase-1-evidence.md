@@ -42,12 +42,27 @@ familiarity is independent of rating. 1H keeps browser tokens in memory, coalesc
 guards logout races, removes inline event handlers, and clears private data on logout. 1I sets
 explicit CORS, security headers, HTTPS/HSTS in production, size limits, and no-store API responses.
 
-The offline solution suite passed on 2026-10-06 with 201 tests (Domain 77, Application 47,
-Infrastructure 14, DataAccess 25, Presentation 38), including local PostgreSQL security tests.
+The offline solution suite passed on 2026-10-07 with 202 tests (Domain 77, Application 47,
+Infrastructure 14, DataAccess 26, Presentation 38), including local PostgreSQL security tests.
 The live Last.fm coverage spike remained excluded; no live calls were made. The PostgreSQL tests
 use a disposable database with `EnsureCreated`, so they do not validate a production migration.
 `node scripts/checks/phase1_browser.cjs`, `python3 scripts/checks/secret_defaults.py`, and
 `python3 scripts/checks/renewal_docs.py` passed. Developer runtime confirmation is pending.
+
+## Greptile follow-up
+
+Fixed stale login/registration response races, feedback failure messaging, rating highlight clearing,
+and rating a familiar track now preserves its familiarity feedback. Configured forwarded scheme/client
+IP handling for explicitly trusted proxy IPs before HTTPS redirection and rate limiting. Updated the
+existing rating migration to add its Identity FK as PostgreSQL `NOT VALID`, preserving legacy domain
+rows during upgrade while enforcing the FK for new/changed rows. A local PostgreSQL migration test
+upgrades a populated InitialCreate database and verifies both preservation and future enforcement.
+
+The FK remains unvalidated for pre-existing domain users without Identity rows. This avoids inventing
+credentials or deleting user data; account reconciliation and FK validation remain a separate follow-up.
+`node scripts/checks/phase1_browser.cjs` covers auth response races, feedback payload/UI behavior and
+HTTP failure reporting. The proxy integration test confirms a trusted forwarded HTTPS request avoids
+redirection. All 202 offline tests passed; no live Last.fm calls were made.
 
 ## 1J
 

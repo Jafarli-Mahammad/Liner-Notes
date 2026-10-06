@@ -378,14 +378,15 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                 column: "NormalizedUserName",
                 unique: true);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_Users_Users_Id",
-                table: "Users",
-                column: "Id",
-                principalSchema: "identity",
-                principalTable: "Users",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+            // Preserve domain users created before Identity storage existed. PostgreSQL enforces
+            // this FK for new/changed rows while allowing the migration to upgrade existing rows;
+            // legacy account reconciliation can validate it after those rows are addressed.
+            migrationBuilder.Sql("""
+                ALTER TABLE "Users"
+                ADD CONSTRAINT "FK_Users_Users_Id"
+                FOREIGN KEY ("Id") REFERENCES identity."Users" ("Id")
+                ON DELETE CASCADE NOT VALID;
+                """);
         }
 
         /// <inheritdoc />

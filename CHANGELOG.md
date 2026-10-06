@@ -2,7 +2,18 @@
 
 ## Unreleased — renewal
 
-- Database configuration must now be supplied explicitly; removed the built-in password fallback.
+- Revised the renewal plan into nine approval-gated phases, with proposed pilot/evaluation thresholds
+  and separate recording manifests; Phase 1 authorization is unchanged and later phases remain unapproved.
+- Recorded developer approval of the revised written plan, evaluation thresholds, pilot bars and
+  reviewed interpretations; later-phase execution and concrete recording manifests remain gated.
+
+- Added explicit loopback-only development defaults (`postgres` database password and a local JWT
+  signing key) at the developer's request. Production credentials remain unset and the development
+  signing key is rejected outside Development. Application users still choose their passwords.
+- Secured browser sessions and refresh-token rotation, added account lockout and request throttling,
+  and made registration, account deletion, and feedback replacement transactional.
+- Added CORS, transport and security-header defaults; removed the vulnerable AutoMapper dependency,
+  pinned XML cryptography remediation, and stopped tracking generated build output.
 
 - Reconciled project documentation with popularity-neutral V1 and explicit approval gates.
 - Qualified earlier coverage, delivery, export and privacy claims; previous release entries below are historical assertions, not current verification.

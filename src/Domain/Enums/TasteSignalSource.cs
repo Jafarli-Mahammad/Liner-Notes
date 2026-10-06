@@ -12,5 +12,7 @@ public enum TasteSignalSource
     RecommendationLike = 4,
     RecommendationDislike = 5,
     ExplicitFeedback = 6,
-    ListeningHistoryImport = 7
+    ListeningHistoryImport = 7,
+    RecommendationAlreadyKnown = 8,
+    RecommendationRating = 9
 }

@@ -1,8 +1,6 @@
-using AutoMapper;
 using FluentValidation.TestHelper;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
-using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Features.Subscribers.Commands.RegisterSubscriber;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
@@ -13,14 +11,6 @@ namespace LinerNotes.Application.Tests.Features.Subscribers;
 
 public class RegisterSubscriberTests
 {
-    private readonly IMapper _mapper;
-
-    public RegisterSubscriberTests()
-    {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
-        _mapper = config.CreateMapper();
-    }
-
     [Fact]
     public void Validator_ShouldHaveError_WhenEmailIsInvalid()
     {
@@ -75,7 +65,7 @@ public class RegisterSubscriberTests
         userRepository.GetByEmailAsync("newlistener@example.com", Arg.Any<CancellationToken>())
             .Returns((User?)null);
 
-        var handler = new RegisterSubscriberCommandHandler(userRepository, unitOfWork, _mapper);
+        var handler = new RegisterSubscriberCommandHandler(userRepository, unitOfWork);
         var command = new RegisterSubscriberCommand(
             Email: "newlistener@example.com",
             TimeZone: "Europe/Berlin",
@@ -105,7 +95,7 @@ public class RegisterSubscriberTests
         userRepository.GetByEmailAsync("existing@example.com", Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
-        var handler = new RegisterSubscriberCommandHandler(userRepository, unitOfWork, _mapper);
+        var handler = new RegisterSubscriberCommandHandler(userRepository, unitOfWork);
         var command = new RegisterSubscriberCommand(
             Email: "existing@example.com",
             TimeZone: "UTC",

@@ -1,117 +1,133 @@
-PROGRESS.md
+# Liner Notes renewal progress
 
-Roadmap and status for V1. Tick a box only after the developer has confirmed it works. After each phase: review together before moving on.
+## Current state and next step
+- Authorized: **Phase 1 only**, local commits on `Prism`; no push or later-phase execution.
+- Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
+- Active step: Phase 1 implementation and offline verification are ready for developer review.
+- PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
+  shared files, 1C–1F and 1I are grouped in `775a838`; this differs from the planned one-PR-per-
+  commit-set split and needs review. No implementation is developer confirmed.
+- No implementation is developer confirmed. Verification is not confirmation.
+- PR 1A planning revision: the developer approved the revised written plan, numeric evaluation
+  thresholds, pilot adequacy bars and flagged interpretations on 2026-10-06. Phase 1 authorization
+  is unchanged; this planning approval does not approve later-phase execution or concrete runs.
+- Schema/migrations, further API/export changes, framework/CI, test removal or weakening,
+  module deletion, history rewrites, pushing, merging and irreversible actions need separate approval.
+  The narrowly scoped 1J dependency remediation was implemented after the developer directed
+  Phase 1 to continue; no broader package upgrade was made.
+- Product decisions and status live here; preferences/gotchas in [MEMORY](MEMORY.md);
+  release history in [CHANGELOG](CHANGELOG.md). Older conflicting memory notes are not current policy.
 
-Current phase: 1
+## Decisions and reasons
+- Six layers: Domain, Application, DataAccess, Infrastructure, Presentation, Worker.
+  Domain is pure; Application orchestrates; provider details remain in Infrastructure.
+- V1 is popularity-neutral. Existing popularity penalties are legacy implementation, not adopted policy.
+  No custom ML or claim of owning upstream similarity data.
+- Known/disliked tracks are excluded; sibling tracks stay eligible. Negative feedback never subtracts
+  artist tags. Replacing a like removes its positive contribution. Familiarity is independent of rating.
+- Synthetic fixtures test mechanics only. Real recordings require a separately approved run,
+  remain local and gitignored, and must never be committed. No secret-bearing URLs in logs.
+- User-facing taste/account records must be inspectable/exportable; credential/security internals
+  are outside the public export. Exact inventory and export changes require review.
+- Physical deletion must remove account-owned data and invalidate access; shared catalog records
+  and backups need explicit documented boundaries. No claim of legal compliance from a soft-delete flag.
+- Nothing is purchased or provisioned without approval. No public deployment or external email sending.
+- Last.fm discovery is in scope for the future pipeline; ListenBrainz and both username/history imports
+  are deferred. Streaming search links do not constitute Spotify API integration.
+- Email: unsubscribe, HTML/plaintext, text attribution and ordinary links; no remote images, fonts,
+  CSS resources, tracking pixels, or other automatic third-party requests.
 
-Phase 0: Name and branding
-Project name
-License
-Branding basics (only what README/landing needs)
-Phase 1: Solution skeleton
-Projects: Domain / Application / Infrastructure / Web / Worker / tests
-DI wiring for both composition roots (Web + Worker)
-GitHub Actions CI (build + test)
-README (what it does, what it builds on, what it does NOT claim)
-CHANGELOG
-Fill in the Structure section of AGENTS.md with real paths
-Phase 2: Upstream abstraction + Last.fm
-IRecommendationSource abstraction
-Verify current Last.fm terms (licence, attribution, caching, rate limits)
-Last.fm client (HttpClientFactory) with caching and rate limiting
-Tests with faked HTTP
-Phase 3: ListenBrainz
-Verify current endpoints, auth, rate limits, terms
-ListenBrainz client behind the same abstraction
-Decide primary upstream and blending (see Open decisions)
-Phase 4: Domain scorer ("Residue" Engine)
-Name: "Residue" (pure deterministic recommendation and feedback re-ranking engine)
-Tag-overlap similarity
-Popularity penalty
-Novelty penalty/boost
-Feedback adjustment
-Configurable weights
-Score breakdown model (feeds "why this pick")
-Unit tests (mandatory)
-Benchmark seed set (metal, hip-hop, electronic, jazz, pop, indie, classical, regional)
-Phase 5: Accounts and taste seeding
-ASP.NET Identity + hardening (Data Protection, anti-forgery, auth rate limiting)
-Taste seeding flow (Hybrid onboarding: Last.fm/ListenBrainz sync + manual 3–5 seed artists/tags fallback)
-Phase 6: Feedback
-Like / dislike / comment per recommendation
-Persistence
-Feedback used in re-ranking
-Phase 7: Worker and email
-Verify current free/low-cost email options
-Weekly digest generation (MediatR command)
-Email sender implementation
-Unsubscribe in every message, no tracking pixels
-Zero-friction listening: Direct deep-links for every pick (YouTube, Spotify, Bandcamp, Apple Music)
-Phase 8: Your data + explanations
-"Your data" page reflecting what is actually stored
-Versioned JSON export schema + documentation
-Account deletion
-"Why this pick" from stored breakdowns
-Phase 9: Deployment
-Verify current hosting free tiers / prices
-Dockerize, CD pipeline
-Honest cost estimate
-Phase 10: Public release
-README states exactly what it does and what it builds on
-Copy reviewed for overclaims (no "new algorithm", clearly attributes candidates to Last.fm/ListenBrainz with deterministic "Residue" scoring)
-Privacy copy matches what the code stores
-Open decisions (raise when relevant, don't decide silently)
-Taste seeding: Hybrid approach (Last.fm/ListenBrainz sync + manual 3–5 artist picks fallback) to eliminate the cold-start trap
-Primary upstream in V1 and how to blend both
-Project name, branding, license
-Email provider and hosting (verify first)
-ML.NET matrix factorization: V2 only, and only with real feedback data
+## Renewal phases
+The plan below is approved; **not approved** refers to phase execution and its remaining gates.
 
-Core Product & Retention Pillars (V1 Guidelines)
-1. **Zero-Friction Listening (The "Copy-Paste" Problem)**: Every pick in the email and web UI must feature direct 1-click deep-links (YouTube, Spotify, Bandcamp, Apple Music search links) so users don't have to manually search in streaming apps.
-2. **Hybrid Onboarding (The Cold-Start Problem)**: Allow power users to connect existing Last.fm / ListenBrainz profiles, while offering casual users a simple 3–5 seed artist/tag selector to start discovering immediately.
-3. **High-Precision Batches (Weekly Retention)**: Limit weekly discovery batches to 3–5 high-confidence picks to avoid overwhelm and recommendation misses, paired with effortless 1-click feedback (thumbs up / thumbs down / "already know this").
+1. Baseline and security — **authorized**, unchanged PRs 1A–1K; implementation verified locally,
+   developer confirmation pending.
+2. Harness mechanics — **not approved**. Fixture-only mode with an outbound-rejecting HTTP handler;
+   metrics; founder/development/held-out/synthetic sets, with held-out membership locked before any
+   scoring; recorder written but not run; acquisition storage guard.
+3. Honest ingestion, in memory only — **not approved**. No invented evidence; missing stays missing;
+   live/recorded/synthetic provenance; unknown seeds are coverage gaps. First verify no schema change
+   is needed; stop and ask if one is needed.
+4. Pilot — **not approved**. Developer approval of a concrete run manifest and adequacy bars before
+   one roughly 5 MB local recording covering six founder clusters plus a few seeds. Data-shape report,
+   then A–D and blind listening; no tuning or promotion; every result labelled **pilot, directional**.
+5. Real evaluation — **not approved**. Last.fm reply or explicit developer decision to proceed without
+   one; a second approved manifest for full development/held-out recording, then scoring comparison
+   and developer formula choice. Include IDF corpus size/balance/sensitivity and persisted C match
+   aggregation. Freeze configuration before the one held-out evaluation. Developer alone chooses
+   whether to wait or bypass real evaluation and proceed to Phase 6 with baseline A.
+6. Recommendation pipeline and persistence — **not approved**. Resolve hash/ordinal/representative
+   selection, retention and feedback conflicts; approve concrete schema changes before building.
+   Use the Phase 5 choice, or baseline A on explicit evidence bypass. Extensible JSON compatibility
+   across formula changes remains **not verified**, despite the existing JSONB mapping.
+7. Worker-to-local-email slice — **not approved**. Mandatory reassessment and explicit decision
+   to proceed, narrow or revise before later phases.
+8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
+   verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.
+9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
+   public-page approval. Release stays blocked until that approval is documented.
 
- Additional V1 notes
-Recommendation provenance: Store the upstream source(s), source identifiers, retrieval time, and Residue version for every recommendation so a pick can always be reconstructed and explained later.
-Deterministic reproducibility: Given the same user taste snapshot, candidate set, configuration, and Residue version, the same recommendation result should be reproducible.
-Data minimization: Before adding any user-facing feature, define the minimum data required to implement it; do not collect behavioral events merely because they may become useful later.
-Privacy-safe telemetry: Separate product telemetry from personalization data. Operational/product metrics should not silently become recommendation signals.
-Recommendation lifecycle: Store recommendation status explicitly (Generated, Shown, Interacted, Dismissed, Expired) so feedback and digest behavior are not inferred from ambiguous timestamps.
-Already-known suppression: Treat “already know this” as a first-class feedback signal distinct from dislike; suppressing familiar artists should not teach Residue that the artist is disliked.
-Candidate diversity: Prevent weekly batches from collapsing into near-duplicates of the same artist, tag cluster, or upstream source.
-Upstream isolation: A recommendation source outage or API policy change must degrade the system gracefully without changing the Domain layer.
-Source attribution: Keep attribution/provenance attached to candidate data rather than rebuilding it from memory at presentation time.
-Configuration versioning: Persist the effective Residue configuration/version used for a recommendation so score explanations remain valid after weight changes.
-Email idempotency: Weekly digest generation/sending must be safe to retry without sending duplicate digests.
-Unsubscribe enforcement: Unsubscribed users must be excluded at query time, not merely filtered immediately before sending.
-Ideas parking lot
-Privacy-preserving aggregate community statistics — 2026-10-01
-Import/export taste profile independent of account identity — 2026-10-01
-Recommendation source health/status page — 2026-10-01
-User-facing recommendation history and “why this was shown” timeline — 2026-10-01
-Per-source confidence / freshness metadata — 2026-10-01
-Open decisions
-Whether user feedback modifies only future ranking, or also alters the persistent TasteSignal representation.
-Whether weekly digest recommendations are generated once and persisted, or regenerated when the user opens the site.
-Retention period for raw listening/feedback events versus derived TasteSignals.
-Whether candidate metadata is snapshotted at recommendation time or always resolved from current upstream data.
- Multi-point recommendation feedback: Replace the coarse Like / Dislike model with a 10-point preference scale for more granular feedback. Keep “Already Know” as a separate 11th choice, since familiarity should not be interpreted as dislike.
- Guest-first entry experience: Do not make registration the first interaction. New visitors should enter through a clean, polished discovery UI that provides useful content immediately. Account creation should be an optional upgrade rather than a gate. Exact UI to be designed later.
- Pre-recommendation taste profile: Before a new user enters the Residue recommendation flow, collect lightweight initial taste signals such as preferred genres, artists/bands, favorite music, and related preferences. Exact questions and weighting to be designed later.
- Progressive personalization: Initial onboarding should collect enough information to make the first recommendation useful without becoming a lengthy questionnaire. Additional taste information should be gathered progressively through interaction with Residue.
+Number mapping: old 2 -> new 2-5 (split), old 3 -> new 6, old 3A -> new 7,
+old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
 
-* Artist discovery notifications — notify verified artists when their music generates meaningful aggregate discovery through the service; never expose individual listener identities or let artist participation influence Residue ranking — 2026-10-01
+Detailed future-phase constraints and unresolved proposals: [renewal contracts](docs/renewal/contracts.md).
+Numeric thresholds, pilot bars and manifest format there are approved for planning, not permission
+to record or score real data. Concrete run manifests retain separate approval. Recordings and
+evaluation reports must remain local, gitignored and untracked.
+Binding-spec coverage: integrations/imports in infrastructure §§1, 5.4, 6.2, 7.1, 8.2;
+Docker/deployment §13; hardening §15. CI is not explicitly specified.
 
-Ideas parking lot
+## Per-PR status
+| PR / local commit-set identifier | Concern | Status | Evidence | Developer confirmation |
+|---|---|---|---|---|
+| 1A / renewal-1a | Progress/specification/copy reconciliation | earlier reconciliation verified; revised written plan approved | [1A](docs/renewal/phase-1-evidence.md#1a) | plan approved 2026-10-06; implementation confirmation pending |
+| 1B / renewal-1b | Secret defaults and rotation instructions | verified; revised for explicit local defaults in `a87d86a` | [1B](docs/renewal/phase-1-evidence.md#1b) | pending |
+| 1C / renewal-1c | Refresh storage, expiry, rotation, replay | implemented in grouped `775a838`; offline tests pass | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1D / renewal-1d | Login lockout and abuse throttling | implemented in grouped `775a838`; offline tests pass | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1E / renewal-1e | Atomic registration and rollback | implemented in grouped `775a838`; PostgreSQL test passes | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1F / renewal-1f | Physical deletion and access invalidation | implemented in grouped `775a838`; PostgreSQL tests pass | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1G / renewal-1g | Feedback validation and atomic replacement | implemented in `43e3fc9`; PostgreSQL tests pass | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1H / renewal-1h | Browser/session security and refresh | implemented in `88d53a3`; browser check passes | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1I / renewal-1i | Transport, CORS and security headers | implemented in grouped `775a838`; PostgreSQL host tests pass | [1C–1I](docs/renewal/phase-1-evidence.md#1c-1i) | pending |
+| 1J / renewal-1j | Dependency remediation | implemented in `cf09a61`; audit clear, NU1510 warning remains | [1J](docs/renewal/phase-1-evidence.md#1j) | pending |
+| 1K / renewal-1k | Tracked build artifacts | 816 removals committed in `4f4d24a` | [1K](docs/renewal/phase-1-evidence.md#1k) | pending |
 
-Not in V1. Add anything that comes up mid-build, one line each, with the date.
+Local commit subjects use the identifiers shown above; 1C–1F/I share one commit. No PR has been published.
 
-Log
+## Open decisions
+- Track selection: versioned weekly SHA-256 tie-break and upstream-ranked representative proposals
+  are alternatives, neither adopted. Within-artist popularity preference requires explicit approval.
+- Scoring alternatives A–D, stoplists, IDF corpus and weights require real development recordings
+  and explicit adoption approval, except baseline A if the developer explicitly bypasses real evidence.
+  No catalog conclusions from synthetic data. Pilot evidence cannot promote or tune a formula.
+- Correctness gates, held-out guardrails against A and blind-rating margin are approved as written;
+  changes require review before real scoring. Diversity and novelty are formula-selection tie-breakers,
+  never substitutes for ratings; the approved evaluation formulas retain their novelty component.
+- Phase 2 placement must follow V1_FolderStructure.md; any new project/folder deviation needs approval.
+  Evaluation depends on Application/Domain only; the harness has no live source. Clarify production
+  acquisition against the recorder-only live-call rule before Phase 6 implementation.
+- Retention (24h cache, 30d recordings/backups, 12mo recommendations) is proposed, not approved.
+- Shared storage inventory/acquisition guard and alert-and-degrade policy are future work;
+  actual persisted complete-breakdown sizes and supported capacity are **not verified**.
+- Phase 1 rejects contradictory sentiment/rating pairs (Liked 1–3, Disliked 7–10) and
+  preserves familiarity independently. Phase 6 still needs a full conflict/retention contract.
+- Dependency, schema, API/export and test-contract changes must be presented concretely for review.
 
-Short dated entries for decisions and notable changes (mirrors CHANGELOG for user-visible ones).
-- 2026-09-30: Solution skeleton set up (Onion architecture: Domain, Application, Infrastructure, Web, Worker, tests). Pure deterministic recommendation scorer with 4 components, score breakdown, and benchmark fixture implemented. Ready for developer review.
-- 2026-09-30: DataAccessLayer finished: PostgreSQL 16+ (via Npgsql) configured, AppDbContext with IAppDbContext, IDataProtectionKeyContext, automatic audit timestamps, complete entity configurations, repositories (User, WeeklyDigest, TasteSignal, Track), InitialCreate migration generated, and 11 unit/model tests passing.
-- 2026-10-01: Named the deterministic recommendation & feedback re-ranking engine "Residue". Added 3 core product pillars to PROGRESS.md (Zero-Friction Deep Links, Hybrid Onboarding, and 3-5 Track High-Precision Batches).
-- 2026-10-02: Integrated DataContext with ASP.NET Core Identity (ApplicationUser in identity schema linked 1:1 to Domain User), generic AsyncRepository<T>, UnitOfWork, DapperPagedRepositoryBase, comprehensive audit trail with soft-delete interceptor in SaveChangesAsync, and NoTracking + SplitQuery EF Core patterns. 43 tests passing.
-- 2026-10-02: ApplicationLayer completed: MediatR 12.4+ CQRS architecture with open generic ValidationBehavior pipeline, FluentValidation validators (enforcing 3-5 hybrid onboarding seeds, delivery schedules, feedback), AutoMapper profiles + zero-allocation MappingExtensions, immutable DTO records (Subscribers, Taste, Digests, GDPR Data Export), and tests/Application.Tests test suite. All 75 tests passing across solution.
+## Open Last.fm questions
+- Azerbaijan/EEA territorial conditions, required consents and cross-border transfers.
+- Recording redistribution, benchmark publication and research-use permission.
+- Written public-page approval; attribution-button placement and permission for local hosting.
+- Text-only email attribution acceptability is **not verified**.
+- Current terms do not specify a universal numeric request allowance. Four/five requests per second
+  in older files are not verified allowances. One request/second is only proposed conservative pacing.
+- [Terms](https://www.last.fm/api/tos) and
+  [track endpoint](https://www.last.fm/api/show/artist.getTopTracks) checked 2026-10-06.
+- Last.fm enquiry remains draft only; repository URL must be confirmed before any sending.
+
+## Historical baseline
+- The previous implementation includes scorer/domain tests, Identity/JWT controllers, EF persistence,
+  Last.fm client/fixtures, and a static dashboard. Worker scheduling/delivery is not complete.
+- Prior agents' completion, privacy, coverage and compliance claims are not carried forward.
+- The old coverage report has hybrid fallback and hard-coded conclusions; it cannot establish live
+  provenance or musical quality. See its [qualification](docs/coverage-spike-founder-seeds.md).
+- Runtime targets .NET 10; several packages are 9.x. No dependency migration is implied by this document.

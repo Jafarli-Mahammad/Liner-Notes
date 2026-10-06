@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace LinerNotes.Domain.Enums;
 
 /// <summary>
 /// User sentiment expressed on a specific recommendation.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum UserFeedback
 {
     None = 0,

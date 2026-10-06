@@ -41,7 +41,7 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
         ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
     }
 
-    public DataContext(
+    protected DataContext(
         DbContextOptions options,
         IHttpContextAccessor? httpContextAccessor = null) : base(options)
     {

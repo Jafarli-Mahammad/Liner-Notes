@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/mahammadjafarli/source/repos/Liner Notes/scripts/checks/secret_defaults.py", line 5, in <module>
+    assert not config.get('ConnectionStrings', {}).get('DefaultConnection'), 'Tracked database configuration must not carry default credentials'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Tracked database configuration must not carry default credentials

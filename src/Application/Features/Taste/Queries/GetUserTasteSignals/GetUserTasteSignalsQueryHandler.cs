@@ -1,4 +1,4 @@
-using AutoMapper;
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Taste;
 using MediatR;
@@ -11,12 +11,10 @@ namespace LinerNotes.Application.Features.Taste.Queries.GetUserTasteSignals;
 public sealed class GetUserTasteSignalsQueryHandler : IRequestHandler<GetUserTasteSignalsQuery, IReadOnlyList<TasteSignalDto>>
 {
     private readonly ITasteSignalRepository _tasteSignalRepository;
-    private readonly IMapper _mapper;
 
-    public GetUserTasteSignalsQueryHandler(ITasteSignalRepository tasteSignalRepository, IMapper mapper)
+    public GetUserTasteSignalsQueryHandler(ITasteSignalRepository tasteSignalRepository)
     {
         _tasteSignalRepository = tasteSignalRepository;
-        _mapper = mapper;
     }
 
     public async Task<IReadOnlyList<TasteSignalDto>> Handle(
@@ -24,6 +22,6 @@ public sealed class GetUserTasteSignalsQueryHandler : IRequestHandler<GetUserTas
         CancellationToken cancellationToken)
     {
         var signals = await _tasteSignalRepository.GetByUserIdAsync(request.UserId, cancellationToken);
-        return _mapper.Map<IReadOnlyList<TasteSignalDto>>(signals);
+        return signals.Select(s => s.ToDto()).ToArray();
     }
 }

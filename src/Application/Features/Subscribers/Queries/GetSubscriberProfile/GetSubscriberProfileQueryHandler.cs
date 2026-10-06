@@ -1,4 +1,4 @@
-using AutoMapper;
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Subscribers;
 using MediatR;
@@ -11,12 +11,10 @@ namespace LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfi
 public sealed class GetSubscriberProfileQueryHandler : IRequestHandler<GetSubscriberProfileQuery, SubscriberDto?>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IMapper _mapper;
 
-    public GetSubscriberProfileQueryHandler(IUserRepository userRepository, IMapper mapper)
+    public GetSubscriberProfileQueryHandler(IUserRepository userRepository)
     {
         _userRepository = userRepository;
-        _mapper = mapper;
     }
 
     public async Task<SubscriberDto?> Handle(
@@ -24,6 +22,6 @@ public sealed class GetSubscriberProfileQueryHandler : IRequestHandler<GetSubscr
         CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-        return user is null ? null : _mapper.Map<SubscriberDto>(user);
+        return user?.ToDto();
     }
 }

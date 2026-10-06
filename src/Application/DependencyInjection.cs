@@ -1,6 +1,5 @@
 using FluentValidation;
 using LinerNotes.Application.Common.Behaviors;
-using LinerNotes.Application.Common.Mappings;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,12 +20,6 @@ public static class DependencyInjection
 
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(assembly);
-
-        // Register AutoMapper
-        services.AddAutoMapper(cfg =>
-        {
-            cfg.AddProfile<MappingProfile>();
-        }, assembly);
 
         return services;
     }

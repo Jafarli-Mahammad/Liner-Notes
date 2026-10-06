@@ -1,4 +1,4 @@
-using AutoMapper;
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Digests;
 using MediatR;
@@ -11,12 +11,10 @@ namespace LinerNotes.Application.Features.Digests.Queries.GetLatestDigest;
 public sealed class GetLatestDigestQueryHandler : IRequestHandler<GetLatestDigestQuery, WeeklyDigestDto?>
 {
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
-    private readonly IMapper _mapper;
 
-    public GetLatestDigestQueryHandler(IWeeklyDigestRepository weeklyDigestRepository, IMapper mapper)
+    public GetLatestDigestQueryHandler(IWeeklyDigestRepository weeklyDigestRepository)
     {
         _weeklyDigestRepository = weeklyDigestRepository;
-        _mapper = mapper;
     }
 
     public async Task<WeeklyDigestDto?> Handle(
@@ -26,6 +24,6 @@ public sealed class GetLatestDigestQueryHandler : IRequestHandler<GetLatestDiges
         var digests = await _weeklyDigestRepository.GetRecentDigestsForUserAsync(request.UserId, 1, cancellationToken);
         var latest = digests.FirstOrDefault();
 
-        return latest is null ? null : _mapper.Map<WeeklyDigestDto>(latest);
+        return latest?.ToDto();
     }
 }

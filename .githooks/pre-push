@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Git pre-push hook: Pure Deterministic Quality & Security Gate
+# Verifies build integrity, runs full automated test suite, and scans for credentials.
+# Zero AI hallucinations; 100% executable truth.
+
+if [ "$SKIP_PUSH_GATE" = "1" ] || [ "$SKIP_GATE" = "1" ]; then
+    echo -e "\033[93m[pre-push] SKIP_PUSH_GATE=1 detected; bypassing gate.\033[0m"
+    exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+
+echo -e "\033[96m\033[1m🚀 [Pre-Push Gate] Verifying build integrity and automated test suite...\033[0m"
+
+# 1. Credential leak check on unpushed diff
+UNPUSHED_DIFF=""
+UPSTREAM_TRACKING="$(git rev-parse --abbrev-ref @{u} 2>/dev/null)"
+if [ -n "$UPSTREAM_TRACKING" ]; then
+    UNPUSHED_DIFF="$(git diff @{u}..HEAD 2>/dev/null)"
+else
+    UNPUSHED_DIFF="$(git diff HEAD~1..HEAD 2>/dev/null)"
+fi
+
+if [ -n "$UNPUSHED_DIFF" ]; then
+    if echo "$UNPUSHED_DIFF" | grep -Eq '^\+.*-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'; then
+        echo -e "\033[91m\033[1m🛑 PUSH BLOCKED: Unpushed commit contains hardcoded Private Key!\033[0m"
+        exit 1
+    fi
+    if echo "$UNPUSHED_DIFF" | grep -Eq '^\+.*\b(AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}\b'; then
+        echo -e "\033[91m\033[1m🛑 PUSH BLOCKED: Unpushed commit contains AWS Access Key ID!\033[0m"
+        exit 1
+    fi
+    if echo "$UNPUSHED_DIFF" | grep -Eq '^\+.*\bgh[pousr]_[A-Za-z0-9_]{36,}\b'; then
+        echo -e "\033[91m\033[1m🛑 PUSH BLOCKED: Unpushed commit contains GitHub Token!\033[0m"
+        exit 1
+    fi
+fi
+
+# 2. Build Verification
+echo -ne "⚙️  Building solution... "
+BUILD_OUT=$(dotnet build "$REPO_ROOT/Liner Notes.sln" '/clp:NoSummary;ErrorsOnly' 2>&1)
+BUILD_STATUS=$?
+
+if [ $BUILD_STATUS -ne 0 ]; then
+    echo -e "\033[91mFAILED\033[0m\n"
+    echo -e "\033[91m\033[1m🛑 PUSH BLOCKED: Solution failed to build!\033[0m"
+    echo "$BUILD_OUT"
+    exit 1
+fi
+echo -e "\033[92mOK (0 Errors)\033[0m"
+
+# 3. Test Suite Verification
+echo -ne "🧪 Running automated test suite... "
+TEST_OUT=$(dotnet test "$REPO_ROOT/Liner Notes.sln" --logger "console;verbosity=quiet" 2>&1)
+TEST_STATUS=$?
+
+if [ $TEST_STATUS -ne 0 ]; then
+    echo -e "\033[91mFAILED\033[0m\n"
+    echo -e "\033[91m\033[1m🛑 PUSH BLOCKED: Automated tests failed!\033[0m"
+    echo "$TEST_OUT"
+    exit 1
+fi
+echo -e "\033[92mPASSED (All test suites green)\033[0m"
+
+echo -e "\n\033[92m\033[1m✅ All deterministic gates passed! Proceeding with push...\033[0m\n"
+exit 0

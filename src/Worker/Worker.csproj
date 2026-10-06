@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>LinerNotes.Worker</RootNamespace>
     <AssemblyName>LinerNotes.Worker</AssemblyName>
+    <UserSecretsId>linernotes-secrets-app-v1</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

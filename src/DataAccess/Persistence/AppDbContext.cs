@@ -23,11 +23,4 @@ public class AppDbContext : DataContext
         : base(options, httpContextAccessor)
     {
     }
-
-    public AppDbContext(
-        DbContextOptions options,
-        IHttpContextAccessor? httpContextAccessor = null)
-        : base(options, httpContextAccessor)
-    {
-    }
 }

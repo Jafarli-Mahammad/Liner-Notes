@@ -21,3 +21,14 @@ venv/
 
 # Antigravity & Agent scratch
 .system_generated/
+
+# Local configuration, credentials, recordings and verification output
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.p12
+recordings/
+TestResults/

@@ -8,4 +8,5 @@ public interface IUserRepository : IAsyncRepository<User>
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<User>> GetUsersDueForDigestAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
     void Update(User user);
+    Task<bool> DeleteOwnedDataAsync(Guid userId, CancellationToken cancellationToken = default);
 }

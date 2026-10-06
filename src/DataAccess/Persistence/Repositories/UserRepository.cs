@@ -42,4 +42,16 @@ public sealed class UserRepository : AsyncRepository<User>, IUserRepository
     {
         DataContext.Users.Update(user);
     }
+
+    public async Task<bool> DeleteOwnedDataAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        // Must run inside the account transaction. Bulk deletes bypass the soft-delete interceptor.
+        if (DataContext.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Account deletion requires a transaction.");
+        await DataContext.WeeklyRecommendations.IgnoreQueryFilters().Where(r => r.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await DataContext.WeeklyDigests.IgnoreQueryFilters().Where(d => d.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await DataContext.TasteSignals.IgnoreQueryFilters().Where(s => s.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await DataContext.UserMusicConnections.IgnoreQueryFilters().Where(c => c.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        return await DataContext.Users.IgnoreQueryFilters().Where(u => u.Id == userId).ExecuteDeleteAsync(cancellationToken) == 1;
+    }
 }

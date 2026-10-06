@@ -64,7 +64,8 @@ public static class MappingExtensions
         recommendation.WhyThisPick(),
         recommendation.Feedback,
         recommendation.FeedbackComment,
-        recommendation.FeedbackGivenAt);
+        recommendation.FeedbackGivenAt,
+        recommendation.Rating);
 
     public static WeeklyDigestDto ToDto(this WeeklyDigest digest) => new(
         digest.Id,

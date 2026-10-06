@@ -1,11 +1,11 @@
 Project
 
-Open-source website that emails each user a weekly music discovery list. Every pick shows WHY it was chosen (stored score breakdown). Avoids pushing already-popular artists. Users can see and export all taste data we hold.
+Open-source website that emails each user a weekly music discovery list. Every pick shows WHY it was chosen (stored score breakdown). V1 is popularity-neutral; no popularity preference or penalty is adopted. Users can see and export all taste data we hold.
 
 No own recommendation engine, no ML. Candidates come from Last.fm / ListenBrainz; we apply our own deterministic scoring and feedback re-ranking.
 Never claim a new algorithm or imply we built the similarity data. Flag README/copy that overclaims.
 Structure (Onion; dependencies point inward only)
-- src/Domain/ (LinerNotes.Domain): entities, value objects, PURE scorer (tag overlap, popularity penalty, novelty, ranking policy). Zero external deps.
+- src/Domain/ (LinerNotes.Domain): entities, value objects, PURE scorer (tag overlap, novelty, ranking policy). Zero external deps.
 - src/Application/ (LinerNotes.Application): MediatR commands/queries + interfaces (IRecommendationSource, IEmailSender, repositories). Orchestration only.
 - src/DataAccess/ (LinerNotes.DataAccess): EF Core (AppDbContext, Entity Configurations, Migrations).
 - src/Infrastructure/ (LinerNotes.Infrastructure): Last.fm/ListenBrainz HTTP clients (HttpClientFactory), email sender, in-memory caching.
@@ -35,5 +35,12 @@ Verify API terms, rate limits, endpoints, library versions and pricing before co
 Don't call something done until the developer has confirmed it works.
 Changes to the scorer must be sanity-checked against the benchmark seed set (tests/ once it exists).
 Update CHANGELOG.md for user-visible changes.
+
+For broad requests such as finishing a phase, read PROGRESS.md first and report the remaining
+scope, expected effort, and proposed commit/test breakdown before starting a long implementation.
+Keep the developer updated during extended work; do not let a multi-part task run silently.
+Before removing a dependency, state the exact audit/advisory finding, whether an exploitable path
+was established, and the removal-versus-upgrade tradeoff. Keep dependency remediation within the
+authorized scope and prefer the smallest justified change.
 
 Read MEMORY.md and PROGRESS.md at session start; follow the write rules in MEMORY.md.

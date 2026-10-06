@@ -1,7 +1,5 @@
-using AutoMapper;
 using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces.Repositories;
-using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
@@ -13,14 +11,6 @@ namespace LinerNotes.Application.Tests.Features.Export;
 
 public class GetUserDataExportTests
 {
-    private readonly IMapper _mapper;
-
-    public GetUserDataExportTests()
-    {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
-        _mapper = config.CreateMapper();
-    }
-
     [Fact]
     public async Task Handle_ReturnsCompleteTransparencyExport_WhenUserExists()
     {
@@ -40,7 +30,7 @@ public class GetUserDataExportTests
         tasteRepo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(new List<TasteSignal> { signal });
         digestRepo.GetRecentDigestsForUserAsync(userId, 1000, Arg.Any<CancellationToken>()).Returns(new List<WeeklyDigest> { digest });
 
-        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo, _mapper);
+        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo);
         var result = await handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None);
 
         Assert.NotNull(result);
@@ -65,7 +55,7 @@ public class GetUserDataExportTests
 
         userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns((User?)null);
 
-        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo, _mapper);
+        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None));

@@ -13,4 +13,5 @@ public record WeeklyRecommendationDto(
     string WhyThisPick,
     UserFeedback Feedback,
     string? FeedbackComment,
-    DateTime? FeedbackGivenAt);
+    DateTime? FeedbackGivenAt,
+    int? Rating = null);

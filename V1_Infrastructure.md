@@ -1,3 +1,6 @@
+> Renewal qualification (2026-10-06): this is a target specification, not verified implementation.
+> The [renewal contracts](docs/renewal/contracts.md#specification-reconciliation) supersede conflicting examples: six layers, popularity-neutral V1, deferred imports, physical deletion, and email without remote resources. Numeric API allowances and provider pricing below are not verified. Dependency, schema and deployment changes remain approval-gated.
+
 # 🎵 Liner Notes V1 — Architecture & Infrastructure Specification
 
 **Document Version:** 1.0.0 (V1 Lean Production)  

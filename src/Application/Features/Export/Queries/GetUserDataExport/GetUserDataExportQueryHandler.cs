@@ -1,4 +1,4 @@
-using AutoMapper;
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Digests;
@@ -18,18 +18,15 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     private readonly IUserRepository _userRepository;
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
-    private readonly IMapper _mapper;
 
     public GetUserDataExportQueryHandler(
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
-        IWeeklyDigestRepository weeklyDigestRepository,
-        IMapper mapper)
+        IWeeklyDigestRepository weeklyDigestRepository)
     {
         _userRepository = userRepository;
         _tasteSignalRepository = tasteSignalRepository;
         _weeklyDigestRepository = weeklyDigestRepository;
-        _mapper = mapper;
     }
 
     public async Task<UserDataExportDto> Handle(
@@ -45,10 +42,10 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         var signals = await _tasteSignalRepository.GetByUserIdAsync(request.UserId, cancellationToken);
         var digests = await _weeklyDigestRepository.GetRecentDigestsForUserAsync(request.UserId, count: 1000, cancellationToken);
 
-        var subscriberDto = _mapper.Map<SubscriberDto>(user);
-        var connectionDtos = _mapper.Map<IReadOnlyList<UserMusicConnectionExportDto>>(user.Connections);
-        var signalDtos = _mapper.Map<IReadOnlyList<TasteSignalDto>>(signals);
-        var digestDtos = _mapper.Map<IReadOnlyList<WeeklyDigestDto>>(digests);
+        var subscriberDto = user.ToDto();
+        var connectionDtos = user.Connections.Select(c => c.ToExportDto()).ToArray();
+        var signalDtos = signals.Select(s => s.ToDto()).ToArray();
+        var digestDtos = digests.Select(d => d.ToDto()).ToArray();
 
         return new UserDataExportDto(
             ExportVersion: "1.0",

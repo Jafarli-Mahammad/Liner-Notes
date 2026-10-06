@@ -1,4 +1,3 @@
-using AutoMapper;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.DTOs.Digests;
 using LinerNotes.Application.DTOs.Export;
@@ -15,36 +14,20 @@ namespace LinerNotes.Application.Tests.Common.Mappings;
 
 public class MappingTests
 {
-    private readonly IMapper _mapper;
-
-    public MappingTests()
+    [Fact]
+    public void TypedMapping_PreservesEmptyNestedRecommendations()
     {
-        var config = new MapperConfiguration(cfg =>
-        {
-            cfg.AddProfile<MappingProfile>();
-        });
-
-        config.AssertConfigurationIsValid();
-        _mapper = config.CreateMapper();
+        var digest = new WeeklyDigest(Guid.NewGuid(), new IsoWeek(2026, 40),
+            DateTime.UtcNow, DateTime.UtcNow.AddDays(7));
+        Assert.Empty(digest.ToDto().Recommendations);
     }
 
     [Fact]
-    public void AutoMapper_Configuration_IsValid()
-    {
-        var config = new MapperConfiguration(cfg =>
-        {
-            cfg.AddProfile<MappingProfile>();
-        });
-
-        config.AssertConfigurationIsValid();
-    }
-
-    [Fact]
-    public void AutoMapper_Maps_User_To_SubscriberDto()
+    public void TypedMapping_Maps_User_To_SubscriberDto()
     {
         var user = new User("listener@example.com", "UTC", DigestDeliveryDay.Friday, 9);
 
-        var dto = _mapper.Map<SubscriberDto>(user);
+        var dto = user.ToDto();
 
         Assert.Equal(user.Id, dto.Id);
         Assert.Equal("listener@example.com", dto.Email);
@@ -54,7 +37,7 @@ public class MappingTests
     }
 
     [Fact]
-    public void AutoMapper_Maps_TasteSignal_To_TasteSignalDto()
+    public void TypedMapping_Maps_TasteSignal_To_TasteSignalDto()
     {
         var signal = TasteSignal.CreateSeedTag(
             Guid.NewGuid(),
@@ -62,7 +45,7 @@ public class MappingTests
             0.85,
             "Manual user onboarding");
 
-        var dto = _mapper.Map<TasteSignalDto>(signal);
+        var dto = signal.ToDto();
 
         Assert.Equal(signal.Id, dto.Id);
         Assert.Equal(signal.UserId, dto.UserId);
@@ -74,7 +57,7 @@ public class MappingTests
     }
 
     [Fact]
-    public void AutoMapper_Maps_WeeklyDigest_With_Nested_Recommendations_To_WeeklyDigestDto()
+    public void TypedMapping_Maps_WeeklyDigest_With_Nested_Recommendations_To_WeeklyDigestDto()
     {
         var startDate = new DateTime(2026, 9, 28, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2026, 10, 4, 23, 59, 59, DateTimeKind.Utc);
@@ -86,7 +69,7 @@ public class MappingTests
 
         digest.AddRecommendation(track, breakdown, 1);
 
-        var dto = _mapper.Map<WeeklyDigestDto>(digest);
+        var dto = digest.ToDto();
 
         Assert.Equal(digest.Id, dto.Id);
         Assert.Equal(digest.UserId, dto.UserId);

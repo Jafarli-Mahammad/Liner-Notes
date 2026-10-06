@@ -1,6 +1,4 @@
-using AutoMapper;
 using LinerNotes.Application.Common.Interfaces.Repositories;
-using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Features.Taste.Queries.GetUserTasteSignals;
 using LinerNotes.Domain.Taste;
 using NSubstitute;
@@ -10,14 +8,6 @@ namespace LinerNotes.Application.Tests.Features.Taste;
 
 public class GetUserTasteSignalsTests
 {
-    private readonly IMapper _mapper;
-
-    public GetUserTasteSignalsTests()
-    {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
-        _mapper = config.CreateMapper();
-    }
-
     [Fact]
     public async Task Handle_ReturnsMappedSignals_ForUser()
     {
@@ -29,7 +19,7 @@ public class GetUserTasteSignalsTests
         tasteRepo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
             .Returns(new List<TasteSignal> { signal1, signal2 });
 
-        var handler = new GetUserTasteSignalsQueryHandler(tasteRepo, _mapper);
+        var handler = new GetUserTasteSignalsQueryHandler(tasteRepo);
         var result = await handler.Handle(new GetUserTasteSignalsQuery(userId), CancellationToken.None);
 
         Assert.Equal(2, result.Count);

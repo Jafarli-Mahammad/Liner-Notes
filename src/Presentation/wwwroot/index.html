@@ -13,10 +13,10 @@
       <span class="badge">V1 Beta</span>
     </div>
     <nav>
-      <button id="nav-discovery" class="active" onclick="switchTab('discovery')">Weekly Discovery</button>
-      <button id="nav-seeding" onclick="switchTab('seeding')">Taste Seeding</button>
-      <button id="nav-your-data" onclick="switchTab('your-data')">Your Data & Privacy</button>
-      <button id="nav-auth" onclick="switchTab('auth')">Account</button>
+      <button id="nav-discovery" class="active" data-action="tab" data-tab="discovery">Weekly Discovery</button>
+      <button id="nav-seeding" data-action="tab" data-tab="seeding">Taste Seeding</button>
+      <button id="nav-your-data" data-action="tab" data-tab="your-data">Your Data & Privacy</button>
+      <button id="nav-auth" data-action="tab" data-tab="auth">Account</button>
     </nav>
     <div class="auth-badge" id="auth-status"></div>
   </header>
@@ -24,7 +24,7 @@
   <main>
     <div class="hero">
       <h1>Your Taste, Explained and Owned by You</h1>
-      <p>A weekly music discovery digest where every pick shows exactly why it was chosen. Transparent scoring with popularity-bias control, 1-click streaming search links, and complete data sovereignty.</p>
+      <p>A weekly music discovery digest where every pick shows exactly why it was chosen. The V1 plan uses popularity-neutral scoring and streaming search links. Weekly delivery and complete data export are still in development.</p>
     </div>
 
     <!-- Discovery Tab -->
@@ -48,18 +48,18 @@
         <div class="form-group">
           <label>Popular Taste Tags (Click to toggle)</label>
           <div class="tag-cloud">
-            <button type="button" class="tag-btn" data-tag="post-punk" onclick="toggleTag('post-punk')">post-punk</button>
-            <button type="button" class="tag-btn" data-tag="trip-hop" onclick="toggleTag('trip-hop')">trip-hop</button>
-            <button type="button" class="tag-btn" data-tag="shoegaze" onclick="toggleTag('shoegaze')">shoegaze</button>
-            <button type="button" class="tag-btn" data-tag="krautrock" onclick="toggleTag('krautrock')">krautrock</button>
-            <button type="button" class="tag-btn" data-tag="idm" onclick="toggleTag('idm')">idm</button>
-            <button type="button" class="tag-btn" data-tag="ambient" onclick="toggleTag('ambient')">ambient</button>
-            <button type="button" class="tag-btn" data-tag="synthwave" onclick="toggleTag('synthwave')">synthwave</button>
-            <button type="button" class="tag-btn" data-tag="math rock" onclick="toggleTag('math rock')">math rock</button>
-            <button type="button" class="tag-btn" data-tag="dreampop" onclick="toggleTag('dreampop')">dreampop</button>
-            <button type="button" class="tag-btn" data-tag="dark ambient" onclick="toggleTag('dark ambient')">dark ambient</button>
-            <button type="button" class="tag-btn" data-tag="anatolian rock" onclick="toggleTag('anatolian rock')">anatolian rock</button>
-            <button type="button" class="tag-btn" data-tag="jazz fusion" onclick="toggleTag('jazz fusion')">jazz fusion</button>
+            <button type="button" class="tag-btn" data-tag="post-punk" data-action="tag">post-punk</button>
+            <button type="button" class="tag-btn" data-tag="trip-hop" data-action="tag">trip-hop</button>
+            <button type="button" class="tag-btn" data-tag="shoegaze" data-action="tag">shoegaze</button>
+            <button type="button" class="tag-btn" data-tag="krautrock" data-action="tag">krautrock</button>
+            <button type="button" class="tag-btn" data-tag="idm" data-action="tag">idm</button>
+            <button type="button" class="tag-btn" data-tag="ambient" data-action="tag">ambient</button>
+            <button type="button" class="tag-btn" data-tag="synthwave" data-action="tag">synthwave</button>
+            <button type="button" class="tag-btn" data-tag="math rock" data-action="tag">math rock</button>
+            <button type="button" class="tag-btn" data-tag="dreampop" data-action="tag">dreampop</button>
+            <button type="button" class="tag-btn" data-tag="dark ambient" data-action="tag">dark ambient</button>
+            <button type="button" class="tag-btn" data-tag="anatolian rock" data-action="tag">anatolian rock</button>
+            <button type="button" class="tag-btn" data-tag="jazz fusion" data-action="tag">jazz fusion</button>
           </div>
         </div>
 
@@ -68,7 +68,7 @@
           <input type="text" id="seed-artists" placeholder="e.g. Aphex Twin, Slowdive, Massive Attack">
         </div>
 
-        <button class="btn-primary" onclick="submitSeeds()">Save Seeds & Calibrate Profile</button>
+        <button class="btn-primary" data-action="seeds">Save Seeds & Calibrate Profile</button>
       </div>
     </section>
 
@@ -77,9 +77,9 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Your Stored Data (GDPR Portability & Transparency)</div>
+            <div class="card-title">Your Stored Data</div>
             <p style="color: var(--text-muted); font-size: 0.9rem;">
-              We believe in total transparency. Every atomic taste signal, account setting, and generated recommendation stored in our database is inspectable and exportable below verbatim.
+              Inspect and export the records currently covered by this preview. Complete export coverage is still being verified.
             </p>
           </div>
         </div>
@@ -93,7 +93,7 @@
         <!-- Register -->
         <div class="card">
           <div class="card-title" style="margin-bottom: 1rem;">Join Liner Notes</div>
-          <form onsubmit="handleRegister(event)">
+          <form id="register-form">
             <div class="form-group">
               <label for="reg-username">Username</label>
               <input type="text" id="reg-username" required placeholder="e.g. audiophile99">
@@ -104,7 +104,7 @@
             </div>
             <div class="form-group">
               <label for="reg-password">Password</label>
-              <input type="password" id="reg-password" required minlength="6" placeholder="At least 6 characters">
+              <input type="password" id="reg-password" required minlength="12" placeholder="At least 12 characters">
             </div>
             <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
           </form>
@@ -113,7 +113,7 @@
         <!-- Login -->
         <div class="card">
           <div class="card-title" style="margin-bottom: 1rem;">Subscriber Sign In</div>
-          <form onsubmit="handleLogin(event)">
+          <form id="login-form">
             <div class="form-group">
               <label for="login-email">Email Address</label>
               <input type="email" id="login-email" required placeholder="you@domain.com">

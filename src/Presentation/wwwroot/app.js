@@ -2,11 +2,62 @@
 const API_BASE = '/api';
 
 const state = {
-  token: localStorage.getItem('linernotes_token') || null,
+  token: null,
+  refreshToken: null,
+  sessionEpoch: 0,
   user: null,
   selectedTags: new Set(),
   activeTab: 'discovery'
 };
+
+// Remove credentials persisted by older versions; sessions now live only in this tab's memory.
+localStorage.removeItem('linernotes_token');
+let refreshInFlight = null;
+
+function acceptSession(data) {
+  state.sessionEpoch++;
+  state.token = data.accessToken;
+  state.refreshToken = data.refreshToken;
+  state.user = data.user;
+}
+
+async function refreshSession(epoch) {
+  if (refreshInFlight) return refreshInFlight;
+  const operation = (async () => {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST', credentials: 'omit', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: state.token, refreshToken: state.refreshToken })
+    });
+    if (state.sessionEpoch !== epoch) throw new Error('Session changed.');
+    if (!res.ok) { logout(); throw new Error('Please sign in again.'); }
+    const data = await res.json();
+    if (state.sessionEpoch !== epoch) throw new Error('Session changed.');
+    state.token = data.accessToken;
+    state.refreshToken = data.refreshToken;
+  })();
+  refreshInFlight = operation;
+  try { await operation; }
+  finally { if (refreshInFlight === operation) refreshInFlight = null; }
+}
+
+async function apiFetch(url, options = {}) {
+  if (!url.startsWith(`${API_BASE}/`)) throw new Error('Invalid API address.');
+  const epoch = state.sessionEpoch;
+  const token = state.token;
+  const send = () => fetch(url, { ...options, credentials: 'omit', cache: 'no-store',
+    headers: { ...options.headers, Authorization: `Bearer ${state.token}` } });
+  let response = await send();
+  if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
+  if (response.status === 401 && state.refreshToken) {
+    if (token === state.token) await refreshSession(epoch);
+    if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
+    response = await send();
+    if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
+  }
+  if (response.status === 401) logout();
+  return response;
+}
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -122,13 +173,13 @@ function renderTrackCard(track, isGuest = false) {
       ${buildDeepLinks(track.artist, track.title)}
       ${renderScoreBreakdown(track)}
       <div class="feedback-actions">
-        <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'Liked', null, ${isGuest})">
+        <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Liked" data-guest="${isGuest}">
           👍 Like
         </button>
-        <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'Disliked', null, ${isGuest})">
+        <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Disliked" data-guest="${isGuest}">
           👎 Dislike
         </button>
-        <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" onclick="submitFeedback('${safeId}', 'AlreadyKnown', null, ${isGuest})">
+        <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="AlreadyKnown" data-guest="${isGuest}">
           🎧 Already Know This
         </button>
       </div>
@@ -137,7 +188,7 @@ function renderTrackCard(track, isGuest = false) {
         ${[1,2,3,4,5,6,7,8,9,10].map(r => `
           <button type="button" class="btn-rating-num ${track.rating === r ? 'active' : ''}" 
                   style="padding: 2px 7px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: ${track.rating === r ? 'var(--accent-primary)' : 'var(--bg-secondary)'}; color: ${track.rating === r ? '#fff' : 'var(--text-color)'}; cursor: pointer;"
-                  onclick="submitFeedback('${safeId}', '${r >= 7 ? 'Liked' : (r <= 3 ? 'Disliked' : 'None')}', ${r}, ${isGuest})">${r}</button>
+                  data-action="feedback" data-id="${safeId}" data-feedback="${r >= 7 ? 'Liked' : (r <= 3 ? 'Disliked' : 'None')}" data-rating="${r}" data-guest="${isGuest}">${r}</button>
         `).join('')}
       </div>
     </div>
@@ -146,11 +197,12 @@ function renderTrackCard(track, isGuest = false) {
 
 async function loadDiscovery() {
   const container = document.getElementById('discovery-container');
+  const epoch = state.sessionEpoch;
   if (!state.token) {
     container.innerHTML = `
       <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-        <strong>Guest Preview Mode</strong>: Below is a sample 3-pick discovery batch generated by our deterministic Residue (Prism) scorer. 
-        <a href="#" onclick="switchTab('auth')" style="color: var(--accent-primary); text-decoration: underline;">Create an account</a> to get personalized weekly emails and custom seed preferences.
+        <strong>Guest Preview Mode</strong>: These three synthetic examples demonstrate the interface; they are not scored recommendations.
+        <a href="#" data-action="tab" data-tab="auth" style="color: var(--accent-primary); text-decoration: underline;">Create an account</a> to save seed preferences. Weekly email delivery is still in development.
       </div>
       ${sampleGuestPicks.map(p => renderTrackCard(p, true)).join('')}
     `;
@@ -159,18 +211,19 @@ async function loadDiscovery() {
 
   container.innerHTML = '<p>Loading your weekly digest...</p>';
   try {
-    const res = await fetch(`${API_BASE}/digests/latest`, {
+    const res = await apiFetch(`${API_BASE}/digests/latest`, {
       headers: { 'Authorization': `Bearer ${state.token}` }
     });
+    if (epoch !== state.sessionEpoch) return;
 
     if (res.status === 404) {
       container.innerHTML = `
         <div class="card">
           <h3>No Digest Generated Yet</h3>
           <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
-            Your taste profile is being processed. Complete your taste seeding or link Last.fm/ListenBrainz to prepare your first scheduled weekly delivery.
+            No digest is available yet. You can save seed preferences while digest generation is in development.
           </p>
-          <button class="btn-primary" onclick="switchTab('seeding')">Go to Taste Seeding</button>
+          <button class="btn-primary" data-action="tab" data-tab="seeding">Go to Taste Seeding</button>
         </div>
       `;
       return;
@@ -178,6 +231,7 @@ async function loadDiscovery() {
 
     if (!res.ok) throw new Error('Failed to load digest');
     const digest = await res.json();
+    if (epoch !== state.sessionEpoch) return;
 
     const items = digest.recommendations.map(r => ({
       id: r.id,
@@ -200,6 +254,7 @@ async function loadDiscovery() {
       ${items.map(p => renderTrackCard(p, false)).join('')}
     `;
   } catch (err) {
+    if (epoch !== state.sessionEpoch) return;
     container.innerHTML = `<p style="color: var(--accent-danger);">Error loading digest: ${escapeHtml(err.message)}</p>`;
   }
 }
@@ -226,7 +281,7 @@ async function submitFeedback(recommendationId, feedbackType, rating = null, isG
     const payload = { feedback: feedbackType };
     if (rating !== null) payload.rating = rating;
 
-    const res = await fetch(`${API_BASE}/digests/recommendations/${recommendationId}/feedback`, {
+    const res = await apiFetch(`${API_BASE}/digests/recommendations/${recommendationId}/feedback`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -306,7 +361,7 @@ async function submitSeeds() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/taste/seed`, {
+    const res = await apiFetch(`${API_BASE}/taste/seed`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -329,6 +384,7 @@ async function submitSeeds() {
 
 async function loadYourData() {
   const container = document.getElementById('export-container');
+  const epoch = state.sessionEpoch;
   if (!state.token) {
     container.innerHTML = `
       <p style="color: var(--text-muted);">
@@ -340,12 +396,13 @@ async function loadYourData() {
 
   container.innerHTML = '<p>Retrieving your stored records...</p>';
   try {
-    const res = await fetch(`${API_BASE}/export/my-data`, {
+    const res = await apiFetch(`${API_BASE}/export/my-data`, {
       headers: { 'Authorization': `Bearer ${state.token}` }
     });
 
     if (!res.ok) throw new Error('Failed to retrieve export');
     const data = await res.json();
+    if (epoch !== state.sessionEpoch) return;
 
     container.innerHTML = `
       <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
@@ -353,7 +410,7 @@ async function loadYourData() {
           <strong>Export Version:</strong> ${escapeHtml(data.exportVersion)} | 
           <strong>Generated:</strong> ${escapeHtml(new Date(data.exportedAtUtc).toLocaleString())}
         </div>
-        <button class="btn-primary" onclick="downloadExport()">Download JSON Export</button>
+        <button class="btn-primary" data-action="downloadExport">Download JSON Export</button>
       </div>
       <pre id="json-dump-pre" class="json-dump"></pre>
       <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
@@ -361,7 +418,7 @@ async function loadYourData() {
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
           Permanently purge your subscriber profile, preferences, and taste signals under the GDPR right to be forgotten.
         </p>
-        <button class="btn-danger" onclick="deleteAccount()">Delete My Account</button>
+        <button class="btn-danger" data-action="deleteAccount">Delete My Account</button>
       </div>
     `;
 
@@ -370,18 +427,21 @@ async function loadYourData() {
       pre.textContent = JSON.stringify(data, null, 2);
     }
   } catch (err) {
+    if (epoch !== state.sessionEpoch) return;
     container.innerHTML = `<p style="color: var(--accent-danger);">Error: ${escapeHtml(err.message)}</p>`;
   }
 }
 
 async function downloadExport() {
   if (!state.token) return;
+  const epoch = state.sessionEpoch;
   try {
-    const res = await fetch(`${API_BASE}/export/my-data?download=true`, {
+    const res = await apiFetch(`${API_BASE}/export/my-data?download=true`, {
       headers: { 'Authorization': `Bearer ${state.token}` }
     });
     if (!res.ok) throw new Error('Failed to retrieve authenticated export file');
     const blob = await res.blob();
+    if (epoch !== state.sessionEpoch) return;
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -391,6 +451,7 @@ async function downloadExport() {
     window.URL.revokeObjectURL(url);
     a.remove();
   } catch (err) {
+    if (epoch !== state.sessionEpoch) return;
     alert('Export download failed: ' + err.message);
   }
 }
@@ -399,7 +460,7 @@ async function deleteAccount() {
   if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
 
   try {
-    const res = await fetch(`${API_BASE}/subscribers/me`, {
+    const res = await apiFetch(`${API_BASE}/subscribers/me`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${state.token}` }
     });
@@ -434,9 +495,7 @@ async function handleRegister(e) {
       return;
     }
 
-    state.token = data.accessToken;
-    state.user = data.user;
-    localStorage.setItem('linernotes_token', state.token);
+    acceptSession(data);
     updateAuthUI();
     switchTab('seeding');
   } catch (err) {
@@ -462,9 +521,7 @@ async function handleLogin(e) {
       return;
     }
 
-    state.token = data.accessToken;
-    state.user = data.user;
-    localStorage.setItem('linernotes_token', state.token);
+    acceptSession(data);
     updateAuthUI();
     switchTab('discovery');
   } catch (err) {
@@ -473,9 +530,14 @@ async function handleLogin(e) {
 }
 
 function logout() {
+  state.sessionEpoch++;
   state.token = null;
+  state.refreshToken = null;
+  refreshInFlight = null;
   state.user = null;
   localStorage.removeItem('linernotes_token');
+  document.getElementById('export-container').replaceChildren();
+  document.getElementById('discovery-container').replaceChildren();
   updateAuthUI();
   switchTab('discovery');
 }
@@ -485,11 +547,11 @@ function updateAuthUI() {
   if (state.token) {
     badge.innerHTML = `
       <span>Subscriber Active</span> | 
-      <a href="#" onclick="logout()" style="color: var(--accent-primary); text-decoration: underline;">Logout</a>
+      <a href="#" data-action="logout" style="color: var(--accent-primary); text-decoration: underline;">Logout</a>
     `;
   } else {
     badge.innerHTML = `
-      <a href="#" onclick="switchTab('auth')" style="color: var(--accent-primary); text-decoration: underline;">Sign In / Register</a>
+      <a href="#" data-action="tab" data-tab="auth" style="color: var(--accent-primary); text-decoration: underline;">Sign In / Register</a>
     `;
   }
 }
@@ -509,7 +571,25 @@ function switchTab(tabName) {
   if (tabName === 'your-data') loadYourData();
 }
 
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-action]');
+  if (!target) return;
+  event.preventDefault();
+  const data = target.dataset;
+  switch (data.action) {
+    case 'tab': switchTab(data.tab); break;
+    case 'tag': toggleTag(data.tag); break;
+    case 'seeds': submitSeeds(); break;
+    case 'feedback': submitFeedback(data.id, data.feedback, data.rating ? Number(data.rating) : null, data.guest === 'true'); break;
+    case 'downloadExport': downloadExport(); break;
+    case 'deleteAccount': deleteAccount(); break;
+    case 'logout': logout(); break;
+  }
+});
+
 window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('register-form').addEventListener('submit', handleRegister);
+  document.getElementById('login-form').addEventListener('submit', handleLogin);
   updateAuthUI();
   loadDiscovery();
 });

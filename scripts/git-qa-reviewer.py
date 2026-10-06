@@ -1,31 +1,26 @@
-#!/usr/bin/env python3
-"""
-CLI wrapper for Liner Notes AI QA Reviewer.
-Runs the unified chunked review engine on staged files or a specified commit.
-"""
+#!/usr/bin/env bash
+# Deterministic QA Reviewer: Build and test suite verification
+# Runs solution build and automated tests with zero hallucinations.
 
-import sys
-import subprocess
-import os
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
 
-def main():
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    reviewer = os.path.join(repo_root, "scripts", "git-background-reviewer.py")
+echo -e "\033[96m⚙️  Building solution...\033[0m"
+dotnet build "$REPO_ROOT/Liner Notes.sln" '/clp:NoSummary;ErrorsOnly'
+BUILD_STATUS=$?
 
-    target = sys.argv[1] if len(sys.argv) > 1 else "--staged"
-    cmd = [sys.executable, reviewer, target]
-    
-    print(f"\033[96m🔍 Running AI QA & Security Reviewer on {target}...\033[0m\n")
-    proc = subprocess.run(cmd)
+if [ $BUILD_STATUS -ne 0 ]; then
+    echo -e "\033[91m🛑 Build failed with errors!\033[0m"
+    exit 1
+fi
 
-    last_report = os.path.join(repo_root, ".git", "LAST_REVIEW_REPORT.md")
-    if os.path.exists(last_report):
-        print("\n" + "=" * 60)
-        with open(last_report, "r", encoding="utf-8") as f:
-            print(f.read())
-        print("=" * 60 + "\n")
+echo -e "\033[96m🧪 Running automated test suite...\033[0m"
+dotnet test "$REPO_ROOT/Liner Notes.sln" --logger "console;verbosity=quiet"
+TEST_STATUS=$?
 
-    return proc.returncode
+if [ $TEST_STATUS -ne 0 ]; then
+    echo -e "\033[91m🛑 Automated tests failed!\033[0m"
+    exit 1
+fi
 
-if __name__ == "__main__":
-    sys.exit(main())
+echo -e "\033[92m\033[1m✅ All QA checks passed (Build OK, Tests OK)!\033[0m"
+exit 0

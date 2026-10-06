@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Application.Features.Subscribers.Commands.RegisterSubscriber;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
@@ -19,6 +20,7 @@ namespace LinerNotes.Presentation.Tests.Controllers;
 public class AuthControllerTests
 {
     private readonly IAuthService _authService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly ISender _mediator;
     private readonly IOptions<JwtOptions> _jwtOptions;
@@ -27,6 +29,9 @@ public class AuthControllerTests
     public AuthControllerTests()
     {
         _authService = Substitute.For<IAuthService>();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+        _unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<IActionResult>>>()(call.Arg<CancellationToken>()));
         _jwtService = Substitute.For<IJwtService>();
         _mediator = Substitute.For<ISender>();
 
@@ -39,7 +44,7 @@ public class AuthControllerTests
         };
         _jwtOptions = Microsoft.Extensions.Options.Options.Create(options);
 
-        _controller = new AuthController(_authService, _jwtService, _jwtOptions);
+        _controller = new AuthController(_authService, _jwtService, _jwtOptions, _unitOfWork);
 
         var services = new ServiceCollection();
         services.AddSingleton(_mediator);
@@ -144,7 +149,7 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task Register_WhenDomainRegistrationFails_PerformsCompensatingRollback()
+    public async Task Register_WhenDomainRegistrationFails_PropagatesThroughTransaction()
     {
         var request = new RegisterRequest(
             UserName: "failinguser",
@@ -164,7 +169,8 @@ public class AuthControllerTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _controller.Register(request, CancellationToken.None));
 
-        await _authService.Received(1).DeleteUserAsync(userId);
+        await _unitOfWork.Received(1).ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>());
+        await _authService.DidNotReceive().StoreRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -202,6 +208,7 @@ public class AuthControllerTests
         _jwtService.GenerateRefreshToken()
             .Returns("new-refresh-token");
 
+        _authService.RotateRefreshTokenAsync(userId, "valid-refresh-token", "new-refresh-token", Arg.Any<CancellationToken>()).Returns(true);
         var request = new RefreshTokenRequest("valid-expired-access-token", "valid-refresh-token");
         var result = await _controller.Refresh(request, CancellationToken.None);
 
@@ -210,7 +217,7 @@ public class AuthControllerTests
         Assert.Equal("new-access-token", response.AccessToken);
         Assert.Equal("new-refresh-token", response.RefreshToken);
 
-        await _authService.Received(1).StoreRefreshTokenAsync(userId, "new-refresh-token");
+        await _authService.Received(1).RotateRefreshTokenAsync(userId, "valid-refresh-token", "new-refresh-token", Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using AutoMapper;
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Subscribers;
@@ -14,16 +14,13 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
 
     public RegisterSubscriberCommandHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
     }
 
     public async Task<SubscriberDto> Handle(
@@ -50,6 +47,6 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return _mapper.Map<SubscriberDto>(user);
+        return user.ToDto();
     }
 }

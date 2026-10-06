@@ -7,7 +7,7 @@ using MediatR;
 namespace LinerNotes.Application.Features.Subscribers.Commands.DeleteUserAccount;
 
 /// <summary>
-/// Handler executing account soft-deletion in accordance with GDPR privacy compliance.
+/// Removes account-owned domain records within the account deletion transaction.
 /// </summary>
 public sealed class DeleteUserAccountCommandHandler : IRequestHandler<DeleteUserAccountCommand, bool>
 {
@@ -24,16 +24,11 @@ public sealed class DeleteUserAccountCommandHandler : IRequestHandler<DeleteUser
         DeleteUserAccountCommand request,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-        if (user is null)
+        return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            throw new NotFoundException(nameof(User), request.UserId);
-        }
-
-        user.SoftDelete();
-        _userRepository.Update(user);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return true;
+            if (!await _userRepository.DeleteOwnedDataAsync(request.UserId, ct))
+                throw new NotFoundException(nameof(User), request.UserId);
+            return true;
+        }, cancellationToken);
     }
 }

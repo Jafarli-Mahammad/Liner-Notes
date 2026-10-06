@@ -13,12 +13,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.AddServerHeader = false;
+    options.Limits.MaxRequestBodySize = 64 * 1024;
 });
 
 // Configure Onion Architecture layers
 builder.Services.AddApplication();
 builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
 builder.Services.AddPresentation(builder.Configuration);
 
 // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
@@ -31,16 +33,16 @@ builder.Services.AddControllers(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
-// CORS for web client access
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
+// Same-origin by default; cross-origin clients must be explicitly configured.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (allowedOrigins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+    (uri.Scheme != "https" && !(builder.Environment.IsDevelopment() && uri.Scheme == "http")) ||
+    origin != uri.GetLeftPart(UriPartial.Authority)))
+    throw new InvalidOperationException("CORS origins must be explicit HTTPS origins (HTTP allowed in Development).");
+builder.Services.AddCors(options => options.AddPolicy("ConfiguredOrigins", policy =>
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "DELETE")));
+builder.Services.AddHsts(options => { options.MaxAge = TimeSpan.FromDays(180); });
+builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
 
 var app = builder.Build();
 
@@ -55,12 +57,33 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll");
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    if (!(app.Environment.IsDevelopment() && context.Request.Path.StartsWithSegments("/swagger")))
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+            "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+    if (context.Request.Path.StartsWithSegments("/api"))
+        context.Response.Headers.CacheControl = "no-store";
+    await next();
+});
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseCors("ConfiguredOrigins");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

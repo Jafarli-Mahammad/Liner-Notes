@@ -2,6 +2,7 @@ using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Application.Features.Subscribers.Commands.DeleteUserAccount;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
 using LinerNotes.Application.Services;
+using LinerNotes.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,10 +16,12 @@ namespace LinerNotes.Presentation.Controllers;
 public sealed class SubscribersController : ApiControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public SubscribersController(IAuthService authService)
+    public SubscribersController(IAuthService authService, IUnitOfWork unitOfWork)
     {
         _authService = authService;
+        _unitOfWork = unitOfWork;
     }
     /// <summary>
     /// Gets the current subscriber's profile and discovery settings.
@@ -44,7 +47,7 @@ public sealed class SubscribersController : ApiControllerBase
     }
 
     /// <summary>
-    /// Soft-deletes the current subscriber's account and discovery preferences (GDPR right to be forgotten).
+    /// Physically deletes account-owned records and credentials in one transaction.
     /// </summary>
     [HttpDelete("me")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -52,6 +55,8 @@ public sealed class SubscribersController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
     {
+        return await _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
+        {
         var succeeded = await Mediator.Send(new DeleteUserAccountCommand(CurrentUser.UserId), cancellationToken);
         if (!succeeded)
         {
@@ -64,8 +69,10 @@ public sealed class SubscribersController : ApiControllerBase
         }
 
         // Irreversibly delete Identity credentials alongside domain profile
-        await _authService.DeleteUserAsync(CurrentUser.UserId);
+        if (!await _authService.DeleteUserAsync(CurrentUser.UserId))
+            throw new InvalidOperationException("Account credentials could not be deleted.");
 
         return NoContent();
+        }, cancellationToken);
     }
 }

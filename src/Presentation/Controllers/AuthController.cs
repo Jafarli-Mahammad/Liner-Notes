@@ -1,3 +1,5 @@
+using LinerNotes.Application.Common.Interfaces;
+using Microsoft.AspNetCore.RateLimiting;
 using LinerNotes.Application.Features.Subscribers.Commands.RegisterSubscriber;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
 using LinerNotes.Application.Features.Taste.Commands.SeedTasteProfile;
@@ -14,18 +16,22 @@ namespace LinerNotes.Presentation.Controllers;
 /// <summary>
 /// Authentication endpoints for subscriber registration, login, and profile resolution.
 /// </summary>
+[EnableRateLimiting("auth")]
 public sealed class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly JwtOptions _jwtOptions;
 
     public AuthController(
         IAuthService _authService,
         IJwtService jwtService,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IUnitOfWork unitOfWork)
     {
         this._authService = _authService;
+        _unitOfWork = unitOfWork;
         _jwtService = jwtService;
         _jwtOptions = jwtOptions.Value;
     }
@@ -41,11 +47,10 @@ public sealed class AuthController : ApiControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        // 1. Create Identity credentials
-        var userId = await _authService.RegisterAsync(request.UserName, request.Email, request.Password);
-
-        try
+        return await _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
         {
+            ct.ThrowIfCancellationRequested();
+            var userId = await _authService.RegisterAsync(request.UserName, request.Email, request.Password);
             // 2. Register domain subscriber record linked 1:1 by Id
             var registerCommand = new RegisterSubscriberCommand(
                 Email: request.Email,
@@ -82,13 +87,7 @@ public sealed class AuthController : ApiControllerBase
                 User: subscriber);
 
             return CreatedAtAction(nameof(Me), response);
-        }
-        catch
-        {
-            // Compensating rollback: delete Identity credentials so account isn't stranded
-            await _authService.DeleteUserAsync(userId);
-            throw;
-        }
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -209,7 +208,8 @@ public sealed class AuthController : ApiControllerBase
         var userName = principal.Identity?.Name ?? subscriber.Email;
         var newAccessToken = _jwtService.GenerateAccessToken(userId, userName, subscriber.Email);
         var newRefreshToken = _jwtService.GenerateRefreshToken();
-        await _authService.StoreRefreshTokenAsync(userId, newRefreshToken);
+        if (!await _authService.RotateRefreshTokenAsync(userId, request.RefreshToken, newRefreshToken, cancellationToken))
+            return Unauthorized(new ProblemDetails { Title = "Invalid Refresh Token", Status = StatusCodes.Status401Unauthorized });
 
         var response = new AuthResponse(
             AccessToken: newAccessToken,

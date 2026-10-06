@@ -14,5 +14,6 @@ public interface IAuthService
     Task<bool> AddToRoleAsync(Guid userId, string role);
     Task<bool> ValidateRefreshTokenAsync(Guid userId, string refreshToken);
     Task StoreRefreshTokenAsync(Guid userId, string refreshToken);
+    Task<bool> RotateRefreshTokenAsync(Guid userId, string refreshToken, string replacementToken, CancellationToken cancellationToken = default);
     Task<bool> DeleteUserAsync(Guid userId);
 }

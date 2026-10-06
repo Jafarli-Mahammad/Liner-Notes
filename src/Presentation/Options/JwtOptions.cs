@@ -10,5 +10,6 @@ public sealed class JwtOptions
     public string SecretKey { get; set; } = string.Empty;
     public string Issuer { get; set; } = "LinerNotes";
     public string Audience { get; set; } = "LinerNotesAudience";
-    public int ExpiryMinutes { get; set; } = 1440; // 24 hours default
+    public int ExpiryMinutes { get; set; } = 15;
+    public int RefreshExpiryDays { get; set; } = 7;
 }

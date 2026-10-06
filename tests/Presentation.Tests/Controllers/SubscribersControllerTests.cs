@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Application.Features.Subscribers.Commands.DeleteUserAccount;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
@@ -18,6 +19,7 @@ public class SubscribersControllerTests
     private readonly ISender _mediator;
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly SubscribersController _controller;
     private readonly Guid _testUserId = Guid.NewGuid();
 
@@ -26,9 +28,12 @@ public class SubscribersControllerTests
         _mediator = Substitute.For<ISender>();
         _currentUser = Substitute.For<ICurrentUserService>();
         _authService = Substitute.For<IAuthService>();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+        _unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<IActionResult>>>()(call.Arg<CancellationToken>()));
         _currentUser.UserId.Returns(_testUserId);
 
-        _controller = new SubscribersController(_authService);
+        _controller = new SubscribersController(_authService, _unitOfWork);
 
         var services = new ServiceCollection();
         services.AddSingleton(_mediator);
@@ -69,6 +74,7 @@ public class SubscribersControllerTests
         _mediator.Send(Arg.Is<DeleteUserAccountCommand>(c => c.UserId == _testUserId), Arg.Any<CancellationToken>())
             .Returns(true);
 
+        _authService.DeleteUserAsync(_testUserId).Returns(true);
         var result = await _controller.DeleteAccount(CancellationToken.None);
 
         Assert.IsType<NoContentResult>(result);
@@ -81,6 +87,7 @@ public class SubscribersControllerTests
         _mediator.Send(Arg.Any<DeleteUserAccountCommand>(), Arg.Any<CancellationToken>())
             .Returns(false);
 
+        _authService.DeleteUserAsync(_testUserId).Returns(true);
         var result = await _controller.DeleteAccount(CancellationToken.None);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);

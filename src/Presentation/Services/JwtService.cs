@@ -80,6 +80,7 @@ public sealed class JwtService : IJwtService
             ValidIssuer = _jwtOptions.Issuer,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey)),
+            ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             ValidateLifetime = false // Allow reading expired token claims for refresh flow
         };
 

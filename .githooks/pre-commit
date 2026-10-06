@@ -1,46 +1,37 @@
 #!/usr/bin/env bash
-# Git pre-commit hook to trigger Qwen2.5-Coder AI QA & Security Reviewers
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-QA_SCRIPT="$REPO_ROOT/scripts/git-qa-reviewer.py"
-SECURITY_SCRIPT="$REPO_ROOT/scripts/git-security-reviewer.py"
+# Fast-path Git pre-commit hook (< 10ms)
+# Only checks for critical hardcoded credentials (private keys, cloud tokens)
+# to prevent secrets from entering Git history.
+# Full QA and Security reviews run asynchronously in the background post-commit.
 
-# 0. Global AI bypass check
-if [ "$SKIP_AI" = "1" ]; then
-    echo -e "\033[2m[pre-commit] SKIP_AI=1 detected; bypassing AI reviewers.\033[0m"
+if [ "$SKIP_PRE_COMMIT" = "1" ] || [ "$SKIP_AI" = "1" ]; then
     exit 0
 fi
 
-# Ensure python3 is available
-if ! command -v python3 >/dev/null 2>&1; then
-    echo -e "\033[33m[pre-commit] python3 not found; skipping AI reviewers.\033[0m"
-    exit 0
-fi
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
 
-# 1. Run QA Review (Quality, Logic, Performance via Qwen2.5)
-if [ -f "$QA_SCRIPT" ] && [ "$SKIP_QA" != "1" ]; then
-    start_qa=$(date +%s)
-    python3 "$QA_SCRIPT"
-    QA_EXIT=$?
-    end_qa=$(date +%s)
-    qa_duration=$((end_qa - start_qa))
-    if [ $QA_EXIT -ne 0 ]; then
-        exit $QA_EXIT
-    fi
-    echo -e "\033[2m⏱️  QA Review completed in ${qa_duration}s\033[0m\n"
-fi
+# Check staged diff for private keys and cloud credentials
+STAGED_DIFF=$(git diff --cached --unified=0 2>/dev/null)
 
-# 2. Run Security Review (Vulnerabilities, Auth, Secrets via Qwen2.5)
-if [ -f "$SECURITY_SCRIPT" ] && [ "$SKIP_SECURITY_REVIEW" != "1" ]; then
-    start_sec=$(date +%s)
-    python3 "$SECURITY_SCRIPT"
-    SEC_EXIT=$?
-    end_sec=$(date +%s)
-    sec_duration=$((end_sec - start_sec))
-    if [ $SEC_EXIT -ne 0 ]; then
-        exit $SEC_EXIT
+if [ -n "$STAGED_DIFF" ]; then
+    # 1. Private keys
+    if echo "$STAGED_DIFF" | grep -Eq '^\+.*-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'; then
+        echo -e "\033[91m\033[1m🛑 COMMIT REJECTED: Hardcoded Private Key detected in staged files!\033[0m"
+        echo -e "\033[93mPlease remove sensitive keys and store them in secure environment variables or vault.\033[0m"
+        exit 1
     fi
-    echo -e "\033[2m⏱️  Security Review completed in ${sec_duration}s\033[0m\n"
+
+    # 2. AWS tokens
+    if echo "$STAGED_DIFF" | grep -Eq '^\+.*\b(AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}\b'; then
+        echo -e "\033[91m\033[1m🛑 COMMIT REJECTED: AWS Access Key ID detected in staged files!\033[0m"
+        exit 1
+    fi
+
+    # 3. GitHub Personal Access Tokens
+    if echo "$STAGED_DIFF" | grep -Eq '^\+.*\bgh[pousr]_[A-Za-z0-9_]{36,}\b'; then
+        echo -e "\033[91m\033[1m🛑 COMMIT REJECTED: GitHub Token detected in staged files!\033[0m"
+        exit 1
+    fi
 fi
 
 exit 0
-

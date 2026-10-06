@@ -38,6 +38,8 @@ Working preferences
 [stated] Don't give UI navigation steps from memory; flag uncertainty first. (2026-09-28)
 [stated] When giving code, follow existing patterns (CQRS handlers, repository interfaces). If deviating, say why. (2026-09-28)
 [stated] No manufactured urgency. Small, shippable iterations. (2026-09-28)
+[stated] For broad phase requests, state remaining scope and expected effort before extended implementation, and keep the developer updated. (2026-10-06)
+[stated] Explain dependency-removal audit findings, exploitability evidence, and upgrade alternatives before removing a dependency. (2026-10-06)
 [stated] Use default passwords for now; the developer intends to revise them later. (2026-10-06)
 Decisions (with reasons)
 [stated] No custom ML in V1, including ML.NET matrix factorization: no budget, and no feedback data to train on at launch. Revisit in V2 with real data. (2026-09-28)

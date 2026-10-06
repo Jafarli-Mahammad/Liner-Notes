@@ -36,4 +36,11 @@ Don't call something done until the developer has confirmed it works.
 Changes to the scorer must be sanity-checked against the benchmark seed set (tests/ once it exists).
 Update CHANGELOG.md for user-visible changes.
 
+For broad requests such as finishing a phase, read PROGRESS.md first and report the remaining
+scope, expected effort, and proposed commit/test breakdown before starting a long implementation.
+Keep the developer updated during extended work; do not let a multi-part task run silently.
+Before removing a dependency, state the exact audit/advisory finding, whether an exploitable path
+was established, and the removal-versus-upgrade tradeoff. Keep dependency remediation within the
+authorized scope and prefer the smallest justified change.
+
 Read MEMORY.md and PROGRESS.md at session start; follow the write rules in MEMORY.md.

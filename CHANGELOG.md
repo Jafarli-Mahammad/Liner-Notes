@@ -14,6 +14,10 @@
   and made registration, account deletion, and feedback replacement transactional.
 - Added CORS, transport and security-header defaults; removed the vulnerable AutoMapper dependency,
   pinned XML cryptography remediation, and stopped tracking generated build output.
+- Guarded login and registration against stale responses, preserved familiarity when rating known
+  tracks, cleared obsolete rating highlights, and surfaced unsuccessful feedback submissions.
+- Added trusted forwarded-header handling for configured proxy IPs and made the Identity FK
+  migration tolerate pre-existing domain profiles while enforcing the relationship on new rows.
 
 - Reconciled project documentation with popularity-neutral V1 and explicit approval gates.
 - Qualified earlier coverage, delivery, export and privacy claims; previous release entries below are historical assertions, not current verification.

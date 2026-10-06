@@ -5,6 +5,7 @@ const state = {
   token: null,
   refreshToken: null,
   sessionEpoch: 0,
+  authAttemptId: 0,
   user: null,
   selectedTags: new Set(),
   activeTab: 'discovery'
@@ -16,6 +17,7 @@ let refreshInFlight = null;
 
 function acceptSession(data) {
   state.sessionEpoch++;
+  state.authAttemptId++;
   state.token = data.accessToken;
   state.refreshToken = data.refreshToken;
   state.user = data.user;
@@ -266,17 +268,12 @@ async function submitFeedback(recommendationId, feedbackType, rating = null, isG
       card.querySelectorAll('.btn-feedback').forEach(b => b.classList.remove('active'));
       const btn = card.querySelector(`.btn-feedback.${feedbackType.toLowerCase() === 'alreadyknown' ? 'known' : feedbackType.toLowerCase()}`);
       if (btn) btn.classList.add('active');
-      if (rating !== null) {
-        card.querySelectorAll('.btn-rating-num').forEach(b => {
-          const isActive = parseInt(b.textContent.trim()) === rating;
-          b.style.background = isActive ? 'var(--accent-primary)' : 'var(--bg-secondary)';
-          b.style.color = isActive ? '#fff' : 'var(--text-color)';
-        });
-      }
+      setRatingSelection(card, rating);
     }
     return;
   }
 
+  const epoch = state.sessionEpoch;
   try {
     const payload = { feedback: feedbackType };
     if (rating !== null) payload.rating = rating;
@@ -290,24 +287,46 @@ async function submitFeedback(recommendationId, feedbackType, rating = null, isG
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) {
-      const card = document.getElementById(`card-${recommendationId}`);
-      if (card) {
-        card.querySelectorAll('.btn-feedback').forEach(b => b.classList.remove('active'));
-        const btn = card.querySelector(`.btn-feedback.${feedbackType.toLowerCase() === 'alreadyknown' ? 'known' : feedbackType.toLowerCase()}`);
-        if (btn) btn.classList.add('active');
-        if (rating !== null) {
-          card.querySelectorAll('.btn-rating-num').forEach(b => {
-            const isActive = parseInt(b.textContent.trim()) === rating;
-            b.style.background = isActive ? 'var(--accent-primary)' : 'var(--bg-secondary)';
-            b.style.color = isActive ? '#fff' : 'var(--text-color)';
-          });
-        }
-      }
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const problem = await res.json();
+        detail = problem.detail || problem.title || '';
+      } catch { /* Non-JSON error responses use the status fallback. */ }
+      throw new Error(detail || `The server returned ${res.status}.`);
+    }
+
+    const card = document.getElementById(`card-${recommendationId}`);
+    if (card) {
+      card.querySelectorAll('.btn-feedback').forEach(b => b.classList.remove('active'));
+      const btn = card.querySelector(`.btn-feedback.${feedbackType.toLowerCase() === 'alreadyknown' ? 'known' : feedbackType.toLowerCase()}`);
+      if (btn) btn.classList.add('active');
+      setRatingSelection(card, rating);
     }
   } catch (err) {
-    alert('Feedback submission failed: ' + err.message);
+    if (epoch !== state.sessionEpoch) return;
+    alert(`Feedback was not saved: ${err.message} Please try again.`);
   }
+}
+
+function setRatingSelection(card, rating) {
+  card.querySelectorAll('.btn-rating-num').forEach(button => {
+    const selected = rating !== null && Number(button.textContent.trim()) === rating;
+    button.classList.toggle('active', selected);
+    button.style.background = selected ? 'var(--accent-primary)' : 'var(--bg-secondary)';
+    button.style.color = selected ? '#fff' : 'var(--text-color)';
+  });
+}
+
+function feedbackForRating(card, feedback) {
+  return card?.querySelector('.btn-feedback.known.active') ? 'AlreadyKnown' : feedback;
+}
+
+function handleFeedbackAction(data) {
+  const rating = data.rating ? Number(data.rating) : null;
+  const card = rating === null ? null : document.getElementById(`card-${data.id}`);
+  const feedback = rating === null ? data.feedback : feedbackForRating(card, data.feedback);
+  return submitFeedback(data.id, feedback, rating, data.guest === 'true');
 }
 
 function toggleTag(tag) {
@@ -478,6 +497,7 @@ async function deleteAccount() {
 
 async function handleRegister(e) {
   e.preventDefault();
+  const attemptId = ++state.authAttemptId;
   const userName = document.getElementById('reg-username').value;
   const email = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
@@ -488,8 +508,10 @@ async function handleRegister(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userName, email, password })
     });
+    if (attemptId !== state.authAttemptId) return;
 
     const data = await res.json();
+    if (attemptId !== state.authAttemptId) return;
     if (!res.ok) {
       alert('Registration failed: ' + (data.detail || data.title || 'Check credentials.'));
       return;
@@ -499,12 +521,14 @@ async function handleRegister(e) {
     updateAuthUI();
     switchTab('seeding');
   } catch (err) {
+    if (attemptId !== state.authAttemptId) return;
     alert('Registration error: ' + err.message);
   }
 }
 
 async function handleLogin(e) {
   e.preventDefault();
+  const attemptId = ++state.authAttemptId;
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
 
@@ -514,8 +538,10 @@ async function handleLogin(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    if (attemptId !== state.authAttemptId) return;
 
     const data = await res.json();
+    if (attemptId !== state.authAttemptId) return;
     if (!res.ok) {
       alert('Login failed: ' + (data.detail || 'Invalid credentials.'));
       return;
@@ -525,12 +551,14 @@ async function handleLogin(e) {
     updateAuthUI();
     switchTab('discovery');
   } catch (err) {
+    if (attemptId !== state.authAttemptId) return;
     alert('Login error: ' + err.message);
   }
 }
 
 function logout() {
   state.sessionEpoch++;
+  state.authAttemptId++;
   state.token = null;
   state.refreshToken = null;
   refreshInFlight = null;
@@ -580,7 +608,7 @@ document.addEventListener('click', event => {
     case 'tab': switchTab(data.tab); break;
     case 'tag': toggleTag(data.tag); break;
     case 'seeds': submitSeeds(); break;
-    case 'feedback': submitFeedback(data.id, data.feedback, data.rating ? Number(data.rating) : null, data.guest === 'true'); break;
+    case 'feedback': handleFeedbackAction(data); break;
     case 'downloadExport': downloadExport(); break;
     case 'deleteAccount': deleteAccount(); break;
     case 'logout': logout(); break;

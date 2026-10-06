@@ -1,9 +1,11 @@
+using System.Net;
 using LinerNotes.Application;
 using LinerNotes.DataAccess;
 using LinerNotes.Infrastructure;
 using LinerNotes.Presentation;
 using LinerNotes.Presentation.Filters;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -43,8 +45,23 @@ builder.Services.AddCors(options => options.AddPolicy("ConfiguredOrigins", polic
     policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "DELETE")));
 builder.Services.AddHsts(options => { options.MaxAge = TimeSpan.FromDays(180); });
 builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
+var knownForwardedProxies = new List<IPAddress>();
+foreach (var configuredProxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+{
+    if (!IPAddress.TryParse(configuredProxy, out var proxyAddress))
+        throw new InvalidOperationException($"ForwardedHeaders:KnownProxies contains an invalid IP address: '{configuredProxy}'.");
+    knownForwardedProxies.Add(proxyAddress);
+}
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    foreach (var proxyAddress in knownForwardedProxies)
+        if (!options.KnownProxies.Contains(proxyAddress)) options.KnownProxies.Add(proxyAddress);
+});
 
 var app = builder.Build();
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {

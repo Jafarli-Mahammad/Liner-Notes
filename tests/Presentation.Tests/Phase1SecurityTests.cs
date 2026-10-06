@@ -82,7 +82,9 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
             ["ConnectionStrings:DefaultConnection"] = connection,
             ["Jwt:SecretKey"] = SigningKey,
             ["Jwt:ExpiryMinutes"] = "15",
-            ["LastFm:Mode"] = "FixtureOnly"
+            ["LastFm:Mode"] = "FixtureOnly",
+            ["ForwardedHeaders:KnownProxies:0"] = "127.0.0.1",
+            ["ForwardedHeaders:KnownProxies:1"] = "::1"
         }).Build();
 
     private TestApp App(string environment = "Development") => new(_connection, environment, _clock);
@@ -323,6 +325,12 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
         var redirect = await prod.GetAsync("/");
         Assert.Equal(HttpStatusCode.TemporaryRedirect, redirect.StatusCode);
         Assert.Equal("https", redirect.Headers.Location?.Scheme);
+
+        using var forwardedRequest = new HttpRequestMessage(HttpMethod.Get, "/");
+        forwardedRequest.Headers.Add("X-Forwarded-Proto", "https");
+        var forwardedResponse = await prod.SendAsync(forwardedRequest);
+        Assert.NotEqual(HttpStatusCode.TemporaryRedirect, forwardedResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, forwardedResponse.StatusCode);
     }
 
     private sealed class TestClock : TimeProvider

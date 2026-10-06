@@ -10,6 +10,9 @@ credentials empty; the Presentation host refuses the development signing key out
 For non-development environments, set `ConnectionStrings__DefaultConnection` and `Jwt__SecretKey`
 in the process environment or Presentation user secrets. `.env.example` names the variables; .NET
 does not load `.env` automatically. Use a randomly generated signing secret of at least 32 bytes.
+When TLS terminates at a reverse proxy, set `ForwardedHeaders__KnownProxies__0` to that proxy's
+trusted IP address. Forwarded scheme and client IP headers are accepted only from configured
+proxies; use a stable proxy address or update this setting when it changes.
 Leave Last.fm credentials unset for offline work. No upstream acquisition is authorized here.
 
 The prior source had a default database password. Treat any credential ever committed or reused

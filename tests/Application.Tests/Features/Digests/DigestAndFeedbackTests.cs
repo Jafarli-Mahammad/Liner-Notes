@@ -1,9 +1,7 @@
-using AutoMapper;
 using FluentValidation.TestHelper;
 using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
-using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Features.Digests.Commands.RecordFeedback;
 using LinerNotes.Application.Features.Digests.Queries.GetLatestDigest;
 using LinerNotes.Domain.Catalog;
@@ -17,14 +15,6 @@ namespace LinerNotes.Application.Tests.Features.Digests;
 
 public class DigestAndFeedbackTests
 {
-    private readonly IMapper _mapper;
-
-    public DigestAndFeedbackTests()
-    {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
-        _mapper = config.CreateMapper();
-    }
-
     [Fact]
     public async Task GetLatestDigest_ReturnsLatestDigest_WhenUserHasDigests()
     {
@@ -38,7 +28,7 @@ public class DigestAndFeedbackTests
         repo.GetRecentDigestsForUserAsync(userId, 1, Arg.Any<CancellationToken>())
             .Returns(new List<WeeklyDigest> { digest });
 
-        var handler = new GetLatestDigestQueryHandler(repo, _mapper);
+        var handler = new GetLatestDigestQueryHandler(repo);
         var result = await handler.Handle(new GetLatestDigestQuery(userId), CancellationToken.None);
 
         Assert.NotNull(result);
@@ -54,7 +44,7 @@ public class DigestAndFeedbackTests
         repo.GetRecentDigestsForUserAsync(userId, 1, Arg.Any<CancellationToken>())
             .Returns(new List<WeeklyDigest>());
 
-        var handler = new GetLatestDigestQueryHandler(repo, _mapper);
+        var handler = new GetLatestDigestQueryHandler(repo);
         var result = await handler.Handle(new GetLatestDigestQuery(userId), CancellationToken.None);
 
         Assert.Null(result);
@@ -103,8 +93,10 @@ public class DigestAndFeedbackTests
 
         var repo = Substitute.For<IWeeklyDigestRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<bool>>>()(call.Arg<CancellationToken>()));
 
-        repo.GetRecommendationByIdAsync(recId, userId, Arg.Any<CancellationToken>())
+        repo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns(recommendation);
 
         var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork);
@@ -132,8 +124,10 @@ public class DigestAndFeedbackTests
         var userId = Guid.NewGuid();
         var repo = Substitute.For<IWeeklyDigestRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<bool>>>()(call.Arg<CancellationToken>()));
 
-        repo.GetRecommendationByIdAsync(recId, userId, Arg.Any<CancellationToken>())
+        repo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns((WeeklyRecommendation?)null);
 
         var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork);
@@ -163,7 +157,7 @@ public class DigestAndFeedbackTests
     }
 
     [Theory]
-    [InlineData(1)]
+    [InlineData(4)]
     [InlineData(5)]
     [InlineData(10)]
     public void RecordFeedbackValidator_ShouldPass_WhenRatingIsWithinRange(int validRating)
@@ -177,6 +171,18 @@ public class DigestAndFeedbackTests
 
         var result = validator.TestValidate(command);
         result.ShouldNotHaveValidationErrorFor(x => x.Rating);
+    }
+
+    [Theory]
+    [InlineData(UserFeedback.Liked, 1)]
+    [InlineData(UserFeedback.Liked, 3)]
+    [InlineData(UserFeedback.Disliked, 7)]
+    [InlineData(UserFeedback.Disliked, 10)]
+    public void RecordFeedbackValidator_RejectsContradictoryRatings(UserFeedback feedback, int rating)
+    {
+        var validator = new RecordRecommendationFeedbackCommandValidator();
+        var result = validator.TestValidate(new RecordRecommendationFeedbackCommand(Guid.NewGuid(), Guid.NewGuid(), feedback, Rating: rating));
+        Assert.False(result.IsValid);
     }
 
     [Fact]
@@ -196,9 +202,11 @@ public class DigestAndFeedbackTests
 
         var digestRepo = Substitute.For<IWeeklyDigestRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<bool>>>()(call.Arg<CancellationToken>()));
         var tasteRepo = Substitute.For<ITasteSignalRepository>();
 
-        digestRepo.GetRecommendationByIdAsync(recId, userId, Arg.Any<CancellationToken>())
+        digestRepo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns(recommendation);
 
         var handler = new RecordRecommendationFeedbackCommandHandler(digestRepo, unitOfWork, tasteRepo);

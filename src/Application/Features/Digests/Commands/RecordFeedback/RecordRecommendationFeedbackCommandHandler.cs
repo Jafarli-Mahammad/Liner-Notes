@@ -32,7 +32,9 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
         RecordRecommendationFeedbackCommand request,
         CancellationToken cancellationToken)
     {
-        var recommendation = await _weeklyDigestRepository.GetRecommendationByIdAsync(
+        return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+        var recommendation = await _weeklyDigestRepository.GetRecommendationForUpdateAsync(
             request.RecommendationId,
             request.UserId,
             cancellationToken);
@@ -54,6 +56,17 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
             var signals = new List<TasteSignal>();
             var artistName = recommendation.Track.ArtistName;
             var trackKey = recommendation.Track.TrackKey;
+
+            if (request.Feedback == UserFeedback.AlreadyKnown)
+            {
+                signals.Add(new TasteSignal(
+                    request.UserId,
+                    TasteTargetType.Track,
+                    trackKey,
+                    0.0,
+                    TasteSignalSource.RecommendationAlreadyKnown,
+                    $"{contextPrefix} - Marked familiar: {recommendation.Track.Title} by {artistName}"));
+            }
 
             if (request.Feedback == UserFeedback.Liked || (request.Rating.HasValue && request.Rating.Value >= 7))
             {
@@ -91,24 +104,6 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                     TasteSignalSource.RecommendationDislike,
                     $"{contextPrefix} - Disliked recommendation #{recommendation.Rank}: {recommendation.Track.Title}"));
             }
-            else if (request.Feedback == UserFeedback.AlreadyKnown)
-            {
-                signals.Add(new TasteSignal(
-                    request.UserId,
-                    TasteTargetType.Track,
-                    trackKey,
-                    0.0,
-                    TasteSignalSource.RecommendationAlreadyKnown,
-                    $"{contextPrefix} - Marked familiar: {recommendation.Track.Title} by {artistName}"));
-                signals.Add(new TasteSignal(
-                    request.UserId,
-                    TasteTargetType.Artist,
-                    artistName,
-                    0.0,
-                    TasteSignalSource.RecommendationAlreadyKnown,
-                    $"{contextPrefix} - Marked artist familiar: {artistName}"));
-            }
-
             if (signals.Count > 0)
             {
                 await _tasteSignalRepository.AddRangeAsync(signals, cancellationToken);
@@ -118,5 +113,6 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
+        }, cancellationToken);
     }
 }

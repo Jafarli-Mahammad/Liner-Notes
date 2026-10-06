@@ -60,8 +60,18 @@ public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWee
         DataContext.WeeklyDigests.Update(digest);
     }
 
+    public async Task<WeeklyRecommendation?> GetRecommendationForUpdateAsync(Guid recommendationId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (DataContext.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Feedback replacement requires a transaction.");
+        return await DataContext.WeeklyRecommendations
+            .FromSqlInterpolated($"SELECT * FROM \"WeeklyRecommendations\" WHERE \"Id\" = {recommendationId} AND \"UserId\" = {userId} FOR UPDATE")
+            .Include(r => r.Track)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
     public void UpdateRecommendation(WeeklyRecommendation recommendation)
     {
-        DataContext.WeeklyRecommendations.Update(recommendation);
+        DataContext.Entry(recommendation).State = EntityState.Modified;
     }
 }

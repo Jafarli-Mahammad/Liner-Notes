@@ -54,8 +54,15 @@ public sealed class WeeklyRecommendation : AuditableEntity
 
     public void RecordFeedback(UserFeedback feedback, string? comment = null, int? rating = null)
     {
+        if (!Enum.IsDefined(feedback))
+            throw new ArgumentOutOfRangeException(nameof(feedback), "A defined feedback value is required.");
+        if (comment?.Length > 1000)
+            throw new ArgumentException("Feedback comment cannot exceed 1000 characters.", nameof(comment));
         if (rating.HasValue && (rating.Value < 1 || rating.Value > 10))
             throw new ArgumentOutOfRangeException(nameof(rating), "Rating must be between 1 and 10.");
+        if (feedback == UserFeedback.Liked && rating is <= 3 ||
+            feedback == UserFeedback.Disliked && rating is >= 7)
+            throw new ArgumentException("The rating contradicts the selected feedback.", nameof(rating));
 
         Feedback = feedback;
         Rating = rating;

@@ -36,6 +36,10 @@ Verify API terms, rate limits, endpoints, library versions and pricing before co
 Don't call something done until the developer has confirmed it works.
 Changes to the scorer must be sanity-checked against the benchmark seed set (tests/ once it exists).
 Update CHANGELOG.md for user-visible changes.
+After completing an authorized task, run the relevant verification and create a local git commit
+for the task's changes. Keep the commit focused; do not include unrelated work, amend or rewrite
+existing commits, or push without explicit authorization. If verification cannot run or fails,
+report that and ask before committing.
 
 For broad requests such as finishing a phase, read PROGRESS.md first and report the remaining
 scope, expected effort, and proposed commit/test breakdown before starting a long implementation.

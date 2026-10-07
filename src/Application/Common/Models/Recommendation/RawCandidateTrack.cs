@@ -1,25 +1,41 @@
+using System.Collections.Immutable;
+using LinerNotes.Domain.Catalog;
+
 namespace LinerNotes.Application.Common.Models.Recommendation;
 
-/// <summary>
-/// An unhydrated music candidate discovered from an upstream recommendation source (e.g. Last.fm, ListenBrainz).
-/// Contains upstream affinity scores before local tag hydration, popularity penalties, and feedback re-ranking.
-/// </summary>
-/// <param name="Title">The song or track title.</param>
-/// <param name="ArtistName">The performing artist or band name.</param>
-/// <param name="Mbid">MusicBrainz Identifier if available from upstream metadata.</param>
-/// <param name="UpstreamScore">The raw affinity or similarity score provided by upstream (0.0 to 1.0).</param>
-/// <param name="SourceId">Identifier of the upstream source (e.g. "lastfm:artist.getSimilar").</param>
-public sealed record RawCandidateTrack(
-    string Title,
-    string ArtistName,
-    string? Mbid,
-    double UpstreamScore,
-    string SourceId)
+/// <summary>Unmapped discovery metadata. Every path and original observation is retained.</summary>
+public sealed class RawCandidateTrack
 {
-    /// <summary>
-    /// Deterministic candidate lookup key matching the domain TrackKey format.
-    /// </summary>
-    public string CandidateKey => !string.IsNullOrEmpty(Mbid)
-        ? $"mbid:{Mbid.ToLowerInvariant()}"
-        : $"{ArtistName.Trim().ToLowerInvariant()}:{Title.Trim().ToLowerInvariant()}";
+    public string Title { get; }
+    public string ArtistName { get; }
+    public string? Mbid { get; }
+    public ImmutableArray<DiscoveryPath> Paths { get; }
+    public EvidenceOrigin Origin => Paths[0].TrackResponse.Origin;
+    // No match aggregation policy is adopted in Phase 3.
+    public double? UpstreamScore => Paths.Length == 1 ? Paths[0].Match.Value : null;
+    public string SourceId => $"{Paths[0].TrackResponse.Provider.ToLowerInvariant().Replace(".", "", StringComparison.Ordinal)}:{(Paths[0].SimilarityResponse ?? Paths[0].TrackResponse).Method.ToLowerInvariant()}";
+    public string CandidateKey { get; }
+
+    public RawCandidateTrack(string title, string artistName, string? mbid, IEnumerable<DiscoveryPath> paths)
+    {
+        var track = Track.Create(title, artistName, mbid: mbid);
+        Title = track.Title; ArtistName = track.ArtistName; Mbid = track.Mbid; CandidateKey = track.TrackKey;
+        Paths = paths.OrderBy(p => p.Seed.Trim().ToLowerInvariant(), StringComparer.Ordinal)
+            .ThenBy(p => p.TrackResponse.Method, StringComparer.Ordinal)
+            .ThenBy(p => p.SimilarityResponse?.ResponseSha256, StringComparer.Ordinal)
+            .ThenBy(p => p.TrackResponse.ResponseSha256, StringComparer.Ordinal)
+            .ThenBy(p => p.UpstreamPosition).ThenBy(p => p.SimilarityPosition).ToImmutableArray();
+        if (Paths.IsEmpty) throw new ArgumentException("Candidate must have response provenance.", nameof(paths));
+        static bool Received(ResponseReference reference) => !string.IsNullOrWhiteSpace(reference.Provider) &&
+            !string.IsNullOrWhiteSpace(reference.Method) && !string.IsNullOrWhiteSpace(reference.RequestIdentity) &&
+            Enum.IsDefined(reference.Origin) && reference.ResponseSha256 is { Length: 64 } hash &&
+            hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') &&
+            reference.RetrievedAtUtc is { Offset: var offset } && offset == TimeSpan.Zero;
+        if (Paths.Any(p => p.UpstreamPosition <= 0 || !Received(p.TrackResponse) ||
+            (p.SimilarityResponse is { } reference && !Received(reference))))
+            throw new ArgumentException("Emitted candidates require received response hashes, timestamps and positions.", nameof(paths));
+        if (Paths.Any(p => p.TrackResponse.Origin != Origin ||
+            (p.SimilarityResponse is { } reference && reference.Origin != Origin)))
+            throw new InvalidOperationException("Live, recorded and synthetic observations cannot be blended.");
+    }
 }

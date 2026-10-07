@@ -1,3 +1,4 @@
+using LinerNotes.Infrastructure.Tests.Fakes;
 using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.RecommendationSources.LastFm;
 using LinerNotes.Infrastructure.RecommendationSources.LastFm.Models;
@@ -15,23 +16,17 @@ public sealed class LastFmCandidateHydratorTests
     public async Task HydrateCandidateAsync_FiltersStoplistTags_AndNormalizesWeights()
     {
         // Arrange
-        var rawCandidate = new RawCandidateTrack("Koca Bir Saçmalık", "Jakuzi", "mbid-j", 0.9, "lastfm:artist.getsimilar");
+        var rawCandidate = EvidenceFixtures.Raw("Koca Bir Saçmalık", "Jakuzi", "mbid-j", 0.9);
 
         _apiClient.GetArtistTopTagsAsync("Jakuzi", 15, Arg.Any<CancellationToken>())
-            .Returns(new List<LastFmTagItem>
+            .Returns(EvidenceFixtures.Response(new List<LastFmTagItem>
             {
                 new("synthpop", 100, null),
                 new("darkwave", 80, null),
                 new("seen live", 50, null), // Stoplist tag
                 new("favorite", 40, null),  // Stoplist tag
                 new("post-punk", 60, null)
-            });
-
-        _apiClient.GetArtistTopTracksAsync("Jakuzi", 1, Arg.Any<CancellationToken>())
-            .Returns(new List<LastFmTrackItem>
-            {
-                new("Koca Bir Saçmalık", null, null, null, "25000", null, null)
-            });
+            }, identity: "Jakuzi", method: "artist.gettoptags"));
 
         var hydrator = new LastFmCandidateHydrator(_apiClient, NullLogger<LastFmCandidateHydrator>.Instance);
 
@@ -53,22 +48,22 @@ public sealed class LastFmCandidateHydratorTests
         Assert.True(candidate.TagVector.Weights.ContainsKey("darkwave"));
         Assert.Equal(0.8, candidate.TagVector["darkwave"]);
 
-        // Verify popularity calculation is reasonable
-        Assert.True(candidate.GlobalPopularity > 0.0 && candidate.GlobalPopularity < 1.0);
+        // Preserve track scope and do not estimate artist-wide popularity
+        Assert.Null(candidate.GlobalPopularity);
+        Assert.Equal("artist_listener_measure_not_supplied", candidate.PopularityMissingReason);
+        Assert.Equal(25000, candidate.RawCandidate.Paths[0].TrackListeners.Value);
+        await _apiClient.DidNotReceive().GetArtistTopTracksAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task HydrateCandidatesBatchAsync_ReusesFetchedTagVectorForSameArtist()
     {
         // Arrange
-        var raw1 = new RawCandidateTrack("Track 1", "Jakuzi", null, 0.9, "src");
-        var raw2 = new RawCandidateTrack("Track 2", "Jakuzi", null, 0.8, "src");
+        var raw1 = EvidenceFixtures.Raw("Track 1", "Jakuzi", null, 0.9);
+        var raw2 = EvidenceFixtures.Raw("Track 2", "Jakuzi", null, 0.8);
 
         _apiClient.GetArtistTopTagsAsync("Jakuzi", 15, Arg.Any<CancellationToken>())
-            .Returns(new List<LastFmTagItem> { new("synthpop", 100, null) });
-
-        _apiClient.GetArtistTopTracksAsync("Jakuzi", 1, Arg.Any<CancellationToken>())
-            .Returns(new List<LastFmTrackItem> { new("Top Track", null, null, null, "10000", null, null) });
+            .Returns(EvidenceFixtures.Response(new List<LastFmTagItem> { new("synthpop", 100, null) }, identity: "Jakuzi", method: "artist.gettoptags"));
 
         var hydrator = new LastFmCandidateHydrator(_apiClient, NullLogger<LastFmCandidateHydrator>.Instance);
 

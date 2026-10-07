@@ -28,7 +28,8 @@ Custom ML / ML.NET, Spotify similarity or audio features, SignalR, payments, soc
 
 Existing helpers to reuse
 
-None yet. Add entries here as they land (rate limiter, upstream cache, etc.), one line each with path.
+- Last.fm evidence parsing shared by HTTP and replay: `src/Infrastructure/RecommendationSources/LastFm/LastFmEvidenceParser.cs`.
+- Immutable in-memory response replay without HTTP/file discovery: `src/Infrastructure/RecommendationSources/LastFm/RecordedLastFmApiClient.cs`.
 
 Rules for agents
 Verify API terms, rate limits, endpoints, library versions and pricing before coding against them. If unverified, say so.

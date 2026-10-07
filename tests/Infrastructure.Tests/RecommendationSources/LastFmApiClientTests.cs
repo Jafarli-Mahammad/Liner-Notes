@@ -29,7 +29,12 @@ public sealed class LastFmApiClientTests
         }
         """;
 
-        var fakeHandler = MockHttpMessageHandler.WithJsonResponse(sampleJson);
+        var fakeHandler = new MockHttpMessageHandler(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(sampleJson) };
+            response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { MaxAge = TimeSpan.FromMinutes(1) };
+            return Task.FromResult(response);
+        });
         var httpClient = new HttpClient(fakeHandler)
         {
             BaseAddress = new Uri("https://ws.audioscrobbler.com/2.0/")
@@ -75,7 +80,12 @@ public sealed class LastFmApiClientTests
         }
         """;
 
-        var fakeHandler = MockHttpMessageHandler.WithJsonResponse(sampleJson);
+        var fakeHandler = new MockHttpMessageHandler(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(sampleJson) };
+            response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { MaxAge = TimeSpan.FromMinutes(1) };
+            return Task.FromResult(response);
+        });
         var httpClient = new HttpClient(fakeHandler)
         {
             BaseAddress = new Uri("https://ws.audioscrobbler.com/2.0/")
@@ -187,7 +197,7 @@ public sealed class LastFmApiClientTests
     }
 
     [Fact]
-    public async Task WhenHttpFails_FallsBackToFixturesInHybridMode()
+    public async Task WhenHttpFails_ReturnsLiveGapWithoutFixtureFallbackInHybridMode()
     {
         // Arrange
         var fakeHandler = MockHttpMessageHandler.WithStatusCode(HttpStatusCode.TooManyRequests);
@@ -203,8 +213,9 @@ public sealed class LastFmApiClientTests
         var result = await client.GetSimilarArtistsAsync("Jakuzi", 3);
 
         // Assert
-        Assert.NotEmpty(result); // Successfully falls back to offline fixture
-        Assert.Equal("Son Feci Bisiklet", result[0].Name);
-        Assert.Single(fakeHandler.RecordedRequests); // Attempted HTTP once, failed with 429, fell back safely
+        Assert.Empty(result);
+        Assert.Equal(LinerNotes.Application.Common.Models.Recommendation.EvidenceOrigin.Live, result.Reference.Origin);
+        Assert.Contains(result.Gaps, gap => gap.Reason == "rate_limit");
+        Assert.Single(fakeHandler.RecordedRequests); // Attempted HTTP once, failed with 429, retained an explicit failure gap
     }
 }

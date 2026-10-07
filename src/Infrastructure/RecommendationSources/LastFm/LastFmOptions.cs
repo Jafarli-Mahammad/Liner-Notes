@@ -6,18 +6,18 @@ namespace LinerNotes.Infrastructure.RecommendationSources.LastFm;
 public enum LastFmClientMode
 {
     /// <summary>
-    /// Prefers live Last.fm API calls; automatically falls back to offline fixtures
-    /// if the API key is unconfigured, rate-limited, or network fails.
+    /// Legacy configuration spelling for HTTP ingestion. Missing credentials or
+    /// upstream failure return explicit gaps; no synthetic fallback.
     /// </summary>
     Hybrid = 0,
 
     /// <summary>
-    /// Exclusively makes live API calls to Last.fm (fails if offline or missing API key).
+    /// HTTP ingestion with explicit failure gaps if offline or missing the API key.
     /// </summary>
     LiveOnly = 1,
 
     /// <summary>
-    /// Exclusively uses deterministic pre-recorded fixtures (zero outbound network requests).
+    /// Exclusively uses explicitly synthetic fixtures (zero outbound network requests).
     /// </summary>
     FixtureOnly = 2
 }
@@ -61,13 +61,13 @@ public sealed class LastFmOptions
 
     /// <summary>
     /// Maximum allowed requests per second across the application to prevent rate-limit violations.
-    /// Default is 4 req/sec to stay safely under Last.fm's 5 req/sec fair-use ceiling.
+    /// Local pacing configuration only. Last.fm documents no universal numeric allowance.
     /// </summary>
     public int RequestsPerSecond { get; set; } = 4;
 
     /// <summary>
-    /// In-memory cache duration for tag lists and similar artists in hours.
-    /// Default is 24 hours (1440 minutes).
+    /// Legacy configuration field retained for compatibility. Evidence envelopes
+    /// are cached only within upstream HTTP freshness, without an adopted default lifetime.
     /// </summary>
     public int CacheDurationHours { get; set; } = 24;
 

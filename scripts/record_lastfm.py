@@ -370,6 +370,10 @@ def record(m, repo, inventory, roots, transport, credential, cancelled=lambda: F
             interval = m["pacing"]["minimum_start_interval_ms"] / 1000
             if last_start is not None:
                 sleep(max(0, interval - (clock() - last_start)))
+            # Pacing may leave time for another writer to change inventoried data.
+            # Reconcile again immediately before dispatch so the reservation is current.
+            if filesystem_revision(roots)[0] != guard.inventory.revision:
+                raise AcquisitionStopped("External inventory change after pacing")
             if cancelled():
                 raise AcquisitionStopped("Cancelled")
             last_start = clock()

@@ -295,6 +295,7 @@ class RecorderTests(unittest.TestCase):
             ledger = json.loads(path.read_bytes())
             self.assertEqual("recorded", ledger["provenance"])
             self.assertEqual("pilot, directional", ledger["label"])
+            self.assertGreaterEqual(recorder.stamp(ledger["retrieved_at_utc"]), recorder.stamp(ledger["started_at_utc"]))
             raw = path.with_name(path.name.replace("ledger", "response")).read_bytes()
             self.assertEqual(recorder.sha(raw), ledger["response_sha256"])
         self.assertFalse(any(b"fake-secret" in p.read_bytes() for p in output.iterdir()))

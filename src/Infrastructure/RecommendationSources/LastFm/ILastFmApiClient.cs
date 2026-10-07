@@ -4,14 +4,14 @@ namespace LinerNotes.Infrastructure.RecommendationSources.LastFm;
 
 /// <summary>
 /// Low-level typed HTTP client for Last.fm Web Services 2.0.
-/// Encapsulates request rate limiting, response caching, error backoff, and hybrid fixture fallback.
+/// Returns explicit provenance and gaps; never substitutes synthetic data after a real failure.
 /// </summary>
 public interface ILastFmApiClient
 {
     /// <summary>
     /// Calls 'artist.getSimilar' to retrieve artists similar to the specified artist name.
     /// </summary>
-    Task<IReadOnlyList<LastFmArtistSummary>> GetSimilarArtistsAsync(
+    Task<LastFmResponse<LastFmArtistSummary>> GetSimilarArtistsAsync(
         string artistName,
         int limit = 10,
         CancellationToken cancellationToken = default);
@@ -19,7 +19,7 @@ public interface ILastFmApiClient
     /// <summary>
     /// Calls 'artist.getTopTags' to retrieve top user tags for the specified artist.
     /// </summary>
-    Task<IReadOnlyList<LastFmTagItem>> GetArtistTopTagsAsync(
+    Task<LastFmResponse<LastFmTagItem>> GetArtistTopTagsAsync(
         string artistName,
         int limit = 20,
         CancellationToken cancellationToken = default);
@@ -27,7 +27,7 @@ public interface ILastFmApiClient
     /// <summary>
     /// Calls 'artist.getTopTracks' to retrieve top tracks for the specified artist.
     /// </summary>
-    Task<IReadOnlyList<LastFmTrackItem>> GetArtistTopTracksAsync(
+    Task<LastFmResponse<LastFmTrackItem>> GetArtistTopTracksAsync(
         string artistName,
         int limit = 5,
         CancellationToken cancellationToken = default);
@@ -35,7 +35,7 @@ public interface ILastFmApiClient
     /// <summary>
     /// Calls 'tag.getTopTracks' to retrieve top tracks tagged with the specified musical tag.
     /// </summary>
-    Task<IReadOnlyList<LastFmTrackItem>> GetTagTopTracksAsync(
+    Task<LastFmResponse<LastFmTrackItem>> GetTagTopTracksAsync(
         string tag,
         int limit = 10,
         CancellationToken cancellationToken = default);

@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Application\Application.csproj" />
     <ProjectReference Include="..\..\src\Domain\Domain.csproj" />
+    <Compile Include="..\Domain.Tests\Fixtures\BenchmarkSeedFixtures.cs" Link="Common\BenchmarkSeedFixtures.cs" />
   </ItemGroup>
 
   <ItemGroup>

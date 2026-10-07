@@ -4,7 +4,7 @@ namespace LinerNotes.Infrastructure.RecommendationSources.LastFm.Fixtures;
 
 /// <summary>
 /// Deterministic offline fixtures for Last.fm API responses.
-/// Provides rich, realistic mock data for hybrid mode fallback and offline development/testing,
+/// Provides explicitly synthetic offline test data,
 /// specifically covering founder seeds (Jakuzi, Son Feci Bisiklet, Hotline Miami, Dying Light, ULTRAKILL, Hades).
 /// </summary>
 public static class LastFmFixtureProvider
@@ -265,51 +265,15 @@ public static class LastFmFixtureProvider
         }
     };
 
-    public static IReadOnlyList<LastFmArtistSummary> GetSimilarArtists(string artistName)
-    {
-        if (SimilarArtists.TryGetValue(artistName, out var list))
-            return list;
+    public static IReadOnlyList<LastFmArtistSummary> GetSimilarArtists(string artistName) =>
+        SimilarArtists.TryGetValue(artistName.Trim(), out var list) ? list.ToArray() : [];
 
-        // Sensible default fallback fixture for unknown artists
-        return new List<LastFmArtistSummary>
-        {
-            new($"{artistName} Related A", null, "0.75", null),
-            new($"{artistName} Related B", null, "0.65", null)
-        };
-    }
+    public static IReadOnlyList<LastFmTagItem> GetArtistTopTags(string artistName) =>
+        ArtistTopTags.TryGetValue(artistName.Trim(), out var list) ? list.ToArray() : [];
 
-    public static IReadOnlyList<LastFmTagItem> GetArtistTopTags(string artistName)
-    {
-        if (ArtistTopTags.TryGetValue(artistName, out var list))
-            return list;
+    public static IReadOnlyList<LastFmTrackItem> GetArtistTopTracks(string artistName) =>
+        ArtistTopTracks.TryGetValue(artistName.Trim(), out var list) ? list.ToArray() : [];
 
-        return new List<LastFmTagItem>
-        {
-            new("indie", 80, null),
-            new("alternative", 60, null)
-        };
-    }
-
-    public static IReadOnlyList<LastFmTrackItem> GetArtistTopTracks(string artistName)
-    {
-        if (ArtistTopTracks.TryGetValue(artistName, out var list))
-            return list;
-
-        return new List<LastFmTrackItem>
-        {
-            new($"{artistName} Track 1", null, null, "200", "10000", "50000", new LastFmArtistRef(artistName, null, null)),
-            new($"{artistName} Track 2", null, null, "210", "8000", "40000", new LastFmArtistRef(artistName, null, null))
-        };
-    }
-
-    public static IReadOnlyList<LastFmTrackItem> GetTagTopTracks(string tag)
-    {
-        if (TagTopTracks.TryGetValue(tag, out var list))
-            return list;
-
-        return new List<LastFmTrackItem>
-        {
-            new($"{tag} Discovery 1", null, null, "210", "15000", "60000", new LastFmArtistRef($"{tag} Artist", null, null))
-        };
-    }
+    public static IReadOnlyList<LastFmTrackItem> GetTagTopTracks(string tag) =>
+        TagTopTracks.TryGetValue(tag.Trim(), out var list) ? list.ToArray() : [];
 }

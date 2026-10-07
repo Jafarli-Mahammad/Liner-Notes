@@ -1,16 +1,21 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
-- Authorized: **Phase 1 only**, local commits on `Prism`; no push or later-phase execution.
+- Authorized: **Phase 1–3 local work** on `Prism`; the developer requested Phase 2
+  execution and approved its exact membership and offline test replacement on 2026-10-07,
+  then requested Phase 3 execution. No push or Phase 4–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: Phase 1 implementation and offline verification are ready for developer review.
+- Active step: Phase 3 implementation and offline verification are ready for developer review;
+  see [Phase 3 evidence](docs/renewal/phase-3-evidence.md). Phase 1–2 confirmation remains pending.
 - PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
   shared files, 1C–1F and 1I are grouped in `775a838`; this differs from the planned one-PR-per-
   commit-set split and needs review. No implementation is developer confirmed.
 - No implementation is developer confirmed. Verification is not confirmation.
 - PR 1A planning revision: the developer approved the revised written plan, numeric evaluation
   thresholds, pilot adequacy bars and flagged interpretations on 2026-10-06. Phase 1 authorization
-  is unchanged; this planning approval does not approve later-phase execution or concrete runs.
+  was unchanged by that planning approval; the subsequent 2026-10-07 instruction authorizes
+  Phase 2 execution. The subsequent Phase 3 request authorizes its transient ingestion scope.
+  Concrete live recording runs still require separate approval.
 - Schema/migrations, further API/export changes, framework/CI, test removal or weakening,
   module deletion, history rewrites, pushing, merging and irreversible actions need separate approval.
   The narrowly scoped 1J dependency remediation was implemented after the developer directed
@@ -42,12 +47,23 @@ The plan below is approved; **not approved** refers to phase execution and its r
 
 1. Baseline and security — **authorized**, unchanged PRs 1A–1K; implementation verified locally,
    developer confirmation pending.
-2. Harness mechanics — **not approved**. Fixture-only mode with an outbound-rejecting HTTP handler;
-   metrics; founder/development/held-out/synthetic sets, with held-out membership locked before any
-   scoring; recorder written but not run; acquisition storage guard.
-3. Honest ingestion, in memory only — **not approved**. No invented evidence; missing stays missing;
-   live/recorded/synthetic provenance; unknown seeds are coverage gaps. First verify no schema change
-   is needed; stop and ask if one is needed.
+2. Harness mechanics — **authorized; implementation verified locally, developer confirmation pending**.
+   Fixture-only harness and rejecting HTTP handler; metric implementations; approved founder,
+   development, held-out and synthetic sets locked before harness ranking; separate recorder written
+   but not run live; acquisition guard verified with fake inventories. The approved legacy founder
+   test now runs offline and writes no tracked report. Evidence: 22 focused .NET checks, 21 fake
+   recorder checks, full suite 216 passed / 9 existing PostgreSQL skips. **Mechanics only, no catalog
+   conclusions.** See [design and approved membership](docs/renewal/phase-2-design.md) and
+   [verification/limitations](docs/renewal/phase-2-evidence.md).
+3. Honest ingestion, in memory only — **authorized; implementation verified locally, developer confirmation pending**.
+   Schema preflight confirmed transient models are unmapped; no schema or public API changes.
+   Removed invented tags, listener estimates and matches; preserved missing/invalid values, all
+   discovery paths, original positions, attribution, response hashes/times and origins. Unknown
+   fixture seeds and failed HTTP requests produce gaps; no hybrid substitution. Recorded replay
+   consumes injected immutable byte snapshots without HTTP or file discovery. Evidence: all 55
+   Infrastructure checks pass, including four baseline failures; full suite 256 passed / 9 existing
+   PostgreSQL skips, with 77 Domain checks passing. **Mechanics only, no catalog conclusions.**
+   See [design](docs/renewal/phase-3-design.md) and [verification/limitations](docs/renewal/phase-3-evidence.md).
 4. Pilot — **not approved**. Developer approval of a concrete run manifest and adequacy bars before
    one roughly 5 MB local recording covering six founder clusters plus a few seeds. Data-shape report,
    then A–D and blind listening; no tuning or promotion; every result labelled **pilot, directional**.
@@ -103,11 +119,12 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
 - Correctness gates, held-out guardrails against A and blind-rating margin are approved as written;
   changes require review before real scoring. Diversity and novelty are formula-selection tie-breakers,
   never substitutes for ratings; the approved evaluation formulas retain their novelty component.
-- Phase 2 placement must follow V1_FolderStructure.md; any new project/folder deviation needs approval.
+- Phase 2 follows existing test folders and `scripts/`; no evaluation project or package was added.
   Evaluation depends on Application/Domain only; the harness has no live source. Clarify production
   acquisition against the recorder-only live-call rule before Phase 6 implementation.
 - Retention (24h cache, 30d recordings/backups, 12mo recommendations) is proposed, not approved.
-- Shared storage inventory/acquisition guard and alert-and-degrade policy are future work;
+- Phase 2's offline acquisition guard and recorder inventory checks are implemented;
+  production shared storage coordination and alert-and-degrade integration remain future work;
   actual persisted complete-breakdown sizes and supported capacity are **not verified**.
 - Phase 1 rejects contradictory sentiment/rating pairs (Liked 1–3, Disliked 7–10) and
   preserves familiarity independently. Phase 6 still needs a full conflict/retention contract.
@@ -120,8 +137,8 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
 - Text-only email attribution acceptability is **not verified**.
 - Current terms do not specify a universal numeric request allowance. Four/five requests per second
   in older files are not verified allowances. One request/second is only proposed conservative pacing.
-- [Terms](https://www.last.fm/api/tos) and
-  [track endpoint](https://www.last.fm/api/show/artist.getTopTracks) checked 2026-10-06.
+- [Terms](https://www.last.fm/api/tos) and similarity/tag/track endpoint documentation refreshed
+  2026-10-07; see [Phase 3 references](docs/renewal/phase-3-evidence.md#authoritative-documentation).
 - Last.fm enquiry remains draft only; repository URL must be confirmed before any sending.
 
 ## Historical baseline

@@ -1,18 +1,23 @@
 # Renewal contracts and pending proposals
 
 The 2026-10-06 user-supplied renewal plan takes precedence over older specifications.
-Only Phase 1 execution is authorized, unchanged PRs 1A–1K. On 2026-10-06, the developer explicitly
+Phase 1 execution was authorized with unchanged PRs 1A–1K. On 2026-10-07, the developer requested
+Phase 2 execution and explicitly approved its exact membership and offline legacy-test replacement;
+see [Phase 2 design](phase-2-design.md) and [evidence](phase-2-evidence.md). The developer subsequently
+requested Phase 3 execution; see [design](phase-3-design.md) and [evidence](phase-3-evidence.md).
+Phases 4–9 and live run manifests remain separately gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
-Phases 2–9 execution remains NOT approved, and concrete run manifests retain separate approval.
+that approval alone did not authorize Phases 2–9, and concrete run manifests retain separate approval.
 No recorder execution, live Last.fm calls, real scoring, project scaffolding or code changes form part
 of this planning revision. Phase 1 work remains authorized under its existing separate-approval limits.
 See [PROGRESS](../../PROGRESS.md) for current decisions and gates.
 
 Approval scope: the evaluation protocol, pilot bars, manifest format and evaluation-only formula
 definitions below are approved for planning. Descriptions retained as proposals do not indicate
-pending reapproval of those same values. Production formula adoption, retention, exact profile
-membership, live acquisition, schema/API/test-contract changes and individual run manifests still
+pending reapproval of those same values. Phase 2 exact profile membership and its offline legacy-test
+replacement are now approved as documented above. Production formula adoption, retention, live
+acquisition, broader schema/API/test-contract changes and individual run manifests still
 require the decisions specified below. No implementation was confirmed by this planning approval.
 The three reviewed interpretations are accepted: recorder-only calls apply to evaluation, with
 production acquisition unresolved until Phase 6; tags sum to the tag subtotal and named components
@@ -41,12 +46,12 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
 1. **Baseline and security — authorized, unchanged.** PRs 1A–1K retain their existing scopes,
    separate local commit sets, verification requirements and developer-confirmation requirement.
    This revision belongs to PR 1A; it does not authorize scorer, provider or test-contract changes.
-2. **Harness mechanics — not approved.** Fixture-only harness with an HTTP handler that rejects
+2. **Harness mechanics — authorized; implementation verified locally, confirmation pending.** Fixture-only harness with an HTTP handler that rejects
    outbound requests, metric implementations and founder/development/held-out/synthetic profile
    sets. Lock held-out membership before any harness scoring, including synthetic mechanics runs.
-   Write the separate recorder but do not run it. Build the acquisition storage guard using fake
+   Write the separate recorder but do not run it live. Build the acquisition storage guard using fake
    inventory/response inputs. No Last.fm dependency is needed to complete these mechanics.
-3. **Honest ingestion, in memory only — not approved.** First verify the concrete design needs no
+3. **Honest ingestion, in memory only — authorized; implementation verified locally, confirmation pending.** First verify the concrete design needs no
    database schema change; if it does, stop and ask. Remove invented tags, listener counts and
    match values. Preserve absent/invalid evidence explicitly, all discovery paths, attribution and
    candidate provenance (`live`, `recorded`, `synthetic`). Unknown seeds produce coverage gaps,
@@ -105,11 +110,11 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
   the blueprint: present its exact path and references and obtain approval before adding it.
   No project or folder is added by this revision. Output-directory creation also belongs to the
   approved recording manifest, not this planning pass.
-- Proposed sets: six founder profiles, 16 development profiles (two per each of the eight benchmark
+- Approved Phase 2 membership: six founder profiles, 16 development profiles (two per each of the eight benchmark
   genres), 16 held-out profiles (two per genre), and the existing eight-genre synthetic mechanics
-  fixture plus missing/invalid/tied-input cases. These are proposed counts, not existing real data.
+  fixture plus missing/invalid/tied-input cases. These are reviewed profile definitions, not acquired real data.
   Exact membership, seeds, canonicalization and split hashes must be locked before any harness
-  scoring; selecting named profiles is a Phase 2 review item. Proposed real profiles contain two
+  scoring; named profiles were reviewed in Phase 2. Development/held-out profiles contain two
   to five declared artist/tag seeds; preserve sparse profiles as such, never auto-fill them.
   No response acquisition is needed
   to lock membership. Founder/pilot seeds cannot be held-out seeds; development and held-out seed
@@ -379,6 +384,12 @@ For Phase 4/5, retention is a required run-manifest decision; the general 30-day
 not silently adopted. Plans may name paths, but no recording/report output is tracked.
 
 ## Verified conflicts and approval points (read-only inspection, 2026-10-06)
+
+The table preserves the original audit. The ingestion and hybrid/unknown-fixture conflicts were
+addressed locally in [Phase 3](phase-3-evidence.md); the unsafe legacy spike was replaced with
+an approved offline check in [Phase 2](phase-2-evidence.md). Their baseline descriptions below
+are historical, not descriptions of the current implementations. Endpoint/terms documentation
+was refreshed on 2026-10-07 for Phase 3; unresolved production decisions retain their gates.
 
 | Finding | Consequence for this plan |
 |---|---|

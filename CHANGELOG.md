@@ -2,6 +2,16 @@
 
 ## Unreleased — renewal
 
+- Added Phase 3 transient ingestion evidence: missing/invalid values and coverage gaps, every
+  discovery path, attribution, response hashes/times and explicit origins. Removed invented tags,
+  listener estimates, matches and hybrid fixture substitution; added in-memory recorded replay.
+  No schema changes or live acquisition; verification awaits developer confirmation.
+
+- Added Phase 2 fixture evaluation mechanics, reviewed profile membership locks, metric checks,
+  and a separate manifest-gated recorder with bounded storage accounting. Replaced the legacy
+  founder test with an offline isolation check. No live recording or catalog-quality evaluation
+  was performed; implementation verification awaits developer confirmation.
+
 - Revised the renewal plan into nine approval-gated phases, with proposed pilot/evaluation thresholds
   and separate recording manifests; Phase 1 authorization is unchanged and later phases remain unapproved.
 - Recorded developer approval of the revised written plan, evaluation thresholds, pilot bars and

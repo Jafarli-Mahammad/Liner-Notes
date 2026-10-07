@@ -20,7 +20,7 @@ public interface IRecommendationSource
     /// <param name="limitPerArtist">Maximum number of candidate tracks to retrieve per seed artist.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of raw unhydrated candidate tracks.</returns>
-    Task<IReadOnlyList<RawCandidateTrack>> GetCandidatesByArtistsAsync(
+    Task<IngestionResult<RawCandidateTrack>> GetCandidatesByArtistsAsync(
         IReadOnlyList<string> artistNames,
         int limitPerArtist = 10,
         CancellationToken cancellationToken = default);
@@ -32,7 +32,7 @@ public interface IRecommendationSource
     /// <param name="limitPerTag">Maximum number of candidate tracks to retrieve per seed tag.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of raw unhydrated candidate tracks.</returns>
-    Task<IReadOnlyList<RawCandidateTrack>> GetCandidatesByTagsAsync(
+    Task<IngestionResult<RawCandidateTrack>> GetCandidatesByTagsAsync(
         IReadOnlyList<string> tags,
         int limitPerTag = 10,
         CancellationToken cancellationToken = default);

@@ -1,12 +1,15 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
-- Authorized: **Phase 1–3 local work** on `Prism`; the developer requested Phase 2
+- Authorized: **Phase 1–4 local work** on `Prism`; the developer requested Phase 2
   execution and approved its exact membership and offline test replacement on 2026-10-07,
-  then requested Phase 3 execution. No push or Phase 4–9 execution is authorized.
+  then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
+  still needs separate approval. No push or Phase 5–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: Phase 3 implementation and offline verification are ready for developer review;
-  see [Phase 3 evidence](docs/renewal/phase-3-evidence.md). Phase 1–2 confirmation remains pending.
+- Active step: Phase 4 tooling is implemented and verified offline; obtain exact run-manifest
+  approval with a fresh reconciled inventory, then record, inspect shape and perform blind review.
+  See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
+  Phase 1–3 confirmation remains pending. Phase 4 pilot execution is incomplete.
 - PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
   shared files, 1C–1F and 1I are grouped in `775a838`; this differs from the planned one-PR-per-
   commit-set split and needs review. No implementation is developer confirmed.
@@ -15,7 +18,8 @@
   thresholds, pilot adequacy bars and flagged interpretations on 2026-10-06. Phase 1 authorization
   was unchanged by that planning approval; the subsequent 2026-10-07 instruction authorizes
   Phase 2 execution. The subsequent Phase 3 request authorizes its transient ingestion scope.
-  Concrete live recording runs still require separate approval.
+  The Phase 4 request authorizes pilot tooling; concrete live recording runs still require
+  separate manifest approval and explicit shared-storage reconciliation.
 - Schema/migrations, further API/export changes, framework/CI, test removal or weakening,
   module deletion, history rewrites, pushing, merging and irreversible actions need separate approval.
   The narrowly scoped 1J dependency remediation was implemented after the developer directed
@@ -64,9 +68,15 @@ The plan below is approved; **not approved** refers to phase execution and its r
    Infrastructure checks pass, including four baseline failures; full suite 256 passed / 9 existing
    PostgreSQL skips, with 77 Domain checks passing. **Mechanics only, no catalog conclusions.**
    See [design](docs/renewal/phase-3-design.md) and [verification/limitations](docs/renewal/phase-3-evidence.md).
-4. Pilot — **not approved**. Developer approval of a concrete run manifest and adequacy bars before
-   one roughly 5 MB local recording covering six founder clusters plus a few seeds. Data-shape report,
-   then A–D and blind listening; no tuning or promotion; every result labelled **pilot, directional**.
+4. Pilot — **tooling authorized and verified locally; live pilot not executed**. Frozen untuned
+   A–D evaluation, complete contributions/provenance, replay bridge, shape gates, storage accounting,
+   concealed six-profile blind pool and complete-rating arithmetic are implemented. Verification:
+   21 new .NET checks; full suite 277 passed / 9 existing PostgreSQL skips; 32 fake recorder/operator
+   checks; CLI metadata and fabricated-input smoke checks. **Mechanics only, no catalog conclusions.**
+   Concrete manifest approval, current shared-storage inventory, actual recording, data-shape results
+   and developer blind ratings remain pending. Failed yield/tag/integrity bars stop before comparisons;
+   missing match/popularity bars mark their checks unassessable. No tuning/promotion. Real outputs
+   must say **pilot, directional**. See [evidence and run procedure](docs/renewal/phase-4-evidence.md).
 5. Real evaluation — **not approved**. Last.fm reply or explicit developer decision to proceed without
    one; a second approved manifest for full development/held-out recording, then scoring comparison
    and developer formula choice. Include IDF corpus size/balance/sensitivity and persisted C match
@@ -119,11 +129,12 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
 - Correctness gates, held-out guardrails against A and blind-rating margin are approved as written;
   changes require review before real scoring. Diversity and novelty are formula-selection tie-breakers,
   never substitutes for ratings; the approved evaluation formulas retain their novelty component.
-- Phase 2 follows existing test folders and `scripts/`; no evaluation project or package was added.
+- Phase 2 and Phase 4 follow existing test folders and `scripts/`; no tracked evaluation project or package was added.
   Evaluation depends on Application/Domain only; the harness has no live source. Clarify production
   acquisition against the recorder-only live-call rule before Phase 6 implementation.
 - Retention (24h cache, 30d recordings/backups, 12mo recommendations) is proposed, not approved.
 - Phase 2's offline acquisition guard and recorder inventory checks are implemented;
+  Phase 4 adds bounded local analysis/report writes and an explicit refreshed inventory gate.
   production shared storage coordination and alert-and-degrade integration remain future work;
   actual persisted complete-breakdown sizes and supported capacity are **not verified**.
 - Phase 1 rejects contradictory sentiment/rating pairs (Liked 1–3, Disliked 7–10) and

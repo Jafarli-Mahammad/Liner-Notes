@@ -17,6 +17,7 @@
     <Compile Include="..\Application.Tests\Common\EvaluationMetrics.cs" Link="RecommendationSources\EvaluationMetrics.cs" />
     <Compile Include="..\Application.Tests\Common\PilotScoring.cs" Link="RecommendationSources\PilotScoring.cs" />
     <Compile Include="..\Application.Tests\Common\PilotEvaluation.cs" Link="RecommendationSources\PilotEvaluation.cs" />
+    <EmbeddedResource Include="..\..\scripts\phase4_weights.json" LogicalName="LinerNotes.Pilot.Weights.json" />
   </ItemGroup>
 
   <ItemGroup>

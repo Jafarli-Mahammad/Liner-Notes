@@ -9,16 +9,27 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LinerNotes.Infrastructure.Tests.RecommendationSources;
 
-public sealed record PilotProtocol(string Version, string MembershipHash, string ScoringDefinition,
+public sealed record PilotWeightConfiguration(string Version, ImmutableSortedDictionary<string, PilotWeights> Weights);
+public sealed record PilotProtocol(string Version, string WeightsVersion, string MembershipHash, string ScoringDefinition,
     string NormalizationVersion, string StoplistHash, ImmutableSortedDictionary<string, PilotWeights> Weights,
     ImmutableArray<string> KnownTracks, ImmutableArray<string> DislikedTracks,
     string NoiseRule, string PopularityRule, string BlindRule, string AdequacyContract)
 {
-    public static PilotProtocol Initial() => new("pilot-protocol-v1", Phase2ProfileMembership.ApprovedHash,
+    public static PilotProtocol Initial()
+    {
+        // Embedded configuration only: no runtime file/credential discovery in the harness.
+        using var stream = typeof(PilotProtocol).Assembly.GetManifestResourceStream("LinerNotes.Pilot.Weights.json")
+            ?? throw new InvalidOperationException("Missing versioned pilot weights.");
+        var configuration = JsonSerializer.Deserialize<PilotWeightConfiguration>(stream)
+            ?? throw new InvalidOperationException("Invalid pilot weights.");
+        if (configuration.Version != "pilot-weights-v1" || configuration.Weights is null ||
+            !configuration.Weights.Keys.SequenceEqual(new[] { "A", "B", "C", "D" }, StringComparer.Ordinal) ||
+            configuration.Weights.Any(p => new[] { p.Value.Tag, p.Value.Novelty, p.Value.Match }.Any(w => !double.IsFinite(w) || w < 0) ||
+                (p.Key != "C" && p.Value.Match != 0))) throw new ArgumentException("Invalid versioned evaluation configuration.");
+        return new("pilot-protocol-v1", configuration.Version, Phase2ProfileMembership.ApprovedHash,
         PilotScoring.Definition, LastFmTagEvidence.NormalizationVersion,
         PilotScoring.Hash(JsonSerializer.Serialize(LastFmTagEvidence.Stoplist)),
-        new[] { "A", "B", "C", "D" }.ToImmutableSortedDictionary(f => f,
-            f => new PilotWeights(1, .2, f == "C" ? .1 : 0), StringComparer.Ordinal), [], [],
+        configuration.Weights, [], [],
         "frozen existing stoplist, trimmed invariant case; all raw nonblank tags once per artist; ambiguous names listed, no tuning",
         PilotEvaluation.PopularityMeasure + "; missing/conflicting or >2^53 values unassessable; empirical midrank percentiles",
         "six founder profiles; deduplicated top-five union A-D; concealed reproducible SHA256 order; like=1 neutral=0 dislike=-1; " +
@@ -27,6 +38,7 @@ public sealed record PilotProtocol(string Version, string MembershipHash, string
         ">=80% candidate artists two usable tags; <=30% raw stoplist noise; >=95% requests usable; 100% retained parse-or-gap/provenance; " +
         "yield/tag/integrity failure stops comparison; >=80% valid similarity paths for C; >=80% authentic listener coverage for popularity; " +
         "k=3/5; correctness/determinism/arithmetic gates; stability +/-5%,10% individual/joint; pilot-only IDF distinct artists; no tuning");
+    }
 
     public void Validate()
     {

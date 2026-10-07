@@ -1,0 +1,9 @@
+{
+  "Version": "pilot-weights-v1",
+  "Weights": {
+    "A": { "Tag": 1.0, "Novelty": 0.2, "Match": 0.0 },
+    "B": { "Tag": 1.0, "Novelty": 0.2, "Match": 0.0 },
+    "C": { "Tag": 1.0, "Novelty": 0.2, "Match": 0.1 },
+    "D": { "Tag": 1.0, "Novelty": 0.2, "Match": 0.0 }
+  }
+}

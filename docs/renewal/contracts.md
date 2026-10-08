@@ -7,7 +7,10 @@ see [Phase 2 design](phase-2-design.md) and [evidence](phase-2-evidence.md). The
 requested Phase 3 execution; see [design](phase-3-design.md) and [evidence](phase-3-evidence.md).
 The developer then requested Phase 4 implementation; its tooling is verified offline, with the
 concrete live run still pending. See [Phase 4 evidence and procedure](phase-4-evidence.md).
-Phases 5–9 and live run manifests remain separately gated. On 2026-10-06, the developer explicitly
+Phase 6 local work was requested on 2026-10-09, followed by an explicit provisional baseline-A
+evidence bypass. Its concrete persistence/API/policy design still requires review; quality remains
+unverified and real evaluation remains open. Phases 5/7–9 and live run manifests remain separately
+gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
 that approval alone did not authorize Phases 2–9, and concrete run manifests retain separate approval.
@@ -76,7 +79,10 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    and ask for a fresh set. If the Last.fm gate takes too long, the developer chooses to wait longer
    or proceed to Phase 6 with baseline A without real evidence. The agent never chooses this escape.
    Waiving the reply to run evaluation and bypassing evaluation entirely are distinct decisions.
-6. **Recommendation pipeline and persistence — not approved.** Application orchestrates signals →
+6. **Recommendation pipeline and persistence — local work authorized; design review pending.**
+   Provisional baseline A was explicitly approved under an evidence bypass on 2026-10-09;
+   quality remains unverified and evaluation remains open. See [concrete review](phase-6-review.md).
+   Application orchestrates signals →
    materialization → discovery → hydration → pure ranking → persistence; provider details stay in
    Infrastructure. Use the formula chosen in Phase 5, or A on explicit evidence bypass. Resolve the
    hash/ordinal/representative-track selection contract, retention and categorical/numeric feedback

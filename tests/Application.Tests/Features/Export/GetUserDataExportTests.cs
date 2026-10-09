@@ -26,15 +26,15 @@ public class GetUserDataExportTests
         var tasteRepo = Substitute.For<ITasteSignalRepository>();
         var digestRepo = Substitute.For<IWeeklyDigestRepository>();
 
-        userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
-        tasteRepo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(new List<TasteSignal> { signal });
-        digestRepo.GetRecentDigestsForUserAsync(userId, 1000, Arg.Any<CancellationToken>()).Returns(new List<WeeklyDigest> { digest });
+        userRepo.GetForExportAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        tasteRepo.GetForExportAsync(userId, Arg.Any<CancellationToken>()).Returns(new List<TasteSignal> { signal });
+        digestRepo.GetExportPageAsync(userId, null, null, 100, Arg.Any<CancellationToken>()).Returns(new List<WeeklyDigest> { digest });
 
         var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo);
         var result = await handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("1.0", result.ExportVersion);
+        Assert.Equal("2.0", result.ExportVersion);
         Assert.Equal("gdpr@example.com", result.Subscriber.Email);
         Assert.Single(result.Connections);
         Assert.Equal("LastFm", result.Connections[0].ServiceType);

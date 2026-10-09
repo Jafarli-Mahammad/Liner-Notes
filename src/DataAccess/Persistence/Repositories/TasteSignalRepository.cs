@@ -28,6 +28,10 @@ public sealed class TasteSignalRepository : AsyncRepository<TasteSignal>, ITaste
         await DataContext.TasteSignals.AddRangeAsync(signals, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TasteSignal>> GetForExportAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await DataContext.TasteSignals.IgnoreQueryFilters().Where(s => s.UserId == userId).OrderBy(s => s.Id)
+            .ToArrayAsync(cancellationToken).ConfigureAwait(false);
+
     public async Task DeleteSignalsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var signals = await DataContext.TasteSignals.Where(s => s.UserId == userId).ToListAsync(cancellationToken);

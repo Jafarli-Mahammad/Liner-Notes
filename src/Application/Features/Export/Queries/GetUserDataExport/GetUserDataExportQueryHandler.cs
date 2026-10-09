@@ -11,7 +11,7 @@ using MediatR;
 namespace LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 
 /// <summary>
-/// Handler producing the comprehensive data export covering all stored tables and columns.
+/// Exports the reviewed taste/account records using bounded stable digest pages.
 /// </summary>
 public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataExportQuery, UserDataExportDto>
 {
@@ -33,26 +33,39 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         GetUserDataExportQuery request,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+        var user = await _userRepository.GetForExportAsync(request.UserId, cancellationToken);
         if (user is null)
         {
             throw new NotFoundException(nameof(User), request.UserId);
         }
 
-        var signals = await _tasteSignalRepository.GetByUserIdAsync(request.UserId, cancellationToken);
-        var digests = await _weeklyDigestRepository.GetRecentDigestsForUserAsync(request.UserId, count: 1000, cancellationToken);
+        var signals = await _tasteSignalRepository.GetForExportAsync(request.UserId, cancellationToken);
+        var digests = new List<WeeklyDigestDto>();
+        DateTime? beforeCreatedAt = null;
+        Guid? beforeId = null;
+        while (true)
+        {
+            var page = await _weeklyDigestRepository.GetExportPageAsync(request.UserId, beforeCreatedAt,
+                beforeId, 100, cancellationToken).ConfigureAwait(false);
+            digests.AddRange(page.Select(d => d.ToDto()));
+            if (page.Count < 100) break;
+            var cursor = page[^1];
+            if (cursor.CreatedAt == beforeCreatedAt && cursor.Id == beforeId)
+                throw new InvalidOperationException("Export page did not advance.");
+            beforeCreatedAt = cursor.CreatedAt;
+            beforeId = cursor.Id;
+        }
 
         var subscriberDto = user.ToDto();
         var connectionDtos = user.Connections.Select(c => c.ToExportDto()).ToArray();
         var signalDtos = signals.Select(s => s.ToDto()).ToArray();
-        var digestDtos = digests.Select(d => d.ToDto()).ToArray();
 
         return new UserDataExportDto(
-            ExportVersion: "1.0",
+            ExportVersion: "2.0",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
             TasteSignals: signalDtos,
-            Digests: digestDtos);
+            Digests: digests);
     }
 }

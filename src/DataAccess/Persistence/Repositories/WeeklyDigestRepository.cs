@@ -48,6 +48,19 @@ public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWee
             .AnyAsync(d => d.UserId == userId && d.Week == week, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<WeeklyDigest>> GetExportPageAsync(Guid userId, DateTime? beforeCreatedAt,
+        Guid? beforeId, int pageSize, CancellationToken cancellationToken = default)
+    {
+        if (pageSize is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(pageSize));
+        var query = DataContext.WeeklyDigests.IgnoreQueryFilters().Where(d => d.UserId == userId);
+        if (beforeCreatedAt.HasValue && beforeId.HasValue)
+            query = query.Where(d => d.CreatedAt < beforeCreatedAt.Value ||
+                d.CreatedAt == beforeCreatedAt.Value && d.Id.CompareTo(beforeId.Value) < 0);
+        return await query.OrderByDescending(d => d.CreatedAt).ThenByDescending(d => d.Id).Take(pageSize)
+            .Include(d => d.Recommendations).ThenInclude(r => r.Track).AsSplitQuery()
+            .ToArrayAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<WeeklyRecommendation?> GetRecommendationByIdAsync(Guid recommendationId, Guid userId, CancellationToken cancellationToken = default)
     {
         return await DataContext.WeeklyRecommendations

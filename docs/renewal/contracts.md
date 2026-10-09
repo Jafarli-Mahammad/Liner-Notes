@@ -8,7 +8,8 @@ requested Phase 3 execution; see [design](phase-3-design.md) and [evidence](phas
 The developer then requested Phase 4 implementation; its tooling is verified offline, with the
 concrete live run still pending. See [Phase 4 evidence and procedure](phase-4-evidence.md).
 Phase 6 local work was requested on 2026-10-09, followed by an explicit provisional baseline-A
-evidence bypass. Its concrete persistence/API/policy design still requires review; quality remains
+evidence bypass. Its concrete persistence/API/policy design was approved and implementation
+explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 evidence](phase-6-evidence.md). Quality remains
 unverified and real evaluation remains open. Phases 5/7–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
@@ -79,9 +80,11 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    and ask for a fresh set. If the Last.fm gate takes too long, the developer chooses to wait longer
    or proceed to Phase 6 with baseline A without real evidence. The agent never chooses this escape.
    Waiving the reply to run evaluation and bypassing evaluation entirely are distinct decisions.
-6. **Recommendation pipeline and persistence — local work authorized; design review pending.**
+6. **Recommendation pipeline and persistence — design approved; locally verified, developer confirmation pending.**
    Provisional baseline A was explicitly approved under an evidence bypass on 2026-10-09;
-   quality remains unverified and evaluation remains open. See [concrete review](phase-6-review.md).
+   quality remains unverified and evaluation remains open. The concrete JSON/API, ordinal selection,
+   feedback, no-automatic-deletion and local storage policy is approved. See
+   [design](phase-6-review.md) and [implementation evidence](phase-6-evidence.md).
    Application orchestrates signals →
    materialization → discovery → hydration → pure ranking → persistence; provider details stay in
    Infrastructure. Use the formula chosen in Phase 5, or A on explicit evidence bypass. Resolve the

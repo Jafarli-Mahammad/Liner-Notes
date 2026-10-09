@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Added bounded recorder-fed weekly digest generation with atomic PostgreSQL persistence,
+  complete stored evidence, canonical ISO weeks, replay and storage/expiry guards. Export 2.0
+  includes complete snapshots, audit fields and all digest history through bounded pages.
+  Later ratings preserve familiarity; marking a rated track known preserves its numeric rating.
+  Local checks pass; developer confirmation and recommendation quality remain pending.
+
 - Added pure provisional baseline-A scoring with popularity-neutral ranking, one pick per
   artist, complete versioned score inputs/contributions and stored-input replay. Legacy
   payloads remain readable; new snapshots retain unknown JSON fields. Recommendation

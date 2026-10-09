@@ -2,6 +2,14 @@
 
 ## Unreleased — renewal
 
+- Redesigned the README with a musical identity, clearer product goals and development
+  status, architecture diagrams, and a separate guide for navigating the codebase.
+  Added original record sleeve artwork and a Codebase Memory Nebula snapshot with
+  source and coverage notes in `docs/architecture`.
+
+- Added a security policy covering supported development code, private vulnerability
+  reporting, response targets, and coordinated disclosure.
+
 - Recheck recorder storage inventory after pacing and before each provider request. Preserve blank-name
   Last.fm tag observations, including their count, URL and response position, as excluded evidence.
 

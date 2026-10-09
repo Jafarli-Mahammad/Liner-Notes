@@ -38,6 +38,8 @@ Working preferences
 [stated] Don't give UI navigation steps from memory; flag uncertainty first. (2026-09-28)
 [stated] When giving code, follow existing patterns (CQRS handlers, repository interfaces). If deviating, say why. (2026-09-28)
 [stated] No manufactured urgency. Small, shippable iterations. (2026-09-28)
+[stated] Keep the developer's partial Phase 4 founder-pool listening notes personal and exploratory; do not add them to blind-rating artifacts, benchmark inputs, formula tuning, or a user taste profile. (2026-10-09)
+[stated] Prefer recommendations with less obvious discovery potential when supported by taste evidence; keep the system popularity-neutral and do not apply blanket penalties to familiar franchises or genres. (2026-10-09)
 [stated] For broad phase requests, state remaining scope and expected effort before extended implementation, and keep the developer updated. (2026-10-06)
 [stated] Explain dependency-removal audit findings, exploitability evidence, and upgrade alternatives before removing a dependency. (2026-10-06)
 [stated] Use default passwords for now; the developer intends to revise them later. (2026-10-06)
@@ -64,6 +66,7 @@ Gotchas and corrections
 [verified] Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore package is required for AddDbContextCheck<DataContext> in ASP.NET Core 10. (2026-10-02)
 [verified] Last.fm API Terms of Service enforces 100MB usage cap and mandatory caching (Clause 4.3.4), requiring TokenBucket rate limiter (4 req/sec) and IMemoryCache with sliding expiration. (2026-10-02)
 [verified] Last.fm founder seeds coverage spike verified live: Turkish alternative and game soundtracks (Hotline Miami, Dying Light, ULTRAKILL, Hades) return dense candidate sets with minimal tag noise. (2026-10-02)
+[verified] Phase 4's 35-track blind pool was generated from six fixed, approved founder seed profiles, including Jakuzi, Son Feci Bisiklet, and game-soundtrack artists. The recorded run used those seeds; it did not import listening history from a personal Last.fm username. The seed overlap cannot establish why the profiles were originally chosen. Checked `Phase2ProfileMembership.cs`, the approved Phase 4 manifest, and `blind-review.json` on 2026-10-09.
 <!-- Add dated one-liners as they happen. -->
 Environment and constraints
 [stated] Near-zero budget: cheap VPS or free tiers, SQLite or small Postgres. Verify current pricing before recommending. (2026-09-28)

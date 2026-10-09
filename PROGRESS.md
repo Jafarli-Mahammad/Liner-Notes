@@ -1,12 +1,15 @@
+
 # Liner Notes renewal progress
 
 ## Current state and next step
-- Authorized: **Phase 1–3 local work** on `Prism`; the developer requested Phase 2
+- Authorized: **Phase 1–4 and Phase 6 local work** on `Prism`; the developer requested Phase 2
   execution and approved its exact membership and offline test replacement on 2026-10-07,
-  then requested Phase 3 execution. No push or Phase 4–9 execution is authorized.
+  then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
+  still needs separate approval. No push or Phase 5–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: Phase 3 implementation and offline verification are ready for developer review;
-  see [Phase 3 evidence](docs/renewal/phase-3-evidence.md). Phase 1–2 confirmation remains pending.
+- Active step: review the [Phase 6 design proposal](docs/renewal/phase-6-review.md).
+  Phase 4's concrete live-run manifest still needs approval with a fresh reconciled inventory;
+  Phase 1–3 confirmation remains pending. See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
 - PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
   shared files, 1C–1F and 1I are grouped in `775a838`; this differs from the planned one-PR-per-
   commit-set split and needs review. No implementation is developer confirmed.
@@ -15,7 +18,10 @@
   thresholds, pilot adequacy bars and flagged interpretations on 2026-10-06. Phase 1 authorization
   was unchanged by that planning approval; the subsequent 2026-10-07 instruction authorizes
   Phase 2 execution. The subsequent Phase 3 request authorizes its transient ingestion scope.
-  Concrete live recording runs still require separate approval.
+  The Phase 4 request authorizes pilot tooling; concrete live recording runs still require
+  separate manifest approval and explicit shared-storage reconciliation. On 2026-10-09,
+  the developer requested Phase 6 and explicitly approved bypassing Phase 5 for provisional
+  baseline A. Recommendation quality remains unverified and real evaluation remains open.
 - Schema/migrations, further API/export changes, framework/CI, test removal or weakening,
   module deletion, history rewrites, pushing, merging and irreversible actions need separate approval.
   The narrowly scoped 1J dependency remediation was implemented after the developer directed
@@ -28,6 +34,8 @@
   Domain is pure; Application orchestrates; provider details remain in Infrastructure.
 - V1 is popularity-neutral. Existing popularity penalties are legacy implementation, not adopted policy.
   No custom ML or claim of owning upstream similarity data.
+- Provisional baseline A is authorized for Phase 6 following an explicit Phase 5 evidence bypass
+  on 2026-10-09. Quality remains **not verified**; evaluation and later formula choice remain open.
 - Known/disliked tracks are excluded; sibling tracks stay eligible. Negative feedback never subtracts
   artist tags. Replacing a like removes its positive contribution. Familiarity is independent of rating.
 - Synthetic fixtures test mechanics only. Real recordings require a separately approved run,
@@ -64,17 +72,26 @@ The plan below is approved; **not approved** refers to phase execution and its r
    Infrastructure checks pass, including four baseline failures; full suite 256 passed / 9 existing
    PostgreSQL skips, with 77 Domain checks passing. **Mechanics only, no catalog conclusions.**
    See [design](docs/renewal/phase-3-design.md) and [verification/limitations](docs/renewal/phase-3-evidence.md).
-4. Pilot — **not approved**. Developer approval of a concrete run manifest and adequacy bars before
-   one roughly 5 MB local recording covering six founder clusters plus a few seeds. Data-shape report,
-   then A–D and blind listening; no tuning or promotion; every result labelled **pilot, directional**.
+4. Pilot — **tooling authorized and verified locally; live pilot not executed**. Frozen untuned
+   A–D evaluation, complete contributions/provenance, replay bridge, shape gates, storage accounting,
+   concealed six-profile blind pool and complete-rating arithmetic are implemented. Verification:
+   21 new .NET checks; full suite 277 passed / 9 existing PostgreSQL skips; 32 fake recorder/operator
+   checks; CLI metadata and fabricated-input smoke checks. **Mechanics only, no catalog conclusions.**
+   Concrete manifest approval, current shared-storage inventory, actual recording, data-shape results
+   and developer blind ratings remain pending. Failed yield/tag/integrity bars stop before comparisons;
+   missing match/popularity bars mark their checks unassessable. No tuning/promotion. Real outputs
+   must say **pilot, directional**. See [evidence and run procedure](docs/renewal/phase-4-evidence.md).
 5. Real evaluation — **not approved**. Last.fm reply or explicit developer decision to proceed without
    one; a second approved manifest for full development/held-out recording, then scoring comparison
    and developer formula choice. Include IDF corpus size/balance/sensitivity and persisted C match
    aggregation. Freeze configuration before the one held-out evaluation. Developer alone chooses
-   whether to wait or bypass real evaluation and proceed to Phase 6 with baseline A.
-6. Recommendation pipeline and persistence — **not approved**. Resolve hash/ordinal/representative
-   selection, retention and feedback conflicts; approve concrete schema changes before building.
-   Use the Phase 5 choice, or baseline A on explicit evidence bypass. Extensible JSON compatibility
+   whether to wait or bypass real evaluation and proceed to Phase 6 with baseline A. On 2026-10-09
+   the developer explicitly chose a provisional baseline-A bypass; real evaluation remains deferred.
+6. Recommendation pipeline and persistence — **local work authorized; design review pending**.
+   Provisional baseline A was explicitly approved with quality unverified. Resolve
+   hash/ordinal/representative selection, retention and feedback conflicts; approve concrete
+   persistence/API/export contracts before building. See [review](docs/renewal/phase-6-review.md).
+   Extensible JSON compatibility
    across formula changes remains **not verified**, despite the existing JSONB mapping.
 7. Worker-to-local-email slice — **not approved**. Mandatory reassessment and explicit decision
    to proceed, narrow or revise before later phases.
@@ -113,21 +130,23 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
 ## Open decisions
 - Track selection: versioned weekly SHA-256 tie-break and upstream-ranked representative proposals
   are alternatives, neither adopted. Within-artist popularity preference requires explicit approval.
-- Scoring alternatives A–D, stoplists, IDF corpus and weights require real development recordings
-  and explicit adoption approval, except baseline A if the developer explicitly bypasses real evidence.
+- Scoring alternatives B–D, stoplists, IDF corpus and tuning require real development recordings
+  and explicit adoption approval. Baseline A is provisionally approved under the explicit
+  2026-10-09 evidence bypass; its quality remains unverified.
   No catalog conclusions from synthetic data. Pilot evidence cannot promote or tune a formula.
 - Correctness gates, held-out guardrails against A and blind-rating margin are approved as written;
   changes require review before real scoring. Diversity and novelty are formula-selection tie-breakers,
   never substitutes for ratings; the approved evaluation formulas retain their novelty component.
-- Phase 2 follows existing test folders and `scripts/`; no evaluation project or package was added.
-  Evaluation depends on Application/Domain only; the harness has no live source. Clarify production
-  acquisition against the recorder-only live-call rule before Phase 6 implementation.
+- Phase 2 and Phase 4 follow existing test folders and `scripts/`; no tracked evaluation project or package was added.
+  Evaluation depends on Application/Domain only; the harness has no live source. Phase 6 proposes
+  recorder-fed generation; review [the design](docs/renewal/phase-6-review.md) before implementation.
 - Retention (24h cache, 30d recordings/backups, 12mo recommendations) is proposed, not approved.
 - Phase 2's offline acquisition guard and recorder inventory checks are implemented;
+  Phase 4 adds bounded local analysis/report writes and an explicit refreshed inventory gate.
   production shared storage coordination and alert-and-degrade integration remain future work;
   actual persisted complete-breakdown sizes and supported capacity are **not verified**.
 - Phase 1 rejects contradictory sentiment/rating pairs (Liked 1–3, Disliked 7–10) and
-  preserves familiarity independently. Phase 6 still needs a full conflict/retention contract.
+  preserves familiarity independently. Phase 6's proposed conflict and retention rules await review.
 - Dependency, schema, API/export and test-contract changes must be presented concretely for review.
 
 ## Open Last.fm questions

@@ -233,7 +233,22 @@ public sealed class Phase3EvidenceTests
         Assert.Equal(2, raw.Paths[0].SimilarityPosition);
         var hydrated = await new LastFmCandidateHydrator(api, NullLogger<LastFmCandidateHydrator>.Instance).HydrateCandidateAsync(raw);
         Assert.NotNull(hydrated);
-        Assert.Equal(2, Assert.Single(hydrated.Tags).UpstreamPosition);
+        Assert.Collection(hydrated.Tags,
+            missing =>
+            {
+                Assert.Equal(string.Empty, missing.Name);
+                Assert.Equal("missing_name", missing.ExclusionReason);
+                Assert.Equal(1, missing.UpstreamPosition);
+                Assert.False(missing.Count.IsValid);
+                Assert.Equal("missing", missing.Count.MissingReason);
+            },
+            valid =>
+            {
+                Assert.Equal("valid", valid.Name);
+                Assert.Null(valid.ExclusionReason);
+                Assert.Equal(2, valid.UpstreamPosition);
+                Assert.Equal(100, valid.Count.Value);
+            });
         Assert.Contains(hydrated.Gaps, g => g.Reason == "invalid_item_identity");
     }
 

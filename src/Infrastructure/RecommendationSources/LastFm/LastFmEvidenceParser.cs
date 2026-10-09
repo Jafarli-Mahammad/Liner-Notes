@@ -68,6 +68,12 @@ public static class LastFmEvidenceParser
                 string? name = Text(element, "name");
                 if (string.IsNullOrWhiteSpace(name))
                 {
+                    if (method == "artist.gettoptags")
+                    {
+                        string? raw = Raw(element, "count");
+                        items.Add((T)(object)new LastFmTagItem(string.Empty, Count(raw).Value,
+                            Text(element, "url"), raw, position));
+                    }
                     gaps.Add(new(identity, method, "invalid_item_identity", reference));
                     continue;
                 }

@@ -2,6 +2,14 @@
 
 ## Unreleased — renewal
 
+- Recheck recorder storage inventory after pacing and before each provider request. Preserve blank-name
+  Last.fm tag observations, including their count, URL and response position, as excluded evidence.
+
+- Added Phase 4 local pilot tooling: frozen A–D scoring, complete normalized explanations,
+  approved-recording replay, shape/adequacy gates, bounded reports and concealed blind review.
+  Recorder metadata now retains response receipt time separately from request start time.
+  Verified with offline inputs; live manifest approval, recording and developer ratings remain pending.
+
 - Added Phase 3 transient ingestion evidence: missing/invalid values and coverage gaps, every
   discovery path, attribution, response hashes/times and explicit origins. Removed invented tags,
   listener estimates, matches and hybrid fixture substitution; added in-memory recorded replay.

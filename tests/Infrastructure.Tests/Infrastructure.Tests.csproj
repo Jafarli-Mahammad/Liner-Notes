@@ -12,6 +12,12 @@
     <ProjectReference Include="..\..\src\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Application\Application.csproj" />
     <ProjectReference Include="..\..\src\Domain\Domain.csproj" />
+    <Compile Include="..\Application.Tests\Common\FixtureEvaluationHarness.cs" Link="RecommendationSources\FixtureEvaluationHarness.cs" />
+    <Compile Include="..\Application.Tests\Common\Phase2ProfileMembership.cs" Link="RecommendationSources\Phase2ProfileMembership.cs" />
+    <Compile Include="..\Application.Tests\Common\EvaluationMetrics.cs" Link="RecommendationSources\EvaluationMetrics.cs" />
+    <Compile Include="..\Application.Tests\Common\PilotScoring.cs" Link="RecommendationSources\PilotScoring.cs" />
+    <Compile Include="..\Application.Tests\Common\PilotEvaluation.cs" Link="RecommendationSources\PilotEvaluation.cs" />
+    <EmbeddedResource Include="..\..\scripts\phase4_weights.json" LogicalName="LinerNotes.Pilot.Weights.json" />
   </ItemGroup>
 
   <ItemGroup>

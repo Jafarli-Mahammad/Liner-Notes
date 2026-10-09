@@ -370,6 +370,10 @@ def record(m, repo, inventory, roots, transport, credential, cancelled=lambda: F
             interval = m["pacing"]["minimum_start_interval_ms"] / 1000
             if last_start is not None:
                 sleep(max(0, interval - (clock() - last_start)))
+            # Pacing may leave time for another writer to change inventoried data.
+            # Reconcile again immediately before dispatch so the reservation is current.
+            if filesystem_revision(roots)[0] != guard.inventory.revision:
+                raise AcquisitionStopped("External inventory change after pacing")
             if cancelled():
                 raise AcquisitionStopped("Cancelled")
             last_start = clock()
@@ -383,6 +387,7 @@ def record(m, repo, inventory, roots, transport, credential, cancelled=lambda: F
             try:
                 with transport(method, artist, limit, credential) as response:
                     raw = read_bounded(response, maximum, cancelled)
+                    retrieved = dt.datetime.now(dt.timezone.utc).isoformat()
                     if filesystem_revision(roots)[0] != guard.inventory.revision:
                         raise AcquisitionStopped("External inventory change during request")
                     parsed = json.loads(raw)
@@ -395,6 +400,7 @@ def record(m, repo, inventory, roots, transport, credential, cancelled=lambda: F
                     if credential.encode("utf-8") in raw or b"api_key=" in raw.lower():
                         raise AcquisitionStopped("Credential-bearing response rejected")
                     entry.update({"status": "recorded", "response_sha256": sha(raw), "bytes": len(raw),
+                        "retrieved_at_utc": retrieved,
                         "headers": {key: response.headers[key] for key in ("Cache-Control", "Expires", "Date", "Retry-After") if key in response.headers}})
                     if any(len(value) > 512 for value in entry["headers"].values()):
                         raise AcquisitionStopped("Oversized response metadata")

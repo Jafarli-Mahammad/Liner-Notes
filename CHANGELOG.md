@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Redesigned the README with a musical identity, clearer product goals and development
+  status, architecture diagrams, and a separate guide for navigating the codebase.
+  Added original record sleeve artwork and a Codebase Memory Nebula snapshot with
+  source and coverage notes in `docs/architecture`.
+
 - Added a security policy covering supported development code, private vulnerability
   reporting, response targets, and coordinated disclosure.
 

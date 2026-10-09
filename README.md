@@ -1,36 +1,180 @@
-# Liner Notes
+<p align="center">
+  <img src="docs/assets/liner-notes-cover.svg" alt="Liner Notes: a colorful record sleeve with a vinyl record and sound waves" width="100%">
+</p>
 
-Liner Notes is an open-source project for weekly music discovery with inspectable score explanations and user-owned taste data. It is under renewal; weekly email delivery and a complete recommendation pipeline are **not verified**.
+<h1 align="center">Liner Notes</h1>
 
-Candidates and similarity evidence come from upstream providers. Liner Notes applies deterministic scoring and feedback re-ranking; it does not claim a new algorithm or ownership of Last.fm's similarity data. A Last.fm client exists. ListenBrainz and username/history imports are deferred.
+<p align="center">
+  <strong>Step outside your comfort zone. Find your next favorite song.</strong>
+</p>
 
-The approved V1 direction is popularity-neutral, with three to five picks, stored explanations, track-level exclusion for known/disliked tracks, and sibling tracks remaining eligible. Existing scoring and demo values do not yet implement that entire contract. Synthetic examples demonstrate mechanics, not musical fit.
+<p align="center">
+  An open-source project for a small weekly music discovery list,<br>
+  with a reason behind every pick and a say in what comes next.
+</p>
 
-The current export and deletion flows are incomplete. Neither complete data portability nor legal privacy compliance is claimed. A unique weekly digest record does not guarantee exactly-once email delivery.
+<p align="center">
+  <a href="#the-idea">The idea</a> ·
+  <a href="#the-listening-ritual">The listening ritual</a> ·
+  <a href="#where-we-are">Where we are</a> ·
+  <a href="#for-developers">For developers</a>
+</p>
 
-See [PROGRESS](PROGRESS.md) for authorization/status, [renewal contracts](docs/renewal/contracts.md) for pending decisions, and [verification evidence](docs/renewal/phase-1-evidence.md) for tested behavior.
+---
 
-## Structure
+## The idea
 
-- `src/Domain`: pure entities, values and scorer.
-- `src/Application`: CQRS orchestration and interfaces.
-- `src/DataAccess`: EF Core persistence, Identity stores and migrations.
-- `src/Infrastructure`: provider clients, caching and future email integration.
-- `src/Presentation`: ASP.NET Core host and browser UI.
-- `src/Worker`: second composition root; batch delivery remains future work.
-- `tests/`: Domain, Application, DataAccess, Infrastructure and Presentation checks.
+You know the songs you reach for without thinking. The album that lives on repeat.
+The soundtrack you keep coming back to. There is a whole world of music just beyond
+that familiar loop.
 
-.NET 10 is the target framework; EF and several other package references remain 9.x pending approval of remediation. The architecture specifications describe intended behavior, not implementation certification.
+**Liner Notes is being built to help you take that next step.** Our goal is to send
+you **three to five discoveries each week**, starting from the music you already
+love. A few tracks to spend time with, each carrying an explanation of why it made
+the list.
 
-## Local verification
+The name comes from the notes tucked inside a record sleeve: context that makes
+listening a little richer. We want recommendations to offer that same invitation.
+What connected this song to your taste? What did your feedback change? You should
+be able to see the answers.
 
-```bash
-dotnet restore 'Liner Notes.sln'
-dotnet build 'Liner Notes.sln' --no-restore
-dotnet test 'Liner Notes.sln' --no-restore --filter 'FullyQualifiedName!~FounderSeedCoverageSpikeTests'
-python3 scripts/checks/renewal_docs.py
+> Your next favorite song might be somewhere you haven't thought to look.
+
+## The listening ritual
+
+This is the experience we are working toward:
+
+| Start with a spark | Give it a listen | Shape the next week |
+| --- | --- | --- |
+| Tell us about artists and genres you love. | Explore a short weekly list and the reason behind each pick. | Rate a track from 1–10, or mark it as already known. |
+
+Your taste can move. The list should move with it.
+
+### What matters to us
+
+- **A reason for every pick.** Explanations come from stored scoring details,
+  including the musical tags that connected a candidate to your taste.
+- **Room for discovery.** Known and disliked tracks should be excluded, while
+  other tracks by the same artist can still have their moment.
+- **Popularity-neutral V1.** Being famous or obscure should carry no automatic
+  preference or penalty.
+- **Your taste belongs to you.** The goal is to let you inspect and export the
+  taste data we hold, and delete your account and its data.
+- **An inbox you control.** Weekly email is planned with unsubscribe in every
+  message and no tracking pixels.
+
+These are product goals. The status below describes what is currently available
+in the repository.
+
+## How a pick gets its notes
+
+Candidates and similarity evidence come from upstream music services. A Last.fm
+client exists today; ListenBrainz support and listening-history imports are
+deferred. Liner Notes applies deterministic scoring and feedback re-ranking to
+that evidence. We do not build the providers' similarity data or claim a new
+recommendation algorithm. V1 uses no custom machine learning.
+
+```mermaid
+flowchart LR
+    Taste["Your artists, genres<br>and feedback"] --> Discover["Provider candidates<br>and tag evidence"]
+    Discover --> Score["Deterministic scoring<br>and feedback re-ranking"]
+    Score --> Picks["3–5 picks<br>with stored explanations"]
+    Picks --> Listen["Listen and respond"]
+    Listen --> Taste
+    classDef input fill:#153e53,color:#fff,stroke:#67d8da
+    classDef music fill:#48274e,color:#fff,stroke:#f4a1ca
+    classDef pick fill:#513827,color:#fff,stroke:#ffc58f
+    class Taste,Listen input
+    class Discover,Score music
+    class Picks pick
 ```
 
-The excluded legacy spike can read a locally supplied key and overwrite a report. Running it against Last.fm is not authorized by the offline test command. It remains unchanged pending test-contract review. No Last.fm key is needed for normal offline tests.
+*Intended weekly flow. A complete pipeline and weekly email delivery are not verified.*
 
-The eight-genre synthetic benchmark checks scorer mechanics. It does not establish catalog coverage or recommendation quality. No hosting or email provider has been selected or provisioned by the renewal.
+## Where we are
+
+**Liner Notes is under active development on `Prism`.** This repository is a place
+to explore and contribute to the project; it is not a production-ready service.
+
+| In the code today | Still being built or evaluated |
+| --- | --- |
+| A browser UI, account endpoints, manual taste seeds, digest reading and feedback. | Complete generation of weekly recommendations and scheduled email delivery. |
+| Last.fm discovery, evidence parsing, fixture inputs and recorded-response replay. | ListenBrainz integration and username/listening-history imports. |
+| A pure scorer, score-breakdown models, persistence mappings and offline evaluation tooling. | Alignment of the legacy scorer with all approved V1 rules, and real recommendation-quality evaluation. |
+| Export and deletion paths with local checks. | Verification of complete data export and deletion coverage. |
+
+Synthetic fixtures demonstrate mechanics; they do not establish musical fit.
+Local verification also awaits developer confirmation. Complete data portability,
+privacy compliance and exactly-once email delivery are not claimed.
+
+[Progress and open work](PROGRESS.md) ·
+[Product contracts](docs/renewal/contracts.md) ·
+[Verification evidence](docs/renewal/phase-1-evidence.md) ·
+[Changelog](CHANGELOG.md)
+
+## For developers
+
+The code is organized around a pure Domain, an Application layer for orchestration,
+and adapters for storage and music providers. The web host lives in
+[`src/Presentation`](src/Presentation); [`src/Worker`](src/Worker) is a second
+composition root, with batch delivery still to be implemented.
+
+### The architecture at a glance
+
+Arrows show **project references**, pointing toward the code a project depends on.
+
+```mermaid
+flowchart TB
+    Web["Presentation<br>ASP.NET Core + browser UI"] --> App["Application<br>Commands, queries, interfaces"]
+    Worker["Worker<br>Host; delivery job pending"] --> App
+    Web --> Data["DataAccess<br>EF Core + Identity + PostgreSQL"]
+    Worker --> Data
+    Web --> Infra["Infrastructure<br>Last.fm + cache + replay"]
+    Worker --> Infra
+    Data --> App
+    Infra --> App
+    App --> Domain["Domain<br>Taste, catalog, digests, scoring"]
+    Data --> Domain
+    Infra --> Domain
+    classDef host fill:#153e53,color:#fff,stroke:#67d8da
+    classDef adapter fill:#48274e,color:#fff,stroke:#f4a1ca
+    classDef core fill:#513827,color:#fff,stroke:#ffc58f
+    class Web,Worker host
+    class Data,Infra adapter
+    class App,Domain core
+```
+
+Domain has no external package dependencies. Provider calls stay in Infrastructure;
+the web request path reads stored digests rather than discovering music per page
+view. Runtime targets .NET 10; EF Core and several package references remain 9.x.
+
+### Inside the Nebula
+
+![Codebase Memory Nebula graph of the Liner Notes source checkout](docs/architecture/codebase-nebula.png)
+
+The project's source relationships, captured from **Codebase Memory's Nebula
+viewer**. This is an exploratory source graph, including tests and tooling;
+it is not a runtime trace or proof that every connection was resolved correctly.
+The [snapshot notes](docs/architecture/README.md) explain its scope and how it was
+captured.
+
+**Start with [README-Developer.md](README-Developer.md)** for the folder map,
+feature-to-code mappings, request and data diagrams, API routes, local setup,
+and a suggested reading order.
+
+## Add something to the mix
+
+Developers, listeners and people who care about explainable music discovery are
+welcome. A clearer explanation, a reproducible bug report or a thoughtful product
+discussion can help shape the project.
+
+Read the [developer guide](README-Developer.md) and [current progress](PROGRESS.md)
+before taking on a change. Use
+[issues](https://github.com/Jafarli-Mahammad/Liner-Notes/issues) for ordinary bugs
+and ideas, and the [security policy](SECURITY.md) for private vulnerability reports.
+
+Liner Notes is licensed under [AGPL-3.0](LICENSE).
+
+---
+
+<p align="center"><em>Leave a little room in your week for a song you haven't met yet.</em></p>

@@ -2,6 +2,9 @@
 
 ## Unreleased — renewal
 
+- Added a security policy covering supported development code, private vulnerability
+  reporting, response targets, and coordinated disclosure.
+
 - Recheck recorder storage inventory after pacing and before each provider request. Preserve blank-name
   Last.fm tag observations, including their count, URL and response position, as excluded evidence.
 

@@ -1,5 +1,6 @@
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.Core;
 using LinerNotes.DataAccess.DataContexts;
 using LinerNotes.DataAccess.Persistence;
@@ -60,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();
+        services.AddScoped<IDigestGenerationStore, DigestGenerationStore>();
 
         return services;
     }

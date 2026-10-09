@@ -13,4 +13,12 @@ public record WeeklyDigestDto(
     DateTime WeekEndDate,
     DigestStatus Status,
     DateTime? SentAt,
-    IReadOnlyList<WeeklyRecommendationDto> Recommendations);
+    IReadOnlyList<WeeklyRecommendationDto> Recommendations,
+    DateTime CreatedAt = default,
+    DateTime? LastModifiedAt = null,
+    string? ErrorMessage = null,
+    Guid? CreatedBy = null,
+    Guid? LastModifiedBy = null,
+    Guid? DeletedBy = null,
+    DateTime? DeletedAt = null,
+    bool IsDeleted = false);

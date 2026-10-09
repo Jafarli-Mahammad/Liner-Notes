@@ -12,10 +12,18 @@ public record UserMusicConnectionExportDto(
     string ExternalUsername,
     DateTime? LastSyncedAt,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid Id = default,
+    Guid UserId = default,
+    DateTime? LastModifiedAt = null,
+    Guid? CreatedBy = null,
+    Guid? LastModifiedBy = null,
+    Guid? DeletedBy = null,
+    DateTime? DeletedAt = null,
+    bool IsDeleted = false);
 
 /// <summary>
-/// Full user data export model fulfilling GDPR transparency and data portability requirements.
+/// Versioned taste/account export; full inventory and deletion verification is a separate phase.
 /// </summary>
 public record UserDataExportDto(
     string ExportVersion,

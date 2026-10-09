@@ -3,6 +3,8 @@ using LinerNotes.Infrastructure.RecommendationSources.LastFm;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using LinerNotes.Application.Common.Models.Recommendation;
+using LinerNotes.Infrastructure.Storage;
 
 namespace LinerNotes.Infrastructure;
 
@@ -30,13 +32,33 @@ public static class DependencyInjection
         });
 
         // Register Typed HTTP Client for Last.fm API
-        services.AddHttpClient<ILastFmApiClient, LastFmApiClient>((sp, client) =>
+        services.AddHttpClient<LastFmApiClient>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<LastFmOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl);
             client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
             client.Timeout = TimeSpan.FromSeconds(15);
         });
+
+        services.Configure<GenerationConfiguration>(configuration.GetSection(GenerationConfiguration.SectionName));
+        services.Configure<GenerationStorageOptions>(configuration.GetSection("GenerationStorage"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<GenerationConfiguration>>().Value);
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<GenerationStorageOptions>>().Value);
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddScoped<BatchTagCachingLastFmClient>(sp =>
+        {
+            var generation = sp.GetRequiredService<GenerationConfiguration>();
+            generation.Scoring(); // Live is explicitly rejected before resolving a provider.
+            ILastFmApiClient client = generation.Origin == EvidenceOrigin.Recorded
+                ? new RecordedLastFmApiClient(sp.GetServices<RecordedLastFmResponse>())
+                : new LastFmApiClient(new HttpClient(), Options.Create(new LastFmOptions { Mode = LastFmClientMode.FixtureOnly }),
+                    sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<LastFmRateLimiter>(),
+                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LastFmApiClient>>());
+            return new(client);
+        });
+        services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
+        services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
+        services.AddScoped<IGenerationStorage, LocalGenerationStorage>();
 
         // Register Recommendation Source & Candidate Hydrator abstractions
         services.AddScoped<IRecommendationSource, LastFmRecommendationSource>();

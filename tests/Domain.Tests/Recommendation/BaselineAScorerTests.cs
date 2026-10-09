@@ -25,6 +25,10 @@ public sealed class BaselineAScorerTests
         Assert.Equal(result.FinalScore, scorer.Replay(result.Snapshot).FinalScore);
         Assert.Equal(fixture.TagVector.Count, result.Snapshot.CandidateWeights.Count);
         Assert.DoesNotContain("popularity", result.GenerateExplanation());
+        var aggregate = WeightedTagVector.FromDictionary(new Dictionary<string, double>
+        { ["rock"] = 0.2, ["ambient"] = 0.3, [fixture.TagVector.Weights.Keys.First()] = 0.7 });
+        var different = scorer.Score(new(fixture.Track, fixture.TagVector, ScoreEvidence.Empty), aggregate, true, Week, new());
+        Assert.Equal(aggregate.CosineSimilarity(fixture.TagVector), different.FinalScore, 12);
     }
 
     [Fact]

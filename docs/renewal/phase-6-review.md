@@ -1,10 +1,10 @@
 # Phase 6 implementation review
 
-Status: implementation requested on 2026-10-09; provisional baseline A approved
-under an explicit Phase 5 evidence bypass. Remaining design decisions below are
-proposals awaiting review.
+Status: written design approved and implementation explicitly requested on 2026-10-10;
+provisional baseline A approved under an explicit Phase 5 evidence bypass.
 This document records a source audit and a concrete proposed implementation. It
-does not authorize live acquisition or approve persistence/API changes. Baseline A's
+does not authorize live acquisition. Its concrete JSON/API, feedback, selection and
+storage contracts are approved for Phase 6 implementation. Baseline A's
 recommendation quality remains **not verified**; evaluation and subsequent formula
 choice remain open. No implementation is developer confirmed.
 

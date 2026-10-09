@@ -8,7 +8,7 @@ public sealed record MatchedTagContribution(
     string TagName,
     double CandidateTagWeight,
     double UserTasteWeight,
-    double ContributionProduct)
+    double ContributionProduct) : ExtensibleScoreRecord
 {
     public override string ToString() =>
         $"{TagName} (cand: {CandidateTagWeight:F2}, user: {UserTasteWeight:F2})";

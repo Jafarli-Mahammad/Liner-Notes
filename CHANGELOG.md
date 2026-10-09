@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added pure provisional baseline-A scoring with popularity-neutral ranking, one pick per
+  artist, complete versioned score inputs/contributions and stored-input replay. Legacy
+  payloads remain readable; new snapshots retain unknown JSON fields. Recommendation
+  quality remains unverified and real evaluation remains open.
+
 - Redesigned the README with a musical identity, clearer product goals and development
   status, architecture diagrams, and a separate guide for navigating the codebase.
   Added original record sleeve artwork and a Codebase Memory Nebula snapshot with

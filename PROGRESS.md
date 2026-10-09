@@ -7,7 +7,10 @@
   then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
   still needs separate approval. No push or Phase 5–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: review the [Phase 6 design proposal](docs/renewal/phase-6-review.md).
+- Active step: implement the [approved Phase 6 design](docs/renewal/phase-6-review.md).
+  The developer approved the design and explicitly requested implementation on 2026-10-10,
+  including its JSON/API/export, selection, feedback and storage contracts. Local verification
+  and developer confirmation of the implementation remain pending.
   Phase 4's concrete live-run manifest still needs approval with a fresh reconciled inventory;
   Phase 1–3 confirmation remains pending. See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
 - PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
@@ -87,10 +90,10 @@ The plan below is approved; **not approved** refers to phase execution and its r
    aggregation. Freeze configuration before the one held-out evaluation. Developer alone chooses
    whether to wait or bypass real evaluation and proceed to Phase 6 with baseline A. On 2026-10-09
    the developer explicitly chose a provisional baseline-A bypass; real evaluation remains deferred.
-6. Recommendation pipeline and persistence — **local work authorized; design review pending**.
-   Provisional baseline A was explicitly approved with quality unverified. Resolve
-   hash/ordinal/representative selection, retention and feedback conflicts; approve concrete
-   persistence/API/export contracts before building. See [review](docs/renewal/phase-6-review.md).
+6. Recommendation pipeline and persistence — **design approved; implementation in progress**.
+   Provisional baseline A was explicitly approved with quality unverified. The concrete
+   JSON/API/export, ordinal one-artist selection, feedback and storage contracts were approved
+   with the implementation instruction on 2026-10-10. See [design](docs/renewal/phase-6-review.md).
    Extensible JSON compatibility
    across formula changes remains **not verified**, despite the existing JSONB mapping.
 7. Worker-to-local-email slice — **not approved**. Mandatory reassessment and explicit decision

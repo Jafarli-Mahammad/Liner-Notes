@@ -46,6 +46,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
             ArtifactRoots=LocalGenerationStorage.Categories.ToDictionary(c=>c,c=>new[]{Path.Combine(root,c)})};
         foreach(var path in storage.ArtifactRoots.Values.SelectMany(x=>x))Directory.CreateDirectory(path);
         email=new(){Enabled=true,ApplicationOrigin="http://127.0.0.1:5000",SinkRoot=Path.Combine(root,"copies")};
+        if(!OperatingSystem.IsWindows())File.SetUnixFileMode(email.SinkRoot,UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.UserExecute);
         config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["ConnectionStrings:DefaultConnection"]=connection.ConnectionString,["Generation:Origin"]="Synthetic",["LastFm:ApiKey"]="fixture-only-do-not-dispatch"}).Build();
         services=Build();
         await using var scope=services.CreateAsyncScope();var context=scope.ServiceProvider.GetRequiredService<DataContext>();await context.Database.EnsureCreatedAsync();

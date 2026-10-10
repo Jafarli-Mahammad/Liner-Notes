@@ -28,7 +28,13 @@ the profile for its subscriber GUID. Save three fixture tags: `darkwave`, `synth
 
 The launcher does not create or drop a database. On `quit` or Ctrl+C it stops its server and
 removes only its temporary artifact directory. SQL account data remains until account
-deletion or disposal of your QA database. Review/delete disposable accounts before quitting;
+deletion or disposal of your QA database. On Unix, the configured sink root must be
+owner-only (mode `0700` or stricter); the launcher sets the temporary root and categories
+to mode `0700`. For a persistent sink, create a dedicated owner-only directory before
+configuring `LocalEmail:SinkRoot`. New MIME files use mode `0600`; the application rejects
+a Unix sink directory with group/world access. On Windows, the sink directory must be owned
+by the current process user; its allow rules may grant access only to that user, Local System
+and built-in Administrators. Review/delete disposable accounts before quitting;
 temporary message removal on exit is QA housekeeping, not an adopted product retention rule.
 Clear the environment value afterward with `unset LINER_MANUAL_QA_CONNECTION_STRING`.
 

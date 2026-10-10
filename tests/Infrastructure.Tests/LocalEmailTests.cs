@@ -29,6 +29,8 @@ public sealed class LocalEmailTests : IDisposable
             ArtifactRoots=LocalGenerationStorage.Categories.ToDictionary(c=>c,c=>new[] { Path.Combine(root,c) }) };
         foreach (var path in storageOptions.ArtifactRoots.Values.SelectMany(v=>v)) Directory.CreateDirectory(path);
         options = new() { Enabled=true, ApplicationOrigin="http://127.0.0.1:5000", SinkRoot=Path.Combine(root,"copies") };
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(options.SinkRoot,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var protection = new Protection(); var tokens = new UnsubscribeTokenService(protection);
         renderer = new(options,tokens); serializer = new(options,protection,tokens);
         storage = new(storageOptions,TimeProvider.System); sink = new(options,storageOptions,storage,renderer,serializer);
@@ -158,6 +160,18 @@ public sealed class LocalEmailTests : IDisposable
         var db=new GenerationStorageState(LocalGenerationStorage.StopBytes-300,"threshold");await storage.ReconcileAsync(db);
         string[] paths=Enumerable.Range(0,4).Select(i=>Path.Combine(options.SinkRoot!,i+".partial")).ToArray();
         await Assert.ThrowsAsync<GenerationStoppedException>(()=>storage.AcquireEmailAsync(db,100,paths,false,default));
+    }
+
+    [Theory]
+    [InlineData(UnixFileMode.GroupRead)]
+    [InlineData(UnixFileMode.OtherRead)]
+    public async Task SinkRoot_WithGroupOrWorldPermissions_IsRejected(UnixFileMode sharedPermission)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var input=Inputs(1);
+        File.SetUnixFileMode(options.SinkRoot!, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | sharedPermission);
+        var error=await Assert.ThrowsAsync<GenerationStoppedException>(()=>sink.OpenAsync(input.Digest,input.Subscriber,Database,default));
+        Assert.Equal("email_sink_permissions_invalid",error.Message);
     }
 
     [Fact]

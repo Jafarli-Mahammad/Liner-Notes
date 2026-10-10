@@ -30,6 +30,10 @@ trap cleanup EXIT HUP INT TERM
 for category in recordings cache reports copies backups partials; do
   mkdir -p -- "$phase7_qa_root/$category"
 done
+if [[ "$(uname -s)" != MINGW* && "$(uname -s)" != CYGWIN* && "$(uname -s)" != MSYS* ]]; then
+  chmod 700 -- "$phase7_qa_root" "$phase7_qa_root/recordings" "$phase7_qa_root/cache" \
+    "$phase7_qa_root/reports" "$phase7_qa_root/copies" "$phase7_qa_root/backups" "$phase7_qa_root/partials"
+fi
 
 export ASPNETCORE_ENVIRONMENT=Development
 export DOTNET_ENVIRONMENT=Development

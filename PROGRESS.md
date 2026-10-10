@@ -125,7 +125,7 @@ The plan below is approved; **not approved** refers to phase execution and its r
    exact recorded-input permission, storage accounting, retry/restart and account/row locks.
    Working local unsubscribe adds one nullable opt-out column, isolated persisted capabilities,
    API/export 2.1 and honest ownership-based copy cleanup after account deletion.
-   Final suite: **386 passed / 0 failed / 0 skipped**, including PostgreSQL migration,
+   Final suite: **388 passed / 0 failed / 0 skipped**, including PostgreSQL migration,
    file/SQL failure windows, cancellation, concurrency, token isolation and logging checks.
    Actual separate Worker processes captured empty/five-pick fixture lists; Playwright MCP
    verified read-only GET, confirmation POST and suppressed later capture. Export, restart,

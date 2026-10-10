@@ -19,7 +19,7 @@ execution. Developer confirmation remains pending. **Mechanics only, no catalog 
 | Exact approved recorded-input adapter | Implemented and verified with fabricated manifests: immutable replay, hash/expiry/use/account/week/containment bounds, credential/held-out rejection. No real input used because suitable current local-use permission was not provided. |
 | HTML/plaintext and 0/1/3/5 lists | Implemented: UTF-8 MIME alternatives, actual list size, complete stored explanations, attribution and ordinary links. 0/5 inspected from actual Worker files; all four sizes covered by tests. |
 | No automatic third-party requests/tracking | Implemented: inline CSS/system fonts, no images/scripts/remote fonts/resources/players; renderer and browser checks pass. |
-| Bounded private local capture | Implemented: 100,000 UTF-8 bytes per alternative, 400,000 total MIME, no truncation, explicit ignored accounted sink, private Unix files, no-overwrite atomic publication. |
+| Bounded private local capture | Implemented: 100,000 UTF-8 bytes per alternative, 400,000 total MIME, no truncation, explicit ignored accounted sink, owner-only Unix sink directory, mode 0600 files, Windows owner/ACL allowlist, no-overwrite atomic publication. A later static-analysis report prompted sink-permission guards and regression coverage; bot-suggested receipt-field removal was rejected because it breaks authenticated ownership/cleanup. |
 | Durable receipt and distinct local lifecycle | Implemented: protected ownership/body receipt and versioned render fingerprint; `LocalCaptured = 4`, `SentAt` remains null. Existing Sent numeric value remains 2. |
 | Retry/restart/cancellation/concurrency | Implemented: bounded local I/O/fresh SQL attempts, non-replayed publication transaction, PostgreSQL locks, repeated capture and failure-window recovery checks. Separate-process repeat preserved bytes. |
 | Inventory/headroom/partial accounting | Implemented: explicit reconciliation, exclusive artifact lease, revisions/freshness, three-partial reservation and owned-write tracking. Browser-created report invalidated inventory and caused a stop, then explicit reconciliation allowed progress. |
@@ -45,17 +45,19 @@ then 385 full-suite checks respectively; the final integrated suite below supers
 
 `dotnet test 'Liner Notes.sln' --no-restore --logger 'console;verbosity=quiet'`, with an
 explicit disposable loopback PostgreSQL administrator connection provided through
-`LINER_PHASE1_POSTGRES`, passed **386 / 0 failed / 0 skipped**:
+`LINER_PHASE1_POSTGRES`, passed **388 / 0 failed / 0 skipped**:
 
 | Project | Passed |
 |---|---:|
 | Domain.Tests | 105 |
 | Application.Tests | 86 |
-| Infrastructure.Tests | 97 |
+| Infrastructure.Tests | 99 |
 | DataAccess.Tests | 51 |
 | Presentation.Tests | 47 |
 
-The tests create/drop isolated databases. They cover populated migration/key persistence,
+The tests create/drop isolated databases. The sink-focused regression set passes **15 / 0 / 0**.
+It includes sink directories with group-read and world-read permissions, which now stop
+before message serialization or file creation. The tests cover populated migration/key persistence,
 UTF-8/escaping/header and URL rejection, fingerprints/feedback, actual files, safe export,
 ownership cleanup, path/symlink/byte limits, partial storage accounting, cancellation and
 locks. Existing benchmark seed checks passed; Phase 7 makes no scorer-policy changes.
@@ -149,8 +151,11 @@ receipt reconciliation/inspection and opt-out/deletion continue without creation
 No expiry, retention or automatic partial removal was adopted. Production p95/max histories,
 backup budget, filesystem limits, enrollment and supported capacity remain **not verified**.
 
-Messages contain recipient/taste data and an unsubscribe capability. Newly created Unix
-files are private; Windows ACLs and encryption at rest were not established. Export removes
+Messages contain recipient/taste data and an unsubscribe capability. On Unix the configured
+sink directory must deny group/world access, and newly created files are private. On Windows
+the directory must be owned by the current user and its allow ACLs are restricted to that
+user, Local System and built-in Administrators. The Windows check compiled but was not
+exercised on a Windows host. Encryption at rest was not established. Export removes
 capabilities/security internals and reports missing/corrupt copies. Cleanup occurs after
 SQL deletion, outside automatic SQL retry; unvalidated files remain with an incomplete issue,
 and the separate operator helper can retry after account deletion. This covers the configured

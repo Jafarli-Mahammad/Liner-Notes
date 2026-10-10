@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Infrastructure.Storage;
 
@@ -14,6 +17,16 @@ internal static class LocalEmailPaths
         root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
         if (!storage.ArtifactRoots.TryGetValue("copies", out var copies) || !copies.Any(c => Path.TrimEndingDirectorySeparator(Path.GetFullPath(c)) == root))
             throw new GenerationStoppedException("email_sink_not_accounted");
+        if (OperatingSystem.IsWindows()) ValidateWindowsPermissions(root);
+        else
+        {
+            var mode = File.GetUnixFileMode(root);
+            const UnixFileMode sharedAccess = UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+            const UnixFileMode ownerAccess = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+            if ((mode & sharedAccess) != 0 || (mode & ownerAccess) != ownerAccess)
+                throw new GenerationStoppedException("email_sink_permissions_invalid");
+        }
         CheckAncestors(root);
         for (var directory = new DirectoryInfo(root); directory is not null; directory = directory.Parent)
         {
@@ -32,6 +45,28 @@ internal static class LocalEmailPaths
             break;
         }
         return root;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void ValidateWindowsPermissions(string root)
+    {
+        var security = new DirectoryInfo(root).GetAccessControl();
+        var owner = security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+        var currentUser = WindowsIdentity.GetCurrent().User;
+        if (owner is null || currentUser is null || !owner.Equals(currentUser))
+            throw new GenerationStoppedException("email_sink_permissions_invalid");
+
+        var trusted = new HashSet<SecurityIdentifier>
+        {
+            owner,
+            new(WellKnownSidType.LocalSystemSid, null),
+            new(WellKnownSidType.BuiltinAdministratorsSid, null)
+        };
+        var accessRules = security.GetAccessRules(includeExplicit: true, includeInherited: true,
+            targetType: typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>();
+        if (accessRules.Any(rule => rule.AccessControlType == AccessControlType.Allow &&
+            rule.IdentityReference is SecurityIdentifier sid && !trusted.Contains(sid)))
+            throw new GenerationStoppedException("email_sink_permissions_invalid");
     }
 
     public static void CheckAncestors(string path)

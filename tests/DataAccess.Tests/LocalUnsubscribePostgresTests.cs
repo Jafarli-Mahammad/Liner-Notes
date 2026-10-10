@@ -6,6 +6,8 @@ using LinerNotes.DataAccess.Persistence.Repositories;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Infrastructure.Email;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Xunit;
 
@@ -53,6 +55,14 @@ public sealed class LocalUnsubscribePostgresTests
                 Assert.DoesNotContain("local@example.test", token);
                 var wrongPurpose = new UnsubscribeTokenService(new WrongProtection());
                 Assert.False(wrongPurpose.TryRead(token, out _));
+                var identityServices=new ServiceCollection().AddLogging();
+                identityServices.AddDbContext<DataContext>(o=>o.UseNpgsql(connection.ConnectionString));
+                identityServices.AddDataProtection().SetApplicationName("Identity-compatibility-test")
+                    .PersistKeysToDbContext<DataContext>();
+                using var identity=identityServices.BuildServiceProvider();
+                var identityProtector=identity.GetRequiredService<IDataProtectionProvider>().CreateProtector("Authentication/v1");
+                Assert.Throws<System.Security.Cryptography.CryptographicException>(()=>identityProtector.Unprotect(token));
+                Assert.False(tokens.TryRead(identityProtector.Protect("unsubscribe-v1:"+id.ToString("N")),out _));
             }
             Assert.True(await db.DataProtectionKeys.AnyAsync());
         }

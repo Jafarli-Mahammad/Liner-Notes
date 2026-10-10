@@ -4,6 +4,11 @@ This page exercises the application's real Development APIs against an explicitl
 local PostgreSQL database. It uses synthetic Last.fm fixtures, temporary storage roots and
 the existing Phase 6 generation command. It does not enable live Last.fm requests.
 
+For Phase 7 email capture, unsubscribe, export 2.1 and owned-copy cleanup, use the
+[Phase 7 launcher and procedure](phase-7-local-run.md). It runs this same page with an
+explicitly enabled local sink and a Worker action menu. The original launcher below
+does not enable local email.
+
 ## Prerequisites
 
 - .NET 10 SDK and the repository's restored packages.
@@ -70,9 +75,15 @@ is permanent. Check the test page's Development and Synthetic status before send
    Try `AlreadyKnown` with a rating, change the rating while keeping `AlreadyKnown`, then
    issue `None` without a rating as an explicit reset. Reload the digest after each change.
 9. Inspect the complete export JSON and download the export. Check export version, current
-   taste signals, digest history and stored score snapshots.
+   taste signals, digest history and stored score snapshots. The current export is 2.1;
+   inspect `emailUnsubscribedAtUtc` and local archive status/issues. Without an enabled sink,
+   the archive reports disabled/unavailable rather than claiming owned-copy inspection.
 10. Only when finished, type the deletion confirmation for the disposable account. Confirm
-    the page signs out and a protected account request is denied afterward.
+    the page signs out and a protected account request is denied afterward. HTTP 200 with
+    `accountDeleted: true`, `localCopiesDeleted: false` means SQL deletion completed but
+    configured local-copy cleanup was unavailable/incomplete; the UI displays that result.
+    HTTP 204 means configured owned-copy cleanup completed. Use the Phase 7 procedure to
+    verify files in an enabled sink and retry cleanup after deletion.
 
 The manual refresh button rotates the current token pair. Protected API calls also follow
 the existing browser behavior and attempt one refresh/retry after a 401 response. Do not

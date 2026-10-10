@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using Xunit;
 
 namespace LinerNotes.Presentation.Tests;
@@ -45,6 +47,7 @@ public sealed class UnsubscribeRouteTests
     private sealed class App(string env, bool enabled) : WebApplicationFactory<Program>
     {
         public Store Store { get; } = new();
+        public Logs Logs { get; } = new();
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(env);
@@ -53,6 +56,7 @@ public sealed class UnsubscribeRouteTests
             builder.UseSetting("Jwt:SecretKey", "unsubscribe-route-tests-only-12345678901234567890");
             builder.UseSetting("Jwt:Issuer", "tests"); builder.UseSetting("Jwt:Audience", "tests");
             builder.UseSetting("ForwardedHeaders:KnownProxies:0", "127.0.0.1");
+            builder.ConfigureLogging(logging=>logging.AddProvider(Logs));
             builder.ConfigureServices(s =>
             {
                 s.RemoveAll<LocalEmailOptions>();
@@ -60,6 +64,25 @@ public sealed class UnsubscribeRouteTests
                 s.RemoveAll<IUnsubscribeTokens>(); s.AddSingleton<IUnsubscribeTokens>(new Tokens());
                 s.RemoveAll<IUnsubscribeStore>(); s.AddSingleton<IUnsubscribeStore>(Store);
             });
+        }
+    }
+    [Fact]
+    public async Task CapabilityQuery_IsExcludedFromRequestLogs()
+    {
+        await using var app=new App("Development",true);using var client=app.CreateClient();
+        Assert.Equal(HttpStatusCode.OK,(await client.GetAsync("/api/digests/unsubscribe?token=valid")).StatusCode);
+        Assert.DoesNotContain(app.Logs.Messages,message=>message.Contains("token=valid",StringComparison.Ordinal));
+    }
+    private sealed class Logs : ILoggerProvider
+    {
+        public ConcurrentBag<string> Messages { get; }=new();
+        public ILogger CreateLogger(string categoryName)=>new Logger(Messages);
+        public void Dispose() { }
+        private sealed class Logger(ConcurrentBag<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState:notnull=>null;
+            public bool IsEnabled(LogLevel level)=>true;
+            public void Log<TState>(LogLevel level,EventId eventId,TState state,Exception? exception,Func<TState,Exception?,string> formatter)=>messages.Add(formatter(state,exception));
         }
     }
     private sealed class Tokens : IUnsubscribeTokens

@@ -92,6 +92,7 @@ public sealed class LocalEmailTests : IDisposable
         await using (var capture=await sink.OpenAsync(input.Digest,input.Subscriber,Database,default))
         { Assert.False(capture.ReceiptExists); await capture.PublishAsync(input.Digest,input.Subscriber,Database,default); }
         var final=Directory.GetFiles(options.SinkRoot!,"*.eml").Single(); var bytes=await File.ReadAllBytesAsync(final);
+        if (!OperatingSystem.IsWindows()) Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite,File.GetUnixFileMode(final));
         await using (var recovery=await sink.OpenAsync(input.Digest,input.Subscriber,Database with { Revision="changed" },default))
         { Assert.True(recovery.ReceiptExists); await recovery.PublishAsync(input.Digest,input.Subscriber,Database,default); }
         Assert.Equal(bytes,await File.ReadAllBytesAsync(final));

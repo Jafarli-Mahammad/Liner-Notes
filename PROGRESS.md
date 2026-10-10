@@ -9,9 +9,12 @@
   unsubscribe, one opt-out column and matching API/export changes selected by the developer.
   Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
   The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
-  on 2026-10-11; implementation is in progress. No push or Phase 5/8–9 execution is authorized.
+  on 2026-10-11; implementation is locally verified, developer confirmation pending.
+  No push or Phase 5/8–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: sequential implementation of the [Phase 7 plan](docs/renewal/phase-7-plan.md).
+- Active step: developer confirmation and proceed/narrow/revise reassessment of the
+  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md), using its
+  [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
   remains pending.
   The developer approved the design and explicitly requested implementation on 2026-10-10,
@@ -115,24 +118,23 @@ The plan below is approved; **not approved** refers to phase execution and its r
    Full suite: **337 passed / 0 failed / 0 skipped**, including local PostgreSQL checks.
    **Mechanics only, no catalog conclusions.** Quality and supported capacity remain unverified.
    See [evidence and configuration](docs/renewal/phase-6-evidence.md).
-7. Worker-to-local-email slice — **design and plan approved; implementation in progress**.
-   The developer selected working local unsubscribe with one opt-out column and matching
-   API/export changes. The source audit and proposed Worker, rendering, local capture,
-   storage and recovery contracts are in the [approved review](docs/renewal/phase-7-review.md).
-   The [implementation plan](docs/renewal/phase-7-plan.md) proposes sequential execution in this checkout.
-   The later authorized Phase 6 status/cutoff and Development manual-QA follow-ups have been
-   reconciled into this checkout; current verification passed 341 tests (zero failures/skips),
-   with PostgreSQL, documentation/security and shell/JavaScript checks. The popularity setting remains
-   deferred under the earlier instruction to wait.
-   Phase 7 opt-out/account boundaries passed 348 local tests (zero failures/skips),
-   including populated migration and persisted-token restart checks. Worker/render/capture
-   work is active. The local renderer/sink passed 86 Infrastructure tests, including
-   actual MIME files, sanitized export, owned cleanup, partial accounting and retry.
-   Worker actions, exact recorded-input approval and capture recovery are implemented;
-   385 local tests passed (zero failures/skips), including all file/SQL failure
-   windows, cancellation, opt-out/deletion locks and concurrent/restarted capture.
-   The local browser/process demonstration and final evidence pass remain active. Mandatory reassessment and explicit decision
-   to proceed, narrow or revise remain required before later phases.
+7. Worker-to-local-email slice — **design and plan approved; implementation verified locally,
+   developer confirmation pending**. The authorized Phase 6 status/cutoff and Development
+   manual-QA follow-ups were reconciled first. Implemented explicit offline Worker actions,
+   persisted HTML/plaintext rendering, bounded private MIME capture, authenticated receipts,
+   exact recorded-input permission, storage accounting, retry/restart and account/row locks.
+   Working local unsubscribe adds one nullable opt-out column, isolated persisted capabilities,
+   API/export 2.1 and honest ownership-based copy cleanup after account deletion.
+   Final suite: **386 passed / 0 failed / 0 skipped**, including PostgreSQL migration,
+   file/SQL failure windows, cancellation, concurrency, token isolation and logging checks.
+   Actual separate Worker processes captured empty/five-pick fixture lists; Playwright MCP
+   verified read-only GET, confirmation POST and suppressed later capture. Export, restart,
+   account cleanup and the [runnable QA launcher](docs/renewal/phase-7-local-run.md) were exercised.
+   See [per-approval evidence and reassessment](docs/renewal/phase-7-evidence.md),
+   [approved review](docs/renewal/phase-7-review.md) and [plan](docs/renewal/phase-7-plan.md).
+   **Mechanics only, no catalog conclusions.** Popularity stays deferred; the 1 GB stop
+   remains temporary/unresolved. Mandatory explicit **proceed, narrow or revise** decision
+   remains required before later phases; Phase 8a/8b approvals are separate.
 8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
    verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.
 9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written

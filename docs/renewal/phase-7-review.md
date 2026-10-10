@@ -4,9 +4,14 @@ Prepared 2026-10-11 against `Prism` implementation commit `886c432`.
 The developer requested Phase 7 implementation and selected a working local
 unsubscribe flow, including one opt-out column and matching API/export changes.
 The developer approved this written design on 2026-10-11 with the reply “approved”.
-The [implementation plan](phase-7-plan.md) is prepared for the next architectural
-review before product edits.
+The [implementation plan](phase-7-plan.md) and sequential execution were subsequently
+approved. Implementation is now locally verified; see [current evidence](phase-7-evidence.md)
+and [runnable QA](phase-7-local-run.md).
 Phase 6 remains locally verified with developer confirmation pending.
+
+The audit/status table and proposed contracts below preserve the approved design-time
+snapshot against `886c432`; they are historical where they describe absent implementation
+or checkout drift. Current implementation status lives in the evidence and PROGRESS.
 
 ## Implemented, deferred and not done
 

@@ -67,7 +67,10 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
                 {
                     await lease.ValidateAsync(database, ct);
                     LocalEmailPaths.CheckAncestors(paths[attempt+1]);
-                    await using (var file = new FileStream(paths[attempt+1], FileMode.CreateNew, FileAccess.Write, FileShare.None, 8192, FileOptions.Asynchronous | FileOptions.WriteThrough))
+                    var fileOptions = new FileStreamOptions { Mode=FileMode.CreateNew, Access=FileAccess.Write, Share=FileShare.None,
+                        BufferSize=8192, Options=FileOptions.Asynchronous | FileOptions.WriteThrough };
+                    if (!OperatingSystem.IsWindows()) fileOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+                    await using (var file = new FileStream(paths[attempt+1], fileOptions))
                     {
                         created = true;
                         if (writer is null) await file.WriteAsync(bytes!, ct);
@@ -86,7 +89,8 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
                     // A published file remains a receipt even if cancellation/SQL failure follows.
                     return;
                 }
-                catch (IOException) when (attempt < 2 && !File.Exists(paths[0]))
+                catch (IOException) when (File.Exists(paths[0])) { throw new GenerationStoppedException("email_receipt_conflict"); }
+                catch (IOException) when (attempt < 2)
                 {
                     if (created) await lease.RecordOwnWriteAsync(paths[attempt+1], ct);
                     await Task.Delay(attempt == 0 ? 250 : 1000, ct);

@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added a runnable local email QA launcher and explicit cleanup retry after account
+  deletion. Local MIME files are created private on Unix, capability queries are excluded
+  from request logs, and conflicting receipt publication stops. Phase 7 passed local
+  process/browser checks and 386 tests; developer confirmation remains pending.
+
 - Added explicit offline Worker reconcile/generate/capture actions, account ownership
   coordination, opt-out checks under PostgreSQL row locks, and restart recovery
   across file publication/SQL commit. Recorded generation requires a separately

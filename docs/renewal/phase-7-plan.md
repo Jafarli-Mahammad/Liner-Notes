@@ -2,8 +2,10 @@
 
 Prepared 2026-10-11 against source-checkout commit `a698f05`.
 The developer approved the [written design](phase-7-review.md) with the reply
-“approved”. This plan is the next architectural handoff; product implementation
-starts after plan review and selection of its execution method.
+“approved”, then approved this plan and sequential execution in this checkout.
+All tasks are now implemented and locally verified; developer confirmation remains pending.
+See [current evidence](phase-7-evidence.md) and [runnable QA](phase-7-local-run.md).
+The status table and task descriptions below preserve the approved planning snapshot.
 
 Recommended execution: sequential work in the current source checkout on `Prism`,
 with focused local commits after the relevant checks. No delegation is needed.
@@ -305,6 +307,6 @@ Do not weaken existing tests to make the changes pass. If checks fail or cannot
 run, report the result and ask before committing implementation. Keep developer
 confirmation distinct from verification. No history rewrite or push is authorized.
 
-**Execution handoff:** review this plan, then select sequential execution in this
-checkout. Product edits remain pending that review. The written design is already
-approved and is not being reopened.
+**Execution handoff completed:** the developer approved this plan and sequential execution.
+Tasks 0–4 were implemented with focused local commits. Confirmation and the explicit
+proceed/narrow/revise decision remain pending; later phases retain separate approvals.

@@ -14,7 +14,8 @@ unverified and real evaluation remains open. The developer requested Phase 7 loc
 2026-10-11 and selected working local unsubscribe with one opt-out column and matching
 API/export changes. The developer then approved its [written design](phase-7-review.md);
 its [implementation plan](phase-7-plan.md) and sequential execution were subsequently
-approved. Local implementation is in progress. Phases 5/8–9 and live run manifests remain separately
+approved. Local implementation is verified with developer confirmation pending; see
+[Phase 7 evidence](phase-7-evidence.md). Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
@@ -97,13 +98,20 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Verify that complete, versioned breakdowns are extensible JSON and that adding a formula needs
    no migration; JSONB mapping alone does not prove this. Include old/new payload round trips,
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
-7. **Worker-to-local-email slice — design and plan approved; implementation in progress.**
+7. **Worker-to-local-email slice — design and plan approved; implementation verified locally,
+   developer confirmation pending.**
    See [approved source reassessment and contracts](phase-7-review.md) and
    [implementation plan](phase-7-plan.md). The developer selected
-   working local unsubscribe, one opt-out column and matching API/export changes. No product
-   implementation has started. Worker → offline generation → persisted digest →
-   HTML/plaintext → local sink, including explanations, unsubscribe, short/empty lists, retries and
-   recovery. Mandatory reassessment of end-to-end behavior, security, evidence, storage, terms,
+   working local unsubscribe, one opt-out column and matching API/export changes. Implemented
+   Worker → offline generation → persisted digest → HTML/plaintext → local sink, including
+   explanations, unsubscribe, short/empty lists, retries and recovery. Export 2.1 exposes the
+   nullable `Users.EmailUnsubscribedAtUtc`, LocalCaptured lifecycle and sanitized owned copies/issues.
+   Local file receipts authenticate ownership, render inputs and body integrity; deletion reports
+   incomplete cleanup after SQL commit. No token/delivery table was added and SentAt stays null.
+   Final suite: 386 passed, zero failures/skips, including PostgreSQL. Actual fixture process/browser
+   checks and the mandatory reassessment are in [evidence](phase-7-evidence.md); use the
+   [local procedure](phase-7-local-run.md) for developer confirmation.
+   Reassessment covers end-to-end behavior, security, evidence, storage, terms,
    artist tags' suitability for track discovery, cost and complexity. The developer explicitly
    chooses proceed, narrow or revise before later phases; nothing starts automatically.
 8. **Privacy and delivery — not approved; two separate approvals.** (a) Complete table/column

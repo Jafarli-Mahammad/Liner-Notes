@@ -22,8 +22,8 @@ shapes later picks. The complete generation and email flow is **not verified**.
 4. Read the [provider interfaces](src/Application/Common/Interfaces/Recommendation),
    then the [Last.fm adapter](src/Infrastructure/RecommendationSources/LastFm).
 5. Explore [Domain scoring](src/Domain/Scoring) and its
-   [tests](tests/Domain.Tests/Recommendation). The existing scorer includes legacy
-   popularity penalties; these are not the approved popularity-neutral V1 policy.
+   [tests](tests/Domain.Tests/Recommendation). Phase 6 generation uses popularity-neutral
+   `BaselineAScorer`; the older scorer and its test contracts remain for compatibility.
 
 ## Repository map
 
@@ -85,7 +85,8 @@ the packages match the framework's major version.
 | Manual artist and tag seeds | [`TasteController`](src/Presentation/Controllers/TasteController.cs) | [`SeedTasteProfileCommandHandler`](src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommandHandler.cs), [`TasteSignal`](src/Domain/Taste/TasteSignal.cs) |
 | Reading a stored digest | [`DigestsController`](src/Presentation/Controllers/DigestsController.cs) | [`GetLatestDigestQueryHandler`](src/Application/Features/Digests/Queries/GetLatestDigest/GetLatestDigestQueryHandler.cs), [`WeeklyDigestRepository`](src/DataAccess/Persistence/Repositories/WeeklyDigestRepository.cs) |
 | Ratings and familiarity feedback | [`RecordRecommendationFeedbackCommandHandler`](src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandHandler.cs) | [`WeeklyRecommendation`](src/Domain/Digest/WeeklyRecommendation.cs), [`command validator`](src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandValidator.cs) |
-| Deterministic ranking and explanations | [`RecommendationScorer`](src/Domain/Scoring/RecommendationScorer.cs) | [`ScoringParameters`](src/Domain/Scoring/ScoringParameters.cs), [`ScoreBreakdown`](src/Domain/Scoring/ScoreBreakdown.cs) |
+| Offline digest generation | [`GenerateDigestCommandHandler`](src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs) | [`Phase 6 evidence/configuration`](docs/renewal/phase-6-evidence.md), [`DigestGenerationStore`](src/DataAccess/Persistence/Repositories/DigestGenerationStore.cs) |
+| Deterministic ranking and explanations | [`BaselineAScorer`](src/Domain/Scoring/BaselineAScorer.cs) | [`TasteVectorMaterializer`](src/Domain/Taste/TasteVectorMaterializer.cs), [`ScoreSnapshot`](src/Domain/Scoring/ScoreSnapshot.cs) |
 | Provider candidate discovery | [`IRecommendationSource`](src/Application/Common/Interfaces/Recommendation/IRecommendationSource.cs) | [`LastFmRecommendationSource`](src/Infrastructure/RecommendationSources/LastFm/LastFmRecommendationSource.cs) |
 | Candidate enrichment and missing evidence | [`ICandidateHydrator`](src/Application/Common/Interfaces/Recommendation/ICandidateHydrator.cs) | [`LastFmCandidateHydrator`](src/Infrastructure/RecommendationSources/LastFm/LastFmCandidateHydrator.cs), [`evidence models`](src/Application/Common/Models/Recommendation) |
 | HTTP and replay parsing | [`LastFmEvidenceParser`](src/Infrastructure/RecommendationSources/LastFm/LastFmEvidenceParser.cs) | [`LastFmApiClient`](src/Infrastructure/RecommendationSources/LastFm/LastFmApiClient.cs), [`RecordedLastFmApiClient`](src/Infrastructure/RecommendationSources/LastFm/RecordedLastFmApiClient.cs) |
@@ -180,15 +181,16 @@ serializes the value into a PostgreSQL `jsonb` column. `WhyThisPick()` formats t
 stored breakdown; it does not call a language model. `MappingExtensions` turns
 these values into API DTOs, including the explanation.
 
-Full JSON compatibility across future formula changes is not verified. Neither
-the current export DTO nor the diagram is evidence of complete data portability.
-The export currently reads up to 1,000 recent digests; complete retention and
-export coverage remain open work.
+Phase 6 verifies legacy/new JSON, nested unknown fields and inspectable unsupported
+formula versions; unsupported versions fail explicit replay. Export 2.0 reads all digest
+history through stable bounded pages and exposes full stored snapshots and audit fields.
+Phase 8a still verifies the complete account inventory/deletion boundary independently.
 
 ## Discovery, replay and evaluation
 
-The provider path currently produces transient evidence models. It is separate
-from the stored-digest request path and the legacy Domain scorer.
+The provider path produces transient evidence models that Phase 6 maps into complete
+selected-pick snapshots. Stored-digest page views read persisted data. Host composition
+selects explicit recorded or synthetic input; credentials cannot enable live generation.
 
 ```mermaid
 flowchart TB
@@ -200,7 +202,7 @@ flowchart TB
     HTTP --> Hydrator
     Replay["RecordedLastFmApiClient<br>injected response bytes"] --> Source
     Replay --> Hydrator
-    Evidence -. "future generation integration" .-> Stored["Scoring + stored weekly digest"]
+    Evidence --> Stored["Baseline A + atomic stored weekly digest"]
     classDef adapter fill:#48274e,color:#fff,stroke:#f4a1ca
     classDef model fill:#153e53,color:#fff,stroke:#67d8da
     classDef planned fill:#513827,color:#fff,stroke:#ffc58f,stroke-dasharray:5 5
@@ -244,7 +246,7 @@ web service.
 For a local browser session with fixture-only provider inputs:
 
 ```bash
-ASPNETCORE_ENVIRONMENT=Development LastFm__Mode=FixtureOnly \
+ASPNETCORE_ENVIRONMENT=Development Generation__Origin=Synthetic \
   dotnet run --project src/Presentation/Presentation.csproj --no-launch-profile \
   -- --urls http://localhost:5080
 ```

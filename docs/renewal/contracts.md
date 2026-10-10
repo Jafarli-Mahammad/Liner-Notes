@@ -8,8 +8,14 @@ requested Phase 3 execution; see [design](phase-3-design.md) and [evidence](phas
 The developer then requested Phase 4 implementation; its tooling is verified offline, with the
 concrete live run still pending. See [Phase 4 evidence and procedure](phase-4-evidence.md).
 Phase 6 local work was requested on 2026-10-09, followed by an explicit provisional baseline-A
-evidence bypass. Its concrete persistence/API/policy design still requires review; quality remains
-unverified and real evaluation remains open. Phases 5/7–9 and live run manifests remain separately
+evidence bypass. Its concrete persistence/API/policy design was approved and implementation
+explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 evidence](phase-6-evidence.md). Quality remains
+unverified and real evaluation remains open. The developer requested Phase 7 local work on
+2026-10-11 and selected working local unsubscribe with one opt-out column and matching
+API/export changes. The developer then approved its [written design](phase-7-review.md);
+its [implementation plan](phase-7-plan.md) and sequential execution were subsequently
+approved. Local implementation is verified with developer confirmation pending; see
+[Phase 7 evidence](phase-7-evidence.md). Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
@@ -79,9 +85,11 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    and ask for a fresh set. If the Last.fm gate takes too long, the developer chooses to wait longer
    or proceed to Phase 6 with baseline A without real evidence. The agent never chooses this escape.
    Waiving the reply to run evaluation and bypassing evaluation entirely are distinct decisions.
-6. **Recommendation pipeline and persistence — local work authorized; design review pending.**
+6. **Recommendation pipeline and persistence — design approved; locally verified, developer confirmation pending.**
    Provisional baseline A was explicitly approved under an evidence bypass on 2026-10-09;
-   quality remains unverified and evaluation remains open. See [concrete review](phase-6-review.md).
+   quality remains unverified and evaluation remains open. The concrete JSON/API, ordinal selection,
+   feedback, no-automatic-deletion and local storage policy is approved. See
+   [design](phase-6-review.md) and [implementation evidence](phase-6-evidence.md).
    Application orchestrates signals →
    materialization → discovery → hydration → pure ranking → persistence; provider details stay in
    Infrastructure. Use the formula chosen in Phase 5, or A on explicit evidence bypass. Resolve the
@@ -90,9 +98,20 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Verify that complete, versioned breakdowns are extensible JSON and that adding a formula needs
    no migration; JSONB mapping alone does not prove this. Include old/new payload round trips,
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
-7. **Worker-to-local-email slice — not approved.** Worker → offline generation → persisted digest →
-   HTML/plaintext → local sink, including explanations, unsubscribe, short/empty lists, retries and
-   recovery. Mandatory reassessment of end-to-end behavior, security, evidence, storage, terms,
+7. **Worker-to-local-email slice — design and plan approved; implementation verified locally,
+   developer confirmation pending.**
+   See [approved source reassessment and contracts](phase-7-review.md) and
+   [implementation plan](phase-7-plan.md). The developer selected
+   working local unsubscribe, one opt-out column and matching API/export changes. Implemented
+   Worker → offline generation → persisted digest → HTML/plaintext → local sink, including
+   explanations, unsubscribe, short/empty lists, retries and recovery. Export 2.1 exposes the
+   nullable `Users.EmailUnsubscribedAtUtc`, LocalCaptured lifecycle and sanitized owned copies/issues.
+   Local file receipts authenticate ownership, render inputs and body integrity; deletion reports
+   incomplete cleanup after SQL commit. No token/delivery table was added and SentAt stays null.
+   Final suite: 386 passed, zero failures/skips, including PostgreSQL. Actual fixture process/browser
+   checks and the mandatory reassessment are in [evidence](phase-7-evidence.md); use the
+   [local procedure](phase-7-local-run.md) for developer confirmation.
+   Reassessment covers end-to-end behavior, security, evidence, storage, terms,
    artist tags' suitability for track discovery, cost and complexity. The developer explicitly
    chooses proceed, narrow or revise before later phases; nothing starts automatically.
 8. **Privacy and delivery — not approved; two separate approvals.** (a) Complete table/column
@@ -367,7 +386,9 @@ aggregates still count as derived data. Retain actual factors in per-pick explan
 
 Shared inventory covers recordings, HTTP cache, derived database data, reports/copies/backups.
 Count uncompressed bytes conservatively, category totals, headroom and inventory age.
-Acquisition fails closed at projected 80,000,000 bytes or unknown accounting; bound responses.
+Acquisition fails closed at projected 1,000,000,000 bytes or unknown accounting; this is a
+temporary unresolved placeholder, not a capacity decision. Set the real limit at build-order
+step 9 once hosting is chosen. Bound responses.
 At threshold, stop acquisition/enrichment and alert. Continue account, feedback, unsubscribe,
 delete and delivery-state writes. Pause new derived recommendation snapshots if headroom is
 insufficient/unknown; serve existing snapshots. Evict only under approved expiry policy;

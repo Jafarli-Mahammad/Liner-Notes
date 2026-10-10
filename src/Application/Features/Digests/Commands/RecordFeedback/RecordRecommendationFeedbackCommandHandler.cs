@@ -4,6 +4,7 @@ using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
 using LinerNotes.Domain.Taste;
+using LinerNotes.Application.Common.Models.Recommendation;
 using MediatR;
 
 namespace LinerNotes.Application.Features.Digests.Commands.RecordFeedback;
@@ -17,15 +18,18 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITasteSignalRepository? _tasteSignalRepository;
+    private readonly GenerationConfiguration _configuration;
 
     public RecordRecommendationFeedbackCommandHandler(
         IWeeklyDigestRepository weeklyDigestRepository,
         IUnitOfWork unitOfWork,
-        ITasteSignalRepository? tasteSignalRepository = null)
+        ITasteSignalRepository? tasteSignalRepository = null,
+        GenerationConfiguration? configuration = null)
     {
         _weeklyDigestRepository = weeklyDigestRepository;
         _unitOfWork = unitOfWork;
         _tasteSignalRepository = tasteSignalRepository;
+        _configuration = configuration ?? new GenerationConfiguration();
     }
 
     public async Task<bool> Handle(
@@ -44,7 +48,17 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
             throw new NotFoundException(nameof(WeeklyRecommendation), request.RecommendationId);
         }
 
-        recommendation.RecordFeedback(request.Feedback, request.Comment, request.Rating);
+        var previousSignals = _tasteSignalRepository is null ? [] :
+            await _tasteSignalRepository.GetByUserIdAsync(request.UserId, cancellationToken) ?? [];
+        bool clearFamiliarity = request.Feedback == UserFeedback.None && request.Rating is null;
+        bool familiar = !clearFamiliarity && (request.Feedback == UserFeedback.AlreadyKnown ||
+            recommendation.Feedback == UserFeedback.AlreadyKnown || previousSignals.Any(s =>
+                s.Source == TasteSignalSource.RecommendationAlreadyKnown &&
+                s.Context.StartsWith($"rec:{recommendation.Id} - ", StringComparison.Ordinal)));
+        int? rating = request.Rating ?? (request.Feedback == UserFeedback.AlreadyKnown ? recommendation.Rating : null);
+        var feedback = familiar && request.Feedback == UserFeedback.None && rating.HasValue
+            ? UserFeedback.AlreadyKnown : request.Feedback;
+        recommendation.RecordFeedback(feedback, request.Comment, rating);
         _weeklyDigestRepository.UpdateRecommendation(recommendation);
 
         if (_tasteSignalRepository is not null)
@@ -57,7 +71,7 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
             var artistName = recommendation.Track.ArtistName;
             var trackKey = recommendation.Track.TrackKey;
 
-            if (request.Feedback == UserFeedback.AlreadyKnown)
+            if (familiar)
             {
                 signals.Add(new TasteSignal(
                     request.UserId,
@@ -68,9 +82,9 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
                     $"{contextPrefix} - Marked familiar: {recommendation.Track.Title} by {artistName}"));
             }
 
-            if (request.Feedback == UserFeedback.Liked || (request.Rating.HasValue && request.Rating.Value >= 7))
+            if (request.Feedback == UserFeedback.Liked || rating is >= 7)
             {
-                double weight = request.Rating.HasValue ? Math.Clamp((request.Rating.Value - 5) / 5.0, 0.4, 1.0) : 1.0;
+                double weight = rating.HasValue ? Math.Clamp((rating.Value - 5) / 5.0, _configuration.MinimumPositiveFeedbackWeight, 1.0) : 1.0;
                 signals.Add(new TasteSignal(
                     request.UserId,
                     TasteTargetType.Artist,
@@ -81,21 +95,22 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
 
                 if (recommendation.ScoreBreakdown?.MatchedTags is not null)
                 {
-                    foreach (var matchedTag in recommendation.ScoreBreakdown.MatchedTags.Take(3))
+                    foreach (var matchedTag in recommendation.ScoreBreakdown.MatchedTags.OrderByDescending(t => t.ContributionProduct)
+                        .ThenBy(t => t.TagName, StringComparer.Ordinal).Take(3))
                     {
                         signals.Add(new TasteSignal(
                             request.UserId,
                             TasteTargetType.Tag,
                             matchedTag.TagName,
-                            weight * 0.5,
+                            weight * _configuration.FeedbackTagWeight,
                             TasteSignalSource.RecommendationLike,
                             $"{contextPrefix} - Nudged tag from liked recommendation #{recommendation.Rank}"));
                     }
                 }
             }
-            else if (request.Feedback == UserFeedback.Disliked || (request.Rating.HasValue && request.Rating.Value <= 3))
+            else if (request.Feedback == UserFeedback.Disliked || rating is <= 3)
             {
-                double penalty = request.Rating.HasValue ? Math.Clamp((5 - request.Rating.Value) / 5.0, 0.4, 1.0) : 1.0;
+                double penalty = rating.HasValue ? Math.Clamp((5 - rating.Value) / 5.0, _configuration.MinimumPositiveFeedbackWeight, 1.0) : 1.0;
                 signals.Add(new TasteSignal(
                     request.UserId,
                     TasteTargetType.Track,

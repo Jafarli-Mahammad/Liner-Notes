@@ -94,4 +94,23 @@ public class SubscribersControllerTests
         var problem = Assert.IsType<ProblemDetails>(notFoundResult.Value);
         Assert.Equal(StatusCodes.Status404NotFound, problem.Status);
     }
+
+    [Fact]
+    public async Task DeleteAccount_ReportsCleanupAfterCommittedSql()
+    {
+        bool committed = false;
+        var archive = Substitute.For<ILocalEmailArchive>();
+        _unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>())
+            .Returns(async call => { var result = await call.Arg<Func<CancellationToken, Task<IActionResult>>>()(default); committed = true; return result; });
+        archive.DeleteAsync(_testUserId, Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            Assert.True(committed);
+            return new LocalEmailCleanupResult(false, ["copy_cleanup_unavailable"]);
+        });
+        _mediator.Send(Arg.Any<DeleteUserAccountCommand>(), Arg.Any<CancellationToken>()).Returns(true);
+        _authService.DeleteUserAsync(_testUserId).Returns(true);
+        var controller = new SubscribersController(_authService, _unitOfWork, archive) { ControllerContext = _controller.ControllerContext };
+        Assert.IsType<OkObjectResult>(await controller.DeleteAccount(default));
+        await archive.Received(1).DeleteAsync(_testUserId, Arg.Any<CancellationToken>());
+    }
 }

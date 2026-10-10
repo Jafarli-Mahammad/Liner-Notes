@@ -8,5 +8,6 @@ public enum DigestStatus
     Pending = 0,
     InProgress = 1,
     Sent = 2,
-    Failed = 3
+    Failed = 3,
+    LocalCaptured = 4
 }

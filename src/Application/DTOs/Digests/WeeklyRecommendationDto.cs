@@ -14,4 +14,13 @@ public record WeeklyRecommendationDto(
     UserFeedback Feedback,
     string? FeedbackComment,
     DateTime? FeedbackGivenAt,
-    int? Rating = null);
+    int? Rating = null,
+    Guid UserId = default,
+    Guid WeeklyDigestId = default,
+    DateTime CreatedAt = default,
+    DateTime? LastModifiedAt = null,
+    Guid? CreatedBy = null,
+    Guid? LastModifiedBy = null,
+    Guid? DeletedBy = null,
+    DateTime? DeletedAt = null,
+    bool IsDeleted = false);

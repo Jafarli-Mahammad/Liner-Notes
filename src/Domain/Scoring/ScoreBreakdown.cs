@@ -6,8 +6,9 @@ namespace LinerNotes.Domain.Scoring;
 /// A complete, inspectable, and persistent record of how a recommendation's score was computed.
 /// The entire "why this pick" explanation feature reconstructs from this data verbatim.
 /// </summary>
-public sealed record ScoreBreakdown
+public sealed record ScoreBreakdown : ExtensibleScoreRecord
 {
+    public ScoreSnapshot? Snapshot { get; init; }
     public double FinalScore { get; init; }
 
     // Tag similarity
@@ -62,6 +63,14 @@ public sealed record ScoreBreakdown
     /// </summary>
     public string GenerateExplanation()
     {
+        if (Snapshot is { } snapshot)
+        {
+            var tags = string.Join(", ", snapshot.Contributions.OrderByDescending(t => t.NormalizedWeightedContribution)
+                .ThenBy(t => t.TagName, StringComparer.Ordinal).Take(3).Select(t => t.TagName));
+            return $"Taste overlap: {TagSimilarityRaw:P0}" + (tags.Length == 0 ? "" : $" (shared tags: {tags})") +
+                (snapshot.Familiarity ? "; familiar seed artist" : "; artist outside your familiar seeds") +
+                $". Final score: {FinalScore:F3}.";
+        }
         var sb = new StringBuilder();
 
         // 1. Tag overlap explanation

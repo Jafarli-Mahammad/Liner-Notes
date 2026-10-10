@@ -68,5 +68,6 @@ Gotchas and corrections
 [verified] Last.fm founder seeds coverage spike verified live: Turkish alternative and game soundtracks (Hotline Miami, Dying Light, ULTRAKILL, Hades) return dense candidate sets with minimal tag noise. (2026-10-02)
 [verified] Phase 4's 35-track blind pool was generated from six fixed, approved founder seed profiles, including Jakuzi, Son Feci Bisiklet, and game-soundtrack artists. The recorded run used those seeds; it did not import listening history from a personal Last.fm username. The seed overlap cannot establish why the profiles were originally chosen. Checked `Phase2ProfileMembership.cs`, the approved Phase 4 manifest, and `blind-review.json` on 2026-10-09.
 <!-- Add dated one-liners as they happen. -->
+[verified] EF migrations in this checkout must target `--context AppDbContext`; file-based helpers must use `dotnet run --file <path> --no-cache` to avoid selecting the legacy root project or stale assemblies. Verified by generated migration inspection and the Phase 7 cleanup helper on 2026-10-11.
 Environment and constraints
 [stated] Near-zero budget: cheap VPS or free tiers, SQLite or small Postgres. Verify current pricing before recommending. (2026-09-28)

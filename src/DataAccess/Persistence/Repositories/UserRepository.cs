@@ -30,6 +30,10 @@ public sealed class UserRepository : AsyncRepository<User>, IUserRepository
             .FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
     }
 
+    public Task<User?> GetForExportAsync(Guid id, CancellationToken cancellationToken = default) =>
+        DataContext.Users.IgnoreQueryFilters().Include(u => u.Connections)
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
+
     public async Task<IReadOnlyList<User>> GetUsersDueForDigestAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         return await DataContext.Users

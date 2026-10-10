@@ -485,7 +485,10 @@ async function deleteAccount() {
     });
 
     if (res.ok) {
-      alert('Your account has been deleted.');
+      const cleanup = res.status === 200 ? await res.json() : null;
+      alert(cleanup?.localCopiesDeleted === false
+        ? `Account deleted. Local copy cleanup incomplete: ${cleanup.issues.join(', ')}`
+        : 'Your account has been deleted.');
       logout();
     } else {
       alert('Failed to delete account.');

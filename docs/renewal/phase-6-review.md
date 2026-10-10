@@ -1,10 +1,11 @@
 # Phase 6 implementation review
 
-Status: implementation requested on 2026-10-09; provisional baseline A approved
-under an explicit Phase 5 evidence bypass. Remaining design decisions below are
-proposals awaiting review.
-This document records a source audit and a concrete proposed implementation. It
-does not authorize live acquisition or approve persistence/API changes. Baseline A's
+Status: written design approved and implementation explicitly requested on 2026-10-10;
+provisional baseline A approved under an explicit Phase 5 evidence bypass.
+Implementation is locally verified; see [evidence and configuration](phase-6-evidence.md).
+This document records the pre-implementation source audit and approved design. It
+does not authorize live acquisition. Its concrete JSON/API, feedback, selection and
+storage contracts are approved for Phase 6 implementation. Baseline A's
 recommendation quality remains **not verified**; evaluation and subsequent formula
 choice remain open. No implementation is developer confirmed.
 
@@ -55,7 +56,8 @@ deferring real evaluation on 2026-10-09: "yes for now yes lets keep things open 
 unverified, we will get back to it". Do not treat this as evidence of recommendation
 quality, permanent formula selection or permission to execute Phase 5.
 
-The remainder describes the recommended baseline-A implementation for review.
+The remainder is the written design approved for implementation on 2026-10-10.
+Its original proposal wording records the reviewed choices; it is not a pending reapproval gate.
 
 ## Approaches considered
 
@@ -79,7 +81,7 @@ artist, using the same tie policy, then select up to five artists. A short or em
 supported list is valid. Do not select the upstream highest-ranked track as a
 separate representative rule. Upstream top-track acquisition still biases the
 candidate pool; retaining its original positions does not remove that bias.
-This batch selection needs review because it can affect evaluation applicability.
+This batch selection is approved for Phase 6; future real evaluation must reassess its applicability.
 
 Use a new pure `BaselineAScorer` for generation while retaining the legacy scorer
 and its existing test contracts. The production composition uses only baseline A.
@@ -125,7 +127,7 @@ include identifiers/audit fields for affected account-owned records. Security
 credentials remain outside the export. No generation HTTP endpoint is proposed;
 generation is an Application command for a later Worker/local invocation.
 
-The exact JSON/DTO contracts must be reviewed before product-code edits. If EF
+The exact JSON/DTO contracts were approved with the implementation instruction. If a future EF
 model comparison shows a SQL migration is required, present its exact changes
 before creating it. SQL neutrality does not eliminate the JSON/API review gate.
 
@@ -222,16 +224,18 @@ approved recording manifest's expiry. New persisted snapshots require an explici
 storage limit and reconciled headroom. Unknown or insufficient inventory stops
 new snapshots while allowing account, feedback and deletion operations.
 
-The developer must review this policy and the exact storage-accounting mechanism
-before implementation; a process-local counter cannot establish shared usage.
-PostgreSQL sizes and supported capacity remain not verified.
+This policy and the storage-accounting mechanism are approved. A process-local counter
+cannot establish shared usage. PostgreSQL synthetic sizes are now measured in the evidence
+document; supported capacity and real-data size distributions remain not verified.
 
 Generation requires a storage reservation supplied by an Infrastructure adapter
 under an exclusive local batch lease. Include recordings, cache, derived database,
 reports/copies, backups and partials. Require a reconciled inventory no older than
 five minutes and revalidate revisions immediately before persistence. Reserve
 actual serialized selected-pick bytes plus a configured database-overhead bound;
-reject projected shared usage at or above 80,000,000 bytes. Verify actual stored
+reject projected shared usage at or above 1,000,000,000 bytes as a temporary,
+unresolved placeholder; set the real limit at build-order step 9 once hosting is
+chosen. Verify actual stored
 column sizes inside the transaction, rolling back if the reservation is exceeded.
 An unconfigured overhead bound or unavailable inventory fails closed. The operator
 supplies approved artifact roots; do not scan unrelated files or credentials.

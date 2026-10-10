@@ -17,6 +17,15 @@ public sealed class User : AuditableEntity
     public DigestDeliveryDay DeliveryDay { get; private set; }
     public int DeliveryHourUtc { get; private set; }
     public DateTime? NextDigestAt { get; private set; }
+    public DateTime? EmailUnsubscribedAtUtc { get; private set; }
+
+    public void UnsubscribeEmail(DateTime nowUtc)
+    {
+        if (nowUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("UTC required.", nameof(nowUtc));
+        if (EmailUnsubscribedAtUtc.HasValue) return;
+        EmailUnsubscribedAtUtc = nowUtc;
+        LastModifiedAt = nowUtc;
+    }
 
     public IReadOnlyCollection<UserMusicConnection> Connections => _connections.AsReadOnly();
     public IReadOnlyCollection<TasteSignal> TasteSignals => _tasteSignals.AsReadOnly();

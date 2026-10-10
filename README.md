@@ -98,9 +98,9 @@ to explore and contribute to the project; it is not a production-ready service.
 
 | In the code today | Still being built or evaluated |
 | --- | --- |
-| A browser UI, account endpoints, manual taste seeds, digest reading and feedback. | Complete generation of weekly recommendations and scheduled email delivery. |
+| A browser UI, account endpoints, manual taste seeds, digest reading and feedback. | Scheduled email delivery and production acquisition. |
 | Last.fm discovery, evidence parsing, fixture inputs and recorded-response replay. | ListenBrainz integration and username/listening-history imports. |
-| A pure scorer, score-breakdown models, persistence mappings and offline evaluation tooling. | Alignment of the legacy scorer with all approved V1 rules, and real recommendation-quality evaluation. |
+| Bounded offline generation with pure baseline-A scoring, versioned stored evidence and PostgreSQL checks. | Real recommendation-quality evaluation and supported capacity. |
 | Export and deletion paths with local checks. | Verification of complete data export and deletion coverage. |
 
 Synthetic fixtures demonstrate mechanics; they do not establish musical fit.

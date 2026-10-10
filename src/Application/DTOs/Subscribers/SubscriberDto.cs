@@ -12,4 +12,11 @@ public record SubscriberDto(
     DigestDeliveryDay DeliveryDay,
     int DeliveryHourUtc,
     DateTime? NextDigestAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    DateTime? LastModifiedAt = null,
+    Guid? CreatedBy = null,
+    Guid? LastModifiedBy = null,
+    Guid? DeletedBy = null,
+    DateTime? DeletedAt = null,
+    bool IsDeleted = false,
+    DateTime? EmailUnsubscribedAtUtc = null);

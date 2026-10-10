@@ -2,12 +2,24 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
-- Authorized: **Phase 1–4 and Phase 6 local work** on `Prism`; the developer requested Phase 2
+- Authorized: **Phase 1–4, Phase 6 and Phase 7 local work** on `Prism`; the developer requested Phase 2
   execution and approved its exact membership and offline test replacement on 2026-10-07,
   then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
-  still needs separate approval. No push or Phase 5–9 execution is authorized.
+  still needs separate approval. Phase 7 was requested on 2026-10-11, with working local
+  unsubscribe, one opt-out column and matching API/export changes selected by the developer.
+  Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
+  The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
+  on 2026-10-11; implementation is locally verified, developer confirmation pending.
+  No push or Phase 5/8–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: review the [Phase 6 design proposal](docs/renewal/phase-6-review.md).
+- Active step: developer confirmation and proceed/narrow/revise reassessment of the
+  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md), using its
+  [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
+  Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
+  remains pending.
+  The developer approved the design and explicitly requested implementation on 2026-10-10,
+  including its JSON/API/export, selection, feedback and storage contracts. Local verification
+  passed on 2026-10-10; developer confirmation of the implementation remains pending.
   Phase 4's concrete live-run manifest still needs approval with a fresh reconciled inventory;
   Phase 1–3 confirmation remains pending. See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
 - PRs 1C–1K have local implementation commits. Because the account and host edits overlap in
@@ -32,7 +44,8 @@
 ## Decisions and reasons
 - Six layers: Domain, Application, DataAccess, Infrastructure, Presentation, Worker.
   Domain is pure; Application orchestrates; provider details remain in Infrastructure.
-- V1 is popularity-neutral. Existing popularity penalties are legacy implementation, not adopted policy.
+- V1 is popularity-neutral. Phase 6 generation uses baseline A. Existing popularity penalties
+  remain in the legacy scorer for compatibility and are not used by generation.
   No custom ML or claim of owning upstream similarity data.
 - Provisional baseline A is authorized for Phase 6 following an explicit Phase 5 evidence bypass
   on 2026-10-09. Quality remains **not verified**; evaluation and later formula choice remain open.
@@ -87,14 +100,41 @@ The plan below is approved; **not approved** refers to phase execution and its r
    aggregation. Freeze configuration before the one held-out evaluation. Developer alone chooses
    whether to wait or bypass real evaluation and proceed to Phase 6 with baseline A. On 2026-10-09
    the developer explicitly chose a provisional baseline-A bypass; real evaluation remains deferred.
-6. Recommendation pipeline and persistence — **local work authorized; design review pending**.
-   Provisional baseline A was explicitly approved with quality unverified. Resolve
-   hash/ordinal/representative selection, retention and feedback conflicts; approve concrete
-   persistence/API/export contracts before building. See [review](docs/renewal/phase-6-review.md).
-   Extensible JSON compatibility
-   across formula changes remains **not verified**, despite the existing JSONB mapping.
-7. Worker-to-local-email slice — **not approved**. Mandatory reassessment and explicit decision
-   to proceed, narrow or revise before later phases.
+6. Recommendation pipeline and persistence — **design approved; implementation verified locally, developer confirmation pending**.
+   Provisional baseline A was explicitly approved with quality unverified. The concrete
+   JSON/API/export, ordinal one-artist selection, feedback and storage-mechanics contracts were approved
+   with the implementation instruction on 2026-10-10. The separately approved
+   `Users.PopularityPenaltyEnabled` setting, migration, settings API/UI and export field are not
+   implemented and were omitted, not sequenced to a later phase. The enforced
+   1,000,000,000-byte (1 GB) storage threshold is a temporary unresolved placeholder, not a real
+   capacity decision; the real number is set at build-order step 9 once hosting is chosen.
+   A Development-only [manual QA frontend and run guide](docs/renewal/manual-qa.md) covers the
+   implemented user-facing flows; developer browser review remains pending. See [approval
+   status and evidence](docs/renewal/phase-6-evidence.md).
+   Implemented recorder-fed bounded generation, pure materialization/baseline A, complete versioned
+   snapshots, canonical ISO-week idempotency, PostgreSQL atomic persistence, storage/expiry guards,
+   feedback conflict/familiarity rules and export 2.0 with stable history pages. No SQL migration.
+   Old/new/unknown-field JSON and unsupported-formula inspection/replay behavior are verified.
+   Full suite: **337 passed / 0 failed / 0 skipped**, including local PostgreSQL checks.
+   **Mechanics only, no catalog conclusions.** Quality and supported capacity remain unverified.
+   See [evidence and configuration](docs/renewal/phase-6-evidence.md).
+7. Worker-to-local-email slice — **design and plan approved; implementation verified locally,
+   developer confirmation pending**. The authorized Phase 6 status/cutoff and Development
+   manual-QA follow-ups were reconciled first. Implemented explicit offline Worker actions,
+   persisted HTML/plaintext rendering, bounded private MIME capture, authenticated receipts,
+   exact recorded-input permission, storage accounting, retry/restart and account/row locks.
+   Working local unsubscribe adds one nullable opt-out column, isolated persisted capabilities,
+   API/export 2.1 and honest ownership-based copy cleanup after account deletion.
+   Final suite: **388 passed / 0 failed / 0 skipped**, including PostgreSQL migration,
+   file/SQL failure windows, cancellation, concurrency, token isolation and logging checks.
+   Actual separate Worker processes captured empty/five-pick fixture lists; Playwright MCP
+   verified read-only GET, confirmation POST and suppressed later capture. Export, restart,
+   account cleanup and the [runnable QA launcher](docs/renewal/phase-7-local-run.md) were exercised.
+   See [per-approval evidence and reassessment](docs/renewal/phase-7-evidence.md),
+   [approved review](docs/renewal/phase-7-review.md) and [plan](docs/renewal/phase-7-plan.md).
+   **Mechanics only, no catalog conclusions.** Popularity stays deferred; the 1 GB stop
+   remains temporary/unresolved. Mandatory explicit **proceed, narrow or revise** decision
+   remains required before later phases; Phase 8a/8b approvals are separate.
 8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
    verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.
 9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
@@ -128,8 +168,11 @@ Docker/deployment §13; hardening §15. CI is not explicitly specified.
 Local commit subjects use the identifiers shown above; 1C–1F/I share one commit. No PR has been published.
 
 ## Open decisions
-- Track selection: versioned weekly SHA-256 tie-break and upstream-ranked representative proposals
-  are alternatives, neither adopted. Within-artist popularity preference requires explicit approval.
+- Set the real shared storage limit at build-order step 9 once hosting is chosen. The current
+  1,000,000,000-byte (1 GB) cutoff is a temporary hard-stop placeholder, not a capacity decision.
+- Phase 6 adopts canonical ordinal track-key ties and the highest scoring eligible pick per
+  artist, up to five artists. Weekly hash and upstream-ranked representative proposals remain
+  unadopted. Within-artist popularity preference requires separate approval.
 - Scoring alternatives B–D, stoplists, IDF corpus and tuning require real development recordings
   and explicit adoption approval. Baseline A is provisionally approved under the explicit
   2026-10-09 evidence bypass; its quality remains unverified.
@@ -138,15 +181,21 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
   changes require review before real scoring. Diversity and novelty are formula-selection tie-breakers,
   never substitutes for ratings; the approved evaluation formulas retain their novelty component.
 - Phase 2 and Phase 4 follow existing test folders and `scripts/`; no tracked evaluation project or package was added.
-  Evaluation depends on Application/Domain only; the harness has no live source. Phase 6 proposes
-  recorder-fed generation; review [the design](docs/renewal/phase-6-review.md) before implementation.
-- Retention (24h cache, 30d recordings/backups, 12mo recommendations) is proposed, not approved.
+  Evaluation depends on Application/Domain only; the harness has no live source. Phase 6 implements
+  the [approved recorder-fed design](docs/renewal/phase-6-review.md).
+- Phase 6 adopts no automatic history deletion. Active seeds/feedback/familiarity remain until
+  changed or account deletion; recorded generation requires the approved manifest's expiry.
+  The older 24h/30d/12mo retention suggestions remain unadopted.
 - Phase 2's offline acquisition guard and recorder inventory checks are implemented;
   Phase 4 adds bounded local analysis/report writes and an explicit refreshed inventory gate.
-  production shared storage coordination and alert-and-degrade integration remain future work;
-  actual persisted complete-breakdown sizes and supported capacity are **not verified**.
+  Phase 6 adds an exclusive local batch lease, five-minute inventory and artifact/database revision
+  checks, configured overhead reservation and transactional actual-byte checks. Shared production
+  coordination/alerting remain later work. Synthetic snapshot sizes are measured; supported
+  capacity and real-data size distributions are **not verified**.
 - Phase 1 rejects contradictory sentiment/rating pairs (Liked 1–3, Disliked 7–10) and
-  preserves familiarity independently. Phase 6's proposed conflict and retention rules await review.
+  preserves familiarity independently. Phase 6 implements latest-feedback materialization with
+  an ordinal ID tie-break and preserves familiarity across later ratings. `None` without a rating
+  explicitly resets that recommendation's rating and familiarity.
 - Dependency, schema, API/export and test-contract changes must be presented concretely for review.
 
 ## Open Last.fm questions

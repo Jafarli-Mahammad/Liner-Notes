@@ -4,12 +4,17 @@ using LinerNotes.DataAccess;
 using LinerNotes.Infrastructure;
 using LinerNotes.Presentation;
 using LinerNotes.Presentation.Filters;
+using LinerNotes.Presentation.Development;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Hosting logs run before middleware: omit query-bearing request start/finish messages.
+if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled"))
+    builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 // Standard Kestrel configuration
 builder.WebHost.ConfigureKestrel(options =>
@@ -63,6 +68,26 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 app.UseForwardedHeaders();
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/digests/unsubscribe") &&
+        (!app.Environment.IsDevelopment() || !app.Configuration.GetValue<bool>("LocalEmail:Enabled")))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    if (!app.Environment.IsDevelopment() &&
+        (context.Request.Path.StartsWithSegments("/manual-test") ||
+         context.Request.Path.StartsWithSegments("/api/dev/manual-test")))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -106,6 +131,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+if (app.Environment.IsDevelopment())
+    app.MapManualTestEndpoints();
 app.MapHealthChecks("/health");
 
 // Guest-first discovery SPA fallback

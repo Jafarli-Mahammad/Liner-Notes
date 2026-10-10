@@ -21,7 +21,7 @@ public static class MappingExtensions
         user.DeliveryDay,
         user.DeliveryHourUtc,
         user.NextDigestAt,
-        user.CreatedAt);
+        user.CreatedAt, user.LastModifiedAt, user.CreatedBy, user.LastModifiedBy, user.DeletedBy, user.DeletedAt, user.IsDeleted, user.EmailUnsubscribedAtUtc);
 
     public static TasteSignalDto ToDto(this TasteSignal signal) => new(
         signal.Id,
@@ -32,7 +32,7 @@ public static class MappingExtensions
         signal.Weight,
         signal.Source,
         signal.Context,
-        signal.CreatedAt);
+        signal.CreatedAt, signal.LastModifiedAt, signal.CreatedBy, signal.LastModifiedBy, signal.DeletedBy, signal.DeletedAt, signal.IsDeleted);
 
     public static TrackDto ToDto(this Track track) => new(
         track.Id,
@@ -42,7 +42,7 @@ public static class MappingExtensions
         track.Mbid,
         track.DurationSeconds,
         track.ExternalSpotifyUrl,
-        track.ExternalYoutubeUrl);
+        track.ExternalYoutubeUrl, track.NormalizedTitle, track.NormalizedArtistName);
 
     public static ScoreBreakdownDto ToDto(this ScoreBreakdown breakdown) => new(
         breakdown.FinalScore,
@@ -54,7 +54,9 @@ public static class MappingExtensions
             m.TagName,
             m.CandidateTagWeight,
             m.UserTasteWeight,
-            m.ContributionProduct)).ToList());
+            m.ContributionProduct) { UnknownFields = m.UnknownFields }).ToList(),
+        breakdown.Snapshot, breakdown.TagSimilarityRaw, breakdown.PopularityRaw,
+        breakdown.NoveltyRaw, breakdown.FeedbackPenaltyRaw) { UnknownFields = breakdown.UnknownFields };
 
     public static WeeklyRecommendationDto ToDto(this WeeklyRecommendation recommendation) => new(
         recommendation.Id,
@@ -65,7 +67,9 @@ public static class MappingExtensions
         recommendation.Feedback,
         recommendation.FeedbackComment,
         recommendation.FeedbackGivenAt,
-        recommendation.Rating);
+        recommendation.Rating, recommendation.UserId, recommendation.WeeklyDigestId,
+        recommendation.CreatedAt, recommendation.LastModifiedAt, recommendation.CreatedBy,
+        recommendation.LastModifiedBy, recommendation.DeletedBy, recommendation.DeletedAt, recommendation.IsDeleted);
 
     public static WeeklyDigestDto ToDto(this WeeklyDigest digest) => new(
         digest.Id,
@@ -75,12 +79,15 @@ public static class MappingExtensions
         digest.WeekEndDate,
         digest.Status,
         digest.SentAt,
-        digest.Recommendations.Select(r => r.ToDto()).ToList());
+        digest.Recommendations.OrderBy(r => r.Rank).Select(r => r.ToDto()).ToList(),
+        digest.CreatedAt, digest.LastModifiedAt, digest.ErrorMessage, digest.CreatedBy,
+        digest.LastModifiedBy, digest.DeletedBy, digest.DeletedAt, digest.IsDeleted);
 
     public static UserMusicConnectionExportDto ToExportDto(this UserMusicConnection connection) => new(
         connection.ServiceType.ToString(),
         connection.ExternalUsername,
         connection.LastSyncedAt,
         connection.IsActive,
-        connection.CreatedAt);
+        connection.CreatedAt, connection.Id, connection.UserId, connection.LastModifiedAt,
+        connection.CreatedBy, connection.LastModifiedBy, connection.DeletedBy, connection.DeletedAt, connection.IsDeleted);
 }

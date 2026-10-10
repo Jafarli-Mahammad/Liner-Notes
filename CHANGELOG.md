@@ -2,6 +2,38 @@
 
 ## Unreleased — renewal
 
+- Added a runnable local email QA launcher and explicit cleanup retry after account
+  deletion. Unix sink directories must be owner-only and MIME files are created private;
+  capability queries are excluded
+  from request logs, and conflicting receipt publication stops. Phase 7 passed local
+  process/browser checks and 388 tests; developer confirmation remains pending.
+
+- Added explicit offline Worker reconcile/generate/capture actions, account ownership
+  coordination, opt-out checks under PostgreSQL row locks, and restart recovery
+  across file publication/SQL commit. Recorded generation requires a separately
+  approved exact local-use manifest; credentials cannot enable live generation.
+
+- Added bounded local UTF-8 plaintext/HTML weekly messages with stored explanations,
+  ordinary listening links, unsubscribe and no remote resources or tracking. Atomic
+  MIME capture validates durable receipts, accounts for failed partials and supports
+  sanitized copy export and ownership-based cleanup. External delivery remains pending.
+
+- Added an explicitly enabled Development-only unsubscribe confirmation flow and
+  persistent email opt-out. Export 2.1 exposes the opt-out and local copy inspection
+  status; account deletion reports incomplete local copy cleanup after SQL deletion.
+  Local capture has its own status and does not claim external delivery.
+
+- Added bounded recorder-fed weekly digest generation with atomic PostgreSQL persistence,
+  complete stored evidence, canonical ISO weeks, replay and storage/expiry guards. Export 2.0
+  includes complete snapshots, audit fields and all digest history through bounded pages.
+  Later ratings preserve familiarity; marking a rated track known preserves its numeric rating.
+  Local checks pass; developer confirmation and recommendation quality remain pending.
+
+- Added pure provisional baseline-A scoring with popularity-neutral ranking, one pick per
+  artist, complete versioned score inputs/contributions and stored-input replay. Legacy
+  payloads remain readable; new snapshots retain unknown JSON fields. Recommendation
+  quality remains unverified and real evaluation remains open.
+
 - Redesigned the README with a musical identity, clearer product goals and development
   status, architecture diagrams, and a separate guide for navigating the codebase.
   Added original record sleeve artwork and a Codebase Memory Nebula snapshot with

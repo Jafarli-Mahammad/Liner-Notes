@@ -11,4 +11,6 @@ public record TrackDto(
     string? Mbid,
     int? DurationSeconds,
     string? ExternalSpotifyUrl,
-    string? ExternalYoutubeUrl);
+    string? ExternalYoutubeUrl,
+    string NormalizedTitle = "",
+    string NormalizedArtistName = "");

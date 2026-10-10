@@ -23,7 +23,7 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var parsed = serializer.Parse(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
+                    var parsed = serializer.ParseStoredCopy(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
                     if (parsed.Receipt.UserId != userId) continue;
                     var known = digests.FirstOrDefault(d => d.Id == parsed.Receipt.DigestId);
                     if (known is null || known.Week != parsed.Receipt.Week || Path.GetFileNameWithoutExtension(file) != parsed.Receipt.DigestId.ToString("N"))
@@ -58,7 +58,7 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var parsed = serializer.Parse(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
+                    var parsed = serializer.ParseStoredCopy(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
                     if (parsed.Receipt.UserId == userId) File.Delete(file);
                 }
                 catch (Exception ex) when (ex is GenerationStoppedException or IOException or UnauthorizedAccessException)

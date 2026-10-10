@@ -525,7 +525,10 @@ async function deleteAccount() {
       else setMessage('delete-result', `Account deletion check expected HTTP 401, received HTTP ${probe.status}.`, 'error');
     } catch (error) {
       setMessage('delete-result', `Account deleted, but token revocation could not be verified: ${error.message}`, 'error');
-      if (cleanup?.localCopiesDeleted === false) setMessage('delete-result', `Account deleted; local copy cleanup incomplete: ${cleanup.issues.join(', ')}`, 'error');
+    }
+    if (cleanup?.localCopiesDeleted === false) {
+      const issues = Array.isArray(cleanup.issues) ? cleanup.issues.join(', ') : 'unknown cleanup issue';
+      setMessage('delete-result', `Account deleted; local copy cleanup incomplete: ${issues}`, 'error');
     }
     byId('profile-result').textContent = 'Deleted account session cleared.';
   } catch (error) {

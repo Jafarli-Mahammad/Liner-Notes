@@ -128,8 +128,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         {
             var candidate = pick.Track;
             var track = await db.Tracks.AsTracking().Where(t =>
-                candidate.Mbid != null && t.Mbid != null && t.Mbid.ToLower() == candidate.Mbid.ToLower() ||
-                t.NormalizedArtistName == candidate.NormalizedArtistName && t.NormalizedTitle == candidate.NormalizedTitle)
+                t.NormalizedArtistName == candidate.NormalizedArtistName && t.NormalizedTitle == candidate.NormalizedTitle &&
+                (candidate.Mbid == null ? t.Mbid == null : t.Mbid != null && t.Mbid.ToLower() == candidate.Mbid.ToLower()))
                 .OrderBy(t => t.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
             if (track is null) { track = candidate; db.Tracks.Add(track); }
             digest.AddRecommendation(track, pick.Breakdown, digest.Recommendations.Count + 1);

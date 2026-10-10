@@ -127,6 +127,24 @@ public sealed class LocalEmailTests : IDisposable
     }
 
     [Fact]
+    public async Task StoredCopyArchiveAndDeletionSurviveSenderConfigurationChanges()
+    {
+        var input = Inputs(1);
+        await storage.ReconcileAsync(Database);
+        await using (var capture = await sink.OpenAsync(input.Digest, input.Subscriber, Database, default))
+            await capture.PublishAsync(input.Digest, input.Subscriber, Database, default);
+
+        options.FromAddress = "updated@example.test";
+        options.MessageDomain = "updated.example.test";
+        var archived = await archive.ReadAsync(input.Subscriber.Id,
+            [input.Digest with { Status = DigestStatus.LocalCaptured }], default);
+        Assert.Equal("complete", archived.Status);
+        Assert.Single(archived.Copies);
+        Assert.True((await archive.DeleteAsync(input.Subscriber.Id, default)).Complete);
+        Assert.Empty(Directory.GetFiles(options.SinkRoot!));
+    }
+
+    [Fact]
     public async Task OwnershipCleanup_LeavesOtherAccountAndUnknownCorruptCopies()
     {
         var own=Inputs(1);var other=Inputs(1);

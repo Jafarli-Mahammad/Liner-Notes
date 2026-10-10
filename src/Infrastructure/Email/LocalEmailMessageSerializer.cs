@@ -53,7 +53,11 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
         return result;
     }
 
-    public ParsedLocalEmail Parse(ReadOnlySpan<byte> bytes)
+    public ParsedLocalEmail Parse(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: true);
+
+    public ParsedLocalEmail ParseStoredCopy(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: false);
+
+    private ParsedLocalEmail ParseCore(ReadOnlySpan<byte> bytes, bool requireCurrentSender)
     {
         if (bytes.Length > options.MessageByteLimit) throw new GenerationStoppedException("email_receipt_invalid");
         try
@@ -66,13 +70,24 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
             if (!value.StartsWith(Prefix, StringComparison.Ordinal)) throw new FormatException();
             var receipt = JsonSerializer.Deserialize<LocalEmailReceipt>(value[Prefix.Length..]) ?? throw new FormatException();
             if (receipt.DigestId == Guid.Empty || receipt.UserId == Guid.Empty || string.IsNullOrEmpty(receipt.Week) ||
-                string.IsNullOrEmpty(receipt.Recipient) || string.IsNullOrEmpty(receipt.Fingerprint) || receipt.TemplateVersion != DigestEmailRenderer.Version ||
+                string.IsNullOrEmpty(receipt.Recipient) || string.IsNullOrEmpty(receipt.Fingerprint) || string.IsNullOrEmpty(receipt.TemplateVersion) ||
+                requireCurrentSender && receipt.TemplateVersion != DigestEmailRenderer.Version ||
                 !tokens.TryRead(receipt.Token, out var owner) || owner != receipt.UserId ||
-                headers["To"] != receipt.Recipient || headers["From"] != options.FromAddress ||
-                headers["Message-ID"] != $"<{receipt.DigestId:N}@{options.MessageDomain}>" || headers["MIME-Version"] != "1.0" ||
+                headers["To"] != receipt.Recipient || headers["MIME-Version"] != "1.0" ||
                 headers.Count != 8 || headers["Date"] != Date(receipt.Week) ||
                 headers["Subject"] != "=?utf-8?B?" + Convert.ToBase64String(Utf8.GetBytes("Liner Notes " + receipt.Week)) + "?=") throw new FormatException();
             LocalEmailOptions.ValidateAddress(receipt.Recipient);
+            LocalEmailOptions.ValidateAddress(headers["From"]);
+            string messageIdPrefix = $"<{receipt.DigestId:N}@";
+            string messageId = headers["Message-ID"];
+            string messageDomain = messageId.Length > messageIdPrefix.Length + 1 && messageId.EndsWith('>')
+                ? messageId[messageIdPrefix.Length..^1]
+                : string.Empty;
+            if (!messageId.StartsWith(messageIdPrefix, StringComparison.Ordinal) || !messageId.EndsWith('>') ||
+                messageDomain.Length is 0 or > 253 ||
+                messageDomain.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '.' or '-')) ||
+                requireCurrentSender && (headers["From"] != options.FromAddress ||
+                    messageId != $"<{receipt.DigestId:N}@{options.MessageDomain}>")) throw new FormatException();
             string boundary = "liner_" + receipt.DigestId.ToString("N");
             if (headers["Content-Type"] != $"multipart/alternative; boundary=\"{boundary}\"") throw new FormatException();
             var parts = mime[(split+4)..].Split("--" + boundary);

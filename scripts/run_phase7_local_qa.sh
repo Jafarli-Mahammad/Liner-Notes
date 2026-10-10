@@ -6,15 +6,8 @@ if [[ -z "${LINER_MANUAL_QA_CONNECTION_STRING:-}" ]]; then
   exit 2
 fi
 
-shopt -s nocasematch
-if [[ ! "$LINER_MANUAL_QA_CONNECTION_STRING" =~ (^|\;)[[:space:]]*Host=(localhost|127\.0\.0\.1)(\;|$) ]] ||
-   [[ ! "$LINER_MANUAL_QA_CONNECTION_STRING" =~ (^|\;)[[:space:]]*Database=liner_notes_manual_qa(\;|$) ]]; then
-  printf '%s\n' "The manual QA launcher requires Host=localhost or 127.0.0.1 and Database=liner_notes_manual_qa." >&2
-  exit 2
-fi
-shopt -u nocasematch
-
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+dotnet run --file "$repo_root/scripts/validate_manual_qa_connection.cs" --no-cache
 phase7_qa_root="$(mktemp -d "${TMPDIR:-/tmp}/linernotes-phase7-qa.XXXXXX")"
 phase7_qa_pid=""
 

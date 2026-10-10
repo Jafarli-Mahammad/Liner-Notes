@@ -318,6 +318,33 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
     }
 
     [LocalPostgresMigrationFact]
+    public async Task PersistedPick_DoesNotReuseConflictingTrackMetadataByMbidAlone()
+    {
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
+        const string mbid = "12345678-1234-1234-1234-123456789abc";
+        db.Tracks.Add(Track.Create("Old catalog title", "Old artist", mbid: mbid));
+        await db.SaveChangesAsync();
+        var batch = await store.AcquireBatchAsync();
+        await using (batch)
+        {
+            var input = await store.ReadInputsAsync(userId);
+            var candidate = Track.Create("Scored title", "Scored artist", mbid: mbid);
+            var breakdown = new BaselineAScorer().Score(new(candidate, WeightedTagVector.Empty, ScoreEvidence.Empty),
+                WeightedTagVector.Empty, false, Week, new());
+            var digest = await store.PersistAsync(userId, Week, input.Revision,
+                [new(candidate, breakdown)], new AcceptedReservation());
+            var pick = Assert.Single(digest.Recommendations);
+            Assert.Equal("Scored title", pick.Track.Title);
+            Assert.Equal("Scored artist", pick.Track.ArtistName);
+            Assert.Equal(pick.Track.TrackKey, pick.ScoreBreakdown.Snapshot!.TrackKey);
+            Assert.Equal(pick.Track.Title, pick.ScoreBreakdown.Snapshot.Title);
+            Assert.Equal(pick.Track.ArtistName, pick.ScoreBreakdown.Snapshot.ArtistName);
+        }
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task StorageRevision_HashesRowsSeparatelyAndChangesWhenStoredContentChanges()
     {
         await using var scope = services.CreateAsyncScope();
@@ -379,6 +406,11 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         public Task ValidateAsync(GenerationStorageState database, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task VerifyStoredAsync(long actualColumnBytes, GenerationStorageState database, CancellationToken cancellationToken = default) =>
             throw new GenerationStoppedException("injected_stored_size_failure");
+    }
+    private sealed class AcceptedReservation : IGenerationStorageReservation
+    {
+        public Task ValidateAsync(GenerationStorageState database, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task VerifyStoredAsync(long actualColumnBytes, GenerationStorageState database, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
     private sealed class CancelReservation(CancellationTokenSource cancellation) : IGenerationStorageReservation
     {

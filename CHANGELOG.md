@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added bounded local UTF-8 plaintext/HTML weekly messages with stored explanations,
+  ordinary listening links, unsubscribe and no remote resources or tracking. Atomic
+  MIME capture validates durable receipts, accounts for failed partials and supports
+  sanitized copy export and ownership-based cleanup. External delivery remains pending.
+
 - Added an explicitly enabled Development-only unsubscribe confirmation flow and
   persistent email opt-out. Export 2.1 exposes the opt-out and local copy inspection
   status; account deletion reports incomplete local copy cleanup after SQL deletion.

@@ -26,6 +26,10 @@ public static class DependencyInjection
         services.Configure<LocalEmailOptions>(configuration.GetSection("LocalEmail"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalEmailOptions>>().Value);
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
+        services.AddScoped<IDigestEmailRenderer, DigestEmailRenderer>();
+        services.AddScoped<LocalEmailMessageSerializer>();
+        services.AddScoped<ILocalEmailSink, LocalEmailSink>();
+        services.AddScoped<ILocalEmailArchive, LocalEmailArchive>();
 
         // Bind Last.fm Options
         services.Configure<LastFmOptions>(configuration.GetSection(LastFmOptions.SectionName));
@@ -66,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
         services.AddScoped<LocalGenerationStorage>();
         services.AddScoped<IGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
+        services.AddScoped<ILocalEmailStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
 
         // Register Recommendation Source & Candidate Hydrator abstractions
         services.AddScoped<IRecommendationSource, LastFmRecommendationSource>();

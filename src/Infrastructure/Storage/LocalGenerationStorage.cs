@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
+using LinerNotes.Application.Common.Interfaces;
 
 namespace LinerNotes.Infrastructure.Storage;
 
@@ -18,7 +19,7 @@ public sealed record GenerationInventory(DateTimeOffset MeasuredAtUtc, bool Reco
     long DatabaseBytes, string DatabaseRevision, Dictionary<string, ArtifactMeasurement> Categories);
 
 /// <summary>Explicit local roots and reconciled inventory under one cross-process batch lease.</summary>
-public sealed class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage
+public sealed class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage, ILocalEmailStorage
 {
     private long OverheadBytesPerPick => options.DatabaseOverheadBytesPerPick!.Value;
     public const long StopBytes = 1_000_000_000;
@@ -34,6 +35,26 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
             return new Lease(this, lease, inventory);
         }
         catch { await lease.DisposeAsync().ConfigureAwait(false); throw; }
+    }
+
+    public async Task<ILocalEmailWriteLease> AcquireEmailAsync(GenerationStorageState database, long bytes,
+        IReadOnlyList<string> ownedPaths, bool recovery, CancellationToken ct)
+    {
+        var file = OpenLease();
+        try
+        {
+            if (recovery) return new EmailLease(this, file, null, null, null, 0);
+            var inventory = await ReadInventoryAsync(ct).ConfigureAwait(false);
+            await ValidateAsync(inventory, database, ct).ConfigureAwait(false);
+            if (bytes <= 0 || ownedPaths.Count != 4 || ownedPaths.Distinct(StringComparer.Ordinal).Count() != 4 || ownedPaths.Any(File.Exists))
+                throw new GenerationStoppedException("email_reservation_invalid");
+            long allowance = checked(bytes * 3); // Three attempted partials; rename adds no bytes.
+            if (checked(Total(inventory) + allowance) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+            var excluded = ownedPaths.ToHashSet(StringComparer.Ordinal);
+            var baseline = await MeasureAsync(ct, excluded).ConfigureAwait(false);
+            return new EmailLease(this, file, inventory, baseline, excluded, allowance);
+        }
+        catch { await file.DisposeAsync(); throw; }
     }
 
     // Explicit operator helper, never called automatically by generation.
@@ -58,6 +79,10 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
             roots.Any(root => roots.Any(other => root != other && Within(root, other))) ||
             roots.Any(root => Within(options.LeasePath!, root) || Within(options.InventoryPath!, root)))
             throw new GenerationStoppedException("overlapping_storage_roots");
+        foreach (var path in roots.Append(options.InventoryPath!).Append(options.LeasePath!))
+            for (string? current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+                if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    throw new GenerationStoppedException("symlink_artifact_root");
         try { return new FileStream(options.LeasePath!, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         catch (IOException) { throw new GenerationStoppedException("storage_lease_unavailable"); }
         catch (UnauthorizedAccessException) { throw new GenerationStoppedException("storage_lease_unavailable"); }
@@ -110,7 +135,7 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
 
     private static long Total(GenerationInventory inventory) => checked(inventory.DatabaseBytes + inventory.Categories.Values.Sum(v => v.Bytes));
 
-    private async Task<Dictionary<string, ArtifactMeasurement>> MeasureAsync(CancellationToken ct)
+    private async Task<Dictionary<string, ArtifactMeasurement>> MeasureAsync(CancellationToken ct, IReadOnlySet<string>? excluded = null)
     {
         var measurements = new Dictionary<string, ArtifactMeasurement>(StringComparer.Ordinal);
         long sharedBytes = 0;
@@ -134,6 +159,7 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
                             var attributes = File.GetAttributes(child);
                             if ((attributes & FileAttributes.ReparsePoint) != 0) throw new GenerationStoppedException("symlink_artifact");
                             if ((attributes & FileAttributes.Directory) != 0) { pending.Push(child); continue; }
+                            if (excluded?.Contains(child) == true) continue;
                             if (++fileCount > 100_000) throw new GenerationStoppedException("storage_file_limit");
                             var info = new FileInfo(child);
                             long before = info.Length;
@@ -155,6 +181,41 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
         catch (IOException) { throw new GenerationStoppedException("artifact_inventory_unavailable"); }
         catch (UnauthorizedAccessException) { throw new GenerationStoppedException("artifact_inventory_unavailable"); }
         return measurements;
+    }
+
+    private sealed class EmailLease(LocalGenerationStorage owner, FileStream file, GenerationInventory? inventory,
+        Dictionary<string, ArtifactMeasurement>? baseline, HashSet<string>? ownedPaths, long allowance) : ILocalEmailWriteLease
+    {
+        private readonly Dictionary<string, string> ownRevisions = new(StringComparer.Ordinal);
+        private static async Task<string> RevisionAsync(string path, CancellationToken ct)
+        {
+            if (!File.Exists(path)) return "absent";
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, true);
+            if (stream.Length > 1_200_000) throw new GenerationStoppedException("storage_headroom");
+            return Convert.ToHexStringLower(await SHA256.HashDataAsync(stream, ct));
+        }
+        public async Task RecordOwnWriteAsync(string path, CancellationToken ct)
+        {
+            if (ownedPaths?.Contains(path) != true) throw new GenerationStoppedException("email_reservation_invalid");
+            ownRevisions[path] = await RevisionAsync(path, ct);
+        }
+        public async Task ValidateAsync(GenerationStorageState database, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (inventory is null) return; // Receipt reconciliation creates no file and is available at the stop.
+            owner.CheckInventory(inventory);
+            if (database != new GenerationStorageState(inventory.DatabaseBytes, inventory.DatabaseRevision))
+                throw new GenerationStoppedException("database_inventory_changed");
+            var actual = await owner.MeasureAsync(ct, ownedPaths).ConfigureAwait(false);
+            if (Categories.Any(c => actual[c] != baseline![c])) throw new GenerationStoppedException("artifact_inventory_changed");
+            foreach (var path in ownedPaths!)
+                if (await RevisionAsync(path, ct) != ownRevisions.GetValueOrDefault(path, "absent"))
+                    throw new GenerationStoppedException("email_owned_artifact_changed");
+            long ownedBytes = ownedPaths!.Where(File.Exists).Sum(path => new FileInfo(path).Length);
+            if (ownedBytes > allowance || checked(Total(inventory) + ownedBytes) >= StopBytes)
+                throw new GenerationStoppedException("storage_headroom");
+        }
+        public ValueTask DisposeAsync() => file.DisposeAsync();
     }
 
     private sealed class Lease(LocalGenerationStorage owner, FileStream file, GenerationInventory inventory) : IGenerationStorageLease

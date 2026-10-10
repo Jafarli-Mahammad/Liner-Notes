@@ -10,7 +10,10 @@ concrete live run still pending. See [Phase 4 evidence and procedure](phase-4-ev
 Phase 6 local work was requested on 2026-10-09, followed by an explicit provisional baseline-A
 evidence bypass. Its concrete persistence/API/policy design was approved and implementation
 explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 evidence](phase-6-evidence.md). Quality remains
-unverified and real evaluation remains open. Phases 5/7–9 and live run manifests remain separately
+unverified and real evaluation remains open. The developer requested Phase 7 local work on
+2026-10-11 and selected working local unsubscribe with one opt-out column and matching
+API/export changes; its [concrete design](phase-7-review.md) is prepared for architectural
+review before product edits. Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
@@ -93,7 +96,10 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Verify that complete, versioned breakdowns are extensible JSON and that adding a formula needs
    no migration; JSONB mapping alone does not prove this. Include old/new payload round trips,
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
-7. **Worker-to-local-email slice — not approved.** Worker → offline generation → persisted digest →
+7. **Worker-to-local-email slice — local work requested; concrete design review pending.**
+   See [source reassessment and proposed contracts](phase-7-review.md). The developer selected
+   working local unsubscribe, one opt-out column and matching API/export changes. No product
+   implementation has started. Worker → offline generation → persisted digest →
    HTML/plaintext → local sink, including explanations, unsubscribe, short/empty lists, retries and
    recovery. Mandatory reassessment of end-to-end behavior, security, evidence, storage, terms,
    artist tags' suitability for track discovery, cost and complexity. The developer explicitly

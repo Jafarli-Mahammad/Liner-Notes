@@ -133,6 +133,11 @@ public sealed class LocalEmailTests : IDisposable
         await storage.ReconcileAsync(Database);
         await using (var capture = await sink.OpenAsync(input.Digest, input.Subscriber, Database, default))
             await capture.PublishAsync(input.Digest, input.Subscriber, Database, default);
+        string path = Directory.GetFiles(options.SinkRoot!, "*.eml").Single();
+        var original = await File.ReadAllBytesAsync(path);
+        var tampered = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(original)
+            .Replace("From: liner-notes@localhost", "From: attacker@example.test", StringComparison.Ordinal));
+        Assert.Throws<GenerationStoppedException>(() => serializer.ParseStoredCopy(tampered));
 
         options.FromAddress = "updated@example.test";
         options.MessageDomain = "updated.example.test";

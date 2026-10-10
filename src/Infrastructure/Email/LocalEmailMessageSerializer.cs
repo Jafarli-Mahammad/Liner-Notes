@@ -7,7 +7,8 @@ using LinerNotes.Application.Common.Interfaces.Recommendation;
 namespace LinerNotes.Infrastructure.Email;
 
 public sealed record LocalEmailReceipt(Guid DigestId, Guid UserId, string Week, string Recipient,
-    string TemplateVersion, string Fingerprint, string Token, string ContentHash);
+    string TemplateVersion, string Fingerprint, string Token, string ContentHash,
+    string? FromAddress = null, string? MessageDomain = null);
 public sealed record ParsedLocalEmail(LocalEmailReceipt Receipt, string PlainText, string Html, long Bytes);
 
 /// <summary>Strict bounded local multipart format; authenticated metadata is a durable receipt.</summary>
@@ -31,7 +32,8 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
     {
         options.Validate();
         var receipt = new LocalEmailReceipt(email.DigestId, email.UserId, email.Week, email.Recipient,
-            email.TemplateVersion, email.Fingerprint, email.Token, BodyHash(email.PlainText, email.Html));
+            email.TemplateVersion, email.Fingerprint, email.Token, BodyHash(email.PlainText, email.Html),
+            options.FromAddress, options.MessageDomain);
         string protectedReceipt = protection.Protect(Prefix + JsonSerializer.Serialize(receipt));
         string boundary = "liner_" + email.DigestId.ToString("N");
         var mime = new StringBuilder()
@@ -78,6 +80,10 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
                 headers["Subject"] != "=?utf-8?B?" + Convert.ToBase64String(Utf8.GetBytes("Liner Notes " + receipt.Week)) + "?=") throw new FormatException();
             LocalEmailOptions.ValidateAddress(receipt.Recipient);
             LocalEmailOptions.ValidateAddress(headers["From"]);
+            bool hasStoredSender = receipt.FromAddress is not null || receipt.MessageDomain is not null;
+            if (hasStoredSender && (string.IsNullOrWhiteSpace(receipt.FromAddress) || string.IsNullOrWhiteSpace(receipt.MessageDomain) ||
+                headers["From"] != receipt.FromAddress)) throw new FormatException();
+            if (receipt.FromAddress is not null) LocalEmailOptions.ValidateAddress(receipt.FromAddress);
             string messageIdPrefix = $"<{receipt.DigestId:N}@";
             string messageId = headers["Message-ID"];
             string messageDomain = messageId.Length > messageIdPrefix.Length + 1 && messageId.EndsWith('>')
@@ -86,6 +92,7 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
             if (!messageId.StartsWith(messageIdPrefix, StringComparison.Ordinal) || !messageId.EndsWith('>') ||
                 messageDomain.Length is 0 or > 253 ||
                 messageDomain.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '.' or '-')) ||
+                receipt.MessageDomain is not null && messageDomain != receipt.MessageDomain ||
                 requireCurrentSender && (headers["From"] != options.FromAddress ||
                     messageId != $"<{receipt.DigestId:N}@{options.MessageDomain}>")) throw new FormatException();
             string boundary = "liner_" + receipt.DigestId.ToString("N");

@@ -1,3 +1,5 @@
+using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Infrastructure.Email;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Infrastructure.RecommendationSources.LastFm;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +22,10 @@ public static class DependencyInjection
             options.SizeLimit = 10_000;
             options.CompactionPercentage = 0.20;
         });
+
+        services.Configure<LocalEmailOptions>(configuration.GetSection("LocalEmail"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalEmailOptions>>().Value);
+        services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
 
         // Bind Last.fm Options
         services.Configure<LastFmOptions>(configuration.GetSection(LastFmOptions.SectionName));

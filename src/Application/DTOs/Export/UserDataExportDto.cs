@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.DTOs.Digests;
 using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Application.DTOs.Taste;
@@ -31,4 +32,5 @@ public record UserDataExportDto(
     SubscriberDto Subscriber,
     IReadOnlyList<UserMusicConnectionExportDto> Connections,
     IReadOnlyList<TasteSignalDto> TasteSignals,
-    IReadOnlyList<WeeklyDigestDto> Digests);
+    IReadOnlyList<WeeklyDigestDto> Digests,
+    LocalEmailArchiveDto? LocalEmail = null);

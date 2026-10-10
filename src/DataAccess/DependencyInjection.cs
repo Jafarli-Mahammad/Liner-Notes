@@ -62,6 +62,9 @@ public static class DependencyInjection
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();
         services.AddScoped<IDigestGenerationStore, DigestGenerationStore>();
+        services.AddScoped<IUnsubscribeStore, UnsubscribeStore>();
+        services.AddSingleton<IUnsubscribeTokenProtection>(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton<IAccountEmailLease>(_ => new AccountEmailLease(connectionString));
 
         return services;
     }

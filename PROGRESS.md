@@ -124,7 +124,9 @@ The plan below is approved; **not approved** refers to phase execution and its r
    reconciled into this checkout; current verification passed 341 tests (zero failures/skips),
    with PostgreSQL, documentation/security and shell/JavaScript checks. The popularity setting remains
    deferred under the earlier instruction to wait.
-   No Phase 7 product code is implemented. Mandatory reassessment and explicit decision
+   Phase 7 opt-out/account boundaries passed 348 local tests (zero failures/skips),
+   including populated migration and persisted-token restart checks. Worker/render/capture
+   work is active; actual file cleanup/export verification awaits the sink. Mandatory reassessment and explicit decision
    to proceed, narrow or revise remain required before later phases.
 8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
    verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.

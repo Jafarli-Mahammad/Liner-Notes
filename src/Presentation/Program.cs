@@ -12,6 +12,10 @@ using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Hosting logs run before middleware: omit query-bearing request start/finish messages.
+if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled"))
+    builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+
 // Standard Kestrel configuration
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -66,6 +70,13 @@ app.UseForwardedHeaders();
 
 app.Use(async (context, next) =>
 {
+    if (context.Request.Path.StartsWithSegments("/api/digests/unsubscribe") &&
+        (!app.Environment.IsDevelopment() || !app.Configuration.GetValue<bool>("LocalEmail:Enabled")))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
     if (!app.Environment.IsDevelopment() &&
         (context.Request.Path.StartsWithSegments("/manual-test") ||
          context.Request.Path.StartsWithSegments("/api/dev/manual-test")))

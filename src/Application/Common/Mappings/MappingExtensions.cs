@@ -21,7 +21,7 @@ public static class MappingExtensions
         user.DeliveryDay,
         user.DeliveryHourUtc,
         user.NextDigestAt,
-        user.CreatedAt, user.LastModifiedAt, user.CreatedBy, user.LastModifiedBy, user.DeletedBy, user.DeletedAt, user.IsDeleted);
+        user.CreatedAt, user.LastModifiedAt, user.CreatedBy, user.LastModifiedBy, user.DeletedBy, user.DeletedAt, user.IsDeleted, user.EmailUnsubscribedAtUtc);
 
     public static TasteSignalDto ToDto(this TasteSignal signal) => new(
         signal.Id,

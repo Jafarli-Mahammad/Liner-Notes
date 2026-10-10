@@ -485,7 +485,8 @@ async function deleteAccount() {
   }
   if (!window.confirm('Permanently delete this disposable QA account and its account-owned records?')) return;
   try {
-    await request('/api/subscribers/me', { method: 'DELETE', rawResponse: true });
+    const { response } = await request('/api/subscribers/me', { method: 'DELETE', rawResponse: true });
+    const cleanup = response.status === 200 ? await response.json() : null;
     clearSession();
     setMessage('delete-result', 'Account deleted. Checking that protected access is denied…', 'success');
     try {
@@ -494,6 +495,7 @@ async function deleteAccount() {
     } catch (error) {
       if (!state.accessToken) setMessage('delete-result', 'Account deleted; signed-out session cannot access protected routes.', 'success');
       else setMessage('delete-result', error.message, 'error');
+      if (cleanup?.localCopiesDeleted === false) setMessage('delete-result', `Account deleted; local copy cleanup incomplete: ${cleanup.issues.join(', ')}`, 'error');
     }
     byId('profile-result').textContent = 'Deleted account session cleared.';
   } catch (error) {

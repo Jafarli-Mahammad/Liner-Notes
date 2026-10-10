@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added an explicitly enabled Development-only unsubscribe confirmation flow and
+  persistent email opt-out. Export 2.1 exposes the opt-out and local copy inspection
+  status; account deletion reports incomplete local copy cleanup after SQL deletion.
+  Local capture has its own status and does not claim external delivery.
+
 - Added bounded recorder-fed weekly digest generation with atomic PostgreSQL persistence,
   complete stored evidence, canonical ISO weeks, replay and storage/expiry guards. Export 2.0
   includes complete snapshots, audit fields and all digest history through bounded pages.

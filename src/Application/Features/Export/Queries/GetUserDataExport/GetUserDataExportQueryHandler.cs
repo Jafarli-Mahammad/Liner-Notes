@@ -1,3 +1,5 @@
+using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Domain.Enums;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces.Repositories;
@@ -15,6 +17,7 @@ namespace LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 /// </summary>
 public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataExportQuery, UserDataExportDto>
 {
+    private readonly ILocalEmailArchive? _archive;
     private readonly IUserRepository _userRepository;
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
@@ -22,8 +25,9 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     public GetUserDataExportQueryHandler(
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
-        IWeeklyDigestRepository weeklyDigestRepository)
+        IWeeklyDigestRepository weeklyDigestRepository, ILocalEmailArchive? archive = null)
     {
+        _archive = archive;
         _userRepository = userRepository;
         _tasteSignalRepository = tasteSignalRepository;
         _weeklyDigestRepository = weeklyDigestRepository;
@@ -61,11 +65,14 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         var signalDtos = signals.Select(s => s.ToDto()).ToArray();
 
         return new UserDataExportDto(
-            ExportVersion: "2.0",
+            ExportVersion: "2.1",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
             TasteSignals: signalDtos,
-            Digests: digests);
+            Digests: digests,
+            LocalEmail: _archive is not null ? await _archive.ReadAsync(request.UserId, digests, cancellationToken)
+                : new(digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? "incomplete" : "disabled", [],
+                    digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []));
     }
 }

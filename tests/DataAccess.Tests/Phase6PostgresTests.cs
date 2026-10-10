@@ -292,7 +292,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         db.UserMusicConnections.Add(deletedConnection);
         await db.SaveChangesAsync();
         var export = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.0", export.ExportVersion);
+        Assert.Equal("2.1", export.ExportVersion);
         Assert.Equal(1005, export.Digests.Count);
         Assert.Equal(1005, export.Digests.Select(d => d.Id).Distinct().Count());
         Assert.All(export.Digests, d => Assert.True(d.CreatedAt > DateTime.MinValue));

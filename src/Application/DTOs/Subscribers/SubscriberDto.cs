@@ -18,4 +18,5 @@ public record SubscriberDto(
     Guid? LastModifiedBy = null,
     Guid? DeletedBy = null,
     DateTime? DeletedAt = null,
-    bool IsDeleted = false);
+    bool IsDeleted = false,
+    DateTime? EmailUnsubscribedAtUtc = null);

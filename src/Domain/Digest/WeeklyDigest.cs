@@ -7,7 +7,7 @@ namespace LinerNotes.Domain.Digest;
 
 /// <summary>
 /// A personalized weekly music discovery digest for a subscriber.
-/// Enforces idempotent weekly batch delivery: a user cannot receive multiple digests for the same ISO week.
+/// One persisted list per user/week. Delivery requires a separate durable receipt.
 /// </summary>
 public sealed class WeeklyDigest : AuditableEntity
 {
@@ -80,7 +80,7 @@ public sealed class WeeklyDigest : AuditableEntity
 
     public void MarkInProgress()
     {
-        if (Status == DigestStatus.Sent)
+        if (Status is DigestStatus.Sent or DigestStatus.LocalCaptured)
             throw new InvalidOperationException("Cannot set a sent digest to InProgress.");
 
         Status = DigestStatus.InProgress;
@@ -90,6 +90,7 @@ public sealed class WeeklyDigest : AuditableEntity
 
     public void MarkSent(DateTime sentAtUtc)
     {
+        if (Status == DigestStatus.LocalCaptured) throw new InvalidOperationException("Local capture is not external delivery.");
         Status = DigestStatus.Sent;
         SentAt = sentAtUtc;
         ErrorMessage = null;
@@ -98,8 +99,19 @@ public sealed class WeeklyDigest : AuditableEntity
 
     public void MarkFailed(string errorMessage)
     {
+        if (Status is DigestStatus.Sent or DigestStatus.LocalCaptured) throw new InvalidOperationException("Completed digest cannot fail.");
         Status = DigestStatus.Failed;
         ErrorMessage = errorMessage;
+        LastModifiedAt = DateTime.UtcNow;
+    }
+
+    public void MarkLocalCaptured()
+    {
+        if (Status == DigestStatus.Sent) throw new InvalidOperationException("Sent digest cannot become a local capture.");
+        if (Status == DigestStatus.LocalCaptured) return;
+        Status = DigestStatus.LocalCaptured;
+        SentAt = null;
+        ErrorMessage = null;
         LastModifiedAt = DateTime.UtcNow;
     }
 

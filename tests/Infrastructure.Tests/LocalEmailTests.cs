@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
@@ -85,6 +86,24 @@ public sealed class LocalEmailTests : IDisposable
         Assert.Throws<GenerationStoppedException>(()=>renderer.Render(link,input.Subscriber));
         options.AlternativeByteLimit=10;
         Assert.Throws<GenerationStoppedException>(()=>renderer.Render(input.Digest,input.Subscriber));
+    }
+
+    [Fact]
+    public void ReceiptBoundRendering_IsStableAcrossProcessCultures()
+    {
+        var input = Inputs(3);
+        var prior = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            var captured = renderer.Render(input.Digest, input.Subscriber);
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            var recovered = renderer.Render(input.Digest, input.Subscriber, captured.Token);
+            Assert.Equal(captured.Fingerprint, recovered.Fingerprint);
+            Assert.Equal(captured.PlainText, recovered.PlainText);
+            Assert.Equal(captured.Html, recovered.Html);
+        }
+        finally { CultureInfo.CurrentCulture = prior; }
     }
 
     [Fact]

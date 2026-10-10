@@ -46,7 +46,7 @@ export GenerationStorage__ArtifactRoots__backups__0="$manual_qa_root/backups"
 export GenerationStorage__ArtifactRoots__partials__0="$manual_qa_root/partials"
 
 cd -- "$repo_root"
-dotnet ef database update --project src/DataAccess/DataAccess.csproj --startup-project src/Presentation/Presentation.csproj
+dotnet ef database update --project src/DataAccess/DataAccess.csproj --startup-project src/Presentation/Presentation.csproj --context AppDbContext
 
 printf '%s\n' "Manual QA is starting in Development with synthetic provider fixtures. Stop with Ctrl+C."
 dotnet run --project src/Presentation/Presentation.csproj --no-launch-profile &

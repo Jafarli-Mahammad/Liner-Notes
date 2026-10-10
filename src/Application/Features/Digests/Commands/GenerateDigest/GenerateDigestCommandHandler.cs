@@ -58,7 +58,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             gaps.AddRange(byArtist.Gaps); gaps.AddRange(byTag.Gaps);
             CheckOrigin(byArtist.Concat(byTag).SelectMany(c => c.Paths).SelectMany(p =>
                 p.SimilarityResponse is null ? new[] { p.TrackResponse } : new[] { p.TrackResponse, p.SimilarityResponse }), gaps);
-            var merged = MergeCandidates(byArtist.Concat(byTag));
+            var merged = MergeCandidates(byArtist.Concat(byTag), effective.ExcludedAliases);
             if (merged.Count > config.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
             var hydrated = await hydrator.HydrateCandidatesBatchAsync(merged, cancellationToken).ConfigureAwait(false);
             gaps.AddRange(hydrated.Gaps);
@@ -114,7 +114,8 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
         }
     }
 
-    private static IReadOnlyList<RawCandidateTrack> MergeCandidates(IEnumerable<RawCandidateTrack> candidates)
+    private static IReadOnlyList<RawCandidateTrack> MergeCandidates(IEnumerable<RawCandidateTrack> candidates,
+        IReadOnlySet<string> excludedAliases)
     {
         var groups = new List<List<RawCandidateTrack>>();
         foreach (var candidate in candidates.OrderBy(c => c.CandidateKey, StringComparer.Ordinal))
@@ -125,7 +126,9 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             foreach (var match in matches) { group.AddRange(match); groups.Remove(match); }
             groups.Add(group);
         }
-        return groups.Select(g =>
+        return groups.Where(g => !g.SelectMany(c => TrackIdentity.Aliases(
+                Track.Create(c.Title, c.ArtistName, mbid: c.Mbid))).Any(excludedAliases.Contains))
+            .Select(g =>
         {
             var first = g.OrderByDescending(c => c.Mbid != null).ThenBy(c => c.CandidateKey, StringComparer.Ordinal).First();
             return new RawCandidateTrack(first.Title, first.ArtistName, first.Mbid, g.SelectMany(c => c.Paths).Distinct());

@@ -318,6 +318,22 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
     }
 
     [LocalPostgresMigrationFact]
+    public async Task StorageRevision_HashesRowsSeparatelyAndChangesWhenStoredContentChanges()
+    {
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
+        var before = await store.ReadStorageAsync();
+        Assert.Equal(before, await store.ReadStorageAsync());
+        db.Tracks.Add(Track.Create("Storage revision probe", "Revision Artist"));
+        await db.SaveChangesAsync();
+        var after = await store.ReadStorageAsync();
+        Assert.NotEqual(before.Revision, after.Revision);
+        Assert.Equal(after, await store.ReadStorageAsync());
+        Assert.True(after.DatabaseBytes >= before.DatabaseBytes);
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task StorageStop_LeavesExistingDigestFeedbackExportAndDeletionAvailable()
     {
         var generated = await GenerateAsync(); Assert.Equal("generated", generated.Status);

@@ -1,4 +1,5 @@
-const state = { accessToken: null, refreshToken: null, user: null, activity: [] };
+const state = { accessToken: null, refreshToken: null, user: null, activity: [], displayedDigestWeek: null };
+let refreshInFlight = null;
 const byId = (id) => document.getElementById(id);
 const sessionControls = [...document.querySelectorAll('.requires-session')];
 
@@ -229,12 +230,23 @@ async function rotateSession() {
 }
 
 async function rotateTokenPair() {
-  const { data } = await request('/api/auth/refresh', {
-    method: 'POST', auth: false,
-    body: { accessToken: state.accessToken, refreshToken: state.refreshToken }
-  });
-  saveSession(data);
-  return data;
+  if (refreshInFlight) return refreshInFlight;
+  const accessToken = state.accessToken;
+  const refreshToken = state.refreshToken;
+  const operation = (async () => {
+    const { data } = await request('/api/auth/refresh', {
+      method: 'POST', auth: false,
+      body: { accessToken, refreshToken }
+    });
+    if (state.accessToken !== accessToken || state.refreshToken !== refreshToken) {
+      throw new Error('Session changed while refreshing.');
+    }
+    saveSession(data);
+    return data;
+  })();
+  refreshInFlight = operation;
+  try { return await operation; }
+  finally { if (refreshInFlight === operation) refreshInFlight = null; }
 }
 
 function splitItems(value) {
@@ -381,6 +393,8 @@ function renderPick(recommendation) {
 }
 
 function renderDigest(digest) {
+  state.displayedDigestWeek = digest.week;
+  byId('digest-week').value = digest.week;
   const container = byId('digest-result');
   container.replaceChildren();
   const heading = document.createElement('p');
@@ -441,12 +455,24 @@ async function recordFeedback(recommendationId, feedback, rating, output) {
   try {
     await request(`/api/digests/recommendations/${encodeURIComponent(recommendationId)}/feedback`, { method: 'POST', body: payload });
     output.textContent = 'Saved. Reloading stored digest…';
-    await loadLatestDigest();
+    await reloadDisplayedDigest();
     output.dataset.kind = 'success';
   } catch (error) {
     output.textContent = error.message;
     output.dataset.kind = 'error';
   }
+}
+
+async function reloadDisplayedDigest() {
+  if (!state.displayedDigestWeek) throw new Error('Load a digest before saving feedback.');
+  const { data } = await request('/api/dev/manual-test/digests', {
+    method: 'POST', body: { week: state.displayedDigestWeek }
+  });
+  if (data.status !== 'existing' && data.status !== 'generated') {
+    throw new Error(`Could not reload the displayed digest: ${data.reason || data.status}.`);
+  }
+  renderDigest(data.digest);
+  setMessage('generation-result', `Week ${data.digest.week} reloaded after feedback.`, 'success');
 }
 
 async function loadExport() {
@@ -487,14 +513,18 @@ async function deleteAccount() {
   try {
     const { response } = await request('/api/subscribers/me', { method: 'DELETE', rawResponse: true });
     const cleanup = response.status === 200 ? await response.json() : null;
+    const deletedAccountToken = state.accessToken;
     clearSession();
     setMessage('delete-result', 'Account deleted. Checking that protected access is denied…', 'success');
     try {
-      await request('/api/auth/me', { clearOnUnauthorized: true });
-      setMessage('delete-result', 'Unexpectedly still authorized. Review the server response.', 'error');
+      if (!deletedAccountToken) throw new Error('No account token was available for the deletion check.');
+      const headers = new Headers({ Accept: 'application/json', Authorization: `Bearer ${deletedAccountToken}` });
+      const probe = await fetch('/api/auth/me', { method: 'GET', headers, credentials: 'omit', cache: 'no-store' });
+      logActivity('GET', '/api/auth/me', probe.status);
+      if (probe.status === 401) setMessage('delete-result', 'Account deleted; its prior bearer token now receives HTTP 401.', 'success');
+      else setMessage('delete-result', `Account deletion check expected HTTP 401, received HTTP ${probe.status}.`, 'error');
     } catch (error) {
-      if (!state.accessToken) setMessage('delete-result', 'Account deleted; signed-out session cannot access protected routes.', 'success');
-      else setMessage('delete-result', error.message, 'error');
+      setMessage('delete-result', `Account deleted, but token revocation could not be verified: ${error.message}`, 'error');
       if (cleanup?.localCopiesDeleted === false) setMessage('delete-result', `Account deleted; local copy cleanup incomplete: ${cleanup.issues.join(', ')}`, 'error');
     }
     byId('profile-result').textContent = 'Deleted account session cleared.';

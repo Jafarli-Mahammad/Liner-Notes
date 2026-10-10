@@ -1,6 +1,8 @@
 using System.Data;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore.Storage;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.DataContexts;
@@ -51,18 +53,54 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)
     {
-        // Conservatively count the whole database and uncompressed rows, including TOAST/compression effects.
-        var result = await db.Database.SqlQueryRaw<StorageRow>("""
-            SELECT GREATEST(pg_database_size(current_database()), COALESCE(SUM(octet_length(payload)), 0))::bigint AS "DatabaseBytes",
-                md5(COALESCE(string_agg(payload, '' ORDER BY kind, id), '')) AS "Revision"
-            FROM (
-                SELECT 'track' AS kind, "Id"::text AS id, to_jsonb(t)::text AS payload FROM "Tracks" t
-                UNION ALL SELECT 'signal', "Id"::text, to_jsonb(t)::text FROM "TasteSignals" t
-                UNION ALL SELECT 'digest', "Id"::text, to_jsonb(t)::text FROM "WeeklyDigests" t
-                UNION ALL SELECT 'pick', "Id"::text, to_jsonb(t)::text FROM "WeeklyRecommendations" t
-            ) data
-            """).SingleAsync(cancellationToken).ConfigureAwait(false);
-        return new(result.DatabaseBytes, result.Revision);
+        var connection = db.Database.GetDbConnection();
+        bool opened = connection.State != ConnectionState.Open;
+        if (opened) await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using var consistencyTransaction = db.Database.CurrentTransaction is null
+                ? await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false)
+                : null;
+            var currentTransaction = db.Database.CurrentTransaction?.GetDbTransaction();
+            await using var sizeCommand = connection.CreateCommand();
+            sizeCommand.Transaction = currentTransaction;
+            sizeCommand.CommandText = "SELECT pg_database_size(current_database())";
+            long databaseBytes = Convert.ToInt64(await sizeCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+                System.Globalization.CultureInfo.InvariantCulture);
+
+            using var revision = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            using var rowHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            long payloadBytes = 0;
+            foreach (var (kind, table) in new[]
+                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations") })
+            {
+                revision.AppendData(Encoding.UTF8.GetBytes(kind));
+                revision.AppendData([0]);
+                await using var rowsCommand = connection.CreateCommand();
+                rowsCommand.Transaction = currentTransaction;
+                rowsCommand.CommandText = $"SELECT \"Id\"::text, to_jsonb(t)::text FROM \"{table}\" t ORDER BY \"Id\"";
+                await using var reader = await rowsCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    string id = reader.GetString(0);
+                    string payload = reader.GetString(1);
+                    rowHash.AppendData(Encoding.UTF8.GetBytes(id));
+                    rowHash.AppendData([0]);
+                    rowHash.AppendData(Encoding.UTF8.GetBytes(payload));
+                    revision.AppendData(rowHash.GetHashAndReset());
+                    payloadBytes = checked(payloadBytes + Encoding.UTF8.GetByteCount(payload));
+                }
+            }
+            var result = new GenerationStorageState(Math.Max(databaseBytes, payloadBytes),
+                Convert.ToHexStringLower(revision.GetHashAndReset()));
+            if (consistencyTransaction is not null)
+                await consistencyTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return result;
+        }
+        finally
+        {
+            if (opened) await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
     }
 
     public Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,
@@ -116,9 +154,4 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         }
     }
 
-    private sealed class StorageRow
-    {
-        public long DatabaseBytes { get; set; }
-        public string Revision { get; set; } = "";
-    }
 }

@@ -72,6 +72,46 @@ public sealed class GenerateDigestTests
     }
 
     [Fact]
+    public async Task MergeCandidates_ExcludesWholeAliasGroupWhenAnyTitleWasMarkedKnown()
+    {
+        EmptyGeneration();
+        var knownAlias = TrackIdentity.Aliases(Track.Create("Known Title", "Artist"))[1];
+        var signals = new[]
+        {
+            TasteSignal.CreateSeedTag(userId, "rock", 1, "manual"),
+            new TasteSignal(userId, TasteTargetType.Track, knownAlias, 0,
+                TasteSignalSource.RecommendationAlreadyKnown, "Previously marked known")
+        };
+        store.ReadInputsAsync(userId, Arg.Any<CancellationToken>()).Returns(new GenerationInputs(true, signals, [], "rev"));
+        var sharedMbid = "12345678-1234-1234-1234-123456789abc";
+        var known = CandidateWithIdentity("Known Title", sharedMbid);
+        var alias = CandidateWithIdentity("Alternate Title", sharedMbid);
+        var unrelated = Candidate("Unrelated");
+        source.GetCandidatesByTagsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new IngestionResult<RawCandidateTrack>([known, alias, unrelated]));
+
+        IReadOnlyList<RawCandidateTrack>? hydrated = null;
+        hydrator.HydrateCandidatesBatchAsync(Arg.Any<IReadOnlyList<RawCandidateTrack>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                hydrated = call.Arg<IReadOnlyList<RawCandidateTrack>>();
+                return new IngestionResult<HydratedCandidateTrack>([]);
+            });
+
+        var result = await Handler.Handle(new(userId, new(2026, 41)), default);
+        Assert.Equal("generated", result.Status);
+        Assert.Equal("Unrelated", Assert.Single(hydrated!).Title);
+    }
+
+    private static RawCandidateTrack CandidateWithIdentity(string title, string mbid)
+    {
+        var response = new ResponseReference("Provider", "tracks", "rock", EvidenceOrigin.Recorded,
+            new string('a', 64), DateTimeOffset.UnixEpoch);
+        return new(title, "Artist", mbid, [new("rock", ObservedValue<double>.Missing(), null, response, 1,
+            null, null, ObservedValue<long>.Missing())]);
+    }
+
+    [Fact]
     public async Task SnapshotOverflowAndCancellation_NeverPersistPartialResults()
     {
         EmptyGeneration(); config.MaximumSnapshotBytes = 1;

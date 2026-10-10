@@ -7,10 +7,11 @@
   then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
   still needs separate approval. Phase 7 was requested on 2026-10-11, with working local
   unsubscribe, one opt-out column and matching API/export changes selected by the developer.
-  Its [concrete design](docs/renewal/phase-7-review.md) is prepared for review; product edits and
-  the implementation plan remain pending architectural review. No push or Phase 5/8–9 execution is authorized.
+  Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
+  The [implementation plan](docs/renewal/phase-7-plan.md) is prepared for review and execution
+  selection before product edits. No push or Phase 5/8–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: review of the [Phase 7 local Worker/email design](docs/renewal/phase-7-review.md).
+- Active step: review and execution selection for the [Phase 7 implementation plan](docs/renewal/phase-7-plan.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
   remains pending.
   The developer approved the design and explicitly requested implementation on 2026-10-10,
@@ -107,10 +108,11 @@ The plan below is approved; **not approved** refers to phase execution and its r
    Full suite: **337 passed / 0 failed / 0 skipped**, including local PostgreSQL checks.
    **Mechanics only, no catalog conclusions.** Quality and supported capacity remain unverified.
    See [evidence and configuration](docs/renewal/phase-6-evidence.md).
-7. Worker-to-local-email slice — **local work requested; concrete design review pending**.
+7. Worker-to-local-email slice — **written design approved; implementation-plan review pending**.
    The developer selected working local unsubscribe with one opt-out column and matching
    API/export changes. The source audit and proposed Worker, rendering, local capture,
-   storage and recovery contracts are in the [review](docs/renewal/phase-7-review.md).
+   storage and recovery contracts are in the [approved review](docs/renewal/phase-7-review.md).
+   The [implementation plan](docs/renewal/phase-7-plan.md) proposes sequential execution in this checkout.
    This checkout lacks the later authorized Phase 6 status/cutoff and Development manual-QA
    follow-ups from another worktree. Their prerequisite reconciliation is recorded in that
    review; the popularity setting remains deferred under the earlier instruction to wait.

@@ -3,8 +3,9 @@
 Prepared 2026-10-11 against `Prism` implementation commit `886c432`.
 The developer requested Phase 7 implementation and selected a working local
 unsubscribe flow, including one opt-out column and matching API/export changes.
-This document makes that scope concrete for architectural review. The written
-design and subsequent implementation plan still need review before product edits.
+The developer approved this written design on 2026-10-11 with the reply “approved”.
+The [implementation plan](phase-7-plan.md) is prepared for the next architectural
+review before product edits.
 Phase 6 remains locally verified with developer confirmation pending.
 
 ## Implemented, deferred and not done
@@ -20,7 +21,7 @@ Phase 6 remains locally verified with developer confirmation pending.
 | PopularityPenaltyEnabled, its migration/settings API/UI/export | Deferred under the developer's earlier instruction to wait; absent from this checkout. It must not be silently implemented as part of Phase 7. |
 | Temporary 1,000,000,000-byte storage stop | Implemented in another worktree's `32b661f`; not incorporated here. This checkout still enforces 80,000,000. The temporary value is unresolved; the real limit belongs to build-order step 9 after hosting selection. |
 | Development manual QA environment | Implemented in another worktree through `ce0e8d8`; not incorporated here. Reconcile existing authorized follow-ups before relying on that frontend for Phase 7 verification. |
-| Working local unsubscribe, Worker, renderer and sink | Not done; the developer selected the scope, and this concrete architectural design is awaiting review. |
+| Working local unsubscribe, Worker, renderer and sink | Not done; the written design is approved and implementation-plan review remains pending. |
 | Full privacy/deletion audit and scheduled/external delivery | Deferred behind the two Phase 8 approvals; local mechanics do not establish these results. |
 
 The refreshed session memory located the earlier decisions and worktree commits.

@@ -12,8 +12,9 @@ evidence bypass. Its concrete persistence/API/policy design was approved and imp
 explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 evidence](phase-6-evidence.md). Quality remains
 unverified and real evaluation remains open. The developer requested Phase 7 local work on
 2026-10-11 and selected working local unsubscribe with one opt-out column and matching
-API/export changes; its [concrete design](phase-7-review.md) is prepared for architectural
-review before product edits. Phases 5/8–9 and live run manifests remain separately
+API/export changes. The developer then approved its [written design](phase-7-review.md);
+its [implementation plan](phase-7-plan.md) is prepared for review/execution selection
+before product edits. Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
@@ -96,8 +97,9 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Verify that complete, versioned breakdowns are extensible JSON and that adding a formula needs
    no migration; JSONB mapping alone does not prove this. Include old/new payload round trips,
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
-7. **Worker-to-local-email slice — local work requested; concrete design review pending.**
-   See [source reassessment and proposed contracts](phase-7-review.md). The developer selected
+7. **Worker-to-local-email slice — written design approved; implementation-plan review pending.**
+   See [approved source reassessment and contracts](phase-7-review.md) and
+   [implementation plan](phase-7-plan.md). The developer selected
    working local unsubscribe, one opt-out column and matching API/export changes. No product
    implementation has started. Worker → offline generation → persisted digest →
    HTML/plaintext → local sink, including explanations, unsubscribe, short/empty lists, retries and

@@ -7,8 +7,14 @@ using LinerNotes.Infrastructure.Storage;
 
 namespace LinerNotes.Infrastructure.Email;
 
+public interface ILocalEmailBodyWriter
+{
+    Task WriteAsync(Stream stream, ReadOnlyMemory<byte> bytes, CancellationToken ct);
+}
+
 public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageOptions storageOptions,
-    ILocalEmailStorage storage, IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer) : ILocalEmailSink
+    ILocalEmailStorage storage, IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer,
+    ILocalEmailBodyWriter? writer = null) : ILocalEmailSink
 {
     public async Task<ILocalEmailCapture> OpenAsync(WeeklyDigestDto digest, SubscriberDto subscriber,
         GenerationStorageState database, CancellationToken ct)
@@ -28,7 +34,7 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
         }
         else { message = renderer.Render(digest, subscriber); bytes = serializer.Serialize(message); }
         var lease = await storage.AcquireEmailAsync(database, bytes?.Length ?? 0, paths, exists, ct);
-        return new Capture(options, paths, bytes, message, renderer, serializer, lease, exists);
+        return new Capture(options, paths, bytes, message, renderer, serializer, lease, exists, writer);
     }
 
     private static void Validate(ParsedLocalEmail parsed, RenderedDigestEmail expected)
@@ -39,7 +45,8 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
     }
 
     private sealed class Capture(LocalEmailOptions options, string[] paths, byte[]? bytes, RenderedDigestEmail message,
-        IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer, ILocalEmailWriteLease lease, bool exists) : ILocalEmailCapture
+        IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer, ILocalEmailWriteLease lease, bool exists,
+        ILocalEmailBodyWriter? writer) : ILocalEmailCapture
     {
         public bool ReceiptExists => exists;
         public async Task PublishAsync(WeeklyDigestDto digest, SubscriberDto subscriber, GenerationStorageState database, CancellationToken ct)
@@ -63,7 +70,8 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
                     await using (var file = new FileStream(paths[attempt+1], FileMode.CreateNew, FileAccess.Write, FileShare.None, 8192, FileOptions.Asynchronous | FileOptions.WriteThrough))
                     {
                         created = true;
-                        await file.WriteAsync(bytes!, ct);
+                        if (writer is null) await file.WriteAsync(bytes!, ct);
+                        else await writer.WriteAsync(file, bytes!, ct);
                         await file.FlushAsync(ct);
                         file.Flush(true);
                     }

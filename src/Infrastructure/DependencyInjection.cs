@@ -23,6 +23,10 @@ public static class DependencyInjection
             options.CompactionPercentage = 0.20;
         });
 
+        services.Configure<LocalRecordedInputApproval>(configuration.GetSection("LocalRecordedInput"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalRecordedInputApproval>>().Value);
+        services.AddSingleton<LocalRecordedInputs>();
+        services.AddSingleton<LocalRecordedInputLoader>();
         services.Configure<LocalEmailOptions>(configuration.GetSection("LocalEmail"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalEmailOptions>>().Value);
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
@@ -60,7 +64,7 @@ public static class DependencyInjection
             var generation = sp.GetRequiredService<GenerationConfiguration>();
             generation.Scoring(); // Live is explicitly rejected before resolving a provider.
             ILastFmApiClient client = generation.Origin == EvidenceOrigin.Recorded
-                ? new RecordedLastFmApiClient(sp.GetServices<RecordedLastFmResponse>())
+                ? new RecordedLastFmApiClient(sp.GetRequiredService<LocalRecordedInputs>().Responses ?? sp.GetServices<RecordedLastFmResponse>())
                 : new LastFmApiClient(new HttpClient(), Options.Create(new LastFmOptions { Mode = LastFmClientMode.FixtureOnly }),
                     sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<LastFmRateLimiter>(),
                     sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LastFmApiClient>>());

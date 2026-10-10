@@ -208,7 +208,12 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
         await using var app = App();
         using var client = app.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", access);
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/subscribers/me")).StatusCode);
+        var deletion = await client.DeleteAsync("/api/subscribers/me");
+        Assert.Equal(HttpStatusCode.OK, deletion.StatusCode);
+        var cleanup = await deletion.Content.ReadAsStringAsync();
+        Assert.Contains("\"accountDeleted\":true", cleanup);
+        Assert.Contains("\"localCopiesDeleted\":false", cleanup);
+        Assert.Contains("archive_unavailable", cleanup);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
         await using var verify = _services.CreateAsyncScope();
         var context = verify.ServiceProvider.GetRequiredService<DataContext>();

@@ -198,4 +198,26 @@ public sealed class LocalEmailTests : IDisposable
             public ValueTask DisposeAsync()=>inner.DisposeAsync();
         }
     }
+
+    [Fact]
+    public async Task InterruptedWrite_RetainsBoundedTruncatedPartial_AndPublishesOneRetry()
+    {
+        var input=Inputs(1);await storage.ReconcileAsync(Database);
+        var interrupted=new LocalEmailSink(options,storageOptions,storage,renderer,serializer,new InterruptedWriter());
+        await using(var capture=await interrupted.OpenAsync(input.Digest,input.Subscriber,Database,default))
+            await capture.PublishAsync(input.Digest,input.Subscriber,Database,default);
+        var final=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.eml"));
+        var partial=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.partial"));Assert.Equal(100,new FileInfo(partial).Length);
+        var inventory=await storage.ReconcileAsync(Database);Assert.Equal(new FileInfo(final).Length+100,inventory.Categories["copies"].Bytes);
+        Assert.False((await archive.DeleteAsync(input.Subscriber.Id,default)).Complete);Assert.True(File.Exists(partial));Assert.False(File.Exists(final));
+    }
+    private sealed class InterruptedWriter : ILocalEmailBodyWriter
+    {
+        private bool interrupted;
+        public async Task WriteAsync(Stream stream,ReadOnlyMemory<byte> bytes,CancellationToken ct)
+        {
+            if(!interrupted){interrupted=true;await stream.WriteAsync(bytes[..100],ct);throw new IOException("injected interrupted write");}
+            await stream.WriteAsync(bytes,ct);
+        }
+    }
 }

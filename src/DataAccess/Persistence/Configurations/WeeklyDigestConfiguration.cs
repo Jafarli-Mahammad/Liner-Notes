@@ -47,7 +47,7 @@ public sealed class WeeklyDigestConfiguration : IEntityTypeConfiguration<WeeklyD
 
         builder.Property(d => d.LastModifiedAt);
 
-        // Enforce idempotent weekly delivery: user cannot receive multiple digests for the same week
+        // Enforce one persisted list per user/week; delivery needs a separate receipt.
         builder.HasIndex(d => new { d.UserId, d.WeekStartDate })
             .IsUnique();
 

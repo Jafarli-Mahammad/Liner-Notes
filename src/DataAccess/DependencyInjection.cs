@@ -65,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<IUnsubscribeStore, UnsubscribeStore>();
         services.AddSingleton<IUnsubscribeTokenProtection>(_ => new LocalUnsubscribeProtection(connectionString));
         services.AddSingleton<IAccountEmailLease>(_ => new AccountEmailLease(connectionString));
+        services.AddScoped<ILocalDigestCaptureStore>(_ => new LocalDigestCaptureStore(connectionString));
 
         return services;
     }

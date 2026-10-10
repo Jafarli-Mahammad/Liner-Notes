@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added explicit offline Worker reconcile/generate/capture actions, account ownership
+  coordination, opt-out checks under PostgreSQL row locks, and restart recovery
+  across file publication/SQL commit. Recorded generation requires a separately
+  approved exact local-use manifest; credentials cannot enable live generation.
+
 - Added bounded local UTF-8 plaintext/HTML weekly messages with stored explanations,
   ordinary listening links, unsubscribe and no remote resources or tracking. Atomic
   MIME capture validates durable receipts, accounts for failed partials and supports

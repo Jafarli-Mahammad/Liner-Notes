@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Manual QA | Liner Notes</title>
+  <link rel="stylesheet" href="/manual-test/manual-test.css">
+  <script src="/manual-test/manual-test.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Liner Notes home">
+      <span class="brand-mark" aria-hidden="true">LN</span>
+      <span>Liner Notes <span class="brand-subtitle">Manual QA</span></span>
+    </a>
+    <div class="topbar-right">
+      <span class="environment-pill"><span class="status-dot"></span> DEVELOPMENT ONLY</span>
+      <button id="signout-button" class="button button-quiet" type="button" disabled>Sign out</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro">
+      <p class="eyebrow">LOCAL REVIEW WORKSPACE</p>
+      <h1>Exercise the real app flows</h1>
+      <p>Requests go to this Development host and its local database. Use a disposable account. This page never enables live Last.fm calls.</p>
+    </section>
+
+    <section class="panel status-panel" aria-labelledby="environment-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">01 / ENVIRONMENT</p>
+          <h2 id="environment-title">Readiness</h2>
+        </div>
+        <button id="refresh-status-button" class="button button-secondary" type="button">Refresh status</button>
+      </div>
+      <div id="environment-status" class="status-grid" role="status" aria-live="polite">
+        <p class="muted">Checking this host…</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="account-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">02 / ACCOUNT</p>
+          <h2 id="account-title">Create or access a disposable account</h2>
+        </div>
+        <span id="session-indicator" class="state-label">Signed out</span>
+      </div>
+
+      <div class="two-column">
+        <form id="register-form" class="subpanel">
+          <h3>Register</h3>
+          <label for="register-username">Username</label>
+          <input id="register-username" name="userName" autocomplete="username" required minlength="3" maxlength="64">
+          <label for="register-email">Email</label>
+          <input id="register-email" name="email" type="email" autocomplete="email" required>
+          <label for="register-password">Password <span class="hint">12 characters minimum</span></label>
+          <input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="12">
+          <div class="inline-fields">
+            <div>
+              <label for="register-timezone">Time zone</label>
+              <input id="register-timezone" name="timeZone" value="UTC" required>
+            </div>
+            <div>
+              <label for="register-delivery-day">Delivery day</label>
+              <select id="register-delivery-day" name="deliveryDay">
+                <option value="Sunday">Sunday</option><option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option>
+              </select>
+            </div>
+            <div>
+              <label for="register-delivery-hour">UTC hour</label>
+              <input id="register-delivery-hour" name="deliveryHourUtc" type="number" min="0" max="23" value="8" required>
+            </div>
+          </div>
+          <button class="button button-primary" type="submit">Create account</button>
+          <p id="register-result" class="inline-result" aria-live="polite"></p>
+        </form>
+
+        <form id="login-form" class="subpanel">
+          <h3>Sign in</h3>
+          <label for="login-email">Email</label>
+          <input id="login-email" name="email" type="email" autocomplete="username" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          <button class="button button-primary" type="submit">Sign in</button>
+          <p class="hint">Five failed attempts lock an account for 15 minutes. Test with an account you can discard.</p>
+          <p id="login-result" class="inline-result" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="action-row">
+        <button id="profile-button" class="button button-secondary requires-session" type="button" disabled>Load profile</button>
+        <button id="refresh-session-button" class="button button-secondary requires-session" type="button" disabled>Rotate session tokens</button>
+      </div>
+      <pre id="profile-result" class="result-box" aria-live="polite">Sign in to inspect the profile.</pre>
+    </section>
+
+    <section class="panel" aria-labelledby="taste-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">03 / TASTE PROFILE</p>
+          <h2 id="taste-title">Save seeds and inspect signals</h2>
+        </div>
+        <span class="step-badge">3–5 items total</span>
+      </div>
+      <p class="panel-copy">Fixture suggestions use existing synthetic data. Fill them in, then adjust or save your own mix.</p>
+      <div class="form-grid">
+        <div>
+          <label for="seed-artists">Artist seeds <span class="hint">comma separated</span></label>
+          <input id="seed-artists" value="Jakuzi, Son Feci Bisiklet, M.O.O.N." autocomplete="off">
+        </div>
+        <div>
+          <label for="seed-tags">Tag seeds <span class="hint">comma separated</span></label>
+          <input id="seed-tags" value="darkwave, synthwave" autocomplete="off">
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="save-seeds-button" class="button button-primary requires-session" type="button" disabled>Save seeds</button>
+        <button id="invalid-seed-button" class="button button-secondary requires-session" type="button" disabled>Send 2-seed validation probe</button>
+        <button id="load-signals-button" class="button button-secondary requires-session" type="button" disabled>Load stored signals</button>
+      </div>
+      <p id="seeds-result" class="inline-result" aria-live="polite"></p>
+      <pre id="signals-result" class="result-box" aria-live="polite">Stored signals will appear here.</pre>
+    </section>
+
+    <section class="panel" aria-labelledby="generation-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">04 / DIGEST</p>
+          <h2 id="generation-title">Reconcile, generate, inspect</h2>
+        </div>
+        <span class="step-badge">Uses configured offline input</span>
+      </div>
+      <p class="panel-copy">Storage must be explicitly reconciled before each new generation. The page cannot change provider mode or storage limits.</p>
+      <div class="inline-fields generation-fields">
+        <div class="week-field">
+          <label for="digest-week">ISO week</label>
+          <input id="digest-week" value="" inputmode="text" placeholder="2026-W41" pattern="[0-9]{4}-W[0-9]{2}" required>
+        </div>
+        <button id="reconcile-button" class="button button-secondary requires-session" type="button" disabled>Reconcile storage</button>
+        <button id="generate-button" class="button button-primary requires-session" type="button" disabled>Generate digest</button>
+        <button id="load-digest-button" class="button button-secondary requires-session" type="button" disabled>Load latest digest</button>
+      </div>
+      <p id="generation-result" class="inline-result" aria-live="polite"></p>
+      <div id="digest-result" class="digest-list" aria-live="polite">
+        <p class="muted">No digest loaded.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="export-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">05 / YOUR DATA</p>
+          <h2 id="export-title">Inspect and download export</h2>
+        </div>
+        <span class="step-badge">Export 2.0</span>
+      </div>
+      <div class="action-row">
+        <button id="load-export-button" class="button button-secondary requires-session" type="button" disabled>Load export preview</button>
+        <button id="download-export-button" class="button button-secondary requires-session" type="button" disabled>Download JSON</button>
+      </div>
+      <p id="export-result" class="inline-result" aria-live="polite"></p>
+      <pre id="export-preview" class="result-box json-preview">The versioned account export will appear here.</pre>
+    </section>
+
+    <section class="panel danger-panel" aria-labelledby="delete-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">FINAL / DESTRUCTIVE</p>
+          <h2 id="delete-title">Delete the disposable account</h2>
+        </div>
+      </div>
+      <p class="panel-copy">This permanently removes the current account and its owned records from the QA database.</p>
+      <label for="delete-confirmation">Type <code>DELETE ACCOUNT</code> to enable the final action</label>
+      <div class="inline-fields">
+        <input id="delete-confirmation" autocomplete="off" disabled>
+        <button id="delete-account-button" class="button button-danger requires-session" type="button" disabled>Delete account</button>
+      </div>
+      <p id="delete-result" class="inline-result" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="checklist-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">REVIEW TRACKER</p>
+          <h2 id="checklist-title">Manual checks</h2>
+        </div>
+        <span class="hint">Held in this tab only</span>
+      </div>
+      <div class="checklist-grid">
+        <label class="check-item"><input type="checkbox" data-check="account"> Account and session</label>
+        <label class="check-item"><input type="checkbox" data-check="taste"> Taste seeds and signals</label>
+        <label class="check-item"><input type="checkbox" data-check="generation"> Generation and retry</label>
+        <label class="check-item"><input type="checkbox" data-check="feedback"> Feedback and familiarity</label>
+        <label class="check-item"><input type="checkbox" data-check="export"> Export preview and download</label>
+        <label class="check-item"><input type="checkbox" data-check="deletion"> Account deletion</label>
+      </div>
+    </section>
+
+    <section class="panel activity-panel" aria-labelledby="activity-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">LOCAL REQUESTS</p>
+          <h2 id="activity-title">Activity</h2>
+        </div>
+        <button id="clear-activity-button" class="button button-quiet" type="button">Clear</button>
+      </div>
+      <p class="hint">Only time, same-origin path and status are listed. Credentials and payloads are never logged.</p>
+      <ol id="activity-log" class="activity-log" aria-live="polite"></ol>
+      <p id="page-message" class="sr-only" aria-live="polite"></p>
+    </section>
+  </main>
+</body>
+</html>

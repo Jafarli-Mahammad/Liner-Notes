@@ -1,5 +1,42 @@
 # Phase 6 implementation and verification
 
+## Status against approvals
+
+- **Manual QA environment for implemented user-facing flows:** implemented; four focused
+  Development/Production route and authorization checks pass. Developer browser review is
+  pending; manual confirmation is not inferred from these checks.
+- **Recorder-fed baseline-A generation:** implemented and locally verified; developer
+  confirmation remains pending. Baseline A remains provisional and quality unverified.
+- **Versioned snapshots, unknown-field preservation, stored-evidence replay and canonical
+  ISO-week idempotency:** implemented and locally verified; developer confirmation pending.
+- **Atomic PostgreSQL persistence and storage reservation mechanics:** implemented and locally
+  verified; developer confirmation pending. The shared cutoff's meaning and capacity basis are
+  unresolved, as detailed below.
+- **Approved selection policy (ordinal ties, highest eligible pick per artist, up to five):**
+  implemented and locally verified; developer confirmation pending.
+- **Approved feedback and familiarity behavior:** implemented and locally verified; developer
+  confirmation pending.
+- **Approved export 2.0 changes (complete snapshots and stored fields, stable paged digest
+  history):** implemented and locally verified; developer confirmation pending. Phase 8a's
+  separate full account-table inventory/deletion verification remains out of Phase 6.
+- **`Users.PopularityPenaltyEnabled` (default false), migration, settings API/UI, and export
+  field:** approved but **not implemented**. It was omitted from this Phase 6 implementation;
+  it was not deliberately assigned to a later sub-phase or commit. No later phase or commit
+  is currently designated to contain it.
+- **1,000,000,000-byte (1 GB) shared storage cutoff:** temporary and unresolved, not a real
+  capacity decision. Its protected
+  resource, deployment-wide versus per-tenant scope, and relationship to target deployment
+  capacity have not been decided. Despite that unresolved basis, the current implementation
+  enforces it as a hard stop during artifact inventory (`LocalGenerationStorage.MeasureAsync`)
+  and before/after persistence reservation checks (`ReserveAsync` and
+  `VerifyStoredAsync`), with `storage_headroom` / `stored_bytes_exceed_reservation` stop
+  reasons. The real value is set at build-order step 9 once hosting is chosen. This temporary
+  cutoff is not a validated capacity limit.
+- **Production capacity and recommendation quality:** not verified; no catalog conclusions.
+- **Other approved Phase 6 implementation items:** no further omissions identified in the
+  approved Phase 6 scope recorded in [the design review](phase-6-review.md). Status for each
+  item in that scope is listed above.
+
 The developer approved the written design and explicitly requested implementation on
 2026-10-10. Implementation is locally verified on `Prism`; developer confirmation is pending.
 **Mechanics only, no catalog conclusions.** Baseline A remains provisional and recommendation
@@ -92,7 +129,8 @@ var result = await sender.Send(new GenerateDigestCommand(userId, IsoWeek.Parse("
 The result distinguishes `generated` (including empty digests), `existing` and `stopped`; it returns
 nonpersisted coverage diagnostics and a stop reason. Cancellation propagates. Inventory must be
 reconciled within five minutes and unchanged immediately before writing. New reservations stop at
-projected usage **at or above 80,000,000 bytes**. Refresh inventory explicitly after a successful batch.
+projected usage **at or above 1,000,000,000 bytes (temporary placeholder)**. The real storage
+limit is set at build-order step 9 once hosting is chosen. Refresh inventory explicitly after a successful batch.
 Account/feedback/export/deletion and existing-digest reads continue when generation is stopped.
 The PostgreSQL lease coordinates generation across hosts sharing the database; the file lease
 coordinates participating local writers. Operators must keep acquisition/artifact writes exclusive
@@ -155,3 +193,12 @@ Authoritative references refreshed on 2026-10-10:
 [PostgreSQL advisory/table locks](https://www.postgresql.org/docs/current/explicit-locking.html).
 Last.fm documents discretionary rate limits rather than a universal numeric quota. No live call,
 external email, deployment, push or later-phase execution was performed.
+
+## Source-checkout prerequisite reconciliation (2026-10-11)
+
+The already authorized storage/manual-QA follow-ups were reconciled into `Prism`
+before Phase 7 implementation. Current verification: 341 tests passed, zero failed
+or skipped, using disposable loopback PostgreSQL. Documentation/security checks,
+launcher shell syntax, manual-QA JavaScript syntax and `git diff --check` passed.
+The 1,000,000,000-byte stop remains temporary/unresolved; the popularity setting
+remains deferred. Developer/browser confirmation remains a separate gate.

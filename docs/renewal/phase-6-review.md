@@ -233,7 +233,9 @@ under an exclusive local batch lease. Include recordings, cache, derived databas
 reports/copies, backups and partials. Require a reconciled inventory no older than
 five minutes and revalidate revisions immediately before persistence. Reserve
 actual serialized selected-pick bytes plus a configured database-overhead bound;
-reject projected shared usage at or above 80,000,000 bytes. Verify actual stored
+reject projected shared usage at or above 1,000,000,000 bytes as a temporary,
+unresolved placeholder; set the real limit at build-order step 9 once hosting is
+chosen. Verify actual stored
 column sizes inside the transaction, rolling back if the reservation is exceeded.
 An unconfigured overhead bound or unavailable inventory fails closed. The operator
 supplies approved artifact roots; do not scan unrelated files or credentials.

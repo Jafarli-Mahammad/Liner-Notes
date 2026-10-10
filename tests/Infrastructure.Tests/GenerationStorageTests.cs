@@ -27,12 +27,12 @@ public sealed class GenerationStorageTests : IDisposable
     public async Task Reservation_CountsAllCategoriesAndRejectsExactThreshold()
     {
         var storage = new LocalGenerationStorage(options, clock);
-        var db = new GenerationStorageState(79_999_000, "db");
+        var db = new GenerationStorageState(999_999_000, "db");
         foreach (var c in LocalGenerationStorage.Categories) await File.WriteAllTextAsync(Path.Combine(root, c, "data"), "0123456789");
         var inventory = await storage.ReconcileAsync(db);
         Assert.Equal(60, inventory.Categories.Values.Sum(v => v.Bytes));
         await using var lease = await storage.AcquireAsync(db);
-        await lease.ReserveAsync(839, 1, db); // 79,999,999 is permitted.
+        await lease.ReserveAsync(839, 1, db); // 999,999,999 is permitted.
         var error = await Assert.ThrowsAsync<GenerationStoppedException>(() => lease.ReserveAsync(840, 1, db));
         Assert.Equal("storage_headroom", error.Message);
     }

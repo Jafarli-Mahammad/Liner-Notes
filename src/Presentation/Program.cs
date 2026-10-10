@@ -4,6 +4,7 @@ using LinerNotes.DataAccess;
 using LinerNotes.Infrastructure;
 using LinerNotes.Presentation;
 using LinerNotes.Presentation.Filters;
+using LinerNotes.Presentation.Development;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,19 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 app.UseForwardedHeaders();
 
+app.Use(async (context, next) =>
+{
+    if (!app.Environment.IsDevelopment() &&
+        (context.Request.Path.StartsWithSegments("/manual-test") ||
+         context.Request.Path.StartsWithSegments("/api/dev/manual-test")))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -106,6 +120,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+if (app.Environment.IsDevelopment())
+    app.MapManualTestEndpoints();
 app.MapHealthChecks("/health");
 
 // Guest-first discovery SPA fallback

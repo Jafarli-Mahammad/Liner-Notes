@@ -13,8 +13,8 @@ explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 e
 unverified and real evaluation remains open. The developer requested Phase 7 local work on
 2026-10-11 and selected working local unsubscribe with one opt-out column and matching
 API/export changes. The developer then approved its [written design](phase-7-review.md);
-its [implementation plan](phase-7-plan.md) is prepared for review/execution selection
-before product edits. Phases 5/8–9 and live run manifests remain separately
+its [implementation plan](phase-7-plan.md) and sequential execution were subsequently
+approved. Local implementation is in progress. Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
 approved this PR 1A revised written plan, numeric evaluation thresholds, pilot adequacy bars and
 flagged interpretations in response to the written-plan approval question. This is planning approval;
@@ -97,7 +97,7 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Verify that complete, versioned breakdowns are extensible JSON and that adding a formula needs
    no migration; JSONB mapping alone does not prove this. Include old/new payload round trips,
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
-7. **Worker-to-local-email slice — written design approved; implementation-plan review pending.**
+7. **Worker-to-local-email slice — design and plan approved; implementation in progress.**
    See [approved source reassessment and contracts](phase-7-review.md) and
    [implementation plan](phase-7-plan.md). The developer selected
    working local unsubscribe, one opt-out column and matching API/export changes. No product
@@ -378,7 +378,9 @@ aggregates still count as derived data. Retain actual factors in per-pick explan
 
 Shared inventory covers recordings, HTTP cache, derived database data, reports/copies/backups.
 Count uncompressed bytes conservatively, category totals, headroom and inventory age.
-Acquisition fails closed at projected 80,000,000 bytes or unknown accounting; bound responses.
+Acquisition fails closed at projected 1,000,000,000 bytes or unknown accounting; this is a
+temporary unresolved placeholder, not a capacity decision. Set the real limit at build-order
+step 9 once hosting is chosen. Bound responses.
 At threshold, stop acquisition/enrichment and alert. Continue account, feedback, unsubscribe,
 delete and delivery-state writes. Pause new derived recommendation snapshots if headroom is
 insufficient/unknown; serve existing snapshots. Evict only under approved expiry policy;

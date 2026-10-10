@@ -58,7 +58,8 @@ public static class DependencyInjection
         });
         services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
         services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
-        services.AddScoped<IGenerationStorage, LocalGenerationStorage>();
+        services.AddScoped<LocalGenerationStorage>();
+        services.AddScoped<IGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
 
         // Register Recommendation Source & Candidate Hydrator abstractions
         services.AddScoped<IRecommendationSource, LastFmRecommendationSource>();

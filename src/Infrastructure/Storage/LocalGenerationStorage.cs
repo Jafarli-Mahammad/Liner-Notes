@@ -21,7 +21,7 @@ public sealed record GenerationInventory(DateTimeOffset MeasuredAtUtc, bool Reco
 public sealed class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage
 {
     private long OverheadBytesPerPick => options.DatabaseOverheadBytesPerPick!.Value;
-    public const long StopBytes = 80_000_000;
+    public const long StopBytes = 1_000_000_000;
     public static IReadOnlyList<string> Categories { get; } = ["recordings", "cache", "reports", "copies", "backups", "partials"];
 
     public async Task<IGenerationStorageLease> AcquireAsync(GenerationStorageState database, CancellationToken cancellationToken = default)

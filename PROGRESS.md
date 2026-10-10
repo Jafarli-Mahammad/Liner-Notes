@@ -8,10 +8,10 @@
   still needs separate approval. Phase 7 was requested on 2026-10-11, with working local
   unsubscribe, one opt-out column and matching API/export changes selected by the developer.
   Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
-  The [implementation plan](docs/renewal/phase-7-plan.md) is prepared for review and execution
-  selection before product edits. No push or Phase 5/8–9 execution is authorized.
+  The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
+  on 2026-10-11; implementation is in progress. No push or Phase 5/8–9 execution is authorized.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: review and execution selection for the [Phase 7 implementation plan](docs/renewal/phase-7-plan.md).
+- Active step: sequential implementation of the [Phase 7 plan](docs/renewal/phase-7-plan.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
   remains pending.
   The developer approved the design and explicitly requested implementation on 2026-10-10,
@@ -99,8 +99,15 @@ The plan below is approved; **not approved** refers to phase execution and its r
    the developer explicitly chose a provisional baseline-A bypass; real evaluation remains deferred.
 6. Recommendation pipeline and persistence — **design approved; implementation verified locally, developer confirmation pending**.
    Provisional baseline A was explicitly approved with quality unverified. The concrete
-   JSON/API/export, ordinal one-artist selection, feedback and storage contracts were approved
-   with the implementation instruction on 2026-10-10. See [design](docs/renewal/phase-6-review.md).
+   JSON/API/export, ordinal one-artist selection, feedback and storage-mechanics contracts were approved
+   with the implementation instruction on 2026-10-10. The separately approved
+   `Users.PopularityPenaltyEnabled` setting, migration, settings API/UI and export field are not
+   implemented and were omitted, not sequenced to a later phase. The enforced
+   1,000,000,000-byte (1 GB) storage threshold is a temporary unresolved placeholder, not a real
+   capacity decision; the real number is set at build-order step 9 once hosting is chosen.
+   A Development-only [manual QA frontend and run guide](docs/renewal/manual-qa.md) covers the
+   implemented user-facing flows; developer browser review remains pending. See [approval
+   status and evidence](docs/renewal/phase-6-evidence.md).
    Implemented recorder-fed bounded generation, pure materialization/baseline A, complete versioned
    snapshots, canonical ISO-week idempotency, PostgreSQL atomic persistence, storage/expiry guards,
    feedback conflict/familiarity rules and export 2.0 with stable history pages. No SQL migration.
@@ -108,14 +115,15 @@ The plan below is approved; **not approved** refers to phase execution and its r
    Full suite: **337 passed / 0 failed / 0 skipped**, including local PostgreSQL checks.
    **Mechanics only, no catalog conclusions.** Quality and supported capacity remain unverified.
    See [evidence and configuration](docs/renewal/phase-6-evidence.md).
-7. Worker-to-local-email slice — **written design approved; implementation-plan review pending**.
+7. Worker-to-local-email slice — **design and plan approved; implementation in progress**.
    The developer selected working local unsubscribe with one opt-out column and matching
    API/export changes. The source audit and proposed Worker, rendering, local capture,
    storage and recovery contracts are in the [approved review](docs/renewal/phase-7-review.md).
    The [implementation plan](docs/renewal/phase-7-plan.md) proposes sequential execution in this checkout.
-   This checkout lacks the later authorized Phase 6 status/cutoff and Development manual-QA
-   follow-ups from another worktree. Their prerequisite reconciliation is recorded in that
-   review; the popularity setting remains deferred under the earlier instruction to wait.
+   The later authorized Phase 6 status/cutoff and Development manual-QA follow-ups have been
+   reconciled into this checkout; current verification passed 341 tests (zero failures/skips),
+   with PostgreSQL, documentation/security and shell/JavaScript checks. The popularity setting remains
+   deferred under the earlier instruction to wait.
    No Phase 7 product code is implemented. Mandatory reassessment and explicit decision
    to proceed, narrow or revise remain required before later phases.
 8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
@@ -151,6 +159,8 @@ Docker/deployment §13; hardening §15. CI is not explicitly specified.
 Local commit subjects use the identifiers shown above; 1C–1F/I share one commit. No PR has been published.
 
 ## Open decisions
+- Set the real shared storage limit at build-order step 9 once hosting is chosen. The current
+  1,000,000,000-byte (1 GB) cutoff is a temporary hard-stop placeholder, not a capacity decision.
 - Phase 6 adopts canonical ordinal track-key ties and the highest scoring eligible pick per
   artist, up to five artists. Weekly hash and upstream-ranked representative proposals remain
   unadopted. Within-artist popularity preference requires separate approval.

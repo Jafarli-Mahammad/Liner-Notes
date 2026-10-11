@@ -78,7 +78,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     {
         await Prepare();var results=await Task.WhenAll(Run("capture"),Run("capture"));
         Assert.Contains(results,r=>r.Status=="local_captured");Assert.Contains(results,r=>r.Status=="already_captured");
-        var file=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml"));var bytes=await File.ReadAllBytesAsync(file);
+        var file=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));var bytes=await File.ReadAllBytesAsync(file);
         await services.DisposeAsync();services=Build();Assert.Equal("already_captured",(await Run("capture")).Status);
         Assert.Equal(bytes,await File.ReadAllBytesAsync(file));
         await using var scope=services.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -99,7 +99,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     {
         await Prepare();faults.FailCommits=3;
         Assert.Equal("capture_database_unavailable",(await Run("capture")).Reason);
-        string final=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml"));var bytes=await File.ReadAllBytesAsync(final);
+        string final=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));var bytes=await File.ReadAllBytesAsync(final);
         await using(var scope=services.CreateAsyncScope())Assert.Equal(DigestStatus.Pending,(await scope.ServiceProvider.GetRequiredService<DataContext>().WeeklyDigests.SingleAsync()).Status);
         await services.DisposeAsync();services=Build();Assert.Equal("already_captured",(await Run("capture")).Status);
         Assert.Equal(bytes,await File.ReadAllBytesAsync(final));
@@ -109,7 +109,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     {
         await Prepare();using var cancelled=new CancellationTokenSource();faults.CancelAfterPublish=cancelled;
         await Assert.ThrowsAnyAsync<OperationCanceledException>(()=>Run("capture",ct:cancelled.Token));
-        Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml"));
+        Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));
         Assert.Equal("already_captured",(await Run("capture")).Status);
     }
     [LocalPostgresMigrationFact]
@@ -143,7 +143,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     {
         await using(var scope=services.CreateAsyncScope())await scope.ServiceProvider.GetRequiredService<DataContext>().TasteSignals.ExecuteDeleteAsync();
         await Prepare();Assert.Equal("local_captured",(await Run("capture")).Status);
-        var file=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml"));await using(var scope=services.CreateAsyncScope())
+        var file=Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));await using(var scope=services.CreateAsyncScope())
         {
             var parsed=scope.ServiceProvider.GetRequiredService<LocalEmailMessageSerializer>().Parse(await File.ReadAllBytesAsync(file));Assert.Contains("0 picks",parsed.PlainText);
         }
@@ -153,7 +153,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     public async Task FailureAfterSqlCommit_ReturnsVerifiedExistingReceiptOnFreshAttempt()
     {
         await Prepare();faults.FailAfterCommit=true;Assert.Equal("already_captured",(await Run("capture")).Status);
-        Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml"));Assert.Equal("already_captured",(await Run("capture")).Status);
+        Assert.Single(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));Assert.Equal("already_captured",(await Run("capture")).Status);
     }
     [LocalPostgresMigrationFact]
     public async Task DeletionWaitsForPublication_ThenRemovesOwnedFinal()

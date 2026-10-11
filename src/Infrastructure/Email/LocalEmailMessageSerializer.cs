@@ -12,10 +12,14 @@ public sealed record LocalEmailReceipt(Guid DigestId, Guid UserId, string Week, 
 public sealed record ParsedLocalEmail(LocalEmailReceipt Receipt, string PlainText, string Html, long Bytes);
 
 /// <summary>Strict bounded local multipart format; authenticated metadata is a durable receipt.</summary>
-public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsubscribeTokenProtection protection, IUnsubscribeTokens tokens)
+public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsubscribeTokenProtection protection,
+    IUnsubscribeTokens tokens, ILocalEmailFileProtection files)
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private const string Prefix = "local-receipt-v1:";
+    private static ReadOnlySpan<byte> FileHeader => "LINER-ENCRYPTED-EMAIL-v1\n"u8;
+
+    public static bool IsEncrypted(ReadOnlySpan<byte> bytes) => bytes.StartsWith(FileHeader);
     private static string BodyHash(string plain, string html) => Convert.ToHexStringLower(SHA256.HashData(
         Utf8.GetBytes(plain.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + plain + html)));
 
@@ -52,12 +56,50 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
         mime.Append("--").Append(boundary).Append("--\r\n");
         byte[] result = Utf8.GetBytes(mime.ToString());
         if (result.Length > options.MessageByteLimit || protectedReceipt.Length > 8192) throw new GenerationStoppedException("email_message_too_large");
-        return result;
+        return ProtectMime(result);
     }
 
-    public ParsedLocalEmail Parse(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: true);
+    private byte[] ProtectMime(byte[] mime)
+    {
+        try
+        {
+            byte[] ciphertext = files.Protect(mime);
+            byte[] stored = new byte[checked(FileHeader.Length + ciphertext.Length)];
+            FileHeader.CopyTo(stored);
+            ciphertext.CopyTo(stored, FileHeader.Length);
+            if (stored.Length > options.StoredMessageByteLimit) throw new GenerationStoppedException("email_message_too_large");
+            return stored;
+        }
+        finally { CryptographicOperations.ZeroMemory(mime); }
+    }
 
-    public ParsedLocalEmail ParseStoredCopy(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: false);
+    public ParsedLocalEmail Parse(ReadOnlySpan<byte> bytes) => ParseEncrypted(bytes, requireCurrentSender: true);
+
+    public ParsedLocalEmail ParseStoredCopy(ReadOnlySpan<byte> bytes) => ParseEncrypted(bytes, requireCurrentSender: false);
+
+    // Only explicit conversion and ownership-based deletion may read the legacy plaintext format.
+    public ParsedLocalEmail ParseLegacyStoredCopy(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: false);
+
+    public byte[] EncryptLegacyStoredCopy(ReadOnlySpan<byte> bytes)
+    {
+        _ = ParseLegacyStoredCopy(bytes);
+        return ProtectMime(bytes.ToArray());
+    }
+
+    private ParsedLocalEmail ParseEncrypted(ReadOnlySpan<byte> bytes, bool requireCurrentSender)
+    {
+        if (bytes.Length > options.StoredMessageByteLimit || !IsEncrypted(bytes))
+            throw new GenerationStoppedException("email_receipt_invalid");
+        byte[]? plaintext = null;
+        try
+        {
+            plaintext = files.Unprotect(bytes[FileHeader.Length..].ToArray());
+            return ParseCore(plaintext, requireCurrentSender) with { Bytes = bytes.Length };
+        }
+        catch (Exception ex) when (ex is CryptographicException or ArgumentException)
+        { throw new GenerationStoppedException("email_receipt_invalid"); }
+        finally { if (plaintext is not null) CryptographicOperations.ZeroMemory(plaintext); }
+    }
 
     private ParsedLocalEmail ParseCore(ReadOnlySpan<byte> bytes, bool requireCurrentSender)
     {

@@ -10,6 +10,17 @@ namespace LinerNotes.Infrastructure.Email;
 public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStorageOptions storage,
     LocalEmailMessageSerializer serializer) : ILocalEmailArchive
 {
+    // Called only by the explicit local operator helper, never by public export or an HTTP endpoint.
+    public async Task<ParsedLocalEmail> ReadForOperatorAsync(Guid userId, Guid digestId, CancellationToken ct)
+    {
+        string root = LocalEmailPaths.Root(options, storage);
+        var parsed = serializer.ParseStoredCopy(await LocalEmailPaths.ReadAsync(
+            Path.Combine(root, $"{digestId:N}.eml.enc"), options.StoredMessageByteLimit, ct));
+        if (parsed.Receipt.UserId != userId || parsed.Receipt.DigestId != digestId)
+            throw new GenerationStoppedException("email_copy_ownership_conflict");
+        return parsed;
+    }
+
     public async Task<LocalEmailArchiveDto> ReadAsync(Guid userId, IReadOnlyList<WeeklyDigestDto> digests, CancellationToken ct)
     {
         var copies = new List<LocalEmailCopyDto>(); var issues = new List<string>();
@@ -23,10 +34,13 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var parsed = serializer.ParseStoredCopy(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
+                    var bytes = await LocalEmailPaths.ReadAsync(file, options.StoredMessageByteLimit, ct);
+                    if (!LocalEmailMessageSerializer.IsEncrypted(bytes))
+                    { issues.Add("copy_plaintext_requires_conversion"); continue; }
+                    var parsed = serializer.ParseStoredCopy(bytes);
                     if (parsed.Receipt.UserId != userId) continue;
                     var known = digests.FirstOrDefault(d => d.Id == parsed.Receipt.DigestId);
-                    if (known is null || known.Week != parsed.Receipt.Week || Path.GetFileNameWithoutExtension(file) != parsed.Receipt.DigestId.ToString("N"))
+                    if (known is null || known.Week != parsed.Receipt.Week || Path.GetFileName(file) != $"{parsed.Receipt.DigestId:N}.eml.enc")
                     { issues.Add("copy_history_conflict"); continue; }
                     expected.Remove(known.Id);
                     string Sanitize(string value) => value.Replace(Uri.EscapeDataString(parsed.Receipt.Token), "[capability-removed]", StringComparison.Ordinal)
@@ -58,7 +72,10 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var parsed = serializer.ParseStoredCopy(await LocalEmailPaths.ReadAsync(file, options.MessageByteLimit, ct));
+                    var bytes = await LocalEmailPaths.ReadAsync(file, options.StoredMessageByteLimit, ct);
+                    var parsed = LocalEmailMessageSerializer.IsEncrypted(bytes)
+                        ? serializer.ParseStoredCopy(bytes)
+                        : serializer.ParseLegacyStoredCopy(bytes);
                     if (parsed.Receipt.UserId == userId) File.Delete(file);
                 }
                 catch (Exception ex) when (ex is GenerationStoppedException or IOException or UnauthorizedAccessException)
@@ -75,6 +92,7 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
         var files = Directory.EnumerateFileSystemEntries(root).Take(10_001).ToArray();
         if (files.Length > 10_000) throw new GenerationStoppedException("archive_scan_limit");
         if (files.Any(Directory.Exists)) throw new GenerationStoppedException("archive_shape_invalid");
-        return files.Where(f => f.EndsWith(".eml", StringComparison.Ordinal) || includePartials && f.EndsWith(".partial", StringComparison.Ordinal)).Order(StringComparer.Ordinal).ToArray();
+        return files.Where(f => f.EndsWith(".eml.enc", StringComparison.Ordinal) || f.EndsWith(".eml", StringComparison.Ordinal) ||
+            includePartials && f.EndsWith(".partial", StringComparison.Ordinal)).Order(StringComparer.Ordinal).ToArray();
     }
 }

@@ -12,6 +12,8 @@ public sealed class LocalEmailOptions
     public string MessageDomain { get; set; } = "localhost";
     public int AlternativeByteLimit { get; set; } = 100_000;
     public int MessageByteLimit { get; set; } = 400_000;
+    // A bounded allowance for authenticated-encryption metadata, separate from MIME size.
+    public int StoredMessageByteLimit => checked(MessageByteLimit + 16_384);
 
     public Uri Origin()
     {

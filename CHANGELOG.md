@@ -2,6 +2,13 @@
 
 ## Unreleased — renewal
 
+- Encrypt complete local email captures and partial writes using ASP.NET Core Data
+  Protection with a separate file purpose. Recovery, sanitized export and account
+  cleanup decrypt in memory. Local operator inspection prints sanitized text without
+  creating preview files; explicit conversion replaces authenticated legacy plaintext
+  copies with encrypted files and reports unverifiable leftovers. Keys remain in the
+  existing database key store, whose access and backups require separate protection.
+
 - Added a runnable local email QA launcher and explicit cleanup retry after account
   deletion. Unix sink directories must be owner-only and MIME files are created private;
   capability queries are excluded

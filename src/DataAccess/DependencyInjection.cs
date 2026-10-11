@@ -63,7 +63,9 @@ public static class DependencyInjection
         services.AddScoped<ITrackRepository, TrackRepository>();
         services.AddScoped<IDigestGenerationStore, DigestGenerationStore>();
         services.AddScoped<IUnsubscribeStore, UnsubscribeStore>();
-        services.AddSingleton<IUnsubscribeTokenProtection>(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton<IUnsubscribeTokenProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
+        services.AddSingleton<ILocalEmailFileProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
         services.AddSingleton<IAccountEmailLease>(_ => new AccountEmailLease(connectionString));
         services.AddScoped<ILocalDigestCaptureStore>(_ => new LocalDigestCaptureStore(connectionString));
 

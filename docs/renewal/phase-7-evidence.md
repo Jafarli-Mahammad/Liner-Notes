@@ -155,7 +155,8 @@ Messages contain recipient/taste data and an unsubscribe capability. On Unix the
 sink directory must deny group/world access, and newly created files are private. On Windows
 the directory must be owned by the current user and its allow ACLs are restricted to that
 user, Local System and built-in Administrators. The Windows check compiled but was not
-exercised on a Windows host. Encryption at rest was not established. Export removes
+exercised on a Windows host. The original demonstration used plaintext files; the
+approved encryption follow-up below supersedes that storage behavior. Export removes
 capabilities/security internals and reports missing/corrupt copies. Cleanup occurs after
 SQL deletion, outside automatic SQL retry; unvalidated files remain with an incomplete issue,
 and the separate operator helper can retry after account deletion. This covers the configured
@@ -192,3 +193,27 @@ Before a later phase, explicitly choose **proceed, narrow or revise** based on t
 above. Phase 8a privacy verification and Phase 8b scheduling/delivery have separate approvals;
 Phase 9 release/deployment remains unapproved. The popularity setting stays deferred and the
 storage threshold stays temporary/unresolved. Nothing starts automatically.
+
+## Encrypted capture follow-up — 2026-10-11
+
+The developer selected option 2 after reviewing the two CodeQL plaintext-output
+findings. This supersedes the original plaintext-file workflow, preserving the
+existing lifecycle, opt-out, export fields and authenticated ownership.
+
+| Approved item | Status and evidence |
+|---|---|
+| Complete email encryption at rest | Implemented: `Serialize` returns a versioned binary encrypted envelope; the sink writes only ciphertext to `.eml.enc` and every new partial. Receipt/recipient, MIME headers, alternatives and unsubscribe capability are all inside the protected payload. |
+| Established cryptographic primitive and isolation | Implemented: ASP.NET Core `IDataProtector.Protect(byte[])`, using `CapturedEmailFile/v1` independently of unsubscribe and Identity purposes. PostgreSQL restart checks decrypt files with persisted keys and reject cross-purpose payloads. No new dependency, schema or public export field. |
+| Key storage outside source/copies | Implemented: existing database-backed Data Protection key store. **Boundary:** its XML master keys are not additionally wrapped here. Database access, encrypted backups/volumes and separation from copies remain operator/deployment responsibilities. File theft alone is covered; a compromised service/host or access to both keys and copies is outside this protection. Retain historical keys for restore/cleanup. |
+| Bounded recovery, export and deletion | Implemented: decrypt in memory, validate existing receipts, reject plaintext downgrade, preserve restart bytes and sanitized export. Actual encrypted byte counts, including metadata (up to 16,384 bytes beyond the original MIME bound), enter storage reservations/inventory. Authenticated legacy deletion remains available. |
+| Controlled inspection | Implemented: authenticated export exposes sanitized alternatives. `phase7_local_email.cs --action inspect` prints sanitized selected text without creating plaintext files. Separate explicit Development-only `unsubscribe-link` retrieves the selected original capability; default inspection never prints it. Production and invalid-input helper invocations stop. |
+| Existing plaintext conversion | Implemented: explicit user/week helper validates receipt ownership, accounts for ciphertext headroom, publishes without overwrite and deletes the authenticated source. Matching complete legacy partials are removed. Retry validates/resumes a published copy. Corrupt/truncated or orphan plaintext partials stop with an operator-cleanup reason, including after a prior successful final conversion. Existing previews/backups outside this operation need explicit local review. |
+| Actual old user data/deployment conversion | Not done: only fabricated disposable fixtures were converted; no active deployment or real sink was inspected. The [run procedure](phase-7-local-run.md) provides explicit conversion/cleanup steps. |
+| Local verification | 398 tests passed / 0 failed / 0 skipped with disposable PostgreSQL, including five new encryption/conversion checks. A synthetic actual-composition run generated five picks, captured 12,829 encrypted bytes, preserved repeated-capture bytes, resumed staged legacy conversion, and exercised the helper's sanitized inspection and explicit unsubscribe action. The fixture sink ended with one encrypted file and no plaintext/preview files. |
+| GitHub security result / developer confirmation | Not verified: a local test pass does not resolve GitHub alerts or certify the entire application. A fresh scan of the follow-up revision and developer confirmation remain needed. |
+
+The framework's authenticated-encryption and key-storage behavior was checked against
+[Microsoft's payload documentation](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/authenticated-encryption-details?view=aspnetcore-10.0)
+and [key persistence guidance](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview?view=aspnetcore-10.0).
+The original process/browser byte measurements above describe the earlier plaintext
+implementation; they are retained as historical evidence, not current encrypted sizes.

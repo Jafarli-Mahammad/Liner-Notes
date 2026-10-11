@@ -32,8 +32,10 @@ public static class DependencyInjection
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
         services.AddScoped<IDigestEmailRenderer, DigestEmailRenderer>();
         services.AddScoped<LocalEmailMessageSerializer>();
+        services.AddScoped<LocalEmailLegacyConversion>();
         services.AddScoped<ILocalEmailSink, LocalEmailSink>();
-        services.AddScoped<ILocalEmailArchive, LocalEmailArchive>();
+        services.AddScoped<LocalEmailArchive>();
+        services.AddScoped<ILocalEmailArchive>(sp => sp.GetRequiredService<LocalEmailArchive>());
 
         // Bind Last.fm Options
         services.Configure<LastFmOptions>(configuration.GetSection(LastFmOptions.SectionName));

@@ -54,13 +54,18 @@ dotnet run --project src/Presentation/Presentation.csproj --no-launch-profile &
 phase7_qa_pid=$!
 printf '%s\n' "Open http://127.0.0.1:5087/manual-test, register a disposable account and save fixture seeds."
 printf '%s\n' "Use darkwave, synthwave and soundtrack for a nonempty fixture list. Inspect the subscriber ID."
-printf '%s\n' "Keep this launcher running during email/unsubscribe checks. MIME files: $phase7_qa_root/copies"
+printf '%s\n' "Keep this launcher running during email/unsubscribe checks. Encrypted email files: $phase7_qa_root/copies"
 read -r -p 'Subscriber GUID from profile: ' phase7_qa_user
 read -r -p 'ISO week (for example 2026-W41): ' phase7_qa_week
 while true; do
-  read -r -p 'Action (reconcile, generate, capture, cleanup, quit): ' phase7_qa_action
+  read -r -p 'Action (reconcile, generate, capture, inspect, unsubscribe-link, convert, cleanup, quit): ' phase7_qa_action
   case "$phase7_qa_action" in
     quit) break ;;
+    inspect|convert|unsubscribe-link)
+      if ! dotnet run --file scripts/phase7_local_email.cs --no-cache -- --action "$phase7_qa_action" --user "$phase7_qa_user" --week "$phase7_qa_week"; then
+        printf '%s\n' 'Inspection/conversion stopped; inspect its bounded reason above.'
+      fi
+      ;;
     cleanup)
       if dotnet run --file scripts/phase7_cleanup_local_email.cs --no-cache -- --user "$phase7_qa_user"; then
         printf '%s\n' 'Owned-copy cleanup completed after account deletion.'
@@ -75,6 +80,6 @@ while true; do
         printf '%s\n' 'Worker stopped; inspect its bounded reason above.'
       fi
       ;;
-    *) printf '%s\n' 'Choose reconcile, generate, capture, cleanup or quit.' ;;
+    *) printf '%s\n' 'Choose reconcile, generate, capture, inspect, unsubscribe-link, convert, cleanup or quit.' ;;
   esac
 done

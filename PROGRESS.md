@@ -2,6 +2,14 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Phase 7 storage security follow-up: the developer selected encrypted local capture
+  (option 2) on 2026-10-11 after the CodeQL plaintext-file findings. Complete messages
+  and new partials now use authenticated encryption with a distinct Data Protection
+  file purpose and the existing persistent database key store. Sanitized inspection,
+  explicit legacy conversion and ownership-based deletion are implemented; verification
+  and limitations are recorded in [Phase 7 evidence](docs/renewal/phase-7-evidence.md).
+  Existing deployments/copies have not been inspected or converted. Key-store access,
+  backup protection and developer confirmation remain open.
 - Authorized: **Phase 1–4, Phase 6 and Phase 7 local work** on `Prism`; the developer requested Phase 2
   execution and approved its exact membership and offline test replacement on 2026-10-07,
   then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
@@ -10,7 +18,9 @@
   Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
   The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
   on 2026-10-11; implementation is locally verified, developer confirmation pending.
-  No push or Phase 5/8–9 execution is authorized.
+  Remote pushes for review fixes were subsequently explicitly authorized, and the developer
+  merged PR #8. Phase 5/8–9 execution remains unapproved; this storage follow-up does not
+  authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
 - Active step: developer confirmation and proceed/narrow/revise reassessment of the
   [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md), using its

@@ -135,6 +135,12 @@ Focused commit: `feat(phase7): add persistent local unsubscribe and account data
 
 ## Task 2: Render persisted digests and capture bounded MIME files
 
+Security follow-up approved 2026-10-11 supersedes plaintext file publication in this
+original plan: the complete MIME is encrypted before any write and stored as `.eml.enc`.
+The original MIME size limits remain, with a bounded 16,384-byte encryption allowance;
+the existing storage reservation counts actual ciphertext. Inspection/conversion and
+key-custody requirements are in the current [local run procedure](phase-7-local-run.md).
+
 Primary additions under `src/Infrastructure/Email/`:
 `LocalEmailOptions.cs`, `DigestEmailRenderer.cs`, `LocalEmailMessageSerializer.cs`,
 `LocalEmailSink.cs` and `LocalEmailArchive.cs`. Add their immutable message/result

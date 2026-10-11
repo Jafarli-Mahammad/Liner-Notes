@@ -33,7 +33,7 @@ internal static class LocalEmailPaths
             if (directory.Name == ".git") throw new GenerationStoppedException("email_sink_tracked");
             if (!File.Exists(Path.Combine(directory.FullName, ".git")) && !Directory.Exists(Path.Combine(directory.FullName, ".git"))) continue;
             var start = new ProcessStartInfo("git") { WorkingDirectory=directory.FullName, RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false };
-            foreach (string arg in new[] { "check-ignore", "-q", "--", Path.Combine(root, "capture.eml") }) start.ArgumentList.Add(arg);
+            foreach (string arg in new[] { "check-ignore", "-q", "--", Path.Combine(root, "capture.eml.enc") }) start.ArgumentList.Add(arg);
             using var process = Process.Start(start) ?? throw new GenerationStoppedException("email_sink_tracked");
             process.WaitForExit();
             if (process.ExitCode != 0) throw new GenerationStoppedException("email_sink_tracked");

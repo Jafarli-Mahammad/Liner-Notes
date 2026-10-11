@@ -9,6 +9,12 @@ public interface IUnsubscribeTokenProtection
     string Unprotect(string value);
 }
 
+public interface ILocalEmailFileProtection
+{
+    byte[] Protect(byte[] plaintext);
+    byte[] Unprotect(byte[] ciphertext);
+}
+
 public interface IUnsubscribeTokens
 {
     string Create(Guid userId);

@@ -20,7 +20,9 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
         GenerationStorageState database, CancellationToken ct)
     {
         string root = LocalEmailPaths.Root(options, storageOptions);
-        string final = Path.Combine(root, digest.Id.ToString("N") + ".eml");
+        string final = Path.Combine(root, digest.Id.ToString("N") + ".eml.enc");
+        if (File.Exists(Path.Combine(root, digest.Id.ToString("N") + ".eml")))
+            throw new GenerationStoppedException("email_plaintext_copy_requires_conversion");
         string[] paths = [final, ..Enumerable.Range(0,3).Select(_ => Path.Combine(root, digest.Id.ToString("N") + "." + Guid.NewGuid().ToString("N") + ".partial"))];
         bool exists = File.Exists(final);
         if (!exists && digest.Status == DigestStatus.LocalCaptured) throw new GenerationStoppedException("email_receipt_missing");
@@ -28,7 +30,7 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
         byte[]? bytes = null;
         if (exists)
         {
-            var parsed = serializer.Parse(await LocalEmailPaths.ReadAsync(final, options.MessageByteLimit, ct));
+            var parsed = serializer.Parse(await LocalEmailPaths.ReadAsync(final, options.StoredMessageByteLimit, ct));
             message = renderer.Render(digest, subscriber, parsed.Receipt.Token);
             Validate(parsed, message);
         }
@@ -56,7 +58,7 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
             if (subscriber.EmailUnsubscribedAtUtc is not null) throw new GenerationStoppedException("email_unsubscribed");
             if (exists)
             {
-                Validate(serializer.Parse(await LocalEmailPaths.ReadAsync(paths[0], options.MessageByteLimit, ct)), fresh);
+                Validate(serializer.Parse(await LocalEmailPaths.ReadAsync(paths[0], options.StoredMessageByteLimit, ct)), fresh);
                 return;
             }
             for (int attempt=0; attempt<3; attempt++)
@@ -81,7 +83,7 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
                     await lease.RecordOwnWriteAsync(paths[attempt+1], ct);
                     // Only our three named partials may change while the artifact lease is held.
                     await lease.ValidateAsync(database, ct);
-                    var written = await LocalEmailPaths.ReadAsync(paths[attempt+1], options.MessageByteLimit, ct);
+                    var written = await LocalEmailPaths.ReadAsync(paths[attempt+1], options.StoredMessageByteLimit, ct);
                     if (!written.AsSpan().SequenceEqual(bytes)) throw new GenerationStoppedException("email_partial_conflict");
                     LocalEmailPaths.CheckAncestors(paths[0]);
                     ct.ThrowIfCancellationRequested();

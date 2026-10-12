@@ -57,3 +57,63 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** Single-account failure checks cannot establish fairness when stopped jobs retain their due slots.
 **Suggested improvement:** Test a persistent failure alongside a healthy later account with a limit of one, repeated scopes, an unchanged clock, and both invalid-state and missing-receipt failures. Preserve required operator reconciliation during end-to-end capture checks.
 **Principle:** Verify bounded progress across ticks as well as safety within each job.
+
+### Observation 006: Packaging must preserve local execution boundaries
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Docker, Compose and CI inspection for an existing local batch application.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Packaging preflight
+**Issue:** A web Dockerfile omitted shared target-framework properties before restore; Compose lacked its database, and CI could skip database checks. The batch executable deliberately rejected production mode and non-loopback databases, so a generic production topology would not represent implemented behavior.
+**Suggested improvement:** Inspect shared build inputs, test skip conditions, executable guards, migration context and storage/key ownership before proposing deployment files. Package a supported local topology and distinguish reproducibility from production delivery and external approval.
+**Principle:** Packaging should make existing runtime and verification contracts executable; containerizing a process does not establish a supported production workflow.
+
+### Observation 007: Reproducibility pins follow the approved version policy
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Developer corrected the release design's proposal to retain EF Core 9 after EF Core 10 was stable, and approved proceeding with latest stable packages/tools.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Dependency selection
+**Issue:** Preserving an existing dependency graph was proposed as a default despite a newer stable framework release. Reproducibility and version freshness were treated as competing requirements.
+**Suggested improvement:** Verify stable releases and compatibility first, upgrade under the authorized version policy, then freeze exact versions and lock files. Distinguish a verified compatibility exception from retaining an old version without investigation.
+**Principle:** Reproducibility means pinning a deliberately chosen, verified graph; it does not require keeping an outdated graph.
+
+### Observation 008: Latest transitive majors need executable compatibility checks
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Stable dependency modernization and API documentation compatibility.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Dependency compatibility
+**Issue:** A restore/build accepted a newer transitive OpenAPI major, but document generation failed at runtime with MissingMethodException. A replacement generator passed the same route/security check. A framework upgrade also changed an implicit constraint naming convention despite unchanged entities.
+**Suggested improvement:** Inspect generated schema diffs, preserve intended explicit names, and verify actual generated documents and security references after changing package majors. Do not equate successful dependency resolution or compilation with runtime compatibility.
+**Principle:** Stable packages can form an incompatible graph; prove the contracts the application actually uses.
+
+### Observation 009: Required database checks need an explicit result gate
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Local reproduction of the PostgreSQL-backed CI suite.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Verification completeness
+**Issue:** A successful test command could contain skipped database checks when its environment setting was omitted. A complete rerun passed, but exit status alone could have hidden the missing coverage.
+**Suggested improvement:** Supply a disposable healthy database and validate results for every required project, positive test counts and zero failed or skipped outcomes. Exercise the validator with missing and non-passing result files.
+**Principle:** A passing command establishes only the checks that actually ran.
+
+### Observation 010: Verify approved exceptions against the actual package graph
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Dependency and credential findings in a pull-request review.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Review and dependency approval consistency
+**Issue:** Documentation described an approved licensing exception while the central manifest and restored lock files selected the newer release. A credential scan also flagged private environment interpolation alongside literal fixture passwords.
+**Suggested improvement:** Compare central versions, all affected lock entries and version evidence with approval decisions after restore. Verify flagged credentials against current use before changing configuration or rotating anything; distinguish literals from required private interpolation.
+**Principle:** Approval records and scan labels need verification against the executable configuration.

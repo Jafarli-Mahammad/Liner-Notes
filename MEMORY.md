@@ -31,6 +31,9 @@ Keep this file under ~150 lines. When it grows, merge overlapping lines and drop
 Facts that belong in AGENTS.md (structure, conventions) or PROGRESS.md (status) go there, not here.
 Apply only what's relevant to the current task. Don't recite this file back.
 Working preferences
+[stated] Always use the latest stable versions of project packages and tools; verify current releases and upgrade compatibility rather than retaining old versions just because the checkout already uses them. The developer approved Phase 9 with this correction and instructed implementation to proceed. (2026-10-12)
+[stated] Keep MediatR 12.5.0 as an explicit exception to the latest-stable policy because newer releases change to RPL/commercial licensing; the repository remains AGPL-3.0 and no commercial license purchase was approved. (2026-10-12)
+[verified] Phase 9 review found that the central manifest, locks and version snapshot still selected MediatR 14.2.0 despite the recorded exception. Corrected all three to 12.5.0 and verified the nine affected locks plus 478 passing tests; previous dependency reporting was inaccurate. See `docs/renewal/phase-9-evidence.md`. (2026-10-12)
 [stated] Be direct and technical. No flattery. Disagree with reasons when you have a better argument. (2026-09-28)
 [stated] Ask at most one question at a time, only when the answer changes what you'd do. (2026-09-28)
 [stated] After approving the Phase 8 design, the developer directed immediate implementation and approved routine dotnet, docker and LINER_PHASE1_POSTGRES verification commands; carry that authorization through the task without another simple-command approval checkpoint. (2026-10-12)
@@ -43,7 +46,7 @@ Working preferences
 [stated] Favor a modest, adjustable tilt toward less obvious discoveries while still recommending accessible tracks when they fit; keep popularity neutral and avoid blanket franchise or genre penalties. (2026-10-09)
 [stated] For broad phase requests, state remaining scope and expected effort before extended implementation, and keep the developer updated. (2026-10-06)
 [stated] Explain dependency-removal audit findings, exploitability evidence, and upgrade alternatives before removing a dependency. (2026-10-06)
-[stated] Use default passwords for now; the developer intends to revise them later. (2026-10-06)
+[stated] Remove generic committed development credentials; configure database and signing secrets through User Secrets or environment variables. Keep synthetic test fixtures separate from runtime credentials. (2026-10-13)
 Decisions (with reasons)
 [stated] No custom ML in V1, including ML.NET matrix factorization: no budget, and no feedback data to train on at launch. Revisit in V2 with real data. (2026-09-28)
 [stated] No Spotify similarity/audio-feature integration: those endpoints were removed for new apps. Re-check before relying on this. (2026-09-28)

@@ -11,7 +11,8 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("Users");
 
-        builder.HasKey(u => u.Id);
+        // Keep the existing PostgreSQL key name across EF convention upgrades.
+        builder.HasKey(u => u.Id).HasName("PK_Users");
 
         builder.Property(u => u.Email)
             .IsRequired()

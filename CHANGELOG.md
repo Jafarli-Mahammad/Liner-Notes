@@ -2,6 +2,25 @@
 
 ## Unreleased — renewal
 
+- Restore the approved MediatR 12.5.0 licensing exception in central versions and
+  package locks. CI now generates a disposable database password for each run;
+  Swagger fixtures omit unused database passwords, and the local runbook selects
+  the current UTC ISO week.
+
+- Add non-root web/Worker container targets, explicit migration/private-volume
+  initialization and a local PostgreSQL Compose stack with loopback web only.
+  Private credential generation and opt-in operator/Worker profiles support
+  the existing encrypted capture, scheduling, unsubscribe and deletion flows.
+  CI now supplies PostgreSQL and rejects incomplete or skipped test suites;
+  a disposable container lifecycle job covers the packaged slice. Public release
+  remains gated on written provider approval and production operational decisions.
+
+- Upgrade to stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12 and current
+  stable direct/transitive dependencies, with central versions and locked restore.
+  MediatR 12.5.0 remains an explicit licensing exception. Replace incompatible
+  Swagger generation with NSwag while retaining Development-only documentation
+  routes and bearer security. Explicit existing key names preserve the SQL schema.
+
 - Registration uses the selected UTC delivery weekday/hour. Added an explicit, guarded
   local repair tool for legacy registration slots. Bounded scheduler ticks track
   candidate attempts so persistently stopped accounts cannot starve healthy peers.

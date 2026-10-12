@@ -240,8 +240,12 @@ Read [local configuration](docs/renewal/local-configuration.md) before starting 
 host. Development settings contain explicit local-only defaults; configure your
 database and apply the existing migrations to an isolated development database
 before using account or persistence endpoints. Production secrets remain unset.
-Do not assume `compose.yaml` provisions PostgreSQL: it currently defines only a
-web service.
+On the renewal branch, Phase 9 Compose now provisions an isolated local
+Development web/database stack with explicit migrations and opt-in Worker/operator
+profiles. Use the [local runbook](docs/renewal/phase-9-local-run.md); it requires
+private generated credentials and publishes only loopback web. For host builds,
+install the pinned stable SDK from `global.json` and run `dotnet tool restore`.
+This local packaging does not provide production deployment or external delivery.
 
 For a local browser session with fixture-only provider inputs:
 

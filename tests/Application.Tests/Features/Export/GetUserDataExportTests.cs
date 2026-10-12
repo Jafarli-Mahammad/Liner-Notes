@@ -2,6 +2,7 @@ using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Export;
+using LinerNotes.Application.DTOs.Digests;
 using LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
@@ -113,12 +114,72 @@ public class GetUserDataExportTests
         await Assert.ThrowsAsync<IOException>(() => handler.Handle(new(id), default));
     }
 
+    [Fact]
+    public async Task Handle_LaterPageFailureDoesNotReturnPartialHistory()
+    {
+        var id = Guid.NewGuid();
+        var (handler, reader, _, digests) = Setup(id);
+        reader.GetAsync(id, Arg.Any<CancellationToken>()).Returns(Profile(id));
+        digests.GetExportPageAsync(id, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), 100, Arg.Any<CancellationToken>())
+            .Returns(call => call.ArgAt<DateTime?>(1) is null
+                ? Task.FromResult(FullPage(id))
+                : Task.FromException<IReadOnlyList<WeeklyDigest>>(new IOException("later-page failure")));
+        await Assert.ThrowsAsync<IOException>(() => handler.Handle(new(id), default));
+    }
+
+    [Fact]
+    public async Task Handle_LaterPageCancellationDoesNotReturnPartialHistory()
+    {
+        var id = Guid.NewGuid();
+        var (handler, reader, _, digests) = Setup(id);
+        reader.GetAsync(id, Arg.Any<CancellationToken>()).Returns(Profile(id));
+        using var cancellation = new CancellationTokenSource();
+        digests.GetExportPageAsync(id, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), 100, Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                if (call.ArgAt<DateTime?>(1) is null) return Task.FromResult(FullPage(id));
+                cancellation.Cancel();
+                return Task.FromCanceled<IReadOnlyList<WeeklyDigest>>(cancellation.Token);
+            });
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => handler.Handle(new(id), cancellation.Token));
+    }
+
+    [Fact]
+    public async Task Handle_ArchiveExceptionDoesNotReturnSuccessfulExport()
+    {
+        var id = Guid.NewGuid();
+        var archive = Substitute.For<ILocalEmailArchive>();
+        var (handler, reader, _, _) = Setup(id, archive);
+        reader.GetAsync(id, Arg.Any<CancellationToken>()).Returns(Profile(id));
+        archive.ReadAsync(id, Arg.Any<IReadOnlyList<WeeklyDigestDto>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<LocalEmailArchiveDto>(new IOException("archive read failure")));
+        await Assert.ThrowsAsync<IOException>(() => handler.Handle(new(id), default));
+    }
+
+    [Fact]
+    public async Task Handle_AllowsExplicitIncompleteArchiveWithoutHidingIssues()
+    {
+        var id = Guid.NewGuid();
+        var archive = Substitute.For<ILocalEmailArchive>();
+        var (handler, reader, _, _) = Setup(id, archive);
+        reader.GetAsync(id, Arg.Any<CancellationToken>()).Returns(Profile(id));
+        archive.ReadAsync(id, Arg.Any<IReadOnlyList<WeeklyDigestDto>>(), Arg.Any<CancellationToken>())
+            .Returns(new LocalEmailArchiveDto("incomplete", [], ["copy_integrity_unavailable"]));
+        var result = await handler.Handle(new(id), default);
+        Assert.Equal("incomplete", result.LocalEmail!.Status);
+        Assert.Equal(new[] { "copy_integrity_unavailable" }, result.LocalEmail.Issues);
+    }
+
+    private static IReadOnlyList<WeeklyDigest> FullPage(Guid id) => Enumerable.Range(0, 100)
+        .Select(_ => new WeeklyDigest(id, new IsoWeek(2026, 42), DateTime.UtcNow, DateTime.UtcNow.AddDays(7)))
+        .ToArray();
+
     private static AccountExportDto Profile(Guid id) => new(id, "<profile-markup>", "STORED_NORMALIZED",
         "identity@example.test", "IDENTITY@EXAMPLE.TEST", true, "+000555123", true,
         new(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), id, null, null, null, null, false);
 
     private static (GetUserDataExportQueryHandler Handler, IAccountProfileReader Reader,
-        ITasteSignalRepository Taste, IWeeklyDigestRepository Digests) Setup(Guid id)
+        ITasteSignalRepository Taste, IWeeklyDigestRepository Digests) Setup(Guid id, ILocalEmailArchive? archive = null)
     {
         var users = Substitute.For<IUserRepository>();
         var taste = Substitute.For<ITasteSignalRepository>();
@@ -127,6 +188,6 @@ public class GetUserDataExportTests
         users.GetForExportAsync(id, Arg.Any<CancellationToken>()).Returns(new User("domain@example.test", id: id));
         taste.GetForExportAsync(id, Arg.Any<CancellationToken>()).Returns(Array.Empty<TasteSignal>());
         digests.GetExportPageAsync(id, null, null, 100, Arg.Any<CancellationToken>()).Returns(Array.Empty<WeeklyDigest>());
-        return (new(users, taste, digests, reader), reader, taste, digests);
+        return (new(users, taste, digests, reader, archive), reader, taste, digests);
     }
 }

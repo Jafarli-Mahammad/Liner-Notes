@@ -4,6 +4,7 @@ using System.Text.Json;
 using LinerNotes.Application;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
+using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.Features.Digests.Commands.CaptureLocalDigest;
 using LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 using LinerNotes.Application.Services;
@@ -129,6 +130,34 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
             "UserTasteWeight":0.73,"ContributionProduct":0.657,"FutureTag":{"keep":true}}],
             "FutureComponent":{"unchanged":[1,2,3]}}
             """)!;
+        var response = new StoredResponse("Fixture", "fixture.tags", "Fixture seed", "Synthetic",
+            new string('a', 64), new DateTimeOffset(2026, 10, 2, 3, 4, 5, TimeSpan.Zero))
+        { UnknownFields = Future("futureResponse") };
+        var observation = new StoredObservation("12", "12.0", null) { UnknownFields = Future("futureObservation") };
+        var tag = new StoredTag("rock", observation, "https://example.test/tag", response, null, 2)
+        { UnknownFields = Future("futureTag") };
+        var evidence = new ScoreEvidence(
+            [new StoredTasteSignal(Guid.NewGuid(), "Tag", "ROCK", 0.73, "InitialSeedManual", "snapshot fixture") { UnknownFields = Future("futureSignal") }],
+            [new StoredSeed("Fixture seed", new Dictionary<string, double> { ["rock"] = 0.87 }, [tag], response, null,
+                [new StoredGap("Fixture seed", "fixture.missing", "not_supplied", response) { UnknownFields = Future("futureSeedGap") }])
+                { UnknownFields = Future("futureSeed") }],
+            [tag], response,
+            [new StoredDiscoveryPath("Fixture seed", observation, response, response, 3, "https://example.test/track",
+                "https://example.test/artist", observation, "3", "Fixture discovery", 4) { UnknownFields = Future("futurePath") }],
+            [new StoredGap("Fixture seed", "fixture.missing", "not_supplied", null) { UnknownFields = Future("futureGap") }],
+            "artist", "not_supplied") { UnknownFields = Future("futureEvidence") };
+        score = score with { Snapshot = new ScoreSnapshot
+        {
+            ConfigurationVersion = "phase8-fixture-v1", ConfigurationSha256 = new string('b', 64),
+            ConfigurationPolicy = new Dictionary<string, string> { ["scope"] = "synthetic" },
+            Weights = new(1, 0.2) { UnknownFields = Future("futureWeights") },
+            TrackKey = track.TrackKey, ArtistName = track.ArtistName, Title = track.Title, Week = _week.Value,
+            TasteWeights = new Dictionary<string, double> { ["rock"] = 0.73 }, CandidateWeights = new Dictionary<string, double> { ["rock"] = 0.9 },
+            TasteMagnitude = 0.73, CandidateMagnitude = 0.9, Familiarity = false,
+            Contributions = [new("rock", 0.9, 0.73, 1) { UnknownFields = Future("futureContribution") }],
+            Components = [new("tag", 0.61) { UnknownFields = Future("futureComponent") }],
+            MissingReasons = ["popularity_not_used"], Evidence = evidence, UnknownFields = Future("futureSnapshot")
+        } };
         var recommendation = digest.AddRecommendation(track, score, 1);
         recommendation.RecordFeedback(UserFeedback.AlreadyKnown, "Stored feedback " + name, 8);
         db.WeeklyDigests.Add(digest);
@@ -147,7 +176,12 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
             .SetProperty(account => account.UserName, $"<img src=x onerror=alert(1)>-{name}"));
     }
 
-    private TestApp App(bool failCredentials = false) => new(_configuration, _email, _storage, failCredentials);
+    private static Dictionary<string, JsonElement> Future(string name) => new()
+    {
+        [name] = JsonSerializer.SerializeToElement(new { retained = new[] { 11, 22, 33 } })
+    };
+
+    private TestApp App(bool failCredentials = false, bool failExport = false) => new(_configuration, _email, _storage, failCredentials, failExport);
 
     private HttpClient AuthenticatedClient(TestApp app, Guid id)
     {
@@ -247,7 +281,6 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         {
             foreach (var property in expected.EnumerateObject())
             {
-                if (property.Name is "HasSnapshot" or "HasLegacyPopularityPenalty") continue; // Derived scorer helpers.
                 var name = JsonNamingPolicy.CamelCase.ConvertName(property.Name);
                 if (!actual.TryGetProperty(name, out var value)) value = actual.GetProperty(property.Name); // Unknown JSON fields preserve their names.
                 AssertJsonValue(property.Value, value);
@@ -354,6 +387,10 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
     public async Task Delete_CopyIntegrityFailureRevokesAccessAndReportsIncompleteCleanup()
     {
         await CaptureBothAsync();
+        await using var scope = _services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var other = await db.WeeklyDigests.SingleAsync(d => d.UserId == _other);
+        var otherFile = Path.Combine(_email.SinkRoot!, $"{other.Id:N}.eml.enc");
+        var bytes = await File.ReadAllBytesAsync(otherFile);
         var corrupt = Path.Combine(_email.SinkRoot!, "fixture-corrupt.partial");
         await File.WriteAllBytesAsync(corrupt, [1, 2, 3]);
         await using var app = App(); using var client = AuthenticatedClient(app, _owner);
@@ -364,15 +401,26 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         Assert.False(result.RootElement.GetProperty("localCopiesDeleted").GetBoolean());
         Assert.Contains("copy_cleanup_integrity_unavailable", result.RootElement.GetProperty("issues").EnumerateArray().Select(v => v.GetString()));
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
-        await using var scope = _services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         await AssertOwnedRowsAsync(db, _owner, 0);
         Assert.False(await scope.ServiceProvider.GetRequiredService<IAuthService>().ValidateRefreshTokenAsync(_owner, "refresh-fixture-owner"));
-        var other = await db.WeeklyDigests.SingleAsync(d => d.UserId == _other);
-        var otherFile = Path.Combine(_email.SinkRoot!, $"{other.Id:N}.eml.enc");
-        var bytes = await File.ReadAllBytesAsync(otherFile);
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(otherFile));
         Assert.True(File.Exists(corrupt)); File.Delete(corrupt); // Only this fabricated fixture is removed by the operator simulation.
         Assert.True((await scope.ServiceProvider.GetRequiredService<ILocalEmailArchive>().DeleteAsync(_owner, default)).Complete);
         Assert.Equal(bytes, await File.ReadAllBytesAsync(otherFile)); Assert.Single(Directory.GetFiles(_email.SinkRoot!));
+    }
+
+    [PostgresFact]
+    public async Task Export_LaterPageFailureReturnsProblemWithoutPartialExport()
+    {
+        await using var app = App(failExport: true);
+        using var client = AuthenticatedClient(app, _owner);
+        using var response = await client.GetAsync("/api/export/my-data");
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(500, body.RootElement.GetProperty("status").GetInt32());
+        Assert.False(body.RootElement.TryGetProperty("exportVersion", out _));
+        Assert.False(body.RootElement.TryGetProperty("subscriber", out _));
+        Assert.False(body.RootElement.TryGetProperty("digests", out _));
     }
 
     private static async Task AssertOwnedRowsAsync(DataContext db, Guid id, int count)
@@ -400,7 +448,7 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
     }
 
     private sealed class TestApp(IConfiguration configuration, LocalEmailOptions email, GenerationStorageOptions storage,
-        bool failCredentials) : WebApplicationFactory<Program>
+        bool failCredentials, bool failExport) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -410,6 +458,16 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
             builder.ConfigureServices(services =>
             {
                 services.AddSingleton(email).AddSingleton(storage);
+                if (failExport)
+                {
+                    var digests = Substitute.For<IWeeklyDigestRepository>();
+                    digests.GetExportPageAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>(), Arg.Any<Guid?>(), 100, Arg.Any<CancellationToken>())
+                        .Returns(call => call.ArgAt<DateTime?>(1) is null
+                            ? Task.FromResult<IReadOnlyList<WeeklyDigest>>(Enumerable.Range(0, 100)
+                                .Select(_ => new WeeklyDigest(call.ArgAt<Guid>(0), new IsoWeek(2026, 42), DateTime.UtcNow, DateTime.UtcNow.AddDays(7))).ToArray())
+                            : Task.FromException<IReadOnlyList<WeeklyDigest>>(new IOException("injected later-page failure")));
+                    services.AddSingleton(digests);
+                }
                 if (failCredentials)
                 {
                     var auth = Substitute.For<IAuthService>();

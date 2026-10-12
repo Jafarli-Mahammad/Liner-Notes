@@ -2,6 +2,13 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
+  **8a implementation → separate 8a tests → 8b implementation → separate 8b tests
+  → combined verification**. This is the proceed decision after Phase 7 reassessment;
+  earlier implementation confirmation remains pending. The concrete
+  [8a privacy design](docs/renewal/phase-8a-review.md) is awaiting written review,
+  including its proposed additive Identity profile export 2.2. Product code and
+  test implementation have not started; 8b retains its separate concrete design.
 - Phase 7 storage security follow-up: the developer selected encrypted local capture
   (option 2) on 2026-10-11 after the CodeQL plaintext-file findings. Complete messages
   and new partials now use authenticated encryption with a distinct Data Protection
@@ -19,12 +26,13 @@
   The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
   on 2026-10-11; implementation is locally verified, developer confirmation pending.
   Remote pushes for review fixes were subsequently explicitly authorized, and the developer
-  merged PR #8. Phase 5/8–9 execution remains unapproved; this storage follow-up does not
+  merged PR #8. Phase 5/9 execution remains unapproved; the subsequent Phase 8 request
+  is recorded above with its concrete review gates. This storage follow-up does not
   authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: developer confirmation and proceed/narrow/revise reassessment of the
-  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md), using its
-  [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
+- Active step: written review of the Phase 8a design. Developer confirmation of the
+  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md) remains pending;
+  use its [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
   remains pending.
   The developer approved the design and explicitly requested implementation on 2026-10-10,
@@ -143,9 +151,9 @@ The plan below is approved; **not approved** refers to phase execution and its r
    See [per-approval evidence and reassessment](docs/renewal/phase-7-evidence.md),
    [approved review](docs/renewal/phase-7-review.md) and [plan](docs/renewal/phase-7-plan.md).
    **Mechanics only, no catalog conclusions.** Popularity stays deferred; the 1 GB stop
-   remains temporary/unresolved. Mandatory explicit **proceed, narrow or revise** decision
-   remains required before later phases; Phase 8a/8b approvals are separate.
-8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
+   remains temporary/unresolved. The developer selected **proceed** with Phase 8 on
+   2026-10-12; this does not confirm Phase 7. Phase 8a/8b concrete approvals are separate.
+8. Privacy and delivery — **direction authorized on 2026-10-12; concrete design/plan reviews pending**, with **two separate approvals**: (a) export and deletion
    verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.
 9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
    public-page approval. Release stays blocked until that approval is documented.

@@ -9,6 +9,9 @@ namespace LinerNotes.Infrastructure.Email;
 
 internal static class LocalEmailPaths
 {
+    /// <summary>Returns the normalized configured sink after checking storage accounting, private permissions, path links, and Git exclusion.</summary>
+    /// <exception cref="GenerationStoppedException">The sink fails a storage, permissions, path, or Git check.</exception>
+    /// <remarks>Invalid email configuration, filesystem errors, and failure to start Git propagate.</remarks>
     public static string Root(LocalEmailOptions email, GenerationStorageOptions storage)
     {
         email.Validate();

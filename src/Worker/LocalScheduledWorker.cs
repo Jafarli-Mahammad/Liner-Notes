@@ -15,6 +15,8 @@ public sealed class LocalScheduleRunState
 public sealed class LocalScheduledWorker(IServiceScopeFactory scopes, LocalScheduleOptions options,
     TimeProvider clock, IHostApplicationLifetime lifetime, LocalScheduleRunState state) : BackgroundService
 {
+    /// <summary>Runs up to the configured tick limit, delaying between ticks and ending early if the scheduler is busy.</summary>
+    /// <remarks>Stores completed tick results and a completed, stopped, or cancelled status. Unexpected failures set scheduler_unavailable; the host is stopped when the run ends.</remarks>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await Task.Yield(); // Let host startup complete even when an empty tick completes synchronously.

@@ -5,6 +5,9 @@ namespace LinerNotes.Worker;
 
 public sealed record LocalScheduleOptions(IReadOnlyList<Guid> Users, int MaxUsersPerTick, int MaxTicks, TimeSpan Interval)
 {
+    /// <summary>Parses an explicit Synthetic schedule for 1–100 distinct, nonempty user IDs.</summary>
+    /// <remarks>When <paramref name="arguments"/> is supplied, only those command-line arguments are checked for forbidden user/week selectors; otherwise configuration is checked. Defaults are 10 users per tick, one tick, and 60 seconds between ticks. Limits are 1–100 users per tick, 1–1000 ticks, and 1–3600 seconds.</remarks>
+    /// <exception cref="ArgumentException">The action, origin, selectors, users, or numeric limits are invalid.</exception>
     public static LocalScheduleOptions Parse(IConfiguration configuration, string[]? arguments = null)
     {
         // Host environment configuration includes the OS USER variable. Only command-line

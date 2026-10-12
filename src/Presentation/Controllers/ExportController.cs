@@ -7,13 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace LinerNotes.Presentation.Controllers;
 
 /// <summary>
-/// Endpoints for data sovereignty, GDPR transparency, and complete taste data export.
+/// Authenticated export of reviewed account/taste records with explicit security exclusions.
 /// </summary>
 [Authorize]
 public sealed class ExportController : ApiControllerBase
 {
     /// <summary>
-    /// Exports all stored data held for the current subscriber as a structured, versioned JSON payload.
+    /// Exports the reviewed account/taste inventory as a structured, versioned JSON payload.
     /// </summary>
     [HttpGet("my-data")]
     [ProducesResponseType(typeof(UserDataExportDto), StatusCodes.Status200OK)]

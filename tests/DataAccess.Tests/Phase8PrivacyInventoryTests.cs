@@ -66,6 +66,7 @@ public sealed class Phase8PrivacyInventoryTests
         await using (var create = new NpgsqlCommand($"CREATE DATABASE \"{name}\"", connection))
             await create.ExecuteNonQueryAsync();
         settings.Database = name;
+        settings.Pooling = false; // This fixture must not clear pools owned by concurrent test classes.
         try
         {
             await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
@@ -84,7 +85,6 @@ public sealed class Phase8PrivacyInventoryTests
         }
         finally
         {
-            NpgsqlConnection.ClearAllPools();
             await using var drop = new NpgsqlCommand($"DROP DATABASE \"{name}\" WITH (FORCE)", connection);
             await drop.ExecuteNonQueryAsync();
         }

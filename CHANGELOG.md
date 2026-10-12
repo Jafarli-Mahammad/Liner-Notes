@@ -5,7 +5,8 @@
 - Export 2.2 adds stored Identity profile fields, including username, contact
   confirmation and audit values, to the existing account/taste export. Credentials,
   authentication internals and unsubscribe capabilities remain excluded. Added an
-  explicit table/column privacy inventory; full privacy verification is in progress.
+  explicit table/column privacy inventory. The privacy page explains credential
+  exclusions and the separate account, local-copy, shared-catalog and backup boundaries.
 
 - Encrypt complete local email captures and partial writes using ASP.NET Core Data
   Protection with a separate file purpose. Recovery, sanitized export and account

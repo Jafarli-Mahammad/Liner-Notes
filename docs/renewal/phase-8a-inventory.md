@@ -8,7 +8,7 @@ the migration history table. A column's presence here does not by itself prove
 that its persisted value is exported or that deletion ran; the evidence document
 records those results separately. `[]` denotes each account-owned collection item.
 ScoreBreakdown is one persisted JSONB column; export preserves its complete structured
-inputs, components and unknown fields. Derived explanations/week dates are not
+inputs, components and unknown fields. Derived explanations and WeekIdentifier are not
 additional stored columns. Physical deletion includes hidden owned rows.
 
 | Table | Column | Export path or exclusion | Deletion boundary |

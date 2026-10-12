@@ -14,9 +14,11 @@
       "source": "https://api.nuget.org/v3-flatcontainer/fluentvalidation.dependencyinjectionextensions/index.json"
     },
     "MediatR": {
-      "version": "14.2.0",
+      "version": "12.5.0",
       "source": "https://api.nuget.org/v3-flatcontainer/mediatr/index.json",
-      "scope": "transitive pin"
+      "latest_stable_at_review": "14.2.0",
+      "exception": "Developer-approved Apache-2.0 licensing exception; no RPL/commercial upgrade authorized",
+      "license_source": "https://raw.githubusercontent.com/jbogard/MediatR/v12.5.0/LICENSE"
     },
     "Microsoft.AspNetCore.Authentication.JwtBearer": {
       "version": "10.0.12",

@@ -105,3 +105,15 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** A successful test command could contain skipped database checks when its environment setting was omitted. A complete rerun passed, but exit status alone could have hidden the missing coverage.
 **Suggested improvement:** Supply a disposable healthy database and validate results for every required project, positive test counts and zero failed or skipped outcomes. Exercise the validator with missing and non-passing result files.
 **Principle:** A passing command establishes only the checks that actually ran.
+
+### Observation 010: Verify approved exceptions against the actual package graph
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Dependency and credential findings in a pull-request review.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Review and dependency approval consistency
+**Issue:** Documentation described an approved licensing exception while the central manifest and restored lock files selected the newer release. A credential scan also flagged private environment interpolation alongside literal fixture passwords.
+**Suggested improvement:** Compare central versions, all affected lock entries and version evidence with approval decisions after restore. Verify flagged credentials against current use before changing configuration or rotating anything; distinguish literals from required private interpolation.
+**Principle:** Approval records and scan labels need verification against the executable configuration.

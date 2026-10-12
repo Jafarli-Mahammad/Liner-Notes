@@ -58,9 +58,22 @@ printf '%s\n' "Keep this launcher running during email/unsubscribe checks. Encry
 read -r -p 'Subscriber GUID from profile: ' phase7_qa_user
 read -r -p 'ISO week (for example 2026-W41): ' phase7_qa_week
 while true; do
-  read -r -p 'Action (reconcile, generate, capture, inspect, unsubscribe-link, convert, cleanup, quit): ' phase7_qa_action
+  read -r -p 'Action (reconcile, generate, capture, schedule-setup, schedule, inspect, unsubscribe-link, convert, cleanup, quit): ' phase7_qa_action
   case "$phase7_qa_action" in
     quit) break ;;
+    schedule-setup)
+      read -r -p 'Explicit whole-hour UTC due slot (for example 2026-10-12T10:00:00Z): ' phase8_qa_due
+      if ! dotnet run --file scripts/phase8_schedule_fixture.cs --no-cache -- --user "$phase7_qa_user" --due "$phase8_qa_due"; then
+        printf '%s\n' 'Fixture setup stopped; only active disposable manual QA accounts are accepted.'
+      fi
+      ;;
+    schedule)
+      if dotnet run --project src/Worker/Worker.csproj -- --action schedule --origin Synthetic --Schedule:Users:0 "$phase7_qa_user"; then
+        printf '%s\n' 'One bounded scheduling tick completed; inspect its status above.'
+      else
+        printf '%s\n' 'Scheduling stopped. Reconcile explicitly after database_inventory_changed, then retry schedule.'
+      fi
+      ;;
     inspect|convert|unsubscribe-link)
       if ! dotnet run --file scripts/phase7_local_email.cs --no-cache -- --action "$phase7_qa_action" --user "$phase7_qa_user" --week "$phase7_qa_week"; then
         printf '%s\n' 'Inspection/conversion stopped; inspect its bounded reason above.'
@@ -80,6 +93,6 @@ while true; do
         printf '%s\n' 'Worker stopped; inspect its bounded reason above.'
       fi
       ;;
-    *) printf '%s\n' 'Choose reconcile, generate, capture, inspect, unsubscribe-link, convert, cleanup or quit.' ;;
+    *) printf '%s\n' 'Choose reconcile, generate, capture, schedule-setup, schedule, inspect, unsubscribe-link, convert, cleanup or quit.' ;;
   esac
 done

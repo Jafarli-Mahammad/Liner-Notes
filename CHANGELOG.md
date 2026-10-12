@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Added a Development-only synthetic scheduler with an explicit account allowlist,
+  bounded ticks, UTC due slots and a PostgreSQL lease. Verified local capture advances
+  the claimed slot by one week; failures, opt-out, changed preferences and cancellation
+  preserve it. Restart verifies the original encrypted receipt. Storage reconciliation
+  remains an explicit operator step. The local QA menu now includes schedule fixture setup.
 - Export 2.2 adds stored Identity profile fields, including username, contact
   confirmation and audit values, to the existing account/taste export. Credentials,
   authentication internals and unsubscribe capabilities remain excluded. Added an

@@ -41,7 +41,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         admin=Environment.GetEnvironmentVariable("LINER_PHASE1_POSTGRES")??"";if(admin.Length==0)return;
         var connection=new NpgsqlConnectionStringBuilder(admin);Assert.Contains(connection.Host,new[]{"localhost","127.0.0.1","::1"});
         await using(var db=new NpgsqlConnection(admin)){await db.OpenAsync();await using var create=new NpgsqlCommand($"CREATE DATABASE \"{name}\"",db);await create.ExecuteNonQueryAsync();}
-        connection.Database=name;Directory.CreateDirectory(root);
+        connection.Database=name;connection.Pooling=false;Directory.CreateDirectory(root);
         storage=new(){InventoryPath=Path.Combine(root,"inventory.json"),LeasePath=Path.Combine(root,"lease"),DatabaseOverheadBytesPerPick=1_000_000,
             ArtifactRoots=LocalGenerationStorage.Categories.ToDictionary(c=>c,c=>new[]{Path.Combine(root,c)})};
         foreach(var path in storage.ArtifactRoots.Values.SelectMany(x=>x))Directory.CreateDirectory(path);
@@ -62,15 +62,37 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
     }
     public async Task DisposeAsync()
     {
-        if(services is not null)await services.DisposeAsync();NpgsqlConnection.ClearAllPools();
+        if(services is not null)await services.DisposeAsync();
         if(admin.Length>0){await using var db=new NpgsqlConnection(admin);await db.OpenAsync();await using var drop=new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)",db);await drop.ExecuteNonQueryAsync();}
         if(Directory.Exists(root))Directory.Delete(root,true);
     }
-    private Task<LocalWorkerResult> Run(string action,IsoWeek? target=null,CancellationToken ct=default)=>services.GetRequiredService<LocalDigestWorkerRunner>().RunAsync(new(action,userId,target??week,EvidenceOrigin.Synthetic),ct);
+    private async Task<LocalWorkerResult> Run(string action,IsoWeek? target=null,CancellationToken ct=default)
+    {
+        var runner=services.GetRequiredService<LocalDigestWorkerRunner>();
+        for(var attempt=0;attempt<3;attempt++)
+        {
+            var before=faults.Begins;
+            var result=await runner.RunAsync(new(action,userId,target??week,EvidenceOrigin.Synthetic),ct);
+            if(action!="capture" || result.Reason!="database_inventory_changed")return result;
+            output.WriteLine("Fixture capture stopped at changed inventory; explicit operator reconciliation.");
+            // Retry fixture preparation only before the tested final-row/fault boundary.
+            // Never swallow a stop after opt-out/publication/commit hooks have run.
+            Assert.Equal(before,faults.Begins);
+            Assert.Empty(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));
+            Assert.Equal("reconciled",(await runner.RunAsync(new("reconcile",userId,target??week,EvidenceOrigin.Synthetic),ct)).Status);
+        }
+        throw new InvalidOperationException("Capture fixture remained unstable after three explicit reconciliations.");
+    }
     private async Task Prepare()
     {
+        await using(var keys=services.CreateAsyncScope())
+            _=keys.ServiceProvider.GetRequiredService<IUnsubscribeTokens>().Create(userId);
         Assert.Equal("reconciled",(await Run("reconcile")).Status);
         Assert.Equal("generated",(await Run("generate")).Status);
+        await using(var rows=services.CreateAsyncScope())
+        {
+            await using var transaction=await rows.ServiceProvider.GetRequiredService<ILocalDigestCaptureStore>().BeginAsync(userId,week,default);
+        }
         Assert.Equal("reconciled",(await Run("reconcile")).Status);
     }
     [LocalPostgresMigrationFact]
@@ -171,12 +193,12 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         await Task.Delay(100);Assert.False(deletion.IsCompleted);release.SetResult();
         Assert.Equal("local_captured",(await capture).Status);await deletion;Assert.Empty(Directory.GetFiles(email.SinkRoot!));
     }
-    private sealed class Faults { public int FailCommits;public bool FailAfterCommit;public CancellationTokenSource? CancelAfterPublish;public Func<Task>? BeforeBegin; }
+    private sealed class Faults { public int FailCommits,Begins;public bool FailAfterCommit;public CancellationTokenSource? CancelAfterPublish;public Func<Task>? BeforeBegin; }
     private sealed class FaultStore(ILocalDigestCaptureStore inner,Faults faults):ILocalDigestCaptureStore
     {
         public Task<LocalCaptureInputs> ReadAsync(Guid id,IsoWeek week,CancellationToken ct)=>inner.ReadAsync(id,week,ct);
         public async Task<ILocalDigestCaptureTransaction> BeginAsync(Guid id,IsoWeek week,CancellationToken ct)
-        {var before=faults.BeforeBegin;faults.BeforeBegin=null;if(before is not null)await before();return new FaultTransaction(await inner.BeginAsync(id,week,ct),faults);}
+        {Interlocked.Increment(ref faults.Begins);var before=faults.BeforeBegin;faults.BeforeBegin=null;if(before is not null)await before();return new FaultTransaction(await inner.BeginAsync(id,week,ct),faults);}
         public Task RecordFailureAsync(Guid id,IsoWeek week,string reason,CancellationToken ct)=>inner.RecordFailureAsync(id,week,reason,ct);
     }
     private sealed class FaultTransaction(ILocalDigestCaptureTransaction inner,Faults faults):ILocalDigestCaptureTransaction

@@ -337,9 +337,21 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
             await using var scope = _services.CreateAsyncScope();
             var services = scope.ServiceProvider;
             _ = services.GetRequiredService<IUnsubscribeTokens>().Create(id);
-            var state = await services.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync();
-            await services.GetRequiredService<LocalGenerationStorage>().ReconcileAsync(state);
-            Assert.Equal("local_captured", (await services.GetRequiredService<ISender>().Send(new CaptureLocalDigestCommand(id, _week))).Status);
+            await using (var rows = await services.GetRequiredService<ILocalDigestCaptureStore>().BeginAsync(id, _week, default)) { }
+            LocalCaptureResult? captured = null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                var state = await services.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync();
+                await services.GetRequiredService<LocalGenerationStorage>().ReconcileAsync(state);
+                captured = await services.GetRequiredService<ISender>().Send(new CaptureLocalDigestCommand(id, _week));
+                if (captured.Status == "local_captured") break;
+                Assert.Equal("database_inventory_changed", captured.Reason);
+                var db = services.GetRequiredService<DataContext>();
+                var digest = await db.WeeklyDigests.SingleAsync(d => d.UserId == id && d.Week == _week);
+                Assert.Equal(DigestStatus.Pending, digest.Status);
+                Assert.False(File.Exists(Path.Combine(_email.SinkRoot!, $"{digest.Id:N}.eml.enc")));
+            }
+            Assert.Equal("local_captured", captured!.Status);
         }
     }
 

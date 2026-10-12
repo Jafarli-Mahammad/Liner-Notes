@@ -16,6 +16,9 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
     ILocalEmailStorage storage, IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer,
     ILocalEmailBodyWriter? writer = null) : ILocalEmailSink
 {
+    /// <summary>Prepares an encrypted local capture or validates an existing receipt, acquiring a storage lease that the caller must dispose.</summary>
+    /// <remarks><paramref name="database"/> supplies storage measurements for inventory validation and new-file reservation. Configuration, file access, protection, and cancellation errors propagate. Publication occurs separately through the returned capture.</remarks>
+    /// <exception cref="GenerationStoppedException">Storage or receipt checks fail, a legacy plaintext copy needs conversion, or a captured digest's receipt is missing.</exception>
     public async Task<ILocalEmailCapture> OpenAsync(WeeklyDigestDto digest, SubscriberDto subscriber,
         GenerationStorageState database, CancellationToken ct)
     {
@@ -51,6 +54,9 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
         ILocalEmailBodyWriter? writer) : ILocalEmailCapture
     {
         public bool ReceiptExists => exists;
+        /// <summary>Revalidates an existing receipt or publishes the prepared encrypted copy after checking current inputs and subscription state.</summary>
+        /// <remarks>A published receipt and attempted partials may remain after failure. New-file I/O failures are retried up to three attempts; cancellation propagates.</remarks>
+        /// <exception cref="GenerationStoppedException">Inputs, subscription, storage, or receipt checks fail, or new-file I/O retries are exhausted or access is denied.</exception>
         public async Task PublishAsync(WeeklyDigestDto digest, SubscriberDto subscriber, GenerationStorageState database, CancellationToken ct)
         {
             var fresh = renderer.Render(digest, subscriber, message.Token);

@@ -126,6 +126,28 @@ Local logs and results are disposable evidence, not tracked artifacts. No actual
 GitHub Actions execution, remote push, external email, live provider acquisition
 or public deployment occurred. Developer confirmation remains pending.
 
+## Push-recovery merge verification
+
+The attempted push was non-fast-forward: the fetched `origin/Prism` had three
+commits absent locally (registration weekday/legacy repair and scheduler
+fairness fixes), while the local Phase 9 branch had five commits absent remotely.
+Those histories were merged without rebasing or rewriting commits; the text
+conflicts in `CHANGELOG.md`, `PROGRESS.md` and the observation log retain both
+sides' entries. Observation numbers were made unique.
+
+After merging, locked restore and Release build passed. The complete integrated
+suite passed **478 tests, zero failures and zero skips**: Domain 117, DataAccess
+87, Application 112, Presentation 56 and Infrastructure 106. The strict five-file
+TRX validator passed. The 32 existing offline Python tests, four new Phase 9
+helper methods, repository checks and all eight rebuilt Compose lifecycle groups
+passed again. A sandboxed VSTest attempt could not open its local socket; rerunning
+the same suite with the permitted local test runner passed. Only task-owned
+PostgreSQL and Compose containers/volumes were used and cleaned up.
+
+The local merge makes the branch fast-forwardable to the fetched remote tip as
+of this verification. The remote may advance again before any later push. No push
+was performed.
+
 ## Unfinished release work
 
 Last.fm written public-page approval is missing. Recommendation quality is not

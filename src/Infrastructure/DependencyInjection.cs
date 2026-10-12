@@ -12,6 +12,8 @@ namespace LinerNotes.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <summary>Registers recommendation providers, bounded caching, generation storage, and local email capture, archive, and conversion services.</summary>
+    /// <returns>The supplied service collection.</returns>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)

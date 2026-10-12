@@ -19,6 +19,7 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
     private const string Prefix = "local-receipt-v1:";
     private static ReadOnlySpan<byte> FileHeader => "LINER-ENCRYPTED-EMAIL-v1\n"u8;
 
+    /// <summary>Tests only for the encrypted-file header; does not authenticate the contents.</summary>
     public static bool IsEncrypted(ReadOnlySpan<byte> bytes) => bytes.StartsWith(FileHeader);
     private static string BodyHash(string plain, string html) => Convert.ToHexStringLower(SHA256.HashData(
         Utf8.GetBytes(plain.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + plain + html)));
@@ -32,6 +33,10 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
         return date.ToString("ddd, dd MMM yyyy HH:mm:ss +0000", System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Returns encrypted multipart email bytes with an authenticated receipt for the current sender settings.</summary>
+    /// <exception cref="GenerationStoppedException">The MIME, receipt, or encrypted message exceeds its size limit.</exception>
+    /// <exception cref="InvalidOperationException">Local email settings are invalid.</exception>
+    /// <remarks>Protection failures and invalid message data errors propagate.</remarks>
     public byte[] Serialize(RenderedDigestEmail email)
     {
         options.Validate();
@@ -59,6 +64,9 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
         return ProtectMime(result);
     }
 
+    /// <summary>Wraps encrypted MIME bytes with the file header and clears the supplied MIME buffer even on failure.</summary>
+    /// <exception cref="GenerationStoppedException">The encrypted file exceeds the stored-message byte limit.</exception>
+    /// <remarks>Protection and checked-length overflow errors propagate.</remarks>
     private byte[] ProtectMime(byte[] mime)
     {
         try
@@ -73,19 +81,34 @@ public sealed class LocalEmailMessageSerializer(LocalEmailOptions options, IUnsu
         finally { CryptographicOperations.ZeroMemory(mime); }
     }
 
+    /// <summary>Decrypts and validates a receipt and its bodies against the current sender settings and template version.</summary>
+    /// <returns>The unsanitized receipt and bodies, with Bytes equal to the encrypted file size.</returns>
+    /// <exception cref="GenerationStoppedException">The encrypted copy is oversized, invalid, unauthentic, or incompatible with current sender settings.</exception>
     public ParsedLocalEmail Parse(ReadOnlySpan<byte> bytes) => ParseEncrypted(bytes, requireCurrentSender: true);
 
+    /// <summary>Decrypts and validates an archived copy without requiring current sender settings or template version.</summary>
+    /// <returns>The unsanitized receipt and bodies, with Bytes equal to the encrypted file size.</returns>
+    /// <exception cref="GenerationStoppedException">The encrypted copy is oversized, invalid, or cannot be authenticated.</exception>
     public ParsedLocalEmail ParseStoredCopy(ReadOnlySpan<byte> bytes) => ParseEncrypted(bytes, requireCurrentSender: false);
 
     // Only explicit conversion and ownership-based deletion may read the legacy plaintext format.
+    /// <summary>Validates legacy plaintext MIME for explicit conversion or ownership-based deletion, without requiring current sender settings.</summary>
+    /// <returns>The unsanitized receipt and bodies, with Bytes equal to the plaintext MIME size.</returns>
+    /// <exception cref="GenerationStoppedException">The MIME or receipt is oversized, invalid, or cannot be authenticated.</exception>
     public ParsedLocalEmail ParseLegacyStoredCopy(ReadOnlySpan<byte> bytes) => ParseCore(bytes, requireCurrentSender: false);
 
+    /// <summary>Validates legacy plaintext MIME and returns its encrypted file representation without modifying the input buffer.</summary>
+    /// <exception cref="GenerationStoppedException">The legacy copy is invalid or the encrypted result exceeds its byte limit.</exception>
+    /// <remarks>Protection failures propagate.</remarks>
     public byte[] EncryptLegacyStoredCopy(ReadOnlySpan<byte> bytes)
     {
         _ = ParseLegacyStoredCopy(bytes);
         return ProtectMime(bytes.ToArray());
     }
 
+    /// <summary>Decrypts and validates a stored copy, reporting encrypted byte length and clearing the decrypted byte buffer.</summary>
+    /// <remarks>When <paramref name="requireCurrentSender"/> is true, sender settings and template version must match the current configuration.</remarks>
+    /// <exception cref="GenerationStoppedException">The file or receipt is invalid; cryptographic and argument failures are converted to email_receipt_invalid.</exception>
     private ParsedLocalEmail ParseEncrypted(ReadOnlySpan<byte> bytes, bool requireCurrentSender)
     {
         if (bytes.Length > options.StoredMessageByteLimit || !IsEncrypted(bytes))

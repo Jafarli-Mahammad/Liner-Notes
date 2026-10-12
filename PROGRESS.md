@@ -9,13 +9,21 @@
   Pinned build inputs, non-root web/Worker images, tool/init targets, a disposable
   local Compose topology and PostgreSQL-backed CI are locally implemented.
   The [sequential implementation plan](docs/renewal/phase-9-plan.md) is locally
-  verified: **472 .NET checks, 32 offline Python tests, 4 new helper test methods
+  verified: **478 .NET checks, 32 offline Python tests, 4 new helper test methods
   and all eight container lifecycle groups passed**. See the
   [evidence](docs/renewal/phase-9-evidence.md) and [runbook](docs/renewal/phase-9-local-run.md).
   Actual GitHub Actions execution and developer confirmation remain pending.
   MediatR 12.5.0 is the developer-approved licensing exception. Last.fm
   written public-page approval and production operational decisions are missing,
   so release remains blocked independently of local reproducibility work.
+
+- Scheduler review fixes (2026-10-12): registration now uses the selected UTC
+  weekday/hour; explicit guarded legacy-slot repair is documented in
+  [repair procedure](docs/renewal/registration-slot-repair.md). Bounded selection
+  records attempt order in existing audit fields, preventing persistent invalid
+  states or missing receipts from monopolizing ticks across restarts. Final
+  verification passed **474 whole-solution checks, zero failures/skips**.
+  No existing account repair was run; developer confirmation remains pending.
 - Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
   **8a implementation → separate 8a tests → 8b implementation → separate 8b tests
   → combined verification**. This is the proceed decision after Phase 7 reassessment;

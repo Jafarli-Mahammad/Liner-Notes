@@ -23,6 +23,8 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
     private readonly IAccountProfileReader _accountProfileReader;
 
+    /// <summary>Configures export readers and an optional local email archive.</summary>
+    /// <remarks>When <paramref name="archive"/> is absent, exports report the archive as incomplete for captured digests, or disabled otherwise.</remarks>
     public GetUserDataExportQueryHandler(
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
@@ -36,6 +38,10 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         _accountProfileReader = accountProfileReader;
     }
 
+    /// <summary>Returns version 2.2 account and taste records, digest history, and the local email archive result.</summary>
+    /// <remarks>Repository and archive exceptions, including cancellation, propagate; an archive result marked incomplete is retained in the export.</remarks>
+    /// <exception cref="NotFoundException">The subscriber or active Identity profile cannot be found.</exception>
+    /// <exception cref="InvalidOperationException">A full digest page repeats the preceding cursor.</exception>
     public async Task<UserDataExportDto> Handle(
         GetUserDataExportQuery request,
         CancellationToken cancellationToken)

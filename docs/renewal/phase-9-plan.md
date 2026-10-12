@@ -57,10 +57,10 @@ and tests both fresh migrations and a populated legacy upgrade.
 
 ## Execution status
 
-- Dependency modernization locally verified: 472 passed, zero failures/skips.
+- Dependency modernization locally verified: 472 passed, zero failures/skips. After merging the remote scheduling/registration fixes, the integrated branch passed 478 with zero failures/skips.
 - Swagger replacement: NSwag 14.7.1 verified after the developer selected investigation; document, security and Production hiding checks pass.
 - Containers/Compose: implemented; all targets built and all eight disposable lifecycle groups passed. Private build-context exclusions and non-root runtime images verified.
-- CI/release documentation: implemented; local equivalent checks passed (472 .NET, 32 offline Python and 4 new helper methods). Actual GitHub Actions execution remains unverified.
+- CI/release documentation: implemented; merged-branch local checks passed (478 .NET, 32 offline Python and 4 new helper methods). Actual GitHub Actions execution remains unverified.
 - Developer confirmation and public release: pending, independent of test passes.
 
 See [approved design with version correction](phase-9-review.md).

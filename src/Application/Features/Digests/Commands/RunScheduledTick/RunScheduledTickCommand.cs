@@ -15,6 +15,11 @@ public sealed record ScheduleTickResult(string Status, IReadOnlyList<ScheduleJob
 public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, ISender sender, TimeProvider clock)
     : IRequestHandler<RunScheduledTickCommand, ScheduleTickResult>
 {
+    /// <summary>Processes a bounded selection of eligible accounts, initializing missing slots and capturing due digests before advancing each slot seven days.</summary>
+    /// <returns>A busy result if the scheduler lease is unavailable; otherwise, job results and a stopped status if any job stopped.</returns>
+    /// <remarks>Per-account failures become stopped results. Cancellation and failures acquiring the lease, selecting candidates, or disposing the lease propagate.</remarks>
+    /// <exception cref="ArgumentException">The request does not contain 1–100 distinct, nonempty user IDs or a per-tick limit of 1–100.</exception>
+    /// <exception cref="OperationCanceledException">Processing is canceled.</exception>
     public async Task<ScheduleTickResult> Handle(RunScheduledTickCommand request, CancellationToken ct)
     {
         var users = request.Users.ToArray();

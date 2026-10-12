@@ -1,8 +1,12 @@
 # Phase 9 implementation evidence
 
-In progress, 2026-10-12. [Approved design](phase-9-review.md),
+Locally implemented and verified, 2026-10-12. [Approved design](phase-9-review.md),
 [sequential plan](phase-9-plan.md), [verified version snapshot](phase-9-versions.json).
 Developer confirmation remains pending; local verification does not authorize release.
+
+Focused local implementation commits: `04f26da` (dependency compatibility) and
+`73108ed` (container packaging/runbook). CI, final evidence and status are recorded
+in a subsequent focused local commit; nothing was pushed.
 
 ## Approval accounting
 
@@ -11,8 +15,8 @@ Developer confirmation remains pending; local verification does not authorize re
 | Latest stable project dependencies/tools | Direct and transitive package versions centrally upgraded and locked; SDK 10.0.401 and EF runtime/tool 10.0.12 verified |
 | MediatR licensing exception | Upgraded to Apache-licensed 12.5.0 as explicitly selected by the developer |
 | EF 10 compatibility | Existing schema/snapshots preserved; original pending-model and populated migration tests pass |
-| Docker/Compose | Implemented files; image/lifecycle verification in progress |
-| CI and release preparation | Pending implementation/verification |
+| Docker/Compose | All targets built; disposable container lifecycle and private build-context checks passed |
+| CI and release preparation | Workflow and release checklist implemented; equivalent local checks passed; actual GitHub Actions run not verified |
 | Last.fm public-page approval / external delivery / production operations | Not obtained or implemented; remain separate decisions |
 
 ## Dependency verification
@@ -51,7 +55,7 @@ fresh/populated migrations, process recovery, export/deletion and encrypted
 capture checks. Command shape with the verified SDK selected in `PATH`:
 
 ```bash
-dotnet restore 'Liner Notes.sln'
+dotnet restore 'Liner Notes.sln' --locked-mode
 dotnet tool restore
 dotnet build 'Liner Notes.sln' -c Release --no-restore -m:1
 # Supply LINER_PHASE1_POSTGRES privately for a disposable local test database.
@@ -65,7 +69,66 @@ PostgreSQL environment setting, so its skipped results were rejected; the final
 run includes the required database and zero skips. The new Production Swagger
 fixture initially supplied settings too late for startup; explicit early fixture
 settings corrected it without modifying application behavior. Five NU1510 package-pruning warnings remain; the
-explicit current package references were not removed. No dependency was removed
-or old migration rewritten. No provider calls or actual user data were used.
+explicit current package references were not removed. Swashbuckle was replaced
+for the proven runtime compatibility failure, not an established security exploit;
+the developer selected replacement investigation over retaining OpenAPI 2.7.5.
+No old migration was rewritten. No provider calls or actual user data were used.
 
-Container/CI/final evidence will be appended as those approved steps complete.
+## Containers and local lifecycle
+
+All web, Worker, tools and private-volume initialization targets built against
+the immutable stable image pins in the version snapshot. Web and Worker ran as
+UID 1654 and had no installed SDK. The initialization process alone uses root
+to prepare the dedicated volume; the explicit operator profile uses the SDK
+for existing local inspection commands. Inspected artifact directories had mode
+700. A disposable build-context probe excluded fabricated environment, encrypted
+capture and key files while retaining the shared build inputs.
+
+`python3 scripts/checks/phase9_compose.py` passed these eight groups:
+
+1. Failed migration prevents web startup.
+2. Fresh migrations and repeated application are idempotent.
+3. Registration, synthetic generation, encrypted capture and JSON export.
+4. Application recreation retains keys, captures and authenticated access.
+5. Bounded UTC scheduling and idempotent advancement.
+6. Read-only unsubscribe GET, confirmation POST and subsequent capture suppression.
+7. Account deletion invalidates access and removes owned copies; web runs non-root.
+8. Production Worker mode and live recommendation origins remain rejected.
+
+The script uses uniquely named, task-owned projects, fabricated accounts and
+fixture-only providers, and removes its own containers and volumes in `finally`.
+Startup connection resets are retried. The first QA assumptions about arbitrary
+tag seeds and the scheduler JSON envelope were corrected to use known artist
+fixtures and the existing `Ticks` response; application contracts were preserved.
+Final logs: `/tmp/liner-phase9-container-build-final.log` and
+`/tmp/liner-phase9-compose-final.log`. See the [local runbook](phase-9-local-run.md).
+
+## CI and final local checks
+
+CI pins verified stable checkout/setup-dotnet action revisions, provides a
+healthy disposable PostgreSQL service, restores locked packages, builds Release
+and executes all five .NET test projects. Its TRX validator requires positive
+test counts, matching results and zero non-passing outcomes in every project.
+A separate container job builds and exercises the supported local lifecycle.
+The workflow has read-only repository permissions and no publication step.
+
+Local equivalents passed:
+
+- Locked package restore and all five TRX reports: **472 passed, 0 failed, 0 skipped**.
+- Existing offline Python tools: **32 tests passed**.
+- New credential/result helper checks: **4 test methods passed**, including
+  missing/failed/skipped/forged results and exclusive private credential creation.
+- Secret-default, renewal-document and whitespace checks.
+- Final outdated-package report: 11 projects with no reported outdated entries;
+  the explicit MediatR licensing exception remains recorded from the stable feed.
+
+Local logs and results are disposable evidence, not tracked artifacts. No actual
+GitHub Actions execution, remote push, external email, live provider acquisition
+or public deployment occurred. Developer confirmation remains pending.
+
+## Unfinished release work
+
+Last.fm written public-page approval is missing. Recommendation quality is not
+verified; production email, scheduling, hosting/capacity and key/backup operations
+remain separate work. Existing deployments and plaintext copies were not inspected
+or converted. See the [release checklist](phase-9-release-checklist.md).

@@ -206,8 +206,8 @@ not confirm earlier work or supply public-release permission.
 - [Compose startup](https://docs.docker.com/compose/how-tos/startup-order/)
   and [service network mode](https://docs.docker.com/reference/compose-file/services/#network_mode).
 - [GitHub .NET CI](https://docs.github.com/en/actions/tutorials/build-and-test-code/net),
-  [checkout v4](https://raw.githubusercontent.com/actions/checkout/v4/action.yml)
-  and [setup-dotnet v4](https://raw.githubusercontent.com/actions/setup-dotnet/v4/action.yml).
+  [checkout v7.0.1](https://raw.githubusercontent.com/actions/checkout/v7.0.1/action.yml)
+  and [setup-dotnet v6.0.0](https://raw.githubusercontent.com/actions/setup-dotnet/v6.0.0/action.yml).
 - [Last.fm API terms](https://www.last.fm/api/tos): §2.7 public-page permission,
   §4.3.4 caching/storage and §4.4 provider-set limits. No universal numeric
   request allowance or text-only email permission is asserted.

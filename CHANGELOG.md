@@ -2,6 +2,14 @@
 
 ## Unreleased — renewal
 
+- Add non-root web/Worker container targets, explicit migration/private-volume
+  initialization and a local PostgreSQL Compose stack with loopback web only.
+  Private credential generation and opt-in operator/Worker profiles support
+  the existing encrypted capture, scheduling, unsubscribe and deletion flows.
+  CI now supplies PostgreSQL and rejects incomplete or skipped test suites;
+  a disposable container lifecycle job covers the packaged slice. Public release
+  remains gated on written provider approval and production operational decisions.
+
 - Upgrade to stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12 and current
   stable direct/transitive dependencies, with central versions and locked restore.
   MediatR 12.5.0 remains an explicit licensing exception. Replace incompatible

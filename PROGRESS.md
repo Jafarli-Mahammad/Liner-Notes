@@ -6,9 +6,13 @@
   of Phase 9. Repository/container/CI preflight is complete and the
   [concrete written design](docs/renewal/phase-9-review.md) was approved with a
   latest-stable package/tool correction and explicit instruction to proceed.
-  It proposes pinned build inputs, web/Worker/tool images, a disposable local
-  Compose topology and PostgreSQL-backed CI. The [sequential implementation plan](docs/renewal/phase-9-plan.md)
-  is in execution, starting with EF Core 10 and other dependency upgrades.
+  Pinned build inputs, non-root web/Worker images, tool/init targets, a disposable
+  local Compose topology and PostgreSQL-backed CI are locally implemented.
+  The [sequential implementation plan](docs/renewal/phase-9-plan.md) is locally
+  verified: **472 .NET checks, 32 offline Python tests, 4 new helper test methods
+  and all eight container lifecycle groups passed**. See the
+  [evidence](docs/renewal/phase-9-evidence.md) and [runbook](docs/renewal/phase-9-local-run.md).
+  Actual GitHub Actions execution and developer confirmation remain pending.
   MediatR 12.5.0 is the developer-approved licensing exception. Last.fm
   written public-page approval and production operational decisions are missing,
   so release remains blocked independently of local reproducibility work.
@@ -53,7 +57,9 @@
   is recorded above with its concrete review gates. This storage follow-up does not
   authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: execute the approved [Phase 9 plan](docs/renewal/phase-9-plan.md).
+- Active step: developer review/confirmation of the locally verified
+  [Phase 9 evidence](docs/renewal/phase-9-evidence.md); resolve the separate
+  [release gates](docs/renewal/phase-9-release-checklist.md) before public deployment.
   Developer confirmation of the locally verified
   Phase 8 implementation remains pending;
   [Phase 8b evidence and QA](docs/renewal/phase-8b-evidence.md) are ready for review.
@@ -187,7 +193,8 @@ The plan below is approved; **not approved** refers to phase execution and its r
    (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery —
    [concrete local design](docs/renewal/phase-8b-review.md) approved and executed.
 9. Reproducibility and release preparation — **design approved on 2026-10-12
-   with latest-stable package/tool correction; implementation in progress**. [Written design](docs/renewal/phase-9-review.md)
+   with latest-stable package/tool correction; locally implemented and verified;
+   developer confirmation pending**. [Written design](docs/renewal/phase-9-review.md)
    covers Docker/Compose, build pins and CI. Last.fm written public-page approval
    is missing; release stays blocked until approval is documented and separate
    hosting/delivery/production operational decisions are resolved.
@@ -267,4 +274,6 @@ Local commit subjects use the identifiers shown above; 1C–1F/I share one commi
 - Prior agents' completion, privacy, coverage and compliance claims are not carried forward.
 - The old coverage report has hybrid fallback and hard-coded conclusions; it cannot establish live
   provenance or musical quality. See its [qualification](docs/coverage-spike-founder-seeds.md).
-- Runtime targets .NET 10; several packages are 9.x. No dependency migration is implied by this document.
+- Before Phase 9, the runtime targeted .NET 10 while several packages were 9.x.
+  Phase 9 upgraded the dependency graph under the developer's latest-stable policy;
+  see its version snapshot and explicit MediatR exception.

@@ -83,3 +83,15 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** A restore/build accepted a newer transitive OpenAPI major, but document generation failed at runtime with MissingMethodException. A replacement generator passed the same route/security check. A framework upgrade also changed an implicit constraint naming convention despite unchanged entities.
 **Suggested improvement:** Inspect generated schema diffs, preserve intended explicit names, and verify actual generated documents and security references after changing package majors. Do not equate successful dependency resolution or compilation with runtime compatibility.
 **Principle:** Stable packages can form an incompatible graph; prove the contracts the application actually uses.
+
+### Observation 008: Required database checks need an explicit result gate
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Local reproduction of the PostgreSQL-backed CI suite.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Verification completeness
+**Issue:** A successful test command could contain skipped database checks when its environment setting was omitted. A complete rerun passed, but exit status alone could have hidden the missing coverage.
+**Suggested improvement:** Supply a disposable healthy database and validate results for every required project, positive test counts and zero failed or skipped outcomes. Exercise the validator with missing and non-passing result files.
+**Principle:** A passing command establishes only the checks that actually ran.

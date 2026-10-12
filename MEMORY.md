@@ -33,6 +33,7 @@ Apply only what's relevant to the current task. Don't recite this file back.
 Working preferences
 [stated] Be direct and technical. No flattery. Disagree with reasons when you have a better argument. (2026-09-28)
 [stated] Ask at most one question at a time, only when the answer changes what you'd do. (2026-09-28)
+[stated] After approving the Phase 8 design, the developer directed immediate implementation and approved routine dotnet, docker and LINER_PHASE1_POSTGRES verification commands; carry that authorization through the task without another simple-command approval checkpoint. (2026-10-12)
 [stated] Verify before asserting: API behavior, library versions, pricing, terms, competitor claims. If unverified, say "not verified". (2026-09-28)
 [stated] Don't call a problem solved until the developer confirms it works. Think through edge cases first. (2026-09-28)
 [stated] Don't give UI navigation steps from memory; flag uncertainty first. (2026-09-28)

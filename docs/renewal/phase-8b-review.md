@@ -1,6 +1,6 @@
 # Phase 8b scheduling and recovery — concrete design for review
 
-Date: 2026-10-12. Status: phase direction authorized; concrete design awaiting review.
+Date: 2026-10-12. Status: concrete design approved; implementation and local verification executed.
 
 ## Intent and scope
 
@@ -39,7 +39,7 @@ hosting/lifecycle decisions. Neither is adopted by this local design.
   default 1. `Schedule:IntervalSeconds`: 1–3600, default 60. All limits are
   configuration values; a process ends after its configured tick limit or
   cancellation. This is not an implicitly perpetual background deployment.
-- Use a host-managed BackgroundService, a fresh DI scope per tick/job and
+- Use a host-managed BackgroundService, a fresh DI scope per tick and
   `TimeProvider` for the clock/delay. Do not put scheduling logic in Presentation
   or call upstream APIs. Existing command handlers perform generation/capture.
 - Return bounded per-job status/reason plus tick counts for operator inspection.
@@ -162,6 +162,9 @@ The database lease follows PostgreSQL's
 Verify these APIs against installed packages before implementing; documentation
 does not authorize an upgrade or prove the current implementation works.
 
-Concrete written-spec review and the subsequent implementation-plan review are
-required by the brainstorming workflow. The developer already selected sequential
-execution and separate/combined testing; do not ask for that choice again.
+The developer approved this design and explicitly directed immediate implementation.
+That direction superseded an additional planning approval checkpoint. The selected
+sequential execution and separate/combined testing remained authoritative. Each
+bounded tick uses a fresh scope, disposed before its delay; existing generation and
+capture handlers retain their own transaction/context and ownership boundaries.
+See [implementation evidence](phase-8b-evidence.md) and [runnable QA](phase-8b-local-run.md).

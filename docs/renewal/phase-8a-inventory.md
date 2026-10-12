@@ -198,6 +198,14 @@ additional stored columns. Physical deletion includes hidden owned rows.
 
 ## Backups and restore boundaries
 
+Phase 8b adds no stored column. Its scheduler writes the already exported
+`Users.NextDigestAt`, `LastModifiedAt` and `LastModifiedBy`, alongside the existing
+digest/snapshot/copy lifecycle data. The allowlist is operator configuration;
+terminal results may retain account GUIDs, due slots, weeks and bounded reasons.
+Those configuration/terminal copies are outside online account deletion. The
+scheduled CLI disables log providers and emits no email addresses, credentials,
+capabilities or MIME. Real operator/host logging remains outside this local evidence.
+
 Online SQL deletion and configured-sink cleanup cannot erase database/file backups,
 operator previews, copied export downloads, or files outside that sink. Restore can
 reintroduce deleted account rows, tokens, permission files and captures. Historical

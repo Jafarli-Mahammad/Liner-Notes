@@ -14,8 +14,14 @@
   **70 separate 8a checks and 417 whole-solution checks passed, zero failures/skips**,
   actual browser verification and one fresh review with three coverage gaps closed.
   Developer confirmation remains pending. The
-  [bounded local UTC 8b design](docs/renewal/phase-8b-review.md) is awaiting concrete
-  review; 8b implementation and final combined verification have not run.
+  [bounded local UTC 8b design](docs/renewal/phase-8b-review.md) was approved and
+  immediate implementation requested. Its scheduler, restart checks and
+  [runnable QA](docs/renewal/phase-8b-local-run.md) are implemented. Separate 8b
+  checks passed 58 and combined checks passed 121, zero failures/skips. One fresh
+  final review found no Critical/Important issue. Final separate/combined verification
+  passed **8a 70 → 8b 58 → combined 121 → whole solution 468**, zero failures/skips.
+  Implementation commits include `82c3329` and `0c0f7d7`. Developer confirmation,
+  external delivery and deployment remain pending. See [8b evidence](docs/renewal/phase-8b-evidence.md).
 - Phase 7 storage security follow-up: the developer selected encrypted local capture
   (option 2) on 2026-10-11 after the CodeQL plaintext-file findings. Complete messages
   and new partials now use authenticated encryption with a distinct Data Protection
@@ -37,7 +43,9 @@
   is recorded above with its concrete review gates. This storage follow-up does not
   authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: written review of the Phase 8b scheduling/recovery design. Developer confirmation of the
+- Active step: developer confirmation of the locally verified Phase 8 implementation;
+  [Phase 8b evidence and QA](docs/renewal/phase-8b-evidence.md) are ready for review.
+  Developer confirmation of the
   [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md) remains pending;
   use its [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
@@ -160,12 +168,12 @@ The plan below is approved; **not approved** refers to phase execution and its r
    **Mechanics only, no catalog conclusions.** Popularity stays deferred; the 1 GB stop
    remains temporary/unresolved. The developer selected **proceed** with Phase 8 on
    2026-10-12; this does not confirm Phase 7. Phase 8a/8b concrete approvals are separate.
-8. Privacy and delivery — **direction authorized; 8a design/plan approved and locally verified
-   on 2026-10-12; developer confirmation and 8b concrete reviews pending**, with
+8. Privacy and delivery — **8a and 8b designs approved and implemented
+   on 2026-10-12; separate/combined/full local verification passed; developer confirmation pending**, with
    **two separate approvals**: (a) export and deletion verification — 70 separate
    checks and 417 whole-solution checks passed, actual browser and fresh review;
    (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery —
-   [concrete local design](docs/renewal/phase-8b-review.md) awaiting review.
+   [concrete local design](docs/renewal/phase-8b-review.md) approved and executed.
 9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
    public-page approval. Release stays blocked until that approval is documented.
 

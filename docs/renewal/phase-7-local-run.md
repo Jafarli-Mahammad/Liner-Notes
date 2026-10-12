@@ -98,7 +98,8 @@ copies unreadable and prevents authenticated cleanup. Automatic key rotation ret
 older decrypting keys. The database key store is not additionally wrapped by this change:
 restrict database access and protect its backups separately from copies. Theft of copies
 alone is covered; possession of both keys and copies, or compromise of the running service
-or host administrator, is outside this protection. Scheduling, external delivery and
+or host administrator, is outside this protection. The approved Development scheduler
+is documented in [Phase 8b local QA](phase-8b-local-run.md). External delivery and
 production key custody remain separately gated.
 
 For an empty-list case use a separate disposable account with three tags unsupported by
@@ -151,7 +152,8 @@ An operator may remove their own failed QA artifacts, then reconcile before anot
 
 ## Direct Worker and recorded-input boundaries
 
-The Worker has exactly three one-shot actions. In an already configured local environment:
+The Worker retains three one-shot actions and adds the bounded Synthetic-only
+[schedule action](phase-8b-local-run.md). In an already configured local environment:
 
 ```bash
 dotnet run --project src/Worker/Worker.csproj -- --action reconcile --user YOUR_ACCOUNT_GUID --week 2026-W42 --origin Synthetic

@@ -33,7 +33,7 @@ complete [column inventory and boundaries](phase-8a-inventory.md).
 | New schema, packages, retention, scorer, live calls or external sending | Not done, by approved scope | No migration/package change; popularity remains neutral and synthetic mechanics do not validate recommendation quality |
 | Separate 8a verification | Passed locally | 70 passed, 0 failed/skipped |
 | Whole-solution regression check | Passed locally | 417 passed, 0 failed/skipped; all local PostgreSQL checks enabled |
-| 8b and final combined Phase 8 run | Not implemented / not run | [Concrete 8b design](phase-8b-review.md) awaiting review; the whole-solution 8a run is not a combined 8a/8b result |
+| 8b and final combined Phase 8 run | Subsequently implemented and verified | [8b evidence](phase-8b-evidence.md) records the separate/combined runs; the historical 417-check 8a run itself is not a combined result |
 
 ## Implementation and commit boundaries
 

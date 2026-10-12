@@ -2,7 +2,7 @@
 
 The approved local slice is implemented and locally verified; developer confirmation is
 pending. This procedure uses fabricated accounts, Synthetic provider fixtures, a disposable
-PostgreSQL database and private temporary MIME files. See [evidence](phase-7-evidence.md)
+PostgreSQL database and private temporary encrypted email files. See [evidence](phase-7-evidence.md)
 for results and limitations.
 
 ## Start the local application and Worker menu
@@ -31,7 +31,7 @@ removes only its temporary artifact directory. SQL account data remains until ac
 deletion or disposal of your QA database. On Unix, the configured sink root must be
 owner-only (mode `0700` or stricter); the launcher sets the temporary root and categories
 to mode `0700`. For a persistent sink, create a dedicated owner-only directory before
-configuring `LocalEmail:SinkRoot`. New MIME files use mode `0600`; the application rejects
+configuring `LocalEmail:SinkRoot`. New encrypted files use mode `0600`; the application rejects
 a Unix sink directory with group/world access. On Windows, the sink directory must be owned
 by the current process user; its allow rules may grant access only to that user, Local System
 and built-in Administrators. Review/delete disposable accounts before quitting;
@@ -45,48 +45,62 @@ Enter these actions in order:
 1. `reconcile` — measure the database and all six configured artifact categories.
 2. `generate` — invoke the existing generator for the explicit user/week.
 3. `reconcile` — generation changed database accounting; refresh explicitly.
-4. `capture` — load the persisted digest and publish a bounded local MIME file.
+4. `capture` — load the persisted digest and publish a bounded encrypted local email file.
 5. `capture` again — expect `already_captured`, the same digest ID and unchanged file bytes.
 
 Inspect the digest and export on `/manual-test`. A captured digest has status
-`LocalCaptured`, with `SentAt` null. Export version is **2.1**; the subscriber includes
+`LocalCaptured`, with `SentAt` null. Export version is now **2.2**; the `account`
+section exposes stored Identity profile fields while excluding credentials and
+authentication internals. The subscriber includes
 `emailUnsubscribedAtUtc`, and archive inspection exposes sanitized plaintext/HTML and issues.
 The stored score explanation appears in both alternatives, in persisted rank order.
 Listening links are ordinary links; opening the message loads no remote images, fonts,
 scripts, CSS resources, players or tracking pixels.
 
-Open `<digest-id-without-dashes>.eml` in a local MIME viewer to inspect the private message.
-It contains recipient/taste data and a protected unsubscribe capability. Keep it local;
-public export removes capabilities. On Unix newly created files have mode `0600`.
+Stored files are now `<digest-id-without-dashes>.eml.enc`. The entire MIME message,
+including recipient, taste data and unsubscribe capability, is authenticated ciphertext;
+partial writes also contain ciphertext. A MIME viewer cannot open these files directly.
+The original MIME bound is 400,000 bytes, with up to 16,384 additional stored bytes reserved
+for encryption metadata. Storage accounting uses the actual encrypted byte count.
 
-To inspect either MIME alternative without printing its capability, decode it to a private
-local HTML/text file and open it locally. Export `PHASE7_QA_MESSAGE` with the one message's
-absolute path (`export PHASE7_QA_MESSAGE='/absolute/private/path/digest.eml'`), then run:
+Use `inspect` in the launcher for the selected user's week. It decrypts in memory and
+prints sanitized text to your terminal without writing a plaintext preview file. The
+helper requires Development, a loopback database, the existing subscriber/digest and
+operator access to the configured storage and database. Both sanitized alternatives
+remain available through the authenticated data export on `/manual-test`. The export
+removes the unsubscribe capability; the separate explicit `unsubscribe-link` action
+reveals the stored capability only for local testing below. Do not save or redirect private previews,
+paste capabilities into chat or commit them.
+
+For a persistent sink containing older `.eml` copies, configure the same database and
+artifact roots, run Worker `reconcile`, then run the explicit conversion for each user/week:
 
 ```bash
-python3 - <<'PY'
-import os
-from email import policy
-from email.parser import BytesParser
-from pathlib import Path
-
-message = Path(os.environ['PHASE7_QA_MESSAGE'])
-with message.open('rb') as source:
-    mime = BytesParser(policy=policy.default).parse(source)
-for part in mime.iter_parts():
-    extension = 'html' if part.get_content_type() == 'text/html' else 'txt'
-    target = message.with_suffix('.preview.' + extension)
-    descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
-        output.write(part.get_content())
-PY
+dotnet run --file scripts/phase7_local_email.cs --no-cache -- \
+  --action convert --user "$subscriber_id" --week "$iso_week"
 ```
 
-Decoded previews are additional private copies. The configured `copies` category counts
-them, so reconcile after creating them. The archive cannot authenticate their ownership
-as MIME receipts: remove your own previews explicitly before checking account cleanup.
-The launcher removes them on exit because they live inside its disposable artifact root.
-Do not upload messages/previews, paste capabilities into chat or commit them.
+Conversion validates the receipt's ownership, reserves ciphertext headroom, writes and
+verifies a private encrypted partial, publishes without overwrite, and removes the
+authenticated original. Retry resumes a matching published destination. Complete matching
+legacy partials are removed; unverifiable partials stop with an explicit cleanup reason.
+Truncated/corrupt files and previously created `.preview.html`/`.preview.txt` copies cannot
+be assigned to an account safely: explicitly remove your own disposable QA leftovers or
+review their provenance locally. Do not claim conversion complete while these remain.
+Reconcile after conversion. Capture stops for a legacy final copy; export reports it
+incomplete instead of silently returning a plaintext-file fallback. Account deletion can
+still remove authenticated legacy copies.
+
+File encryption uses a separate Data Protection purpose, with persistent keys in the
+existing `DataProtectionKeys` database table, outside source control and the email sink.
+Retain those keys across process restarts and restore; deleting them makes encrypted
+copies unreadable and prevents authenticated cleanup. Automatic key rotation retains
+older decrypting keys. The database key store is not additionally wrapped by this change:
+restrict database access and protect its backups separately from copies. Theft of copies
+alone is covered; possession of both keys and copies, or compromise of the running service
+or host administrator, is outside this protection. The approved Development scheduler
+is documented in [Phase 8b local QA](phase-8b-local-run.md). External delivery and
+production key custody remain separately gated.
 
 For an empty-list case use a separate disposable account with three tags unsupported by
 the fixtures (for example `rock`, `electronic`, `ambient`). A persisted empty digest still
@@ -95,7 +109,11 @@ are covered by renderer checks; the real process demonstration covered 0 and 5.
 
 ## Confirm local unsubscribe
 
-Keep Presentation running. Open the private message's unsubscribe link. GET displays
+Keep Presentation running. Choose `unsubscribe-link` in the launcher, then open the
+printed loopback link locally. This explicit operator action decrypts only the selected
+owned file to retrieve its original capability; it requires an existing subscriber and
+creates no plaintext file. Treat the terminal URL as private and do not paste it into
+chat, reports or source. GET displays
 **Confirm unsubscribe** and makes no account change. Submit the confirmation form; POST
 sets the first UTC opt-out timestamp. Reload the profile/export and verify the field.
 Repeated confirmation preserves the timestamp and does not reveal account details.
@@ -134,7 +152,8 @@ An operator may remove their own failed QA artifacts, then reconcile before anot
 
 ## Direct Worker and recorded-input boundaries
 
-The Worker has exactly three one-shot actions. In an already configured local environment:
+The Worker retains three one-shot actions and adds the bounded Synthetic-only
+[schedule action](phase-8b-local-run.md). In an already configured local environment:
 
 ```bash
 dotnet run --project src/Worker/Worker.csproj -- --action reconcile --user YOUR_ACCOUNT_GUID --week 2026-W42 --origin Synthetic

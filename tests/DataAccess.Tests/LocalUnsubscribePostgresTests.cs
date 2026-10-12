@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
 using Xunit;
 
 namespace LinerNotes.DataAccess.Tests;
@@ -44,10 +46,18 @@ public sealed class LocalUnsubscribePostgresTests
             await store.UnsubscribeAsync(Guid.NewGuid(), time, default);
             Assert.Equal(time, (await db.Users.SingleAsync()).EmailUnsubscribedAtUtc);
             string token;
+            byte[] encryptedFile;
             using (var protection = new LocalUnsubscribeProtection(connection.ConnectionString))
+            {
                 token = new UnsubscribeTokenService(protection).Create(id);
+                encryptedFile = ((ILocalEmailFileProtection)protection).Protect(Encoding.UTF8.GetBytes("private captured MIME"));
+            }
             using (var restarted = new LocalUnsubscribeProtection(connection.ConnectionString))
             {
+                var files = (ILocalEmailFileProtection)restarted;
+                Assert.Equal("private captured MIME", Encoding.UTF8.GetString(files.Unprotect(encryptedFile)));
+                Assert.Throws<System.Security.Cryptography.CryptographicException>(() => restarted.Unprotect(WebEncoders.Base64UrlEncode(encryptedFile)));
+                Assert.Throws<System.Security.Cryptography.CryptographicException>(() => files.Unprotect(WebEncoders.Base64UrlDecode(token)));
                 var tokens = new UnsubscribeTokenService(restarted);
                 Assert.True(tokens.TryRead(token, out var read)); Assert.Equal(id, read);
                 Assert.False(tokens.TryRead(token[..^5] + "xxxxx", out _));
@@ -62,6 +72,7 @@ public sealed class LocalUnsubscribePostgresTests
                 using var identity=identityServices.BuildServiceProvider();
                 var identityProtector=identity.GetRequiredService<IDataProtectionProvider>().CreateProtector("Authentication/v1");
                 Assert.Throws<System.Security.Cryptography.CryptographicException>(()=>identityProtector.Unprotect(token));
+                Assert.Throws<System.Security.Cryptography.CryptographicException>(()=>identityProtector.Unprotect(encryptedFile));
                 Assert.False(tokens.TryRead(identityProtector.Protect("unsubscribe-v1:"+id.ToString("N")),out _));
             }
             Assert.True(await db.DataProtectionKeys.AnyAsync());

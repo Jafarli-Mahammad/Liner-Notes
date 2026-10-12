@@ -11,6 +11,25 @@ namespace LinerNotes.Application.Tests.Features.Subscribers;
 
 public class RegisterSubscriberTests
 {
+    [Theory]
+    [InlineData(2026, 10, 12, 10, DigestDeliveryDay.Friday, 17, 16)]
+    [InlineData(2026, 10, 16, 18, DigestDeliveryDay.Friday, 17, 23)]
+    [InlineData(2026, 10, 16, 17, DigestDeliveryDay.Friday, 17, 16)]
+    public async Task Registration_UsesSelectedUtcWeekday(int year, int month, int date, int hour,
+        DigestDeliveryDay day, int deliveryHour, int expectedDate)
+    {
+        var clock = new RegistrationClock(new(year, month, date, hour, 0, 0, TimeSpan.Zero));
+        var handler = new RegisterSubscriberCommandHandler(Substitute.For<IUserRepository>(), Substitute.For<IUnitOfWork>(), clock);
+        var result = await handler.Handle(new("new@example.test", "Asia/Baku", day, deliveryHour), default);
+        Assert.Equal(new DateTime(year, month, expectedDate, deliveryHour, 0, 0, DateTimeKind.Utc), result.NextDigestAt);
+        WeeklySchedulePolicy.ValidateSlot(result.NextDigestAt!.Value, day, deliveryHour);
+    }
+
+    private sealed class RegistrationClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
     [Fact]
     public void Validator_ShouldHaveError_WhenEmailIsInvalid()
     {

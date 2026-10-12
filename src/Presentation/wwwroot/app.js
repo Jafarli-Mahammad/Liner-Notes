@@ -401,13 +401,17 @@ async function submitSeeds() {
   }
 }
 
+/**
+ * Renders the authenticated account export, or a sign-in prompt when signed out.
+ * Displays request errors in the export container and ignores responses after a session change.
+ */
 async function loadYourData() {
   const container = document.getElementById('export-container');
   const epoch = state.sessionEpoch;
   if (!state.token) {
     container.innerHTML = `
       <p style="color: var(--text-muted);">
-        Sign in to view, inspect, or export all data stored about your account verbatim.
+        Sign in to inspect and export your stored account and taste records.
       </p>
     `;
     return;
@@ -431,11 +435,16 @@ async function loadYourData() {
         </div>
         <button class="btn-primary" data-action="downloadExport">Download JSON Export</button>
       </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem;">
+        This export includes your account profile, taste records, recommendation history, and sanitized local email copies.
+        Credentials and authentication internals are excluded.
+      </p>
       <pre id="json-dump-pre" class="json-dump"></pre>
       <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
         <h4>Danger Zone</h4>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
-          Permanently purge your subscriber profile, preferences, and taste signals under the GDPR right to be forgotten.
+          Delete your account and its stored taste data. Local email copy cleanup is reported separately.
+          Shared music catalog records and backups remain; copies outside this service are not erased.
         </p>
         <button class="btn-danger" data-action="deleteAccount">Delete My Account</button>
       </div>

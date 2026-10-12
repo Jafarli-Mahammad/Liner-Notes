@@ -12,6 +12,8 @@ namespace LinerNotes.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <summary>Registers recommendation providers, bounded caching, generation storage, and local email capture, archive, and conversion services.</summary>
+    /// <returns>The supplied service collection.</returns>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -32,8 +34,10 @@ public static class DependencyInjection
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
         services.AddScoped<IDigestEmailRenderer, DigestEmailRenderer>();
         services.AddScoped<LocalEmailMessageSerializer>();
+        services.AddScoped<LocalEmailLegacyConversion>();
         services.AddScoped<ILocalEmailSink, LocalEmailSink>();
-        services.AddScoped<ILocalEmailArchive, LocalEmailArchive>();
+        services.AddScoped<LocalEmailArchive>();
+        services.AddScoped<ILocalEmailArchive>(sp => sp.GetRequiredService<LocalEmailArchive>());
 
         // Bind Last.fm Options
         services.Configure<LastFmOptions>(configuration.GetSection(LastFmOptions.SectionName));

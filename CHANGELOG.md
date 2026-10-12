@@ -2,6 +2,28 @@
 
 ## Unreleased — renewal
 
+- Registration uses the selected UTC delivery weekday/hour. Added an explicit, guarded
+  local repair tool for legacy registration slots. Bounded scheduler ticks track
+  candidate attempts so persistently stopped accounts cannot starve healthy peers.
+
+- Added a Development-only synthetic scheduler with an explicit account allowlist,
+  bounded ticks, UTC due slots and a PostgreSQL lease. Verified local capture advances
+  the claimed slot by one week; failures, opt-out, changed preferences and cancellation
+  preserve it. Restart verifies the original encrypted receipt. Storage reconciliation
+  remains an explicit operator step. The local QA menu now includes schedule fixture setup.
+- Export 2.2 adds stored Identity profile fields, including username, contact
+  confirmation and audit values, to the existing account/taste export. Credentials,
+  authentication internals and unsubscribe capabilities remain excluded. Added an
+  explicit table/column privacy inventory. The privacy page explains credential
+  exclusions and the separate account, local-copy, shared-catalog and backup boundaries.
+
+- Encrypt complete local email captures and partial writes using ASP.NET Core Data
+  Protection with a separate file purpose. Recovery, sanitized export and account
+  cleanup decrypt in memory. Local operator inspection prints sanitized text without
+  creating preview files; explicit conversion replaces authenticated legacy plaintext
+  copies with encrypted files and reports unverifiable leftovers. Keys remain in the
+  existing database key store, whose access and backups require separate protection.
+
 - Added a runnable local email QA launcher and explicit cleanup retry after account
   deletion. Unix sink directories must be owner-only and MIME files are created private;
   capability queries are excluded

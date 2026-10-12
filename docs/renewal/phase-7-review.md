@@ -157,6 +157,14 @@ This is a functional local unsubscribe flow, not a claim of RFC 8058 one-click
 provider support. Production unsubscribe enforcement and delivery races still
 require Phase 8b verification.
 
+Security revision approved on 2026-10-11: complete captured messages and new partial
+writes now use a separate `CapturedEmailFile/v1` Data Protection purpose. Storage is
+`<digest-id>.eml.enc`; the plaintext `.eml`/viewer instructions below describe the original
+design and are superseded by the encrypted [local run procedure](phase-7-local-run.md).
+An explicit bounded converter validates legacy ownership before replacing a plaintext
+copy. The existing persistent key database is outside the sink/source tree and must be
+protected separately from copies and their backups. No schema or public export fields change.
+
 Worker and Presentation use an isolated unsubscribe Data Protection purpose and
 the same persisted key material. Reuse the existing DataProtectionKeys storage
 through a dedicated provider, without changing the Identity/JWT configuration.

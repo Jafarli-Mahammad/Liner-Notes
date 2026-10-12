@@ -56,7 +56,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
             await using var command = new NpgsqlCommand($"CREATE DATABASE \"{databaseName}\"", db);
             await command.ExecuteNonQueryAsync();
         }
-        builder.Database = databaseName; connection = builder.ConnectionString;
+        builder.Database = databaseName; builder.Pooling = false; connection = builder.ConnectionString;
         Directory.CreateDirectory(root);
         storageOptions.InventoryPath = Path.Combine(root, "inventory.json");
         storageOptions.LeasePath = Path.Combine(root, "lease");
@@ -78,13 +78,15 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         context.TasteSignals.Add(TasteSignal.CreateSeedArtist(userId, "Seed Artist", 1, "manual"));
         context.TasteSignals.Add(TasteSignal.CreateSeedTag(userId, "rock", 0.5, "manual"));
         await context.SaveChangesAsync();
+        var generationStore = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
+        await generationStore.ReadInputsAsync(userId);
+        await generationStore.GetExistingAsync(userId, Week);
         await ReconcileAsync();
     }
 
     public async Task DisposeAsync()
     {
         if (services is not null) await services.DisposeAsync();
-        NpgsqlConnection.ClearAllPools();
         if (admin.Length > 0)
         {
             await using var db = new NpgsqlConnection(admin); await db.OpenAsync();
@@ -103,8 +105,19 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
 
     private async Task<GenerateDigestResult> GenerateAsync(IsoWeek? week = null)
     {
-        await using var scope = services.CreateAsyncScope();
-        return await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GenerateDigestCommand(userId, week ?? Week));
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await using var scope = services.CreateAsyncScope();
+            var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GenerateDigestCommand(userId, week ?? Week));
+            if (result.Reason != "database_inventory_changed") return result;
+            output.WriteLine("Generation fixture stopped on changed inventory; explicitly reconcile before setup retry.");
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            Assert.Empty(await context.WeeklyDigests.IgnoreQueryFilters().ToListAsync());
+            Assert.Empty(await context.WeeklyRecommendations.IgnoreQueryFilters().ToListAsync());
+            Assert.Empty(await context.Tracks.ToListAsync());
+            await ReconcileAsync();
+        }
+        throw new InvalidOperationException("Generation fixture remained unstable after three explicit reconciliations.");
     }
 
     [LocalPostgresMigrationFact]
@@ -292,7 +305,8 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         db.UserMusicConnections.Add(deletedConnection);
         await db.SaveChangesAsync();
         var export = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.1", export.ExportVersion);
+        Assert.Equal("2.2", export.ExportVersion);
+        Assert.Equal(userId, export.Account!.Id);
         Assert.Equal(1005, export.Digests.Count);
         Assert.Equal(1005, export.Digests.Select(d => d.Id).Distinct().Count());
         Assert.All(export.Digests, d => Assert.True(d.CreatedAt > DateTime.MinValue));

@@ -14,6 +14,9 @@ namespace LinerNotes.DataAccess;
 
 public static class DependencyInjection
 {
+    /// <summary>Registers PostgreSQL persistence, repositories, scheduling locks, and shared local email protection services.</summary>
+    /// <returns>The supplied service collection.</returns>
+    /// <exception cref="InvalidOperationException">The DefaultConnection connection string is missing or blank.</exception>
     public static IServiceCollection AddDataAccess(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -58,12 +61,16 @@ public static class DependencyInjection
 
         // Register repository implementations
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAccountProfileReader, AccountProfileReader>();
+        services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();
         services.AddScoped<IDigestGenerationStore, DigestGenerationStore>();
         services.AddScoped<IUnsubscribeStore, UnsubscribeStore>();
-        services.AddSingleton<IUnsubscribeTokenProtection>(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton<IUnsubscribeTokenProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
+        services.AddSingleton<ILocalEmailFileProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
         services.AddSingleton<IAccountEmailLease>(_ => new AccountEmailLease(connectionString));
         services.AddScoped<ILocalDigestCaptureStore>(_ => new LocalDigestCaptureStore(connectionString));
 

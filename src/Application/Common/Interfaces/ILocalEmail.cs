@@ -9,6 +9,14 @@ public interface IUnsubscribeTokenProtection
     string Unprotect(string value);
 }
 
+public interface ILocalEmailFileProtection
+{
+    /// <summary>Returns encrypted, authenticated bytes for local email storage.</summary>
+    byte[] Protect(byte[] plaintext);
+    /// <summary>Returns authenticated plaintext; invalid ciphertext or unavailable keys cause an exception.</summary>
+    byte[] Unprotect(byte[] ciphertext);
+}
+
 public interface IUnsubscribeTokens
 {
     string Create(Guid userId);

@@ -2,6 +2,41 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Scheduler review fixes (2026-10-12): registration now uses the selected UTC
+  weekday/hour; explicit guarded legacy-slot repair is documented in
+  [repair procedure](docs/renewal/registration-slot-repair.md). Bounded selection
+  records attempt order in existing audit fields, preventing persistent invalid
+  states or missing receipts from monopolizing ticks across restarts. Final
+  verification passed **474 whole-solution checks, zero failures/skips**.
+  No existing account repair was run; developer confirmation remains pending.
+- Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
+  **8a implementation → separate 8a tests → 8b implementation → separate 8b tests
+  → combined verification**. This is the proceed decision after Phase 7 reassessment;
+  earlier implementation confirmation remains pending. The concrete
+  [8a privacy design](docs/renewal/phase-8a-review.md), including additive Identity
+  profile export 2.2, was approved on 2026-10-12. Its
+  [implementation plan](docs/renewal/phase-8a-plan.md) was approved and locally executed:
+  export 2.2, complete column inventory, authenticated export/deletion/copy checks,
+  and accurate privacy wording. [8a evidence](docs/renewal/phase-8a-evidence.md) records
+  **70 separate 8a checks and 417 whole-solution checks passed, zero failures/skips**,
+  actual browser verification and one fresh review with three coverage gaps closed.
+  Developer confirmation remains pending. The
+  [bounded local UTC 8b design](docs/renewal/phase-8b-review.md) was approved and
+  immediate implementation requested. Its scheduler, restart checks and
+  [runnable QA](docs/renewal/phase-8b-local-run.md) are implemented. Separate 8b
+  checks passed 58 and combined checks passed 121, zero failures/skips. One fresh
+  final review found no Critical/Important issue. Final separate/combined verification
+  passed **8a 70 → 8b 58 → combined 121 → whole solution 468**, zero failures/skips.
+  Implementation commits include `82c3329` and `0c0f7d7`. Developer confirmation,
+  external delivery and deployment remain pending. See [8b evidence](docs/renewal/phase-8b-evidence.md).
+- Phase 7 storage security follow-up: the developer selected encrypted local capture
+  (option 2) on 2026-10-11 after the CodeQL plaintext-file findings. Complete messages
+  and new partials now use authenticated encryption with a distinct Data Protection
+  file purpose and the existing persistent database key store. Sanitized inspection,
+  explicit legacy conversion and ownership-based deletion are implemented; verification
+  and limitations are recorded in [Phase 7 evidence](docs/renewal/phase-7-evidence.md).
+  Existing deployments/copies have not been inspected or converted. Key-store access,
+  backup protection and developer confirmation remain open.
 - Authorized: **Phase 1–4, Phase 6 and Phase 7 local work** on `Prism`; the developer requested Phase 2
   execution and approved its exact membership and offline test replacement on 2026-10-07,
   then requested Phase 3 and Phase 4 implementation. Phase 4's concrete live-run manifest
@@ -10,11 +45,16 @@
   Its [concrete design](docs/renewal/phase-7-review.md) was approved on 2026-10-11.
   The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
   on 2026-10-11; implementation is locally verified, developer confirmation pending.
-  No push or Phase 5/8–9 execution is authorized.
+  Remote pushes for review fixes were subsequently explicitly authorized, and the developer
+  merged PR #8. Phase 5/9 execution remains unapproved; the subsequent Phase 8 request
+  is recorded above with its concrete review gates. This storage follow-up does not
+  authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: developer confirmation and proceed/narrow/revise reassessment of the
-  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md), using its
-  [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
+- Active step: developer confirmation of the locally verified Phase 8 implementation;
+  [Phase 8b evidence and QA](docs/renewal/phase-8b-evidence.md) are ready for review.
+  Developer confirmation of the
+  [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md) remains pending;
+  use its [runnable local QA procedure](docs/renewal/phase-7-local-run.md).
   Developer review/confirmation of the [Phase 6 implementation evidence](docs/renewal/phase-6-evidence.md)
   remains pending.
   The developer approved the design and explicitly requested implementation on 2026-10-10,
@@ -133,10 +173,14 @@ The plan below is approved; **not approved** refers to phase execution and its r
    See [per-approval evidence and reassessment](docs/renewal/phase-7-evidence.md),
    [approved review](docs/renewal/phase-7-review.md) and [plan](docs/renewal/phase-7-plan.md).
    **Mechanics only, no catalog conclusions.** Popularity stays deferred; the 1 GB stop
-   remains temporary/unresolved. Mandatory explicit **proceed, narrow or revise** decision
-   remains required before later phases; Phase 8a/8b approvals are separate.
-8. Privacy and delivery — **not approved**, with **two separate approvals**: (a) export and deletion
-   verification; (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery.
+   remains temporary/unresolved. The developer selected **proceed** with Phase 8 on
+   2026-10-12; this does not confirm Phase 7. Phase 8a/8b concrete approvals are separate.
+8. Privacy and delivery — **8a and 8b designs approved and implemented
+   on 2026-10-12; separate/combined/full local verification passed; developer confirmation pending**, with
+   **two separate approvals**: (a) export and deletion verification — 70 separate
+   checks and 417 whole-solution checks passed, actual browser and fresh review;
+   (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery —
+   [concrete local design](docs/renewal/phase-8b-review.md) approved and executed.
 9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
    public-page approval. Release stays blocked until that approval is documented.
 

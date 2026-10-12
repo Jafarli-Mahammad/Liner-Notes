@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Security.Cryptography;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.DTOs.Digests;
@@ -22,6 +23,7 @@ public sealed class LocalEmailTests : IDisposable
     private readonly LocalEmailMessageSerializer serializer;
     private readonly LocalEmailSink sink;
     private readonly LocalEmailArchive archive;
+    private readonly Protection protection;
     private static readonly GenerationStorageState Database = new(1000, "initial");
     public LocalEmailTests()
     {
@@ -32,18 +34,23 @@ public sealed class LocalEmailTests : IDisposable
         options = new() { Enabled=true, ApplicationOrigin="http://127.0.0.1:5000", SinkRoot=Path.Combine(root,"copies") };
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(options.SinkRoot,
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        var protection = new Protection(); var tokens = new UnsubscribeTokenService(protection);
-        renderer = new(options,tokens); serializer = new(options,protection,tokens);
+        protection = new Protection(); var tokens = new UnsubscribeTokenService(protection);
+        renderer = new(options,tokens); serializer = new(options,protection,tokens,protection);
         storage = new(storageOptions,TimeProvider.System); sink = new(options,storageOptions,storage,renderer,serializer);
         archive = new(options,storageOptions,serializer);
     }
     public void Dispose() => Directory.Delete(root,true);
-    private sealed class Protection : IUnsubscribeTokenProtection
+    private sealed class Protection : IUnsubscribeTokenProtection, ILocalEmailFileProtection
     {
-        private readonly IDataProtector protector = new EphemeralDataProtectionProvider().CreateProtector("email-test");
+        private readonly EphemeralDataProtectionProvider provider = new();
+        private IDataProtector protector => provider.CreateProtector("email-test");
         public string Protect(string value)=>protector.Protect(value);
         public string Unprotect(string value)=>protector.Unprotect(value);
+        public byte[] Protect(byte[] value)=>provider.CreateProtector("file-test").Protect(value);
+        public byte[] Unprotect(byte[] value)=>provider.CreateProtector("file-test").Unprotect(value);
     }
+
+    private byte[] MimeBytes(byte[] stored) => protection.Unprotect(stored[(Array.IndexOf(stored, (byte)'\n') + 1)..]);
     private static (WeeklyDigestDto Digest, SubscriberDto Subscriber) Inputs(int count)
     {
         var id = Guid.NewGuid(); var digest = Guid.NewGuid();
@@ -67,7 +74,10 @@ public sealed class LocalEmailTests : IDisposable
         else Assert.Contains("No eligible picks",parsed.Html);
         foreach (var forbidden in new[]{"<script","<img","<iframe","<link","@font-face","url(","<audio"}) Assert.DoesNotContain(forbidden,parsed.Html,StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Unsubscribe:",parsed.PlainText); Assert.Contains("Last.fm",parsed.Html);
-        var mime=Encoding.UTF8.GetString(bytes);
+        var mime=Encoding.UTF8.GetString(MimeBytes(bytes));
+        Assert.True(LocalEmailMessageSerializer.IsEncrypted(bytes));
+        Assert.DoesNotContain(input.Subscriber.Email, Encoding.UTF8.GetString(bytes));
+        Assert.Equal(bytes.Length, parsed.Bytes);
         Assert.True(mime.IndexOf("text/plain",StringComparison.Ordinal)<mime.IndexOf("text/html",StringComparison.Ordinal));
         Assert.All(mime.Split("\r\n"),line=>Assert.True(line.Length<998));
         Assert.InRange(bytes.Length,1,400_000);
@@ -112,7 +122,7 @@ public sealed class LocalEmailTests : IDisposable
         var input=Inputs(3); await storage.ReconcileAsync(Database);
         await using (var capture=await sink.OpenAsync(input.Digest,input.Subscriber,Database,default))
         { Assert.False(capture.ReceiptExists); await capture.PublishAsync(input.Digest,input.Subscriber,Database,default); }
-        var final=Directory.GetFiles(options.SinkRoot!,"*.eml").Single(); var bytes=await File.ReadAllBytesAsync(final);
+        var final=Directory.GetFiles(options.SinkRoot!,"*.eml.enc").Single(); var bytes=await File.ReadAllBytesAsync(final);
         if (!OperatingSystem.IsWindows()) Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite,File.GetUnixFileMode(final));
         await using (var recovery=await sink.OpenAsync(input.Digest,input.Subscriber,Database with { Revision="changed" },default))
         { Assert.True(recovery.ReceiptExists); await recovery.PublishAsync(input.Digest,input.Subscriber,Database,default); }
@@ -133,11 +143,11 @@ public sealed class LocalEmailTests : IDisposable
         await storage.ReconcileAsync(Database);
         await using (var capture = await sink.OpenAsync(input.Digest, input.Subscriber, Database, default))
             await capture.PublishAsync(input.Digest, input.Subscriber, Database, default);
-        string path = Directory.GetFiles(options.SinkRoot!, "*.eml").Single();
+        string path = Directory.GetFiles(options.SinkRoot!, "*.eml.enc").Single();
         var original = await File.ReadAllBytesAsync(path);
-        var tampered = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(original)
+        var tampered = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(MimeBytes(original))
             .Replace("From: liner-notes@localhost", "From: attacker@example.test", StringComparison.Ordinal));
-        Assert.Throws<GenerationStoppedException>(() => serializer.ParseStoredCopy(tampered));
+        Assert.Throws<GenerationStoppedException>(() => serializer.ParseLegacyStoredCopy(tampered));
 
         options.FromAddress = "updated@example.test";
         options.MessageDomain = "updated.example.test";
@@ -159,11 +169,11 @@ public sealed class LocalEmailTests : IDisposable
             await using var capture=await sink.OpenAsync(input.Digest,input.Subscriber,Database,default);
             await capture.PublishAsync(input.Digest,input.Subscriber,Database,default);
         }
-        var corrupt=Path.Combine(options.SinkRoot!,"unknown.eml");await File.WriteAllTextAsync(corrupt,"bad");
+        var corrupt=Path.Combine(options.SinkRoot!,"unknown.eml.enc");await File.WriteAllTextAsync(corrupt,"bad");
         var cleanup=await archive.DeleteAsync(own.Subscriber.Id,default);
         Assert.False(cleanup.Complete);Assert.True(File.Exists(corrupt));
-        Assert.False(File.Exists(Path.Combine(options.SinkRoot!,own.Digest.Id.ToString("N")+".eml")));
-        Assert.True(File.Exists(Path.Combine(options.SinkRoot!,other.Digest.Id.ToString("N")+".eml")));
+        Assert.False(File.Exists(Path.Combine(options.SinkRoot!,own.Digest.Id.ToString("N")+".eml.enc")));
+        Assert.True(File.Exists(Path.Combine(options.SinkRoot!,other.Digest.Id.ToString("N")+".eml.enc")));
     }
 
     [Fact]
@@ -171,7 +181,7 @@ public sealed class LocalEmailTests : IDisposable
     {
         var input=Inputs(1);await storage.ReconcileAsync(Database);
         await Assert.ThrowsAsync<GenerationStoppedException>(()=>sink.OpenAsync(input.Digest with {Status=DigestStatus.LocalCaptured},input.Subscriber,Database,default));
-        var final=Path.Combine(options.SinkRoot!,input.Digest.Id.ToString("N")+".eml");await File.WriteAllTextAsync(final,"truncated");
+        var final=Path.Combine(options.SinkRoot!,input.Digest.Id.ToString("N")+".eml.enc");await File.WriteAllTextAsync(final,"truncated");
         await Assert.ThrowsAsync<GenerationStoppedException>(()=>sink.OpenAsync(input.Digest,input.Subscriber,Database,default));
         Assert.Equal("truncated",await File.ReadAllTextAsync(final));
         var export=await archive.ReadAsync(input.Subscriber.Id,[input.Digest with {Status=DigestStatus.LocalCaptured}],default);
@@ -223,7 +233,7 @@ public sealed class LocalEmailTests : IDisposable
         var retrySink=new LocalEmailSink(options,storageOptions,new FailingStorage(storage),renderer,serializer);
         await using(var capture=await retrySink.OpenAsync(input.Digest,input.Subscriber,Database,default))
             await capture.PublishAsync(input.Digest,input.Subscriber,Database,default);
-        var final=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.eml"));
+        var final=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.eml.enc"));
         var partial=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.partial"));
         Assert.Equal(new FileInfo(final).Length,new FileInfo(partial).Length);
         var measured=await storage.ReconcileAsync(Database);
@@ -236,10 +246,125 @@ public sealed class LocalEmailTests : IDisposable
     public void Serializer_RejectsTamperedBodyAndTotalByteOverflow()
     {
         var input=Inputs(1);var message=renderer.Render(input.Digest,input.Subscriber);
-        var bytes=serializer.Serialize(message);bytes[^10] = (byte)'?';
+        var bytes=serializer.Serialize(message);bytes[^10] ^= 1;
         Assert.Throws<GenerationStoppedException>(()=>serializer.Parse(bytes));
         options.MessageByteLimit=100;
         Assert.Throws<GenerationStoppedException>(()=>serializer.Serialize(message));
+    }
+
+    [Fact]
+    public void EncryptedFiles_RejectPlaintextWrongKeysAndTampering()
+    {
+        var input = Inputs(1);
+        var rendered = renderer.Render(input.Digest, input.Subscriber);
+        byte[] stored = serializer.Serialize(rendered);
+        byte[] plaintext = MimeBytes(stored);
+        Assert.Throws<GenerationStoppedException>(() => serializer.Parse(plaintext));
+        Assert.Throws<GenerationStoppedException>(() => serializer.ParseStoredCopy(plaintext));
+        Assert.NotEqual(stored, serializer.Serialize(rendered));
+        Assert.DoesNotContain("To: ", Encoding.UTF8.GetString(stored));
+        Assert.DoesNotContain(rendered.Token, Encoding.UTF8.GetString(stored));
+        Assert.DoesNotContain(Convert.ToBase64String(Encoding.UTF8.GetBytes(rendered.PlainText)), Encoding.UTF8.GetString(stored));
+        var wrongKeys = new Protection();
+        var wrongReader = new LocalEmailMessageSerializer(options, protection, new UnsubscribeTokenService(protection), wrongKeys);
+        Assert.Throws<GenerationStoppedException>(() => wrongReader.Parse(stored));
+        stored[^1] ^= 1;
+        Assert.Throws<GenerationStoppedException>(() => serializer.ParseStoredCopy(stored));
+        CryptographicOperations.ZeroMemory(plaintext);
+    }
+
+    [Fact]
+    public async Task LegacyConversion_ValidatesOwnershipEncryptsAndResumesPublishedCopy()
+    {
+        var input = Inputs(1);
+        var rendered = renderer.Render(input.Digest, input.Subscriber);
+        byte[] ciphertext = serializer.Serialize(rendered);
+        byte[] legacy = MimeBytes(ciphertext);
+        string source = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.eml");
+        await File.WriteAllBytesAsync(source, legacy);
+        string legacyPartial = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.legacy.partial");
+        await File.WriteAllBytesAsync(legacyPartial, legacy);
+        await storage.ReconcileAsync(Database);
+        var converter = new LocalEmailLegacyConversion(options, storageOptions, storage, serializer);
+        var stopped = await Assert.ThrowsAsync<GenerationStoppedException>(() => sink.OpenAsync(input.Digest, input.Subscriber, Database, default));
+        Assert.Equal("email_plaintext_copy_requires_conversion", stopped.Message);
+        var archiveResult = await archive.ReadAsync(input.Subscriber.Id, [input.Digest with { Status = DigestStatus.LocalCaptured }], default);
+        Assert.Contains("copy_plaintext_requires_conversion", archiveResult.Issues);
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(Guid.NewGuid(), input.Digest.Id, Database, default));
+        Assert.True(File.Exists(source));
+        Assert.Equal("converted", await converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.False(File.Exists(source));
+        Assert.False(File.Exists(legacyPartial));
+        string final = source + ".enc";
+        var encrypted = await File.ReadAllBytesAsync(final);
+        Assert.True(LocalEmailMessageSerializer.IsEncrypted(encrypted));
+        Assert.Equal(rendered.PlainText, serializer.ParseStoredCopy(encrypted).PlainText);
+        await using (var recovery = await sink.OpenAsync(input.Digest, input.Subscriber, Database, default)) Assert.True(recovery.ReceiptExists);
+        // Simulate interruption after encrypted publication but before legacy deletion.
+        await File.WriteAllBytesAsync(source, legacy);
+        Assert.Equal("conversion_resumed", await converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.False(File.Exists(source));
+        Assert.Equal(encrypted, await File.ReadAllBytesAsync(final));
+        Assert.Equal("no_plaintext_copy", await converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.True((await archive.DeleteAsync(input.Subscriber.Id, default)).Complete);
+        Assert.Empty(Directory.GetFiles(options.SinkRoot!));
+        CryptographicOperations.ZeroMemory(legacy);
+    }
+
+    [Fact]
+    public async Task LegacyConversion_RejectsConflictingEncryptedDestinationAndAccountsForHeadroom()
+    {
+        var input = Inputs(1);
+        var message = renderer.Render(input.Digest, input.Subscriber);
+        byte[] legacy = MimeBytes(serializer.Serialize(message));
+        string source = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.eml");
+        await File.WriteAllBytesAsync(source, legacy);
+        var converter = new LocalEmailLegacyConversion(options, storageOptions, storage, serializer);
+        var full = new GenerationStorageState(LocalGenerationStorage.StopBytes - legacy.Length - 200, "full");
+        await storage.ReconcileAsync(full);
+        var noSpace = await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, full, default));
+        Assert.Equal("storage_headroom", noSpace.Message);
+        Assert.Single(Directory.GetFiles(options.SinkRoot!));
+        await File.WriteAllBytesAsync(source + ".enc", serializer.Serialize(message with { PlainText = "Different content" }));
+        var conflict = await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.Equal("email_receipt_conflict", conflict.Message);
+        Assert.Equal(legacy, await File.ReadAllBytesAsync(source));
+        CryptographicOperations.ZeroMemory(legacy);
+    }
+
+    [Fact]
+    public async Task AccountDeletion_RemovesOwnedLegacyPlaintextWithoutExportingIt()
+    {
+        var input = Inputs(1);
+        byte[] legacy = MimeBytes(serializer.Serialize(renderer.Render(input.Digest, input.Subscriber)));
+        string path = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.eml");
+        await File.WriteAllBytesAsync(path, legacy);
+        Assert.True((await archive.DeleteAsync(input.Subscriber.Id, default)).Complete);
+        Assert.False(File.Exists(path));
+        CryptographicOperations.ZeroMemory(legacy);
+    }
+
+    [Fact]
+    public async Task LegacyConversion_ReportsUnverifiablePartialAfterProtectingFinal()
+    {
+        var input = Inputs(1);
+        byte[] legacy = MimeBytes(serializer.Serialize(renderer.Render(input.Digest, input.Subscriber)));
+        string source = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.eml");
+        string partial = Path.Combine(options.SinkRoot!, $"{input.Digest.Id:N}.old.partial");
+        await File.WriteAllBytesAsync(partial, legacy[..100]);
+        var converter = new LocalEmailLegacyConversion(options, storageOptions, storage, serializer);
+        var orphan = await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.Equal("email_plaintext_partial_requires_operator_cleanup", orphan.Message);
+        await File.WriteAllBytesAsync(source, legacy);
+        await storage.ReconcileAsync(Database);
+        var error = await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.Equal("email_plaintext_partial_requires_operator_cleanup", error.Message);
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(source + ".enc"));
+        Assert.True(File.Exists(partial));
+        var retry = await Assert.ThrowsAsync<GenerationStoppedException>(() => converter.ConvertAsync(input.Subscriber.Id, input.Digest.Id, Database, default));
+        Assert.Equal(error.Message, retry.Message);
+        CryptographicOperations.ZeroMemory(legacy);
     }
 
     private sealed class FailingStorage(ILocalEmailStorage inner) : ILocalEmailStorage
@@ -263,7 +388,7 @@ public sealed class LocalEmailTests : IDisposable
         var interrupted=new LocalEmailSink(options,storageOptions,storage,renderer,serializer,new InterruptedWriter());
         await using(var capture=await interrupted.OpenAsync(input.Digest,input.Subscriber,Database,default))
             await capture.PublishAsync(input.Digest,input.Subscriber,Database,default);
-        var final=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.eml"));
+        var final=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.eml.enc"));
         var partial=Assert.Single(Directory.GetFiles(options.SinkRoot!,"*.partial"));Assert.Equal(100,new FileInfo(partial).Length);
         var inventory=await storage.ReconcileAsync(Database);Assert.Equal(new FileInfo(final).Length+100,inventory.Categories["copies"].Bytes);
         Assert.False((await archive.DeleteAsync(input.Subscriber.Id,default)).Complete);Assert.True(File.Exists(partial));Assert.False(File.Exists(final));

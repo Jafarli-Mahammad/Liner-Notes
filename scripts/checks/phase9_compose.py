@@ -71,6 +71,16 @@ class Check:
                 pass
         raise RuntimeError("Worker did not emit its result")
 
+    def operator(self, user, week, action):
+        output = self.compose("run", "--rm", "--no-deps", "operator", "--action", action,
+                              "--user", user, "--week", week)
+        for line in reversed(output.splitlines()):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                pass
+        raise RuntimeError("operator did not emit its result")
+
     def lifecycle(self):
         now = datetime.now(timezone.utc)
         iso = now.isocalendar()
@@ -98,6 +108,22 @@ class Check:
         assert 0 < len(field(digest, "recommendations")) <= 5, "fixture picks missing"
         assert len(field(field(export, "localEmail"), "copies")) == 1, "shared capture unavailable to web"
         print("PASS Compose: registration, synthetic generation, encrypted capture and export")
+
+        # Recreate the storage lease as the operator, then verify web and Worker can use it.
+        app_uid = self.compose("exec", "-T", "web", "id", "-u").strip()
+        operator_uid = self.compose("run", "--rm", "--no-deps", "--entrypoint", "id", "operator", "-u").strip()
+        assert operator_uid == app_uid and app_uid != "0", "operator does not share the app UID"
+        self.compose("run", "--rm", "--no-deps", "--entrypoint", "sh", "operator", "-c",
+                     "test -w /src && test -w /opt/nuget/packages && test -w /home/app/.cache")
+        self.compose("exec", "-T", "web", "rm", "-f", "/app/local-state/lease.lock")
+        converted = self.operator(user, week, "convert")
+        assert field(converted, "Status") == "no_plaintext_copy", "operator could not validate existing encrypted copy"
+        lease_owner = self.compose("exec", "-T", "web", "stat", "-c", "%u", "/app/local-state/lease.lock").strip()
+        assert lease_owner == app_uid, "operator-created lease is not app-owned"
+        self.worker(user, week, "reconcile")
+        status, export = self.http("GET", "/api/export/my-data", token=token)
+        assert status == 200 and len(field(field(export, "localEmail"), "copies")) == 1, "web cannot read operator-managed copy"
+        print("PASS Compose: operator UID, writable SDK paths, and shared private lease/copy access")
 
         self.compose("up", "-d", "--no-deps", "--force-recreate", "web")
         self.wait()

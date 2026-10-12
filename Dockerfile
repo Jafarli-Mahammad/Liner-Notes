@@ -1,6 +1,7 @@
 # Stable .NET SDK 10.0.401 and ASP.NET runtime 10.0.12, verified 2026-10-12.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
 WORKDIR /src
+ENV NUGET_PACKAGES=/opt/nuget/packages
 COPY Directory.Build.props Directory.Packages.props global.json ./
 COPY .config/dotnet-tools.json .config/
 COPY src/Domain/Domain.csproj src/Domain/packages.lock.json src/Domain/
@@ -16,6 +17,15 @@ RUN dotnet publish src/Presentation/Presentation.csproj -c Release --no-restore 
 # Explicit local migration runner. Runtime images contain no SDK.
 FROM build AS tools
 ENTRYPOINT ["dotnet", "tool", "run", "dotnet-ef", "--"]
+
+# Local email operator shares artifacts with the non-root web and Worker processes.
+FROM build AS operator
+ENV DOTNET_CLI_HOME=/home/app \
+    XDG_CACHE_HOME=/home/app/.cache
+RUN mkdir -p /home/app/.cache /src/scripts \
+    && chown -R "$APP_UID:$APP_UID" /src /opt/nuget /home/app
+USER $APP_UID
+ENTRYPOINT ["dotnet", "run", "--file", "/src/scripts/phase7_local_email.cs", "--no-cache", "--"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.12@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS runtime
 WORKDIR /app

@@ -68,9 +68,9 @@ only its own fabricated account's due slot. There is no production cron/timer.
 
 ## Inspect, unsubscribe and delete
 
-The operator profile reuses the existing helper from a read-only source mount
-with the SDK tool image. It is an explicit privileged local operator action,
-separate from the non-root web/Worker processes:
+The operator profile runs the existing helper from a read-only source mount
+in a dedicated SDK image as the same non-root APP_UID used by web and Worker.
+Its source, NuGet, and CLI cache paths are writable by that user:
 
 ```bash
 docker compose --env-file .env.phase9.local run --rm operator --action inspect --user "$phase9_user_id" --week "$phase9_week"

@@ -401,6 +401,10 @@ async function submitSeeds() {
   }
 }
 
+/**
+ * Renders the authenticated account export, or a sign-in prompt when signed out.
+ * Displays request errors in the export container and ignores responses after a session change.
+ */
 async function loadYourData() {
   const container = document.getElementById('export-container');
   const epoch = state.sessionEpoch;

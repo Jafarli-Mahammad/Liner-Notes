@@ -2,6 +2,14 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Phase 9 direction: on 2026-10-12 the developer requested build and implementation
+  of Phase 9. Repository/container/CI preflight is complete and the
+  [concrete written design](docs/renewal/phase-9-review.md) is prepared for review.
+  It proposes pinned build inputs, web/Worker/tool images, a disposable local
+  Compose topology and PostgreSQL-backed CI. Concrete design and implementation
+  plan review remain pending; no Phase 9 implementation has started. Last.fm
+  written public-page approval and production operational decisions are missing,
+  so release remains blocked independently of local reproducibility work.
 - Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
   **8a implementation → separate 8a tests → 8b implementation → separate 8b tests
   → combined verification**. This is the proceed decision after Phase 7 reassessment;
@@ -39,11 +47,13 @@
   The [implementation plan](docs/renewal/phase-7-plan.md) and sequential execution were approved
   on 2026-10-11; implementation is locally verified, developer confirmation pending.
   Remote pushes for review fixes were subsequently explicitly authorized, and the developer
-  merged PR #8. Phase 5/9 execution remains unapproved; the subsequent Phase 8 request
+  merged PR #8. Phase 5 execution remains unapproved; the subsequent Phase 8 request
   is recorded above with its concrete review gates. This storage follow-up does not
   authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: developer confirmation of the locally verified Phase 8 implementation;
+- Active step: review the [Phase 9 written design](docs/renewal/phase-9-review.md)
+  before its implementation plan. Developer confirmation of the locally verified
+  Phase 8 implementation remains pending;
   [Phase 8b evidence and QA](docs/renewal/phase-8b-evidence.md) are ready for review.
   Developer confirmation of the
   [Phase 7 implementation evidence](docs/renewal/phase-7-evidence.md) remains pending;
@@ -174,8 +184,11 @@ The plan below is approved; **not approved** refers to phase execution and its r
    checks and 417 whole-solution checks passed, actual browser and fresh review;
    (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery —
    [concrete local design](docs/renewal/phase-8b-review.md) approved and executed.
-9. Reproducibility and release preparation — **not approved**. Docker/Compose, CI and Last.fm written
-   public-page approval. Release stays blocked until that approval is documented.
+9. Reproducibility and release preparation — **execution requested on 2026-10-12;
+   concrete design/plan approval pending**. [Written design](docs/renewal/phase-9-review.md)
+   covers Docker/Compose, build pins and CI. Last.fm written public-page approval
+   is missing; release stays blocked until approval is documented and separate
+   hosting/delivery/production operational decisions are resolved.
 
 Number mapping: old 2 -> new 2-5 (split), old 3 -> new 6, old 3A -> new 7,
 old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.

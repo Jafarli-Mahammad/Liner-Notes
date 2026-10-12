@@ -47,3 +47,15 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** Killing a client while its backend waits in a controlled SQL trigger does not establish rollback. Releasing the barrier can let an autocommit update finish after client death; first-use database allocations can also invalidate a conservative inventory fixture.
 **Suggested improvement:** Identify the exact test-owned backend/database, terminate and wait for its rollback before releasing a crash barrier, and provision keys/first-use row paths before inventory measurement. Permit only documented bounded operator reconciliation for the exact changed-inventory reason; keep product guards intact.
 **Principle:** A crash test must prove the server-side durable boundary, rather than infer it from client process exit. Prepare operational side effects before measuring storage.
+
+### Observation 005: Packaging must preserve local execution boundaries
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Docker, Compose and CI inspection for an existing local batch application.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Packaging preflight
+**Issue:** A web Dockerfile omitted shared target-framework properties before restore; Compose lacked its database, and CI could skip database checks. The batch executable deliberately rejected production mode and non-loopback databases, so a generic production topology would not represent implemented behavior.
+**Suggested improvement:** Inspect shared build inputs, test skip conditions, executable guards, migration context and storage/key ownership before proposing deployment files. Package a supported local topology and distinguish reproducibility from production delivery and external approval.
+**Principle:** Packaging should make existing runtime and verification contracts executable; containerizing a process does not establish a supported production workflow.

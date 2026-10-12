@@ -1,9 +1,9 @@
 # Phase 9: reproducibility and release preparation
 
-Written design for developer review, 2026-10-12. **Proposed; implementation has
-not started.** The developer requested Phase 9 execution today. Concrete
-packaging, tool and CI changes below need review under the existing repository
-approval rules. This request does not confirm earlier implementations.
+Design approved 2026-10-12 with the correction to use latest stable project
+packages and tools; implementation was explicitly requested. MediatR 12.5.0
+is the separately approved licensing exception. The [sequential plan](phase-9-plan.md)
+is being executed. This does not confirm earlier implementations.
 
 ## Intended outcome and current evidence
 
@@ -24,7 +24,8 @@ Verified in this checkout:
   `LocalPostgresMigrationFactAttribute` and `ScheduledPostgresTheoryAttribute`
   skip checks without `LINER_PHASE1_POSTGRES`.
 - The installed SDK is `10.0.112`. Projects target .NET 10 but reference EF
-  Core `9.0.2` and Npgsql EF provider `9.0.4`. Preserve these package references.
+  Core `9.0.2` and Npgsql EF provider `9.0.4` at preflight. Upgrade to verified
+  stable EF `10.0.12` and Npgsql EF `10.0.3`, together with the other direct packages.
 - Worker rejects non-Development execution and non-loopback PostgreSQL hosts.
   Scheduling requires Synthetic origin, explicit user IDs and bounded ticks.
   Storage reconciliation is an explicit operator action.
@@ -47,13 +48,14 @@ Verified in this checkout:
 
 ## 9a: build inputs and images
 
-Add `global.json`: SDK `10.0.112`, `rollForward: disable`, prereleases disabled.
+Add `global.json`: SDK `10.0.401`, `rollForward: disable`, prereleases disabled.
+Centralize direct and transitive stable versions in `Directory.Packages.props`.
 Enable NuGet lock generation in shared build properties and commit locks for
-six source and five test projects. Initial locking preserves the resolved
-package versions; unexpected graph changes stop for review. Docker and CI use
+six source and five test projects after the authorized latest stable upgrade.
+Verify compatibility and freeze the resulting graph. Docker and CI use
 locked restore. This constrains resolution, not byte-identical build output.
 
-Add `.config/dotnet-tools.json` with `dotnet-ef` **9.0.2**, matching current EF
+Add `.config/dotnet-tools.json` with `dotnet-ef` **10.0.12**, matching the upgraded EF
 packages. Restore it explicitly without replacing the global tool.
 
 Refactor the existing Dockerfile with a shared build stage and these targets:
@@ -65,14 +67,14 @@ Refactor the existing Dockerfile with a shared build stage and these targets:
 | `tools` | SDK, source, Release build outputs and pinned EF tool; one-shot local migration runner |
 | `volume-init` | Create/chown private directories in the task-owned named volume, then exit; root used only for this initialization |
 
-Copy shared properties, SDK/tool manifests, project files and locks before
+Copy shared properties, SDK/tool manifests, central versions, project files and locks before
 restore. Copy only necessary source afterward. Strengthen `.dockerignore` to
 exclude local configuration, recordings, captures, keys, inventories, reports
 and test output from the build context. Runtime images contain neither SDK nor
 migration tools.
 
 Pin SDK, runtime and PostgreSQL images by immutable registry digest. Verify
-the selected images contain SDK `10.0.112` and runtime `10.0.12`; record exact
+the selected images contain SDK `10.0.401` and runtime `10.0.12`; record exact
 digests and inspected versions in evidence. Cached tags alone are insufficient.
 Initial verification supports Linux amd64; other platforms remain unverified.
 Reviewed maintenance changes update pins.
@@ -89,7 +91,7 @@ mode and Synthetic generation; it supplies no upstream/provider keys.
 ```mermaid
 flowchart LR
   Browser[Local browser: 127.0.0.1:8080] --> Web[Development web]
-  Database[PostgreSQL 16] --> Migration[One-shot migrations]
+  Database[PostgreSQL 18.6] --> Migration[One-shot migrations]
   Migration --> Web
   Init[Private volume initialization] --> Web
   Web --> Database
@@ -127,13 +129,13 @@ production capacity or larger Last.fm storage permission.
 
 ## 9c: CI and release preparation
 
-Update existing CI. Preserve checkout/setup-dotnet action major versions and pin
+Update existing CI. Use the latest stable checkout/setup-dotnet actions and pin
 verified revisions. Disable persisted checkout credentials, use `contents: read`,
 a fixed Ubuntu runner version, bounded timeouts and cancellation of superseded
 runs. Trigger on PRs, pushes to `main`/`Prism` and manual dispatch. Add no registry
 publishing or deployment job.
 
-The verification job provisions healthy PostgreSQL 16 and supplies
+The verification job provisions healthy PostgreSQL 18.6 and supplies
 `LINER_PHASE1_POSTGRES` for disposable checks. Restore the pinned SDK, tool and
 locked packages; build Release; run the full .NET suite, existing fake-input
 Python recorder/pilot checks and repository checks. Supply no provider keys and
@@ -188,8 +190,9 @@ that estimate; duration depends on network/cache and check results.
 3. CI/result validation, release checklist and evidence/status/docs; run relevant
    checks and the full suite, then create a focused local commit.
 
-Review this written design before the written implementation plan. Execution
-stays sequential unless delegation is requested. Approval covers the described
+The developer approved this design with the latest stable version correction
+and instructed continuation through the sequential implementation plan. Approval
+covers the described
 SDK/locks, EF tool manifest, container/Compose topology and CI changes; it does
 not confirm earlier work or supply public-release permission.
 
@@ -198,7 +201,7 @@ not confirm earlier work or supply public-release permission.
 - [.NET containers](https://learn.microsoft.com/en-us/dotnet/core/docker/build-container)
   and [official .NET 10 release metadata](https://raw.githubusercontent.com/dotnet/core/main/release-notes/10.0/releases.json).
 - [NuGet locks](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies),
-  [dotnet-ef 9.0.2](https://www.nuget.org/packages/dotnet-ef/9.0.2) and
+  [dotnet-ef 10.0.12](https://www.nuget.org/packages/dotnet-ef/10.0.12) and
   [EF migration deployment](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying).
 - [Compose startup](https://docs.docker.com/compose/how-tos/startup-order/)
   and [service network mode](https://docs.docker.com/reference/compose-file/services/#network_mode).

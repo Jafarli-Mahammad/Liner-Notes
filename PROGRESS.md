@@ -4,10 +4,12 @@
 ## Current state and next step
 - Phase 9 direction: on 2026-10-12 the developer requested build and implementation
   of Phase 9. Repository/container/CI preflight is complete and the
-  [concrete written design](docs/renewal/phase-9-review.md) is prepared for review.
+  [concrete written design](docs/renewal/phase-9-review.md) was approved with a
+  latest-stable package/tool correction and explicit instruction to proceed.
   It proposes pinned build inputs, web/Worker/tool images, a disposable local
-  Compose topology and PostgreSQL-backed CI. Concrete design and implementation
-  plan review remain pending; no Phase 9 implementation has started. Last.fm
+  Compose topology and PostgreSQL-backed CI. The [sequential implementation plan](docs/renewal/phase-9-plan.md)
+  is in execution, starting with EF Core 10 and other dependency upgrades.
+  MediatR 12.5.0 is the developer-approved licensing exception. Last.fm
   written public-page approval and production operational decisions are missing,
   so release remains blocked independently of local reproducibility work.
 - Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
@@ -51,8 +53,8 @@
   is recorded above with its concrete review gates. This storage follow-up does not
   authorize a public deployment or another merge.
 - Baseline: `10d97f9`, verified 2026-10-06; see [baseline evidence](docs/renewal/phase-1-evidence.md).
-- Active step: review the [Phase 9 written design](docs/renewal/phase-9-review.md)
-  before its implementation plan. Developer confirmation of the locally verified
+- Active step: execute the approved [Phase 9 plan](docs/renewal/phase-9-plan.md).
+  Developer confirmation of the locally verified
   Phase 8 implementation remains pending;
   [Phase 8b evidence and QA](docs/renewal/phase-8b-evidence.md) are ready for review.
   Developer confirmation of the
@@ -184,8 +186,8 @@ The plan below is approved; **not approved** refers to phase execution and its r
    checks and 417 whole-solution checks passed, actual browser and fresh review;
    (b) scheduling, unsubscribe enforcement, cancellation and delivery recovery —
    [concrete local design](docs/renewal/phase-8b-review.md) approved and executed.
-9. Reproducibility and release preparation — **execution requested on 2026-10-12;
-   concrete design/plan approval pending**. [Written design](docs/renewal/phase-9-review.md)
+9. Reproducibility and release preparation — **design approved on 2026-10-12
+   with latest-stable package/tool correction; implementation in progress**. [Written design](docs/renewal/phase-9-review.md)
    covers Docker/Compose, build pins and CI. Last.fm written public-page approval
    is missing; release stays blocked until approval is documented and separate
    hosting/delivery/production operational decisions are resolved.

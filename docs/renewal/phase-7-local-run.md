@@ -49,7 +49,9 @@ Enter these actions in order:
 5. `capture` again — expect `already_captured`, the same digest ID and unchanged file bytes.
 
 Inspect the digest and export on `/manual-test`. A captured digest has status
-`LocalCaptured`, with `SentAt` null. Export version is **2.1**; the subscriber includes
+`LocalCaptured`, with `SentAt` null. Export version is now **2.2**; the `account`
+section exposes stored Identity profile fields while excluding credentials and
+authentication internals. The subscriber includes
 `emailUnsubscribedAtUtc`, and archive inspection exposes sanitized plaintext/HTML and issues.
 The stored score explanation appears in both alternatives, in persisted rank order.
 Listening links are ordinary links; opening the message loads no remote images, fonts,

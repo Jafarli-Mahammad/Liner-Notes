@@ -21,16 +21,19 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     private readonly IUserRepository _userRepository;
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
+    private readonly IAccountProfileReader _accountProfileReader;
 
     public GetUserDataExportQueryHandler(
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
-        IWeeklyDigestRepository weeklyDigestRepository, ILocalEmailArchive? archive = null)
+        IWeeklyDigestRepository weeklyDigestRepository, IAccountProfileReader accountProfileReader,
+        ILocalEmailArchive? archive = null)
     {
         _archive = archive;
         _userRepository = userRepository;
         _tasteSignalRepository = tasteSignalRepository;
         _weeklyDigestRepository = weeklyDigestRepository;
+        _accountProfileReader = accountProfileReader;
     }
 
     public async Task<UserDataExportDto> Handle(
@@ -42,6 +45,9 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         {
             throw new NotFoundException(nameof(User), request.UserId);
         }
+
+        var account = await _accountProfileReader.GetAsync(request.UserId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("Account", request.UserId);
 
         var signals = await _tasteSignalRepository.GetForExportAsync(request.UserId, cancellationToken);
         var digests = new List<WeeklyDigestDto>();
@@ -65,7 +71,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         var signalDtos = signals.Select(s => s.ToDto()).ToArray();
 
         return new UserDataExportDto(
-            ExportVersion: "2.1",
+            ExportVersion: "2.2",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
@@ -73,6 +79,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
             Digests: digests,
             LocalEmail: _archive is not null ? await _archive.ReadAsync(request.UserId, digests, cancellationToken)
                 : new(digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? "incomplete" : "disabled", [],
-                    digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []));
+                    digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []),
+            Account: account);
     }
 }

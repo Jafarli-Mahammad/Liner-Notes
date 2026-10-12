@@ -84,7 +84,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         await using var scope=services.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<DataContext>();
         var digest=await db.WeeklyDigests.SingleAsync();Assert.Equal(DigestStatus.LocalCaptured,digest.Status);Assert.Null(digest.SentAt);
         var export=await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.1",export.ExportVersion);Assert.Equal("complete",export.LocalEmail!.Status);
+        Assert.Equal("2.2",export.ExportVersion);Assert.Equal(userId,export.Account!.Id);Assert.Equal("complete",export.LocalEmail!.Status);
         var copy=Assert.Single(export.LocalEmail.Copies);Assert.Contains("capability-removed",copy.PlainText);
         output.WriteLine($"Actual synthetic Worker MIME={bytes.Length} bytes; picks={export.Digests.Single().Recommendations.Count}; copy plaintext={copy.PlainText.Length} chars; HTML={copy.Html.Length} chars");
         await using(var ownership=await scope.ServiceProvider.GetRequiredService<IAccountEmailLease>().AcquireAsync(userId,default))

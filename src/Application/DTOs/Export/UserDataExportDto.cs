@@ -33,4 +33,5 @@ public record UserDataExportDto(
     IReadOnlyList<UserMusicConnectionExportDto> Connections,
     IReadOnlyList<TasteSignalDto> TasteSignals,
     IReadOnlyList<WeeklyDigestDto> Digests,
-    LocalEmailArchiveDto? LocalEmail = null);
+    LocalEmailArchiveDto? LocalEmail = null,
+    AccountExportDto? Account = null);

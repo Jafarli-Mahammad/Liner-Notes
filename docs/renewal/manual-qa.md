@@ -4,7 +4,7 @@ This page exercises the application's real Development APIs against an explicitl
 local PostgreSQL database. It uses synthetic Last.fm fixtures, temporary storage roots and
 the existing Phase 6 generation command. It does not enable live Last.fm requests.
 
-For Phase 7 email capture, unsubscribe, export 2.1 and owned-copy cleanup, use the
+For Phase 7 email capture, unsubscribe, current export and owned-copy cleanup, use the
 [Phase 7 launcher and procedure](phase-7-local-run.md). It runs this same page with an
 explicitly enabled local sink and a Worker action menu. The original launcher below
 does not enable local email.
@@ -75,7 +75,7 @@ is permanent. Check the test page's Development and Synthetic status before send
    Try `AlreadyKnown` with a rating, change the rating while keeping `AlreadyKnown`, then
    issue `None` without a rating as an explicit reset. Reload the digest after each change.
 9. Inspect the complete export JSON and download the export. Check export version, current
-   taste signals, digest history and stored score snapshots. The current export is 2.1;
+   taste signals, digest history and stored score snapshots. The current export is 2.2;
    inspect `emailUnsubscribedAtUtc` and local archive status/issues. Without an enabled sink,
    the archive reports disabled/unavailable rather than claiming owned-copy inspection.
 10. Only when finished, type the deletion confirmation for the disposable account. Confirm

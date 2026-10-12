@@ -58,6 +58,7 @@ public static class DependencyInjection
 
         // Register repository implementations
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAccountProfileReader, AccountProfileReader>();
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();

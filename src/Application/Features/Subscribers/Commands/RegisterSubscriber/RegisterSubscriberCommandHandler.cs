@@ -14,13 +14,16 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _clock;
 
     public RegisterSubscriberCommandHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider? clock = null)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<SubscriberDto> Handle(
@@ -41,8 +44,8 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
             id: request.UserId);
 
         // Calculate initial next digest delivery slot
-        var initialDelivery = DateTime.UtcNow.Date.AddDays(7).AddHours(request.DeliveryHourUtc);
-        user.SetNextDigestAt(DateTime.SpecifyKind(initialDelivery, DateTimeKind.Utc));
+        var initialDelivery = WeeklySchedulePolicy.NextUtc(_clock.GetUtcNow().UtcDateTime, request.DeliveryDay, request.DeliveryHourUtc);
+        user.SetNextDigestAt(initialDelivery);
 
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

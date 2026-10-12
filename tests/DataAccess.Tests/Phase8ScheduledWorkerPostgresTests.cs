@@ -97,6 +97,82 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         if (result.Status == "stopped") Console.WriteLine(JsonSerializer.Serialize(result));
         return result;
     }
+    [LocalPostgresMigrationFact]
+    public async Task PersistentInvalidAccount_DoesNotStarveHealthyAccount_AcrossStoreScopes()
+    {
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.NextDigestAt, _due.AddDays(-1))
+                .SetProperty(u => u.LastModifiedAt, _due.AddDays(-2)));
+        }
+        async Task<ScheduleTickResult> Run()
+        {
+            await using var scope = _services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<ISender>().Send(new RunScheduledTickCommand([_user, _other], 1));
+        }
+        var first = Assert.Single((await Run()).Jobs);
+        Assert.Equal(_user, first.UserId); Assert.Equal("invalid_schedule_state", first.Reason);
+        var second = Assert.Single((await Run()).Jobs);
+        Assert.Equal(_other, second.UserId);
+        if (second.Status == "stopped")
+        {
+            Assert.Equal("database_inventory_changed", second.Reason);
+            await ReconcileAsync();
+        }
+        var third = Assert.Single((await Run()).Jobs);
+        Assert.Equal(_user, third.UserId); Assert.Equal("invalid_schedule_state", third.Reason);
+        for (var attempt = 0; second.Status != "advanced" && attempt < 3; attempt++)
+        {
+            second = Assert.Single((await Run()).Jobs);
+            Assert.Equal(_other, second.UserId);
+            if (second.Status == "advanced") break;
+            Assert.Equal("database_inventory_changed", second.Reason);
+            await ReconcileAsync();
+            Assert.Equal(_user, Assert.Single((await Run()).Jobs).UserId);
+        }
+        Assert.Equal("advanced", second.Status);
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task CandidateAttempts_RotateEvenWithUnchangedDueSlotsAndClock()
+    {
+        var seen = new List<Guid>();
+        for (var i = 0; i < 4; i++)
+        {
+            await using var scope = _services.CreateAsyncScope();
+            var store = scope.ServiceProvider.GetRequiredService<IWeeklyScheduleStore>();
+            await using var lease = await store.TryAcquireTickAsync(default);
+            Assert.NotNull(lease);
+            seen.Add(Assert.Single(await store.GetCandidatesAsync([_user, _other], 1, _clock.Now.UtcDateTime, default)).Id);
+        }
+        Assert.NotEqual(seen[0], seen[1]); Assert.Equal(seen[0], seen[2]); Assert.Equal(seen[1], seen[3]);
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task RegistrationRepair_RequiresLegacyPatternExpectedSlotAndNoDigest()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var store = (LinerNotes.DataAccess.Persistence.Repositories.WeeklyScheduleStore)scope.ServiceProvider.GetRequiredService<IWeeklyScheduleStore>();
+        var legacy = _due.AddDays(-1);
+        await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(setters => setters
+            .SetProperty(u => u.CreatedAt, legacy.AddDays(-7).AddMinutes(1))
+            .SetProperty(u => u.NextDigestAt, legacy));
+        var observed = (await store.GetAsync(_user, default))!;
+        Assert.False(await store.RepairRegistrationSlotAsync(observed with { NextDigestAt = legacy.AddDays(-7) }, _due, _due, default));
+        Assert.True(await store.RepairRegistrationSlotAsync(observed, _due, _due, default));
+        Assert.False(await store.RepairRegistrationSlotAsync(observed, _due, _due, default));
+        Assert.False(await store.RepairRegistrationSlotAsync((await store.GetAsync(_user, default))!, _due.AddDays(7), _due, default));
+        await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(setters => setters.SetProperty(u => u.NextDigestAt, legacy.AddDays(-7)));
+        Assert.False(await store.RepairRegistrationSlotAsync((await store.GetAsync(_user, default))!, _due, _due, default));
+        await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(setters => setters.SetProperty(u => u.NextDigestAt, legacy));
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GenerateDigestCommand(_user, WeeklySchedulePolicy.Week(legacy)));
+        Assert.True(await db.WeeklyDigests.AnyAsync(d => d.UserId == _user));
+        Assert.False(await store.RepairRegistrationSlotAsync((await store.GetAsync(_user, default))!, _due, _due, default));
+    }
+
     private async Task PrepareCaptureAsync()
     {
         await using var scope = _services.CreateAsyncScope();
@@ -217,6 +293,27 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         Assert.Equal("email_receipt_missing", Assert.Single((await TickAsync()).Jobs).Reason);
         Assert.Equal(_due, (await db.Users.SingleAsync(user => user.Id == _user)).NextDigestAt);
         Assert.Empty(Directory.GetFiles(_email.SinkRoot!)); Assert.Single(await db.WeeklyDigests.ToListAsync());
+        // Make the healthy account a later due slot. The old ordering would retry
+        // the earlier missing receipt forever at a per-tick limit of one.
+        await db.Users.Where(user => user.Id == _user).ExecuteUpdateAsync(setters => setters
+            .SetProperty(user => user.LastModifiedAt, _due.AddDays(-1)));
+        await db.Users.Where(user => user.Id == _other).ExecuteUpdateAsync(setters => setters
+            .SetProperty(user => user.NextDigestAt, _due.AddDays(7)));
+        _clock.Now = new(_due.AddDays(7).AddMinutes(30));
+        async Task<ScheduleJobResult> Next()
+        {
+            await using var tickScope = _services.CreateAsyncScope();
+            return Assert.Single((await tickScope.ServiceProvider.GetRequiredService<ISender>()
+                .Send(new RunScheduledTickCommand([_user, _other], 1))).Jobs);
+        }
+        var failed = await Next();
+        Assert.Equal(_user, failed.UserId); Assert.Equal("email_receipt_missing", failed.Reason);
+        var healthy = await Next();
+        Assert.Equal(_other, healthy.UserId);
+        Assert.Contains(healthy.Status, new[] { "advanced", "stopped" });
+        // Advancing the clock a week intentionally makes the inventory stale;
+        // fairness must still let this account reach its own generation checks.
+        if (healthy.Status == "stopped") Assert.Equal("stale_or_unknown_storage_inventory", healthy.Reason);
     }
 
     [LocalPostgresMigrationFact]

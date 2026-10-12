@@ -47,3 +47,13 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** Killing a client while its backend waits in a controlled SQL trigger does not establish rollback. Releasing the barrier can let an autocommit update finish after client death; first-use database allocations can also invalidate a conservative inventory fixture.
 **Suggested improvement:** Identify the exact test-owned backend/database, terminate and wait for its rollback before releasing a crash barrier, and provision keys/first-use row paths before inventory measurement. Permit only documented bounded operator reconciliation for the exact changed-inventory reason; keep product guards intact.
 **Principle:** A crash test must prove the server-side durable boundary, rather than infer it from client process exit. Prepare operational side effects before measuring storage.
+
+### Observation 005: Bounded schedulers need liveness checks across repeated ticks
+**Status:** OPEN
+**Date:** 2026-10-12
+**Skill:** test-cases
+**Type:** open-source
+**Phase/Area:** Scheduling regression verification
+**Issue:** Single-account failure checks cannot establish fairness when stopped jobs retain their due slots.
+**Suggested improvement:** Test a persistent failure alongside a healthy later account with a limit of one, repeated scopes, an unchanged clock, and both invalid-state and missing-receipt failures. Preserve required operator reconciliation during end-to-end capture checks.
+**Principle:** Verify bounded progress across ticks as well as safety within each job.

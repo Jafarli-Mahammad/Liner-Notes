@@ -2,6 +2,13 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Scheduler review fixes (2026-10-12): registration now uses the selected UTC
+  weekday/hour; explicit guarded legacy-slot repair is documented in
+  [repair procedure](docs/renewal/registration-slot-repair.md). Bounded selection
+  records attempt order in existing audit fields, preventing persistent invalid
+  states or missing receipts from monopolizing ticks across restarts. Final
+  verification passed **474 whole-solution checks, zero failures/skips**.
+  No existing account repair was run; developer confirmation remains pending.
 - Phase 8 direction: on 2026-10-12 the developer requested Phase 8 and selected
   **8a implementation → separate 8a tests → 8b implementation → separate 8b tests
   → combined verification**. This is the proceed decision after Phase 7 reassessment;

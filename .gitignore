@@ -21,6 +21,9 @@ venv/
 
 # Antigravity & Agent scratch
 .system_generated/
+.codebase-memory/
+.codex/
+scratches/
 
 # Local configuration, credentials, recordings and verification output
 .env.*

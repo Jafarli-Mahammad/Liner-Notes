@@ -59,8 +59,8 @@ and tests both fresh migrations and a populated legacy upgrade.
 
 - Dependency modernization locally verified: 472 passed, zero failures/skips.
 - Swagger replacement: NSwag 14.7.1 verified after the developer selected investigation; document, security and Production hiding checks pass.
-- Containers/Compose: pending implementation.
-- CI/release documentation: pending implementation.
+- Containers/Compose: implemented; all targets built and all eight disposable lifecycle groups passed. Private build-context exclusions and non-root runtime images verified.
+- CI/release documentation: implemented; local equivalent checks passed (472 .NET, 32 offline Python and 4 new helper methods). Actual GitHub Actions execution remains unverified.
 - Developer confirmation and public release: pending, independent of test passes.
 
 See [approved design with version correction](phase-9-review.md).

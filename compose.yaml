@@ -1,8 +1,127 @@
+# Local Development stack; generate ignored credentials with phase9_init_local.py.
+name: linernotes-local
+
+x-local-settings: &local-settings
+  DOTNET_ENVIRONMENT: Development
+  ASPNETCORE_ENVIRONMENT: Development
+  Jwt__SecretKey: ${JWT_SECRET:?Generate the private local env file first}
+  LastFm__Mode: FixtureOnly
+  LastFm__ApiKey: ""
+  Generation__Origin: Synthetic
+  LocalEmail__Enabled: "true"
+  LocalEmail__ApplicationOrigin: http://127.0.0.1:${LINER_WEB_PORT:-8080}
+  LocalEmail__SinkRoot: /app/local-state/copies
+  GenerationStorage__InventoryPath: /app/local-state/inventory.json
+  GenerationStorage__LeasePath: /app/local-state/lease.lock
+  GenerationStorage__DatabaseOverheadBytesPerPick: "1000000"
+  GenerationStorage__ArtifactRoots__recordings__0: /app/local-state/recordings
+  GenerationStorage__ArtifactRoots__cache__0: /app/local-state/cache
+  GenerationStorage__ArtifactRoots__reports__0: /app/local-state/reports
+  GenerationStorage__ArtifactRoots__copies__0: /app/local-state/copies
+  GenerationStorage__ArtifactRoots__backups__0: /app/local-state/backups
+  GenerationStorage__ArtifactRoots__partials__0: /app/local-state/partials
+
 services:
-  web:
-    image: linernotes-web
+  db:
+    # PostgreSQL 18.6 uses /var/lib/postgresql as its volume root.
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_DB: liner_notes_manual_qa
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Generate the private local env file first}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d liner_notes_manual_qa"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  volume-init:
     build:
       context: .
-      dockerfile: Dockerfile
+      target: volume-init
+    volumes:
+      - local-state:/app/local-state
+    restart: "no"
+
+  migrate:
+    build:
+      context: .
+      target: tools
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__SecretKey: ${JWT_SECRET:?Local signing key required}
+      LastFm__Mode: FixtureOnly
+      LastFm__ApiKey: ""
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION:?Regenerate the private local env file first}
+    command: ["database", "update", "--project", "src/DataAccess/DataAccess.csproj", "--startup-project", "src/Presentation/Presentation.csproj", "--context", "AppDbContext", "--configuration", "Release", "--no-build"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      target: web
+    environment:
+      <<: *local-settings
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION:?Regenerate the private local env file first}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:${LINER_WEB_PORT:-8080}:8080"
+    volumes:
+      - local-state:/app/local-state
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+
+  worker:
+    profiles: ["local-worker"]
+    build:
+      context: .
+      target: worker
+    # Preserve the loopback-only guard on this single local host.
+    network_mode: service:db
+    environment:
+      <<: *local-settings
+      ConnectionStrings__DefaultConnection: ${DB_LOOPBACK_CONNECTION:?Regenerate the private local env file first}
+    volumes:
+      - local-state:/app/local-state
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    restart: "no"
+
+  operator:
+    profiles: ["local-operator"]
+    build:
+      context: .
+      target: operator
+    network_mode: service:db
+    environment:
+      <<: *local-settings
+      ConnectionStrings__DefaultConnection: ${DB_LOOPBACK_CONNECTION:?Regenerate the private local env file first}
+    # Reuse the existing explicit operator helper; capabilities are never web-exported.
+    volumes:
+      - local-state:/app/local-state
+      - ./scripts/phase7_local_email.cs:/src/scripts/phase7_local_email.cs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    restart: "no"
+
+volumes:
+  postgres-data:
+  local-state:

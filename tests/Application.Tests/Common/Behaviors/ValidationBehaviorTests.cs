@@ -19,7 +19,7 @@ public class ValidationBehaviorTests
         var command = new SampleCommand("Valid");
 
         var nextCalled = false;
-        RequestHandlerDelegate<string> next = () =>
+        RequestHandlerDelegate<string> next = _ =>
         {
             nextCalled = true;
             return Task.FromResult("Success");
@@ -42,7 +42,7 @@ public class ValidationBehaviorTests
         var command = new SampleCommand("Valid");
 
         var nextCalled = false;
-        RequestHandlerDelegate<string> next = () =>
+        RequestHandlerDelegate<string> next = _ =>
         {
             nextCalled = true;
             return Task.FromResult("Success");
@@ -66,7 +66,7 @@ public class ValidationBehaviorTests
         var command = new SampleCommand("");
 
         var nextCalled = false;
-        RequestHandlerDelegate<string> next = () =>
+        RequestHandlerDelegate<string> next = _ =>
         {
             nextCalled = true;
             return Task.FromResult("Success");

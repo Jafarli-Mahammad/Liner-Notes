@@ -41,7 +41,7 @@ Set the disposable account GUID and its canonical current ISO week:
 
 ```bash
 phase9_user_id=YOUR_DISPOSABLE_ACCOUNT_GUID
-phase9_week=2026-W42
+phase9_week=$(date -u +%G-W%V)
 docker compose --env-file .env.phase9.local run --rm worker --action reconcile --user "$phase9_user_id" --week "$phase9_week" --origin Synthetic
 docker compose --env-file .env.phase9.local run --rm worker --action generate --user "$phase9_user_id" --week "$phase9_week" --origin Synthetic
 docker compose --env-file .env.phase9.local run --rm worker --action reconcile --user "$phase9_user_id" --week "$phase9_week" --origin Synthetic

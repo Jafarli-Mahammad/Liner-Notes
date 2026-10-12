@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Restore the approved MediatR 12.5.0 licensing exception in central versions and
+  package locks. CI now generates a disposable database password for each run;
+  Swagger fixtures omit unused database passwords, and the local runbook selects
+  the current UTC ISO week.
+
 - Add non-root web/Worker container targets, explicit migration/private-volume
   initialization and a local PostgreSQL Compose stack with loopback web only.
   Private credential generation and opt-in operator/Worker profiles support

@@ -2,6 +2,13 @@
 # Liner Notes renewal progress
 
 ## Current state and next step
+- Phase 9 review follow-up (2026-10-12): restored the approved MediatR 12.5.0
+  exception in the actual package graph, removed unused Swagger fixture passwords,
+  generated CI credentials per run and made the runbook week dynamic. The current
+  graph passed locked restore, Release build and **478 tests, zero failures/skips**;
+  the new CI database startup/cleanup ran locally. Compose uses private environment
+  values already; its reported credential is a false positive. Remote scanning and
+  GitHub Actions execution remain unverified.
 - Phase 9 direction: on 2026-10-12 the developer requested build and implementation
   of Phase 9. Repository/container/CI preflight is complete and the
   [concrete written design](docs/renewal/phase-9-review.md) was approved with a

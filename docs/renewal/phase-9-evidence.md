@@ -148,6 +148,34 @@ The local merge makes the branch fast-forwardable to the fetched remote tip as
 of this verification. The remote may advance again before any later push. No push
 was performed.
 
+## Pull-request finding verification and correction
+
+The review found that the checked-in central version, nine affected package locks
+and version snapshot selected MediatR 14.2.0 despite the approved 12.5.0 licensing
+exception. Earlier statements that the original graph used 12.5.0 were inaccurate.
+The actual pin, locks and snapshot now select 12.5.0; its approved exception and
+[Apache-2.0 license](https://raw.githubusercontent.com/jbogard/MediatR/v12.5.0/LICENSE)
+are recorded explicitly. No other central package version was changed.
+
+| Finding | Verified outcome |
+|---|---|
+| GitGuardian 38143099, CI | The former fixed value initialized only a disposable test database. Replaced with a generated password per run, masked in Actions logs, supplied through environment configuration; database port binds to loopback and cleanup always runs |
+| GitGuardian 38143098, Swagger tests | Unused fixture password literals removed from both startup configuration locations. Both Development document and Production hiding tests remain functional without database credentials |
+| GitGuardian 38143097, Compose | No embedded password value: all connection strings require private `DB_PASSWORD` interpolation. False positive; Compose configuration retained |
+| Runbook week | Commands now compute the UTC ISO week when executed rather than retaining a dated example |
+
+No flagged value was confirmed to be a real service credential, so no real
+credential was rotated. Existing commits were not rewritten and GitGuardian
+incidents were not remotely closed. A fresh scanner result is not verified.
+
+Validation after these corrections: locked restore and Release build passed;
+all five TRX reports passed the strict validator with **478 tests, zero failures
+and zero skips**. The new workflow database startup and cleanup steps were
+executed locally with generated credentials and the full suite used that database.
+All nine affected locks resolve MediatR 12.5.0. Repository checks and focused
+helper checks passed. CodeRabbit CLI is not installed; no local CodeRabbit review
+was run. GitHub Actions execution remains separate from these local results.
+
 ## Unfinished release work
 
 Last.fm written public-page approval is missing. Recommendation quality is not

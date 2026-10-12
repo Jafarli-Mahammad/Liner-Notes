@@ -40,12 +40,12 @@ public sealed class Phase9SwaggerTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(environment);
-            builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=127.0.0.1;Database=unused;Username=unused;Password=fixture-only");
+            builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=127.0.0.1;Database=unused;Username=unused");
             builder.UseSetting("Jwt:SecretKey", "phase9-fixture-signing-key-never-deploy-1234567890");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:DefaultConnection"] = "Host=127.0.0.1;Database=unused;Username=unused;Password=fixture-only",
+                    ["ConnectionStrings:DefaultConnection"] = "Host=127.0.0.1;Database=unused;Username=unused",
                     ["Jwt:SecretKey"] = "phase9-fixture-signing-key-never-deploy-1234567890",
                     ["LastFm:Mode"] = "FixtureOnly",
                     ["Generation:Origin"] = "Synthetic"

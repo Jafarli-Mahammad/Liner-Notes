@@ -91,11 +91,11 @@ app.Use(async (context, next) =>
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.UseOpenApi(options => options.Path = "/swagger/{documentName}/swagger.json");
+    app.UseSwaggerUi(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Liner Notes API v1");
-        c.RoutePrefix = "swagger";
+        options.Path = "/swagger";
+        options.DocumentPath = "/swagger/{documentName}/swagger.json";
     });
 }
 

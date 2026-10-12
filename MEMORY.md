@@ -31,6 +31,8 @@ Keep this file under ~150 lines. When it grows, merge overlapping lines and drop
 Facts that belong in AGENTS.md (structure, conventions) or PROGRESS.md (status) go there, not here.
 Apply only what's relevant to the current task. Don't recite this file back.
 Working preferences
+[stated] Always use the latest stable versions of project packages and tools; verify current releases and upgrade compatibility rather than retaining old versions just because the checkout already uses them. The developer approved Phase 9 with this correction and instructed implementation to proceed. (2026-10-12)
+[stated] Keep MediatR 12.5.0 as an explicit exception to the latest-stable policy because newer releases change to RPL/commercial licensing; the repository remains AGPL-3.0 and no commercial license purchase was approved. (2026-10-12)
 [stated] Be direct and technical. No flattery. Disagree with reasons when you have a better argument. (2026-09-28)
 [stated] Ask at most one question at a time, only when the answer changes what you'd do. (2026-09-28)
 [stated] After approving the Phase 8 design, the developer directed immediate implementation and approved routine dotnet, docker and LINER_PHASE1_POSTGRES verification commands; carry that authorization through the task without another simple-command approval checkpoint. (2026-10-12)

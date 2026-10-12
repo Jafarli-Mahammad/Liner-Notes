@@ -21,6 +21,10 @@ Cache upstream responses; respect rate limits. Never call upstream per page view
 Data minimization: store only what scoring/feedback needs. The "your data" page and JSON export must cover every stored table/column.
 Email: unsubscribe in every message, no tracking pixels.
 Secrets never in source control.
+Use the latest stable versions of project packages and tools, verifying releases
+and compatibility before updating and pinning them. Prereleases are excluded.
+MediatR 12.5.0 is the developer-approved licensing exception; newer RPL/commercial
+releases require a separate licensing decision.
 Skip layers where there is no real domain logic.
 Out of scope for V1 (do not add unless told)
 

@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Upgrade to stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12 and current
+  stable direct/transitive dependencies, with central versions and locked restore.
+  MediatR 12.5.0 remains an explicit licensing exception. Replace incompatible
+  Swagger generation with NSwag while retaining Development-only documentation
+  routes and bearer security. Explicit existing key names preserve the SQL schema.
+
 - Added a Development-only synthetic scheduler with an explicit account allowlist,
   bounded ticks, UTC due slots and a PostgreSQL lease. Verified local capture advances
   the claimed slot by one week; failures, opt-out, changed preferences and cancellation

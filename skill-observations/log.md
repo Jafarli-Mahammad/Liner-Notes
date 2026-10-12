@@ -59,3 +59,27 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** A web Dockerfile omitted shared target-framework properties before restore; Compose lacked its database, and CI could skip database checks. The batch executable deliberately rejected production mode and non-loopback databases, so a generic production topology would not represent implemented behavior.
 **Suggested improvement:** Inspect shared build inputs, test skip conditions, executable guards, migration context and storage/key ownership before proposing deployment files. Package a supported local topology and distinguish reproducibility from production delivery and external approval.
 **Principle:** Packaging should make existing runtime and verification contracts executable; containerizing a process does not establish a supported production workflow.
+
+### Observation 006: Reproducibility pins follow the approved version policy
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Developer corrected the release design's proposal to retain EF Core 9 after EF Core 10 was stable, and approved proceeding with latest stable packages/tools.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Dependency selection
+**Issue:** Preserving an existing dependency graph was proposed as a default despite a newer stable framework release. Reproducibility and version freshness were treated as competing requirements.
+**Suggested improvement:** Verify stable releases and compatibility first, upgrade under the authorized version policy, then freeze exact versions and lock files. Distinguish a verified compatibility exception from retaining an old version without investigation.
+**Principle:** Reproducibility means pinning a deliberately chosen, verified graph; it does not require keeping an outdated graph.
+
+### Observation 007: Latest transitive majors need executable compatibility checks
+
+**Status:** OPEN
+**Date:** 2026-10-12
+**Session context:** Stable dependency modernization and API documentation compatibility.
+**Skill:** New skill candidate: release reproducibility
+**Type:** open-source
+**Phase/Area:** Dependency compatibility
+**Issue:** A restore/build accepted a newer transitive OpenAPI major, but document generation failed at runtime with MissingMethodException. A replacement generator passed the same route/security check. A framework upgrade also changed an implicit constraint naming convention despite unchanged entities.
+**Suggested improvement:** Inspect generated schema diffs, preserve intended explicit names, and verify actual generated documents and security references after changing package majors. Do not equate successful dependency resolution or compilation with runtime compatibility.
+**Principle:** Stable packages can form an incompatible graph; prove the contracts the application actually uses.

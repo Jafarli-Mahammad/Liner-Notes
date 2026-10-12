@@ -1,6 +1,7 @@
 # Phase 8a privacy verification — concrete design for review
 
-Date: 2026-10-12. Status: direction approved; written design awaiting review.
+Date: 2026-10-12. Status: written design approved by the developer on 2026-10-12.
+The [implementation plan](phase-8a-plan.md) is awaiting review; implementation has not started.
 Source revision: `64dfc11` on `Prism`.
 
 ## Intent and authorization
@@ -167,8 +168,8 @@ PostgreSQL's [transaction isolation documentation](https://www.postgresql.org/do
 was refreshed on 2026-10-12 for the export consistency boundary. No API, provider,
 package, rate allowance or pricing integration is added by this design.
 
-Written-spec review and a written implementation plan remain required by the
-brainstorming skill. The developer's requested execution order is already
+Written-spec review is complete. Written implementation-plan review remains
+required by the brainstorming skill. The developer's requested execution order is already
 selected and must not be asked again. No popularity preference, real evaluation,
 live acquisition, external sending, provisioning, public deployment, CI upgrade,
 history rewrite or remote push is authorized by this review.

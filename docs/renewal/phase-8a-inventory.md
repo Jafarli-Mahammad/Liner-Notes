@@ -1,7 +1,8 @@
 # Phase 8a reviewed storage inventory
 
 Review boundary: approved design in [phase-8a-review.md](phase-8a-review.md).
-Export 2.2 implementation and full value/deletion verification are in progress.
+Export 2.2 and the reviewed value/deletion boundaries are locally verified;
+see [the per-approval evidence and remaining limits](phase-8a-evidence.md).
 
 This inventory lists every scalar column in the current EF relational model and
 the migration history table. A column's presence here does not by itself prove

@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using NSwag;
 
 namespace LinerNotes.Presentation;
 
@@ -123,38 +123,20 @@ public static class DependencyInjection
 
         // 5. Unified Swagger / OpenAPI documentation
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options =>
+        services.AddOpenApiDocument(options =>
         {
-            options.SwaggerDoc("v1", new OpenApiInfo
-            {
-                Title = "Liner Notes API",
-                Version = "v1",
-                Description = "Open-source weekly music recommendation digest platform with transparent scoring and data sovereignty."
-            });
-
-            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            options.DocumentName = "v1";
+            options.Title = "Liner Notes API";
+            options.Version = "v1";
+            options.Description = "Weekly music discovery with transparent scoring and feedback.";
+            options.AddSecurity("Bearer", [], new OpenApiSecurityScheme
             {
                 Description = "JWT Authorization header using the Bearer scheme. Format: Bearer {token}",
                 Name = "Authorization",
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.Http,
+                In = OpenApiSecurityApiKeyLocation.Header,
+                Type = OpenApiSecuritySchemeType.Http,
                 Scheme = "bearer",
                 BearerFormat = "JWT"
-            });
-
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
             });
         });
 

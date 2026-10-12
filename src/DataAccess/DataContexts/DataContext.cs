@@ -55,7 +55,12 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
         base.OnModelCreating(modelBuilder);
 
         // Place ASP.NET Core Identity authentication tables into dedicated 'identity' schema
-        modelBuilder.Entity<ApplicationUser>(b => b.ToTable("Users", "identity"));
+        modelBuilder.Entity<ApplicationUser>(b =>
+        {
+            b.ToTable("Users", "identity");
+            // PostgreSQL permits the same constraint name in different schemas.
+            b.HasKey(u => u.Id).HasName("PK_Users");
+        });
         modelBuilder.Entity<IdentityRole<Guid>>(b => b.ToTable("Roles", "identity"));
         modelBuilder.Entity<IdentityUserRole<Guid>>(b => b.ToTable("UserRoles", "identity"));
         modelBuilder.Entity<IdentityUserClaim<Guid>>(b => b.ToTable("UserClaims", "identity"));

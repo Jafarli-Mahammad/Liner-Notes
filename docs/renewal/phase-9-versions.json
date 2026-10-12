@@ -1,0 +1,302 @@
+{
+  "checked_on": "2026-10-12",
+  "packages": {
+    "Dapper": {
+      "version": "2.1.89",
+      "source": "https://api.nuget.org/v3-flatcontainer/dapper/index.json"
+    },
+    "FluentValidation": {
+      "version": "12.2.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/fluentvalidation/index.json"
+    },
+    "FluentValidation.DependencyInjectionExtensions": {
+      "version": "12.2.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/fluentvalidation.dependencyinjectionextensions/index.json"
+    },
+    "MediatR": {
+      "version": "12.5.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/mediatr/index.json",
+      "latest_stable_at_review": "14.2.0",
+      "exception": "Developer-approved Apache-2.0 licensing exception; no RPL/commercial upgrade authorized",
+      "license_source": "https://raw.githubusercontent.com/jbogard/MediatR/v12.5.0/LICENSE"
+    },
+    "Microsoft.AspNetCore.Authentication.JwtBearer": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.authentication.jwtbearer/index.json"
+    },
+    "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.dataprotection.entityframeworkcore/index.json"
+    },
+    "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.identity.entityframeworkcore/index.json"
+    },
+    "Microsoft.AspNetCore.Mvc.Testing": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.mvc.testing/index.json"
+    },
+    "Microsoft.EntityFrameworkCore": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore/index.json"
+    },
+    "Microsoft.EntityFrameworkCore.Design": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.design/index.json"
+    },
+    "Microsoft.EntityFrameworkCore.InMemory": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.inmemory/index.json"
+    },
+    "Microsoft.EntityFrameworkCore.Relational": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.relational/index.json"
+    },
+    "Microsoft.Extensions.Caching.Memory": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.caching.memory/index.json"
+    },
+    "Microsoft.Extensions.Configuration.Abstractions": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.abstractions/index.json"
+    },
+    "Microsoft.Extensions.Configuration.EnvironmentVariables": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.environmentvariables/index.json"
+    },
+    "Microsoft.Extensions.Configuration.UserSecrets": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.usersecrets/index.json"
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencyinjection.abstractions/index.json"
+    },
+    "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.diagnostics.healthchecks.entityframeworkcore/index.json"
+    },
+    "Microsoft.Extensions.Hosting": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.hosting/index.json"
+    },
+    "Microsoft.Extensions.Http": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.http/index.json"
+    },
+    "Microsoft.NET.Test.Sdk": {
+      "version": "18.10.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.net.test.sdk/index.json"
+    },
+    "NSubstitute": {
+      "version": "6.2.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/nsubstitute/index.json"
+    },
+    "Npgsql.EntityFrameworkCore.PostgreSQL": {
+      "version": "10.0.3",
+      "source": "https://api.nuget.org/v3-flatcontainer/npgsql.entityframeworkcore.postgresql/index.json"
+    },
+    "System.IdentityModel.Tokens.Jwt": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.identitymodel.tokens.jwt/index.json"
+    },
+    "System.Security.Cryptography.Xml": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.security.cryptography.xml/index.json"
+    },
+    "dotnet-ef": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/dotnet-ef/index.json"
+    },
+    "xunit": {
+      "version": "2.9.3",
+      "source": "https://api.nuget.org/v3-flatcontainer/xunit/index.json"
+    },
+    "xunit.runner.visualstudio": {
+      "version": "4.0.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/xunit.runner.visualstudio/index.json"
+    },
+    "xunit.analyzers": {
+      "version": "2.2.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/xunit.analyzers/index.json",
+      "scope": "transitive pin"
+    },
+    "Humanizer.Core": {
+      "version": "3.0.10",
+      "source": "https://api.nuget.org/v3-flatcontainer/humanizer.core/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.Build.Framework": {
+      "version": "18.10.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.build.framework/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.Analyzers": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.analyzers/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.Common": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.common/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.CSharp": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.csharp/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.CSharp.Workspaces": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.csharp.workspaces/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.Workspaces.Common": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.workspaces.common/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.CodeAnalysis.Workspaces.MSBuild": {
+      "version": "5.9.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.workspaces.msbuild/index.json",
+      "scope": "transitive pin"
+    },
+    "System.CodeDom": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.codedom/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition.AttributedModel": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.attributedmodel/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition.Convention": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.convention/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition.Hosting": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.hosting/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition.Runtime": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.runtime/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Composition.TypedParts": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.typedparts/index.json",
+      "scope": "transitive pin"
+    },
+    "Castle.Core": {
+      "version": "5.2.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/castle.core/index.json",
+      "scope": "transitive pin"
+    },
+    "System.Diagnostics.EventLog": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.diagnostics.eventlog/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.Bcl.Cryptography": {
+      "version": "10.0.12",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.bcl.cryptography/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.IdentityModel.Protocols": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.protocols/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.IdentityModel.Protocols.OpenIdConnect": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.protocols.openidconnect/index.json",
+      "scope": "transitive pin"
+    },
+    "NSwag.AspNetCore": {
+      "version": "14.7.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/nswag.aspnetcore/index.json"
+    },
+    "Microsoft.IdentityModel.Abstractions": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.abstractions/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.IdentityModel.JsonWebTokens": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.jsonwebtokens/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.IdentityModel.Logging": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.logging/index.json",
+      "scope": "transitive pin"
+    },
+    "Microsoft.IdentityModel.Tokens": {
+      "version": "8.23.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.identitymodel.tokens/index.json",
+      "scope": "transitive pin"
+    },
+    "Namotion.Reflection": {
+      "version": "3.5.1",
+      "source": "https://api.nuget.org/v3-flatcontainer/namotion.reflection/index.json",
+      "scope": "transitive pin"
+    },
+    "YamlDotNet": {
+      "version": "18.1.0",
+      "source": "https://api.nuget.org/v3-flatcontainer/yamldotnet/index.json",
+      "scope": "transitive pin"
+    },
+    "Newtonsoft.Json": {
+      "version": "13.0.4",
+      "source": "https://api.nuget.org/v3-flatcontainer/newtonsoft.json/index.json",
+      "scope": "transitive pin"
+    }
+  },
+  "sdk": "10.0.401",
+  "runtime": "10.0.12",
+  "sdk_source": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json",
+  "actions": {
+    "checkout": {
+      "version": "v7.0.1",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "source": "https://github.com/actions/checkout/releases/tag/v7.0.1"
+    },
+    "setup-dotnet": {
+      "version": "v6.0.0",
+      "commit": "a98b56852c35b8e3190ac28c8c2271da59106c68",
+      "source": "https://github.com/actions/setup-dotnet/releases/tag/v6.0.0"
+    }
+  },
+  "images": {
+    "sdk": {
+      "version": "10.0.401",
+      "digest": "sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317"
+    },
+    "aspnet": {
+      "version": "10.0.12",
+      "digest": "sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4"
+    },
+    "postgres": {
+      "version": "18.6-alpine",
+      "digest": "sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873"
+    }
+  },
+  "docker_compose": {
+    "version": "5.6.0",
+    "source": "https://github.com/docker/compose/releases/tag/v5.6.0"
+  },
+  "swagger_replacement": {
+    "finding": "Swashbuckle10.3.0 with OpenApi3.10.2 gives MissingMethodException in get_Content and HTTP500; developer chose investigating replacement rather than pinning2.7.5.",
+    "candidate": "MIT-licensed NSwag.AspNetCore14.7.1",
+    "status": "Verified NSwag document generation, bearer security and Production hiding; full suite472 passed."
+  }
+}

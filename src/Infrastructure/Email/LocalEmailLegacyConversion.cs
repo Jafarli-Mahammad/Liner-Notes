@@ -9,6 +9,10 @@ namespace LinerNotes.Infrastructure.Email;
 public sealed class LocalEmailLegacyConversion(LocalEmailOptions options, GenerationStorageOptions storageOptions,
     ILocalEmailStorage storage, LocalEmailMessageSerializer serializer)
 {
+    /// <summary>Publishes or verifies an encrypted copy, then removes matching legacy plaintext and authenticated legacy partials.</summary>
+    /// <remarks><paramref name="database"/> supplies storage measurements for inventory validation and reservation of a new encrypted copy. The caller holds the account email lease. File changes can remain after failure; cancellation, configuration, file access, and protection errors propagate.</remarks>
+    /// <returns>converted for a new encrypted copy, conversion_resumed for an existing matching copy, or no_plaintext_copy when the source is absent.</returns>
+    /// <exception cref="GenerationStoppedException">IDs, storage, ownership, or copy integrity checks fail, or a plaintext partial needs operator cleanup.</exception>
     public async Task<string> ConvertAsync(Guid userId, Guid digestId, GenerationStorageState database, CancellationToken ct)
     {
         if (userId == Guid.Empty || digestId == Guid.Empty) throw new GenerationStoppedException("invalid_user_or_digest");
@@ -95,12 +99,16 @@ public sealed class LocalEmailLegacyConversion(LocalEmailOptions options, Genera
         finally { CryptographicOperations.ZeroMemory(plaintext); }
     }
 
+    /// <summary>Rejects a receipt for another user or digest with an email_copy_ownership_conflict error.</summary>
     private static void CheckOwnership(ParsedLocalEmail parsed, Guid userId, Guid digestId)
     {
         if (parsed.Receipt.UserId != userId || parsed.Receipt.DigestId != digestId)
             throw new GenerationStoppedException("email_copy_ownership_conflict");
     }
 
+    /// <summary>Deletes legacy partials only when their authenticated receipt and bodies match the final copy; encrypted partials are retained.</summary>
+    /// <exception cref="GenerationStoppedException">More than 10,000 partials exist, a partial cannot be validated, or its contents conflict.</exception>
+    /// <remarks>File access errors and cancellation propagate; earlier deletions are not rolled back.</remarks>
     private async Task RemoveLegacyPartialsAsync(string root, ParsedLocalEmail final, CancellationToken ct)
     {
         var partials = Directory.EnumerateFiles(root, $"{final.Receipt.DigestId:N}.*.partial").Take(10_001).ToArray();

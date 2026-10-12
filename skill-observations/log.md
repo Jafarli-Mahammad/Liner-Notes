@@ -48,7 +48,17 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Suggested improvement:** Identify the exact test-owned backend/database, terminate and wait for its rollback before releasing a crash barrier, and provision keys/first-use row paths before inventory measurement. Permit only documented bounded operator reconciliation for the exact changed-inventory reason; keep product guards intact.
 **Principle:** A crash test must prove the server-side durable boundary, rather than infer it from client process exit. Prepare operational side effects before measuring storage.
 
-### Observation 005: Packaging must preserve local execution boundaries
+### Observation 005: Bounded schedulers need liveness checks across repeated ticks
+**Status:** OPEN
+**Date:** 2026-10-12
+**Skill:** test-cases
+**Type:** open-source
+**Phase/Area:** Scheduling regression verification
+**Issue:** Single-account failure checks cannot establish fairness when stopped jobs retain their due slots.
+**Suggested improvement:** Test a persistent failure alongside a healthy later account with a limit of one, repeated scopes, an unchanged clock, and both invalid-state and missing-receipt failures. Preserve required operator reconciliation during end-to-end capture checks.
+**Principle:** Verify bounded progress across ticks as well as safety within each job.
+
+### Observation 006: Packaging must preserve local execution boundaries
 
 **Status:** OPEN
 **Date:** 2026-10-12
@@ -60,7 +70,7 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Suggested improvement:** Inspect shared build inputs, test skip conditions, executable guards, migration context and storage/key ownership before proposing deployment files. Package a supported local topology and distinguish reproducibility from production delivery and external approval.
 **Principle:** Packaging should make existing runtime and verification contracts executable; containerizing a process does not establish a supported production workflow.
 
-### Observation 006: Reproducibility pins follow the approved version policy
+### Observation 007: Reproducibility pins follow the approved version policy
 
 **Status:** OPEN
 **Date:** 2026-10-12
@@ -72,7 +82,7 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Suggested improvement:** Verify stable releases and compatibility first, upgrade under the authorized version policy, then freeze exact versions and lock files. Distinguish a verified compatibility exception from retaining an old version without investigation.
 **Principle:** Reproducibility means pinning a deliberately chosen, verified graph; it does not require keeping an outdated graph.
 
-### Observation 007: Latest transitive majors need executable compatibility checks
+### Observation 008: Latest transitive majors need executable compatibility checks
 
 **Status:** OPEN
 **Date:** 2026-10-12
@@ -84,7 +94,7 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Suggested improvement:** Inspect generated schema diffs, preserve intended explicit names, and verify actual generated documents and security references after changing package majors. Do not equate successful dependency resolution or compilation with runtime compatibility.
 **Principle:** Stable packages can form an incompatible graph; prove the contracts the application actually uses.
 
-### Observation 008: Required database checks need an explicit result gate
+### Observation 009: Required database checks need an explicit result gate
 
 **Status:** OPEN
 **Date:** 2026-10-12

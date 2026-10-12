@@ -11,6 +11,7 @@ public sealed class LocalUnsubscribeProtection : IUnsubscribeTokenProtection, IL
 {
     private readonly Lazy<(ServiceProvider Services, IDataProtector Protector, IDataProtector FileProtector)> _provider;
 
+    /// <summary>Defers creation of database-backed keys with separate protection purposes for unsubscribe tokens and captured email files.</summary>
     public LocalUnsubscribeProtection(string connectionString)
     {
         _provider = new(() =>
@@ -28,7 +29,11 @@ public sealed class LocalUnsubscribeProtection : IUnsubscribeTokenProtection, IL
 
     public string Protect(string value) => _provider.Value.Protector.Protect(value);
     public string Unprotect(string value) => _provider.Value.Protector.Unprotect(value);
+    /// <summary>Encrypts and authenticates file bytes using the captured-email purpose and persistent keys.</summary>
+    /// <remarks>Key-store and protection failures propagate.</remarks>
     byte[] ILocalEmailFileProtection.Protect(byte[] plaintext) => _provider.Value.FileProtector.Protect(plaintext);
+    /// <summary>Authenticates and decrypts bytes protected for captured email files.</summary>
+    /// <remarks>Key-store and cryptographic failures propagate.</remarks>
     byte[] ILocalEmailFileProtection.Unprotect(byte[] ciphertext) => _provider.Value.FileProtector.Unprotect(ciphertext);
     public void Dispose() { if (_provider.IsValueCreated) _provider.Value.Services.Dispose(); }
 }

@@ -16,6 +16,10 @@
   Swagger generation with NSwag while retaining Development-only documentation
   routes and bearer security. Explicit existing key names preserve the SQL schema.
 
+- Registration uses the selected UTC delivery weekday/hour. Added an explicit, guarded
+  local repair tool for legacy registration slots. Bounded scheduler ticks track
+  candidate attempts so persistently stopped accounts cannot starve healthy peers.
+
 - Added a Development-only synthetic scheduler with an explicit account allowlist,
   bounded ticks, UTC due slots and a PostgreSQL lease. Verified local capture advances
   the claimed slot by one week; failures, opt-out, changed preferences and cancellation

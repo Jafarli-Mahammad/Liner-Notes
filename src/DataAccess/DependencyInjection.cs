@@ -14,6 +14,9 @@ namespace LinerNotes.DataAccess;
 
 public static class DependencyInjection
 {
+    /// <summary>Registers PostgreSQL persistence, repositories, scheduling locks, and shared local email protection services.</summary>
+    /// <returns>The supplied service collection.</returns>
+    /// <exception cref="InvalidOperationException">The DefaultConnection connection string is missing or blank.</exception>
     public static IServiceCollection AddDataAccess(
         this IServiceCollection services,
         IConfiguration configuration)

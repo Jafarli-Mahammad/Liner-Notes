@@ -117,3 +117,15 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** Documentation described an approved licensing exception while the central manifest and restored lock files selected the newer release. A credential scan also flagged private environment interpolation alongside literal fixture passwords.
 **Suggested improvement:** Compare central versions, all affected lock entries and version evidence with approval decisions after restore. Verify flagged credentials against current use before changing configuration or rotating anything; distinguish literals from required private interpolation.
 **Principle:** Approval records and scan labels need verification against the executable configuration.
+
+### Observation 011: Keep progress status concise and evidence-linked
+
+**Status:** OPEN
+**Date:** 2026-10-13
+**Session context:** Pruned the project progress tracker after several backend phases had accumulated implementation evidence.
+**Skill:** New skill candidate: project status documentation
+**Type:** open-source
+**Phase/Area:** Status maintenance
+**Issue:** The progress file repeated completed implementation details across several sections, contained stale historical claims and malformed fragments, and made open gates hard to identify.
+**Suggested improvement:** Keep the tracker focused on current implementation status, concrete remaining decisions and execution gates. Retain detailed verification and historical rationale in linked evidence documents; check claims against the current checkout before pruning.
+**Principle:** A progress tracker should answer what is done and what remains; evidence documents should carry the detailed record.

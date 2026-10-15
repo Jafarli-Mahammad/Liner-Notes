@@ -2,6 +2,10 @@
 
 This packages the existing **Development, fixture-only** slice. It does not
 provide production scheduling, external delivery or public-release permission.
+
+The default fixture provider is now ListenBrainz; Last.fm remains available by
+explicit configuration. See the [provider runbook](listenbrainz-provider-runbook.md)
+for origin/usage gates, private token configuration and rollback.
 Supported verification platform: Linux amd64. Other platforms are unverified.
 Docker Compose 5.6.0 was verified; all images and tools are pinned in
 [the version snapshot](phase-9-versions.json). No Redis service is used.

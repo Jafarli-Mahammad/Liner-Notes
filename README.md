@@ -68,9 +68,10 @@ in the repository.
 
 ## How a pick gets its notes
 
-Candidates and similarity evidence come from upstream music services. A Last.fm
-client exists today; ListenBrainz support and listening-history imports are
-deferred. Liner Notes applies deterministic scoring and feedback re-ranking to
+Candidates and similarity evidence come from upstream music services. ListenBrainz
+is the default provider, with Last.fm retained as an operator-configured option;
+per-user provider choice and listening-history imports are deferred. Live use
+requires explicit configuration and usage review. Liner Notes applies deterministic scoring and feedback re-ranking to
 that evidence. We do not build the providers' similarity data or claim a new
 recommendation algorithm. V1 uses no custom machine learning.
 
@@ -99,7 +100,7 @@ to explore and contribute to the project; it is not a production-ready service.
 | In the code today | Still being built or evaluated |
 | --- | --- |
 | A browser UI, account endpoints, manual taste seeds, digest reading and feedback. | Scheduled email delivery and production acquisition. |
-| Last.fm discovery, evidence parsing, fixture inputs and recorded-response replay. | ListenBrainz integration and username/listening-history imports. |
+| ListenBrainz default and retained Last.fm adapter; evidence parsing, synthetic fixtures and approved replay. | Per-user provider choice, username/listening-history imports and deployment-specific live-use approval. |
 | Bounded offline generation with pure baseline-A scoring, versioned stored evidence and PostgreSQL checks. | Real recommendation-quality evaluation and supported capacity. |
 | Export and deletion paths with local checks. | Verification of complete data export and deletion coverage. |
 
@@ -129,7 +130,7 @@ flowchart TB
     Worker["Worker<br>Host; delivery job pending"] --> App
     Web --> Data["DataAccess<br>EF Core + Identity + PostgreSQL"]
     Worker --> Data
-    Web --> Infra["Infrastructure<br>Last.fm + cache + replay"]
+    Web --> Infra["Infrastructure<br>ListenBrainz / Last.fm + cache + replay"]
     Worker --> Infra
     Data --> App
     Infra --> App

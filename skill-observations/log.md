@@ -4,6 +4,16 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-15
 
+### Observation 013: Validate redundant metadata identities against live envelopes
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** test-cases / brainstorming
+**Type:** open-source
+**Phase/Area:** Provider contract verification
+**Issue:** An official example repeated an artist ID inside every tag, while a live artist-scoped response omitted that redundant field. Fixture tests alone accepted an unnecessarily strict parser that discarded usable tags.
+**Suggested improvement:** Validate the enclosing entity identity first, test both redundant-ID and envelope-scoped shapes, reject conflicting supplied IDs, and use a bounded catalog smoke without recording account data before judging adapter coverage.
+**Principle:** Infer context only from a verified enclosing entity; do not confuse absent redundant fields with absent evidence.
+
 ### Observation 012: Trace supporting evidence services in provider migrations
 **Status:** OPEN
 **Skill:** brainstorming

@@ -1,7 +1,8 @@
 # ListenBrainz default provider plan
 
-Date: 2026-10-15. Status: proposed; planning only. No implementation,
-live acquisition, default change, or deployment has been performed.
+Date: 2026-10-15. Approved by the developer, with implementation continued on
+2026-10-16. This document records the approved design; current verification and
+remaining rollout gates are in [implementation evidence](listenbrainz-provider-evidence.md).
 
 ## Requested outcome
 
@@ -229,4 +230,4 @@ Fixture checks and a smoke run cannot establish recommendation quality.
 - Record usage/license decisions, approved live evidence, deployment checks and
   developer confirmation separately from local test results.
 - Provider choice UI and account linking/import remain deferred. Implementation
-  review/authorization, live validation and release readiness remain open.
+  review/authorization for those deferred features and release readiness remain open.

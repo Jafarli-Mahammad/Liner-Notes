@@ -2,6 +2,13 @@
 
 ## Unreleased — renewal
 
+- Make ListenBrainz the default provider while retaining Last.fm as an operator
+  option. Discovery, seed tags and candidate tags resolve together. Add bounded
+  public-catalog clients, approved recorded replay and explicitly gated live
+  generation; preserve historical evidence and derive email credits from it.
+  Local Compose remains synthetic. Per-user provider choice and history imports
+  are deferred, and deployment-specific usage/license review remains open.
+
 - Reworked the local web interface into clear discovery, taste profile, account,
   and data areas with responsive navigation, accessible focus states, and plain-language
   labels. Guest tracks are marked as examples, and recommendation details no longer

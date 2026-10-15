@@ -1,137 +1,174 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Liner Notes — Transparent Music Discovery</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f6f8">
+  <title>Liner Notes — Music discovery, explained</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header>
-    <div class="logo">
-      <span>🎵 Liner Notes</span>
-      <span class="badge">V1 Beta</span>
-    </div>
-    <nav>
-      <button id="nav-discovery" class="active" data-action="tab" data-tab="discovery">Weekly Discovery</button>
-      <button id="nav-seeding" data-action="tab" data-tab="seeding">Taste Seeding</button>
-      <button id="nav-your-data" data-action="tab" data-tab="your-data">Your Data & Privacy</button>
-      <button id="nav-auth" data-action="tab" data-tab="auth">Account</button>
-    </nav>
-    <div class="auth-badge" id="auth-status"></div>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="Liner Notes home">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span class="brand-name">Liner Notes</span>
+      </a>
 
-  <main>
-    <div class="hero">
-      <h1>Your Taste, Explained and Owned by You</h1>
-      <p>A weekly music discovery digest where every pick shows exactly why it was chosen. The V1 plan uses popularity-neutral scoring and streaming search links. Weekly delivery and complete data export are still in development.</p>
-    </div>
+      <p class="sidebar-label">Your music</p>
+      <nav class="primary-nav" aria-label="Your music">
+        <button id="nav-discovery" class="nav-link active" type="button" aria-current="page" aria-controls="tab-discovery" data-nav-tab data-action="tab" data-tab="discovery">
+          <span class="nav-icon" aria-hidden="true">♫</span><span>Weekly discovery</span>
+        </button>
+        <button id="nav-seeding" class="nav-link" type="button" aria-controls="tab-seeding" data-nav-tab data-action="tab" data-tab="seeding">
+          <span class="nav-icon" aria-hidden="true">⌁</span><span>Taste profile</span>
+        </button>
+        <button id="nav-your-data" class="nav-link" type="button" aria-controls="tab-your-data" data-nav-tab data-action="tab" data-tab="your-data">
+          <span class="nav-icon" aria-hidden="true">▤</span><span>Your data</span>
+        </button>
+      </nav>
 
-    <!-- Discovery Tab -->
-    <section id="tab-discovery" class="tab-pane active">
-      <div id="discovery-container"></div>
-    </section>
+      <div class="sidebar-bottom">
+        <a class="docs-link" href="/swagger"><span class="nav-icon" aria-hidden="true">⌘</span> API documentation</a>
+        <div class="account-status" id="auth-status" aria-live="polite"></div>
+      </div>
+    </aside>
 
-    <!-- Taste Seeding Tab (Hybrid Onboarding) -->
-    <section id="tab-seeding" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
+    <main class="main-content" id="main-content">
+      <div class="topbar">
+        <span class="environment-indicator"><span class="status-dot" aria-hidden="true"></span>Local preview</span>
+        <button id="nav-auth" class="account-link" type="button" aria-controls="tab-auth" data-nav-tab data-action="tab" data-tab="auth">Account</button>
+      </div>
+
+      <div class="page-heading">
+        <p class="page-kicker">A clearer way to find your next favorite</p>
+        <h1>Music discovery, with the reasons attached.</h1>
+        <p class="page-lede">Liner Notes finds tracks from your taste and shows what contributed to each pick. Start with a few artists or styles you like.</p>
+      </div>
+
+      <section id="tab-discovery" class="tab-pane active" role="region" aria-labelledby="nav-discovery" tabindex="0">
+        <div class="section-heading">
           <div>
-            <div class="card-title">Hybrid Taste Seeding</div>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">
-              Select 3–5 initial seed tags and/or artists to calibrate our deterministic Residue (Prism) recommendation engine without the cold-start trap.
-            </p>
-          </div>
-          <span id="seed-count" style="font-weight: 600; color: var(--accent-primary);">0 / 3–5 seeds selected</span>
-        </div>
-
-        <div class="form-group">
-          <label>Popular Taste Tags (Click to toggle)</label>
-          <div class="tag-cloud">
-            <button type="button" class="tag-btn" data-tag="post-punk" data-action="tag">post-punk</button>
-            <button type="button" class="tag-btn" data-tag="trip-hop" data-action="tag">trip-hop</button>
-            <button type="button" class="tag-btn" data-tag="shoegaze" data-action="tag">shoegaze</button>
-            <button type="button" class="tag-btn" data-tag="krautrock" data-action="tag">krautrock</button>
-            <button type="button" class="tag-btn" data-tag="idm" data-action="tag">idm</button>
-            <button type="button" class="tag-btn" data-tag="ambient" data-action="tag">ambient</button>
-            <button type="button" class="tag-btn" data-tag="synthwave" data-action="tag">synthwave</button>
-            <button type="button" class="tag-btn" data-tag="math rock" data-action="tag">math rock</button>
-            <button type="button" class="tag-btn" data-tag="dreampop" data-action="tag">dreampop</button>
-            <button type="button" class="tag-btn" data-tag="dark ambient" data-action="tag">dark ambient</button>
-            <button type="button" class="tag-btn" data-tag="anatolian rock" data-action="tag">anatolian rock</button>
-            <button type="button" class="tag-btn" data-tag="jazz fusion" data-action="tag">jazz fusion</button>
+            <h2>Weekly discovery</h2>
+            <p>Your latest picks and the details behind them.</p>
           </div>
         </div>
+        <div id="discovery-container" class="content-stack"></div>
+      </section>
 
-        <div class="form-group">
-          <label for="seed-artists">Favorite Artists (Optional, comma-separated)</label>
-          <input type="text" id="seed-artists" placeholder="e.g. Aphex Twin, Slowdive, Massive Attack">
-        </div>
-
-        <button class="btn-primary" data-action="seeds">Save Seeds & Calibrate Profile</button>
-      </div>
-    </section>
-
-    <!-- Your Data Tab -->
-    <section id="tab-your-data" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
+      <section id="tab-seeding" class="tab-pane" role="region" aria-labelledby="nav-seeding" tabindex="0" hidden>
+        <div class="section-heading">
           <div>
-            <div class="card-title">Your Stored Data</div>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">
-              Inspect and export the records currently covered by this preview. Complete export coverage is still being verified.
-            </p>
+            <h2>Build your taste profile</h2>
+            <p>Choose 3–5 artists or styles. You can change them any time.</p>
           </div>
         </div>
-        <div id="export-container"></div>
-      </div>
-    </section>
 
-    <!-- Auth Tab -->
-    <section id="tab-auth" class="tab-pane">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <!-- Register -->
-        <div class="card">
-          <div class="card-title" style="margin-bottom: 1rem;">Join Liner Notes</div>
-          <form id="register-form">
-            <div class="form-group">
-              <label for="reg-username">Username</label>
-              <input type="text" id="reg-username" required placeholder="e.g. audiophile99">
+        <div class="surface seed-surface">
+          <div class="surface-heading">
+            <div>
+              <h3>Choose styles you enjoy</h3>
+              <p>Select a few to get started. Each selection counts as one seed.</p>
             </div>
-            <div class="form-group">
-              <label for="reg-email">Email Address</label>
-              <input type="email" id="reg-email" required placeholder="you@domain.com">
+            <span id="seed-count" class="count-pill" aria-live="polite">0 of 3–5 selected</span>
+          </div>
+
+          <div class="field-group">
+            <span class="field-label">Music styles</span>
+            <div class="tag-cloud" aria-label="Choose music styles">
+              <button type="button" class="tag-btn" data-tag="post-punk" data-action="tag" aria-pressed="false">Post-punk</button>
+              <button type="button" class="tag-btn" data-tag="trip-hop" data-action="tag" aria-pressed="false">Trip-hop</button>
+              <button type="button" class="tag-btn" data-tag="shoegaze" data-action="tag" aria-pressed="false">Shoegaze</button>
+              <button type="button" class="tag-btn" data-tag="krautrock" data-action="tag" aria-pressed="false">Krautrock</button>
+              <button type="button" class="tag-btn" data-tag="idm" data-action="tag" aria-pressed="false">IDM</button>
+              <button type="button" class="tag-btn" data-tag="ambient" data-action="tag" aria-pressed="false">Ambient</button>
+              <button type="button" class="tag-btn" data-tag="synthwave" data-action="tag" aria-pressed="false">Synthwave</button>
+              <button type="button" class="tag-btn" data-tag="math rock" data-action="tag" aria-pressed="false">Math rock</button>
+              <button type="button" class="tag-btn" data-tag="dreampop" data-action="tag" aria-pressed="false">Dream pop</button>
+              <button type="button" class="tag-btn" data-tag="dark ambient" data-action="tag" aria-pressed="false">Dark ambient</button>
+              <button type="button" class="tag-btn" data-tag="anatolian rock" data-action="tag" aria-pressed="false">Anatolian rock</button>
+              <button type="button" class="tag-btn" data-tag="jazz fusion" data-action="tag" aria-pressed="false">Jazz fusion</button>
             </div>
-            <div class="form-group">
-              <label for="reg-password">Password</label>
-              <input type="password" id="reg-password" required minlength="12" placeholder="At least 12 characters">
-            </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
-          </form>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="seed-artists">Artists you like <span class="optional-label">Optional</span></label>
+            <input type="text" id="seed-artists" autocomplete="off" placeholder="For example: Aphex Twin, Slowdive">
+            <p class="field-help">Separate artist names with commas. Each artist counts toward the 3–5 total.</p>
+          </div>
+
+          <div class="action-row">
+            <button class="button button-primary" type="button" data-action="seeds">Save taste profile</button>
+            <p class="action-note">Sign in first to save your choices to your account.</p>
+          </div>
+          <p id="seed-status" class="form-message" role="status" aria-live="polite"></p>
         </div>
+      </section>
 
-        <!-- Login -->
-        <div class="card">
-          <div class="card-title" style="margin-bottom: 1rem;">Subscriber Sign In</div>
-          <form id="login-form">
-            <div class="form-group">
-              <label for="login-email">Email Address</label>
-              <input type="email" id="login-email" required placeholder="you@domain.com">
-            </div>
-            <div class="form-group">
-              <label for="login-password">Password</label>
-              <input type="password" id="login-password" required placeholder="Your password">
-            </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
-          </form>
+      <section id="tab-your-data" class="tab-pane" role="region" aria-labelledby="nav-your-data" tabindex="0" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Your data</h2>
+            <p>Review or download the information stored for your account.</p>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+        <div id="export-container" class="content-stack"></div>
+      </section>
 
-  <footer>
-    <p>Liner Notes 🎵 &bull; Open-source music discovery &bull; <a href="/swagger" target="_blank" style="color: var(--accent-primary); text-decoration: none;">Interactive OpenAPI Docs</a></p>
-  </footer>
+      <section id="tab-auth" class="tab-pane" role="region" aria-labelledby="nav-auth" tabindex="0" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Your account</h2>
+            <p>Create an account to save your taste profile and feedback, or sign in to continue.</p>
+          </div>
+        </div>
+        <div class="form-layout">
+          <div class="surface">
+            <div class="surface-heading">
+              <div><h3>Create an account</h3><p>Your picks and feedback stay tied to your account.</p></div>
+            </div>
+            <form id="register-form" class="form-stack">
+              <div class="field-group">
+                <label class="field-label" for="reg-username">Username</label>
+                <input type="text" id="reg-username" required autocomplete="username" placeholder="Choose a username">
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="reg-email">Email address</label>
+                <input type="email" id="reg-email" required autocomplete="email" placeholder="you@example.com">
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="reg-password">Password</label>
+                <input type="password" id="reg-password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters">
+              </div>
+              <button class="button button-primary button-full" type="submit">Create account</button>
+            </form>
+          </div>
+
+          <div class="surface">
+            <div class="surface-heading">
+              <div><h3>Sign in</h3><p>Pick up where you left off.</p></div>
+            </div>
+            <form id="login-form" class="form-stack">
+              <div class="field-group">
+                <label class="field-label" for="login-email">Email address</label>
+                <input type="email" id="login-email" required autocomplete="username" placeholder="you@example.com">
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="login-password">Password</label>
+                <input type="password" id="login-password" required autocomplete="current-password" placeholder="Your password">
+              </div>
+              <button class="button button-secondary button-full" type="submit">Sign in</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <footer class="app-footer">
+        <span>Liner Notes · Open-source music discovery</span>
+        <span>Weekly email delivery is still in development.</span>
+      </footer>
+    </main>
+  </div>
 
   <script src="/app.js"></script>
 </body>

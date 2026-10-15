@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Reworked the local web interface into clear discovery, taste profile, account,
+  and data areas with responsive navigation, accessible focus states, and plain-language
+  labels. Guest tracks are marked as examples, and recommendation details no longer
+  show a popularity penalty for the popularity-neutral V1 scorer.
+
 - Restore the approved MediatR 12.5.0 licensing exception in central versions and
   package locks. CI now generates a disposable database password for each run;
   Swagger fixtures omit unused database passwords, and the local runbook selects

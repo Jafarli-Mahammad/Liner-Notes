@@ -12,7 +12,7 @@ namespace LinerNotes.Infrastructure.Email;
 /// <summary>Presentation of persisted rank and explanations. No acquisition or scoring.</summary>
 public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeTokens tokens) : IDigestEmailRenderer
 {
-    public const string Version = "local-digest-v1";
+    public const string Version = "local-digest-v2";
     public RenderedDigestEmail Render(WeeklyDigestDto digest, SubscriberDto subscriber, string? token = null)
     {
         options.Validate();
@@ -58,9 +58,9 @@ public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeT
             }
             html.Append("</p></section>"); text.AppendLine();
         }
-        const string attribution = "Candidate similarity and tags come from Last.fm. Liner Notes applies deterministic scoring; explanations above come from your stored score breakdowns.";
+        string attribution = Attribution(digest);
         text.AppendLine(attribution).AppendLine("Inspect your list and data: " + account).AppendLine("Unsubscribe: " + unsubscribe);
-        html.Append("<footer style=\"border-top:1px solid #d9d3c8;font-size:14px;padding-top:20px\"><p>").Append(attribution)
+        html.Append("<footer style=\"border-top:1px solid #d9d3c8;font-size:14px;padding-top:20px\"><p>").Append(H(attribution))
             .Append("</p><p><a href=\"").Append(H(account)).Append("\">Inspect your list and data</a></p><p><a href=\"")
             .Append(H(unsubscribe)).Append("\">Unsubscribe from weekly emails</a></p></footer></main></body></html>");
         string plain = text.ToString().Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
@@ -74,6 +74,25 @@ public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeT
             Origin = origin, options.FromAddress, options.MessageDomain
         })));
         return new(digest.Id, subscriber.Id, digest.Week, subscriber.Email, Version, fingerprint, token, plain, markup);
+    }
+
+    private static string Attribution(WeeklyDigestDto digest)
+    {
+        var snapshots = digest.Recommendations.Select(p => p.ScoreBreakdown.Snapshot).Where(s => s is not null).Select(s => s!).ToArray();
+        var providers = snapshots.SelectMany(s => s.Evidence.DiscoveryPaths.SelectMany(p =>
+                p.SupportingResponses.Append(p.TrackResponse).Concat(p.SimilarityResponse is { } similarity ? [similarity] : [])))
+            .Concat(snapshots.SelectMany(s => s.Evidence.CandidateTags.Select(t => t.Response)))
+            .Concat(snapshots.SelectMany(s => s.Evidence.SupportingResponses))
+            .Concat(snapshots.SelectMany(s => s.Evidence.Seeds.SelectMany(seed => seed.SupportingResponses.Append(seed.Response))))
+            .Select(r => r.Provider).ToHashSet(StringComparer.Ordinal);
+        var credit = new List<string>();
+        if (providers.Contains("Last.fm")) credit.Add("Candidate similarity and tags supplied by Last.fm.");
+        if (providers.Contains("ListenBrainz")) credit.Add("Candidates and metadata supplied by ListenBrainz.");
+        if (providers.Contains("MusicBrainz") || providers.Contains("ListenBrainz"))
+            credit.Add("MusicBrainz supplies catalog metadata and artist tags. MusicBrainz tag data, normalized by Liner Notes: CC BY-NC-SA 3.0 (https://creativecommons.org/licenses/by-nc-sa/3.0/); source: https://musicbrainz.org/.");
+        if (credit.Count == 0 && digest.Recommendations.Count > 0) credit.Add("Provider details are unavailable for this stored list.");
+        credit.Add("Liner Notes applies deterministic scoring; explanations above come from your stored score breakdowns.");
+        return string.Join(' ', credit);
     }
 
     private static string? ValidateOptionalLink(string? value)

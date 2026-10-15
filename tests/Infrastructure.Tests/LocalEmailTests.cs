@@ -6,6 +6,7 @@ using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.DTOs.Digests;
 using LinerNotes.Application.DTOs.Subscribers;
 using LinerNotes.Domain.Enums;
+using LinerNotes.Domain.Scoring;
 using LinerNotes.Infrastructure.Email;
 using LinerNotes.Infrastructure.Storage;
 using Microsoft.AspNetCore.DataProtection;
@@ -51,6 +52,29 @@ public sealed class LocalEmailTests : IDisposable
     }
 
     private byte[] MimeBytes(byte[] stored) => protection.Unprotect(stored[(Array.IndexOf(stored, (byte)'\n') + 1)..]);
+
+    [Theory]
+    [InlineData("ListenBrainz", "ListenBrainz", "Last.fm")]
+    [InlineData("Last.fm", "Last.fm", "ListenBrainz")]
+    [InlineData("Untrusted upstream text", "Provider details are unavailable", "Untrusted upstream text")]
+    public void AttributionUsesStoredEvidenceRatherThanCurrentDefault(string provider, string expected, string absent)
+    {
+        var input = Inputs(1);
+        var snapshot = new ScoreSnapshot
+        {
+            ConfigurationVersion = "test", ConfigurationSha256 = new string('a', 64), Weights = new(1, .2),
+            TasteWeights = new Dictionary<string, double>(), CandidateWeights = new Dictionary<string, double>(),
+            TrackKey = "artist:track", ArtistName = "Artist", Title = "Track", Week = input.Digest.Week,
+            Evidence = new([], [], [new("rock", new("1", "1", null), null,
+                new(provider, "metadata.artist", "artist", "Recorded", new string('a', 64), DateTimeOffset.UnixEpoch), null, 1)],
+                null, [], [], "artist", "not_supplied")
+        };
+        var digest = input.Digest with { Recommendations = input.Digest.Recommendations.Select(p =>
+            p with { ScoreBreakdown = p.ScoreBreakdown with { Snapshot = snapshot } }).ToArray() };
+        var message = renderer.Render(digest, input.Subscriber);
+        Assert.Contains(expected, message.PlainText); Assert.DoesNotContain(absent, message.PlainText);
+        if (provider == "ListenBrainz") Assert.Contains("CC BY-NC-SA 3.0", message.Html);
+    }
     private static (WeeklyDigestDto Digest, SubscriberDto Subscriber) Inputs(int count)
     {
         var id = Guid.NewGuid(); var digest = Guid.NewGuid();
@@ -73,7 +97,7 @@ public sealed class LocalEmailTests : IDisposable
         if (count>0) { Assert.Contains("&lt;script&gt;&amp;&quot;",parsed.Html); Assert.Contains("Şarkı",parsed.PlainText); }
         else Assert.Contains("No eligible picks",parsed.Html);
         foreach (var forbidden in new[]{"<script","<img","<iframe","<link","@font-face","url(","<audio"}) Assert.DoesNotContain(forbidden,parsed.Html,StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Unsubscribe:",parsed.PlainText); Assert.Contains("Last.fm",parsed.Html);
+        Assert.Contains("Unsubscribe:",parsed.PlainText); Assert.Contains("stored score breakdowns",parsed.Html);
         var mime=Encoding.UTF8.GetString(MimeBytes(bytes));
         Assert.True(LocalEmailMessageSerializer.IsEncrypted(bytes));
         Assert.DoesNotContain(input.Subscriber.Email, Encoding.UTF8.GetString(bytes));

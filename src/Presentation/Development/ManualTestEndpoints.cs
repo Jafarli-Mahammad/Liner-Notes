@@ -4,6 +4,7 @@ using LinerNotes.Application.Features.Digests.Commands.GenerateDigest;
 using LinerNotes.Application.Services;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Infrastructure.RecommendationSources.LastFm;
+using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 using LinerNotes.Infrastructure.Storage;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -30,12 +31,16 @@ public static class ManualTestEndpoints
         GenerationConfiguration generation,
         GenerationStorageOptions storage,
         IEnumerable<RecordedLastFmResponse> recordings,
+        IEnumerable<RecordedListenBrainzResponse> listenBrainzRecordings,
+        LocalRecordedInputs inputs,
         TimeProvider clock)
     {
         var recordingConfigured = generation.Origin == EvidenceOrigin.Recorded &&
             generation.RecordingExpiresAtUtc is { } expiry && expiry > clock.GetUtcNow() &&
             generation.ApprovedRecordingManifestSha256 is { Length: 64 } hash &&
-            hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') && recordings.Any();
+            hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') &&
+            (generation.Provider == "listenbrainz" ? (inputs.ListenBrainzResponses?.Any() ?? listenBrainzRecordings.Any()) :
+                (inputs.Responses?.Any() ?? recordings.Any()));
         var storageConfigured = storage.DatabaseOverheadBytesPerPick is > 0 &&
             Path.IsPathFullyQualified(storage.InventoryPath ?? string.Empty) &&
             Path.IsPathFullyQualified(storage.LeasePath ?? string.Empty) &&
@@ -45,6 +50,7 @@ public static class ManualTestEndpoints
         {
             environment = environment.EnvironmentName,
             origin = generation.Origin.ToString(),
+            provider = generation.Provider,
             recordingConfigured,
             recordingExpiresAtUtc = generation.RecordingExpiresAtUtc,
             storageConfigured,

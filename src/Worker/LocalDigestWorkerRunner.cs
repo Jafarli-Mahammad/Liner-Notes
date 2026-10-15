@@ -34,7 +34,7 @@ public sealed class LocalDigestWorkerRunner(IServiceProvider services)
             if(options.Origin==EvidenceOrigin.Recorded &&
                 await sp.GetRequiredService<IDigestGenerationStore>().GetExistingAsync(options.UserId,options.Week,ct) is null)
             {
-                var recording=await sp.GetRequiredService<LocalRecordedInputLoader>().LoadAsync(options.UserId,options.Week,ct);
+                var recording=await sp.GetRequiredService<LocalRecordedInputLoader>().LoadAsync(options.UserId,options.Week,ct,generation.Provider);
                 generation.RecordingExpiresAtUtc=recording.ExpiresAtUtc;
                 generation.ApprovedRecordingManifestSha256=recording.ManifestSha256;
                 sp.GetRequiredService<LocalRecordedInputs>().Set(recording);

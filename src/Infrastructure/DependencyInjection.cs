@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.Storage;
+using LinerNotes.Infrastructure.RecommendationSources;
 
 namespace LinerNotes.Infrastructure;
 
@@ -75,14 +76,17 @@ public static class DependencyInjection
             return new(client);
         });
         services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
-        services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
+        services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().SeedTags);
         services.AddScoped<LocalGenerationStorage>();
         services.AddScoped<IGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
         services.AddScoped<ILocalEmailStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
 
         // Register Recommendation Source & Candidate Hydrator abstractions
-        services.AddScoped<IRecommendationSource, LastFmRecommendationSource>();
-        services.AddScoped<ICandidateHydrator, LastFmCandidateHydrator>();
+        services.AddScoped<LastFmRecommendationSource>();
+        services.AddScoped<LastFmCandidateHydrator>();
+        services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
+        services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);
+        services.AddScoped<ICandidateHydrator>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Hydrator);
 
         return services;
     }

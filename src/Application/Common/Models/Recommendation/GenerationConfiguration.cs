@@ -6,6 +6,7 @@ namespace LinerNotes.Application.Common.Models.Recommendation;
 public sealed class GenerationConfiguration
 {
     public const string SectionName = "Generation";
+    public string Provider { get; set; } = "lastfm";
     public string ConfigurationVersion { get; set; } = "phase6-config-v1";
     public double TagWeight { get; set; } = 1;
     public double NoveltyWeight { get; set; } = 0.2;
@@ -23,7 +24,8 @@ public sealed class GenerationConfiguration
 
     public BaselineAConfiguration Scoring()
     {
-        if (MaximumArtistSeeds is < 1 or > 20 || MaximumTagSeeds is < 1 or > 20 || DiscoveryLimit is < 1 or > 10 ||
+        if (Provider is not ("lastfm" or "listenbrainz") ||
+            MaximumArtistSeeds is < 1 or > 20 || MaximumTagSeeds is < 1 or > 20 || DiscoveryLimit is < 1 or > 10 ||
             MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
             Origin is not (EvidenceOrigin.Recorded or EvidenceOrigin.Synthetic) ||
             !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
@@ -31,6 +33,8 @@ public sealed class GenerationConfiguration
             throw new ArgumentException("Invalid offline generation configuration or mechanical limits.");
         var policy = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
+            [nameof(Provider)] = Provider,
+            ["IngestionPolicy"] = Provider == "lastfm" ? "lastfm-artist-tags-v1" : "listenbrainz-artist-tags-v1",
             [nameof(MaximumArtistSeeds)] = MaximumArtistSeeds.ToString(CultureInfo.InvariantCulture),
             [nameof(MaximumTagSeeds)] = MaximumTagSeeds.ToString(CultureInfo.InvariantCulture),
             [nameof(DiscoveryLimit)] = DiscoveryLimit.ToString(CultureInfo.InvariantCulture),

@@ -17,12 +17,13 @@ public sealed class ListenBrainzOptions
     public string UserAgent { get; set; } = "LinerNotes/1.0 (https://github.com/mahammadjafarli/LinerNotes)";
     public bool LiveUseApproved { get; set; }
     public int CacheSeconds { get; set; } = 900;
+    public int MaximumRequests { get; set; } = 80;
     // All processes sharing an upstream IP must use the same private, shared directory.
     public string RateLimitDirectory { get; set; } = Path.Combine(Path.GetTempPath(), "linernotes-metabrainz-pacing");
 
     public void Validate()
     {
-        if (!Enum.IsDefined(Mode) || CacheSeconds is < 1 or > 3600 || !Path.IsPathFullyQualified(RateLimitDirectory) ||
+        if (!Enum.IsDefined(Mode) || CacheSeconds is < 1 or > 3600 || MaximumRequests is < 1 or > 200 || !Path.IsPathFullyQualified(RateLimitDirectory) ||
             string.IsNullOrWhiteSpace(UserAgent) || UserAgent.Length > 300 || UserAgent.Contains('\r') || UserAgent.Contains('\n') ||
             !UserAgent.Contains('(') || !UserAgent.Contains(')') ||
             (Token is not null && (Token.Length > 200 || Token.Any(char.IsWhiteSpace))))

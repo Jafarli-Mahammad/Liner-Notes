@@ -63,7 +63,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         storageOptions.DatabaseOverheadBytesPerPick = 1_000_000; // Test bound only; production remains unconfigured.
         storageOptions.ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(c => c, _ => Array.Empty<string>());
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        { ["ConnectionStrings:DefaultConnection"] = connection, ["Generation:Origin"] = "Recorded",
+            { ["ConnectionStrings:DefaultConnection"] = connection, ["Generation:Origin"] = "Recorded", ["Generation:Provider"] = "lastfm",
             ["Generation:RecordingExpiresAtUtc"] = DateTimeOffset.UtcNow.AddDays(1).ToString("O"),
             ["Generation:ApprovedRecordingManifestSha256"] = new string('a', 64) }).Build();
         var registrations = new ServiceCollection().AddLogging().AddApplication().AddDataAccess(config).AddInfrastructure(config);

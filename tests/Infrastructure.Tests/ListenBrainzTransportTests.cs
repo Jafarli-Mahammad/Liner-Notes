@@ -130,6 +130,19 @@ public sealed class ListenBrainzTransportTests
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public async Task RequestBudgetStopsBeforeAnotherNetworkCall()
+    {
+        int calls = 0;
+        using var http = new HttpClient(new Handler(_ => { calls++; return new(HttpStatusCode.OK) { Content = new StringContent("[]") }; }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, MaximumRequests = 1 }, new Gate(), cache, TimeProvider.System);
+        await client.SendAsync(new(ListenBrainzRequestKind.TagRadio, "rock"));
+        var error = await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException>(() =>
+            client.SendAsync(new(ListenBrainzRequestKind.TagRadio, "electronic")));
+        Assert.Equal("upstream_request_limit", error.Message); Assert.Equal(1, calls);
+    }
+
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(respond(request));

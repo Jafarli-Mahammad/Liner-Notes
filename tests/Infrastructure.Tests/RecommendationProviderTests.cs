@@ -12,7 +12,8 @@ public sealed class RecommendationProviderTests
     [Fact]
     public void LastFmBundleIsCoherentAndStableWithinScope()
     {
-        using var services = new ServiceCollection().AddLogging().AddInfrastructure(new ConfigurationBuilder().Build()).BuildServiceProvider();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Generation:Provider"] = "lastfm" }).Build();
+        using var services = new ServiceCollection().AddLogging().AddInfrastructure(config).BuildServiceProvider();
         using var scope = services.CreateScope();
         var resolver = scope.ServiceProvider.GetRequiredService<IRecommendationProviderResolver>();
         var bundle = resolver.Resolve();

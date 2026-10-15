@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.Storage;
 using LinerNotes.Infrastructure.RecommendationSources;
+using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 namespace LinerNotes.Infrastructure;
 
@@ -84,6 +85,26 @@ public static class DependencyInjection
         // Register Recommendation Source & Candidate Hydrator abstractions
         services.AddScoped<LastFmRecommendationSource>();
         services.AddScoped<LastFmCandidateHydrator>();
+        services.Configure<ListenBrainzOptions>(configuration.GetSection(ListenBrainzOptions.SectionName));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ListenBrainzOptions>>().Value);
+        services.AddSingleton<IMetaBrainzRequestGate, MetaBrainzRequestGate>();
+        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        services.AddScoped<IListenBrainzApiClient>(sp =>
+        {
+            var generation = sp.GetRequiredService<GenerationConfiguration>();
+            var options = sp.GetRequiredService<ListenBrainzOptions>();
+            options.Validate();
+            return generation.Origin switch
+            {
+                EvidenceOrigin.Synthetic when options.Mode == ListenBrainzClientMode.FixtureOnly => new FixtureListenBrainzApiClient(),
+                EvidenceOrigin.Recorded => new RecordedListenBrainzApiClient(sp.GetRequiredService<LocalRecordedInputs>().ListenBrainzResponses ?? sp.GetServices<RecordedListenBrainzResponse>()),
+                EvidenceOrigin.Live when generation.LiveEnabled && options.Mode == ListenBrainzClientMode.LiveOnly && options.LiveUseApproved
+                    => sp.GetRequiredService<ListenBrainzApiClient>(),
+                _ => throw new GenerationStoppedException("listenbrainz_mode_origin_mismatch")
+            };
+        });
+        services.AddScoped<ListenBrainzRecommendationProvider>();
         services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);
         services.AddScoped<ICandidateHydrator>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Hydrator);

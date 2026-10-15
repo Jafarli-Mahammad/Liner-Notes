@@ -48,7 +48,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             foreach (var artist in artists)
             {
                 var seed = await seedTags.GetAsync(artist, cancellationToken).ConfigureAwait(false);
-                CheckOrigin(seed.Tags.Select(t => t.Response).Append(seed.Response), seed.Gaps);
+                CheckOrigin(seed.Tags.Select(t => t.Response).Append(seed.Response).Concat(seed.SupportingResponses), seed.Gaps);
                 seeds.Add(seed); gaps.AddRange(seed.Gaps);
             }
             var taste = TasteVectorMaterializer.Build(effective.PositiveSignals,
@@ -57,19 +57,28 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             var byTag = await source.GetCandidatesByTagsAsync(tags, config.DiscoveryLimit, cancellationToken).ConfigureAwait(false);
             gaps.AddRange(byArtist.Gaps); gaps.AddRange(byTag.Gaps);
             CheckOrigin(byArtist.Concat(byTag).SelectMany(c => c.Paths).SelectMany(p =>
-                p.SimilarityResponse is null ? new[] { p.TrackResponse } : new[] { p.TrackResponse, p.SimilarityResponse }), gaps);
+                (p.SimilarityResponse is null ? new[] { p.TrackResponse } : new[] { p.TrackResponse, p.SimilarityResponse }).Concat(p.SupportingResponses)), gaps);
             var merged = MergeCandidates(byArtist.Concat(byTag), effective.ExcludedAliases);
             if (merged.Count > config.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
             var hydrated = await hydrator.HydrateCandidatesBatchAsync(merged, cancellationToken).ConfigureAwait(false);
             gaps.AddRange(hydrated.Gaps);
-            CheckOrigin(hydrated.SelectMany(c => c.Tags.Select(t => t.Response).Append(c.TagResponse)), gaps);
+            if (config.Origin == EvidenceOrigin.Live && gaps.Any(g => g.Reason is "transport_error" or "http_error" or
+                "rate_limit" or "response_size_limit" or "invalid_json" or "invalid_discovery_shape_or_identifier" or "listenbrainz_live_use_unapproved"))
+                throw new GenerationStoppedException("provider_unavailable");
+            CheckOrigin(hydrated.SelectMany(c => c.Tags.Select(t => t.Response).Append(c.TagResponse).Concat(c.SupportingResponses)), gaps);
             var candidates = hydrated.Select(c => new BaselineACandidate(c.Track, c.TagVector,
                 new(effective.PositiveSignals.Select(s => s.Store()).ToArray(), seeds.Select(s => s.Store()).ToArray(),
                     c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
                     c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
-                    c.TagScope, c.PopularityMissingReason))).ToArray();
+                    c.TagScope, c.PopularityMissingReason)
+                    {
+                        TagNormalizationVersion = c.TagNormalizationVersion,
+                        SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray()
+                    })).ToArray();
             var picks = scorer.Rank(candidates, taste, effective.FamiliarArtists,
                 effective.ExcludedAliases, request.Week, scoring, config.MaximumPicks);
+            if (config.Origin == EvidenceOrigin.Live && picks.Count == 0)
+                throw new GenerationStoppedException("provider_coverage_empty");
             long bytes = 0;
             foreach (var pick in picks)
             {

@@ -194,6 +194,23 @@ public sealed class GenerateDigestTests
         Assert.Equal("invalid_generation_input", (await Handler.Handle(new(userId, new(2026, 41)), default)).Reason);
     }
 
+    [Theory]
+    [InlineData("http_error", "provider_unavailable")]
+    [InlineData("rate_limit", "provider_unavailable")]
+    [InlineData("no_supported_tracks", "provider_coverage_empty")]
+    public async Task LiveFailuresDoNotPersistEmptyOrPartialDigests(string gap, string expected)
+    {
+        EmptyGeneration();
+        config.Provider = "listenbrainz"; config.Origin = EvidenceOrigin.Live; config.LiveEnabled = true;
+        var reference = new ResponseReference("ListenBrainz", "lb-radio.tags", "rock", EvidenceOrigin.Live, null, null);
+        source.GetCandidatesByTagsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new IngestionResult<RawCandidateTrack>([], [new("rock", "lb-radio.tags", gap, reference)]));
+        var result = await Handler.Handle(new(userId, new(2026, 41)), default);
+        Assert.Equal("stopped", result.Status); Assert.Equal(expected, result.Reason);
+        await store.DidNotReceive().PersistAsync(Arg.Any<Guid>(), Arg.Any<IsoWeek>(), Arg.Any<string>(),
+            Arg.Any<IReadOnlyList<BaselineAPick>>(), Arg.Any<IGenerationStorageReservation>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public void LatestFeedback_RebuildsPositiveTasteAndKeepsFamiliarityAcrossAliases()
     {

@@ -18,22 +18,33 @@ public sealed record StoredResponse(string Provider, string Method, string Reque
     string Origin, string? ResponseSha256, DateTimeOffset? RetrievedAtUtc) : ExtensibleScoreRecord;
 public sealed record StoredObservation(string? Value, string? RawValue, string? MissingReason) : ExtensibleScoreRecord;
 public sealed record StoredTag(string Name, StoredObservation Count, string? Url,
-    StoredResponse Response, string? ExclusionReason, int UpstreamPosition) : ExtensibleScoreRecord;
+    StoredResponse Response, string? ExclusionReason, int UpstreamPosition) : ExtensibleScoreRecord
+{
+    public string? EntityIdentity { get; init; }
+}
 public sealed record StoredGap(string Seed, string Method, string Reason, StoredResponse? Response) : ExtensibleScoreRecord;
 public sealed record StoredDiscoveryPath(string Seed, StoredObservation Match,
     StoredResponse? SimilarityResponse, StoredResponse TrackResponse, int UpstreamPosition,
     string? TrackUrl, string? ArtistUrl, StoredObservation TrackListeners, string? RawRank,
-    string? DiscoveredArtist, int? SimilarityPosition) : ExtensibleScoreRecord;
+    string? DiscoveredArtist, int? SimilarityPosition) : ExtensibleScoreRecord
+{
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+}
 public sealed record StoredTasteSignal(Guid Id, string TargetType, string TargetValue, double Weight,
     string Source, string Context) : ExtensibleScoreRecord;
 public sealed record StoredSeed(string ArtistName, IReadOnlyDictionary<string, double> Weights,
     IReadOnlyList<StoredTag> Tags, StoredResponse Response, string? MissingReason,
-    IReadOnlyList<StoredGap> Gaps) : ExtensibleScoreRecord;
+    IReadOnlyList<StoredGap> Gaps) : ExtensibleScoreRecord
+{
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+}
 public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     IReadOnlyList<StoredSeed> Seeds, IReadOnlyList<StoredTag> CandidateTags,
     StoredResponse? CandidateTagResponse, IReadOnlyList<StoredDiscoveryPath> DiscoveryPaths,
     IReadOnlyList<StoredGap> Gaps, string TagScope, string PopularityMissingReason) : ExtensibleScoreRecord
 {
+    public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
     public static ScoreEvidence Empty { get; } = new([], [], [], null, [], [], "artist", "not_supplied");
 }
 

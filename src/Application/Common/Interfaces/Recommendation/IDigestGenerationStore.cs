@@ -26,7 +26,10 @@ public interface ISeedTagSource
 }
 
 public sealed record SeedTagSnapshot(string ArtistName, LinerNotes.Domain.Catalog.WeightedTagVector Vector,
-    IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps);
+    IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps)
+{
+    public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
+}
 
 public interface IGenerationStorage
 {

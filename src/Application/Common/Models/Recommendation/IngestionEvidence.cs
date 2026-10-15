@@ -36,10 +36,16 @@ public sealed class IngestionResult<T> : IReadOnlyList<T>
 public sealed record DiscoveryPath(string Seed, ObservedValue<double> Match,
     ResponseReference? SimilarityResponse, ResponseReference TrackResponse, int UpstreamPosition,
     string? TrackUrl, string? ArtistUrl, ObservedValue<long> TrackListeners,
-    string? RawRank = null, string? DiscoveredArtist = null, int? SimilarityPosition = null);
+    string? RawRank = null, string? DiscoveredArtist = null, int? SimilarityPosition = null)
+{
+    public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
+}
 
 public sealed record TagObservation(string Name, ObservedValue<long> Count, string? Url,
-    ResponseReference Response, string? ExclusionReason, int UpstreamPosition);
+    ResponseReference Response, string? ExclusionReason, int UpstreamPosition)
+{
+    public string? EntityIdentity { get; init; }
+}
 
 /// <summary>Transient ingestion snapshot, deliberately separate from the legacy scorer input.</summary>
 public sealed class HydratedCandidateTrack
@@ -50,7 +56,8 @@ public sealed class HydratedCandidateTrack
     public ImmutableArray<TagObservation> Tags { get; }
     public ResponseReference TagResponse { get; }
     public string TagScope => "artist";
-    public string TagNormalizationVersion => "max-observed-descriptive-count-v1";
+    public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
+    public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
     public string? TagMissingReason { get; }
     public ImmutableArray<CoverageGap> Gaps { get; }
     public double? GlobalPopularity => null;

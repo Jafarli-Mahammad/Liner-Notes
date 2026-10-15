@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using LinerNotes.Application.Common.Models.Recommendation;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
@@ -10,6 +11,7 @@ namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions options,
     IMetaBrainzRequestGate gate, IMemoryCache cache, TimeProvider clock) : IListenBrainzApiClient
 {
+    private int sentRequests;
     public async Task<ListenBrainzResponse> SendAsync(ListenBrainzRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -21,6 +23,8 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
         if (cache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
         try
         {
+            if (Interlocked.Increment(ref sentRequests) > options.MaximumRequests)
+                throw new GenerationStoppedException("upstream_request_limit");
             await gate.WaitAsync(request.Provider, cancellationToken).ConfigureAwait(false);
             using var message = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(root), request.RelativeUri()));
             message.Headers.UserAgent.ParseAdd(options.UserAgent);

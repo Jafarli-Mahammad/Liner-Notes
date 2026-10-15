@@ -66,6 +66,7 @@ public sealed class BaselineAScorer
             {
                 ConfigurationVersion = configuration.Version, ConfigurationSha256 = configuration.Sha256,
                 ConfigurationPolicy = configuration.Policy ?? new Dictionary<string, string>(),
+                TagNormalizationVersion = candidate.Evidence.TagNormalizationVersion,
                 Weights = new(configuration.TagWeight, configuration.NoveltyWeight), TrackKey = candidate.Track.TrackKey,
                 ArtistName = candidate.Track.ArtistName, Title = candidate.Track.Title, Week = week.Value,
                 TasteWeights = tasteWeights, CandidateWeights = candidateWeights,
@@ -94,7 +95,7 @@ public sealed class BaselineAScorer
     {
         if (snapshot.PayloadVersion != "phase6-score-v1" || snapshot.FormulaVersion != "baseline-a-v1" ||
             snapshot.MaterializationVersion != "positive-signals-v1" ||
-            snapshot.TagNormalizationVersion != "max-observed-descriptive-count-v1" ||
+            snapshot.TagNormalizationVersion is not ("max-observed-descriptive-count-v1" or "max-observed-artist-tag-votes-v1") ||
             snapshot.RankingPolicyVersion != "score-ordinal-one-artist-v1")
             throw new NotSupportedException("Unsupported stored scoring version.");
         var configuration = new BaselineAConfiguration(snapshot.ConfigurationVersion, snapshot.Weights.Tag,

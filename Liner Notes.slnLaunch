@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "Liner Notes",
+    "Projects": [
+      {
+        "Path": "src\\Presentation\\Presentation.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

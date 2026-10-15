@@ -2,6 +2,17 @@
 
 Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
+## 2026-10-15
+
+### Observation 012: Trace supporting evidence services in provider migrations
+**Status:** OPEN
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Architectural planning
+**Issue:** A discovery abstraction can appear swappable while seed tags, hydration, attribution and allowed generation origins still depend on the original integration.
+**Suggested improvement:** Trace the complete generation path; distinguish adapter support, offline replay, live generation, default rollout and future user preference.
+**Principle:** Verify every dependency needed for a usable provider, not just discovery.
+
 ## 2026-10-12
 
 ### Observation 001: Preflight transitive workflow skills before starting

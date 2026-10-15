@@ -8,6 +8,12 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
 
 ## Remaining work
 
+- **Plan the provider transition.** ListenBrainz is the requested future default;
+  retain Last.fm and defer a per-user provider selector. The
+  [provider plan](docs/renewal/listenbrainz-provider-plan.md) covers complete
+  provider bundles, evidence/usage checks, verification and rollout.
+  Planning only; implementation and live validation remain pending.
+
 1. **Review and confirm the local implementation.** Developer confirmation is still recorded as pending for the phase evidence, including the latest Phase 9 work. Review the evidence linked below and update this status when confirmed.
 2. **Run the live Phase 4 pilot.** Approve a concrete run manifest and reconcile the current shared-storage inventory first. Then record the frozen pilot inputs and complete the data-shape checks and blind ratings. No live pilot has been run; fixture results establish tooling mechanics only. See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
 3. **Decide whether to authorize Phase 5 real-data evaluation.** It requires a separate decision to proceed, an approved manifest covering development and held-out recordings, frozen scoring configuration, and the documented comparison and formula-choice steps. Recommendation quality remains unverified. See [renewal contracts](docs/renewal/contracts.md).
@@ -34,6 +40,6 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
 
 - V1 remains popularity-neutral. Do not claim a new recommendation algorithm or ownership of upstream similarity data. Synthetic fixtures and pilot mechanics do not establish recommendation quality.
 - Real recordings and evaluation reports require separate approval, stay local, and must remain gitignored and untracked. Do not tune against held-out data.
-- Last.fm and ListenBrainz remain provider-boundary concerns. ListenBrainz and listening-history imports are deferred; streaming search links are not Spotify API integration.
+- Last.fm and ListenBrainz remain provider-boundary concerns. ListenBrainz is planned as the default, retaining Last.fm for future user choice; implementation and listening-history imports remain pending. Streaming search links are not Spotify API integration.
 - The temporary 1,000,000,000-byte storage stop is not a supported capacity decision. No purchase, provisioning, public deployment, or external email delivery is authorized by this progress record.
 - Product decisions and status live here; verified preferences and gotchas live in [MEMORY](MEMORY.md). User-visible changes belong in [CHANGELOG](CHANGELOG.md).

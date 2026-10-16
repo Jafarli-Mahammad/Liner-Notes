@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Proposed design for developer review. Product implementation has not started.**
+Status: **Design approved by the developer on 2026-10-16, including the 30-second cooldown and seven-day inactive guest expiry. Product implementation has not started; the written execution plan awaits review.**
 
 ## 1. Purpose and confirmed requirements
 
@@ -20,7 +20,7 @@ Confirmed by the developer:
 - The design must work toward a small deployment: 2–4 GB RAM, modest CPU, and 10–15 GB total storage. Local operation must remain possible without required paid services.
 - Efficiency must preserve the discovery flow and its functionality.
 
-The durations, resource budgets, load profiles, and exact data model below are proposals for review, not additional approved decisions or measured results.
+The developer approved this design and its proposed defaults. Resource budgets and latency/load figures remain targets to validate, not measured capacity. Source acquisition and deployment retain their separate documented gates.
 
 ## 2. Existing implementation and changes required
 
@@ -164,7 +164,7 @@ Disk pressure first pauses optional refresh/imports and evicts only eligible pub
 
 ## 11. Verification and implementation stages
 
-This is a substantial backend change, provisionally eight focused implementation commits plus this design. Each stage must leave a runnable, verifiable state. The catalog measurement stage determines final scope estimates; no delivery date or production-capacity claim is justified yet.
+This is a substantial backend change across eight stages. The [written execution plan](../plans/2026-10-16-guest-discovery.md) refines this into ten focused implementation commits, separating additive schema from ownership cutover and storage coordination from runner activation. Each stage must leave a runnable, verifiable state. The catalog measurement stage determines final scope estimates; no delivery date or production-capacity claim is justified yet.
 
 | Stage | Deliverable | Required verification |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ Each authorized implementation stage ends with relevant verification and a focus
 
 ## 12. Review and remaining decisions
 
-Review this proposed design before product implementation. Specifically review the guest lifetime, input limits, 30-second cooldown, album fallback, ownership/batch migration, and provisional workload/budgets together. The implementation sequence is a proposed breakdown; it is not authorization to run live acquisition or implement every stage.
+The developer approved the design, guest lifetime, and cooldown after reviewing the proposal. The [written execution plan](../plans/2026-10-16-guest-discovery.md) is the next review artifact before product implementation. Design approval does not authorize live acquisition or bypass source-specific gates.
 
 Engineering questions to resolve in stage 1 rather than guessing now:
 
@@ -192,7 +192,7 @@ Engineering questions to resolve in stage 1 rather than guessing now:
 - What does the complete host inventory leave available after OS, runtime, database, WAL, and recovery overhead?
 - Do actual measurements support the latency targets and proposed cooldown/concurrency? What unprepared-batch latency is acceptable once measured?
 
-After developer review, finalize the written design and a detailed execution plan. The installed brainstorming workflow references a `writing-plans` skill; it was not found in the installed skill directories during this session. The planning deliverable must remain accessible as a repository document rather than assuming that missing skill is available. No implementation skill or product code has been invoked.
+The detailed execution checklist is written in the repository and awaits review. The installed brainstorming workflow references a `writing-plans` skill; it was not found in the installed skill directories during this session. The checklist provides explicit files, prerequisites, acceptance criteria, verification commands, and commit boundaries without assuming that missing skill is available. No implementation skill or product code has been invoked.
 
 ## 13. References checked during planning
 

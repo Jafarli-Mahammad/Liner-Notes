@@ -4,6 +4,16 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 015: Check safety prerequisites at every implementation boundary
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** brainstorming / writing-plans
+**Type:** open-source
+**Phase/Area:** Implementation planning
+**Issue:** A staged plan can introduce job submission before its consumer or add managed writes before the later accounting stage. The final architecture can look safe while intermediate commits accept work that cannot complete or bypass protection.
+**Suggested improvement:** Check each commit's enabled behavior against its prerequisites. Introduce shared contracts/schema before consumers, keep incomplete submission routes disabled, and use existing conservative safeguards until improved coordination is verified. Require privacy coverage when each storage class appears.
+**Principle:** Every intermediate runnable state must preserve ownership, resource admission, and progress guarantees.
+
 ### Observation 014: Inspect ownership and batch identity before adding guest discovery
 **Status:** OPEN
 **Date:** 2026-10-16

@@ -8,6 +8,13 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
 
 ## Remaining work
 
+- **Guest discovery: design approved; execution plan awaits review.** The
+  website-first flow supports guests, artist/album/tag inputs, immediate batches,
+  feedback, and explicit Discover more with a 30-second cooldown. Guest data
+  expires after seven inactive days. The execution plan is not approved yet;
+  product implementation and new capacity evidence remain pending. See the [approved design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md)
+  and [implementation plan](docs/superpowers/plans/2026-10-16-guest-discovery.md).
+
 - **Confirm the ListenBrainz default.** The adapter, coherent provider selection,
   approved replay and explicitly gated live generation are implemented; Last.fm
   remains available. The full local suite passed 516 checks, and a bounded

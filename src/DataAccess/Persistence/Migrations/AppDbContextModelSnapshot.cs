@@ -377,6 +377,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid?>("LastModifiedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -404,6 +407,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasIndex("BatchId")
                         .IsUnique();
 
+                    b.HasIndex("BatchId", "ProfileId")
+                        .IsUnique();
+
                     b.HasIndex("UserId", "Week");
 
                     b.HasIndex("UserId", "WeekStartDate")
@@ -416,6 +422,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -451,6 +460,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid?>("LastModifiedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Rank")
                         .HasColumnType("integer");
 
@@ -464,10 +476,10 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("WeeklyDigestId")
+                    b.Property<Guid?>("WeeklyDigestId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -475,6 +487,13 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasIndex("TrackId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("BatchId", "ProfileId");
+
+                    b.HasIndex("BatchId", "Rank")
+                        .IsUnique();
+
+                    b.HasIndex("ProfileId", "CreatedAt");
 
                     b.HasIndex("WeeklyDigestId", "Rank");
 
@@ -692,6 +711,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -707,13 +729,15 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<double>("Weight")
                         .HasColumnType("double precision");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProfileId", "TargetType", "NormalizedTargetValue");
 
                     b.HasIndex("UserId", "TargetType", "NormalizedTargetValue");
 
@@ -897,16 +921,19 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
             modelBuilder.Entity("LinerNotes.Domain.Digest.WeeklyDigest", b =>
                 {
-                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", null)
-                        .WithOne()
-                        .HasForeignKey("LinerNotes.Domain.Digest.WeeklyDigest", "BatchId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", "Batch")
+                        .WithOne()
+                        .HasForeignKey("LinerNotes.Domain.Digest.WeeklyDigest", "BatchId", "ProfileId")
+                        .HasPrincipalKey("LinerNotes.Domain.Discovery.DiscoveryBatch", "Id", "ProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Batch");
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Digest.WeeklyRecommendation", b =>
@@ -920,12 +947,17 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("LinerNotes.Domain.Digest.WeeklyDigest", null)
                         .WithMany("Recommendations")
                         .HasForeignKey("WeeklyDigestId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", null)
+                        .WithMany()
+                        .HasForeignKey("BatchId", "ProfileId")
+                        .HasPrincipalKey("Id", "ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -959,18 +991,23 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
             modelBuilder.Entity("LinerNotes.Domain.Discovery.ListenerProfile", b =>
                 {
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
-                        .WithOne()
+                        .WithOne("Profile")
                         .HasForeignKey("LinerNotes.Domain.Discovery.ListenerProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Taste.TasteSignal", b =>
                 {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
                         .WithMany("TasteSignals")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -1027,6 +1064,8 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
             modelBuilder.Entity("LinerNotes.Domain.Digest.User", b =>
                 {
                     b.Navigation("Connections");
+
+                    b.Navigation("Profile");
 
                     b.Navigation("TasteSignals");
                 });

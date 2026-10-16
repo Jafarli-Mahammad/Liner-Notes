@@ -43,15 +43,29 @@ public sealed class DiscoveryMigrationTests : IAsyncLifetime
         await _db.Database.MigrateAsync("20261010205812_AddEmailUnsubscribedAtUtc");
         foreach (var id in new[] { _owner, _other, _hidden })
         {
-            _db.ApplicationUsers.Add(new ApplicationUser { Id = id, UserName = $"fixture-{id:N}",
-                NormalizedUserName = $"FIXTURE-{id:N}", Email = $"fixture-{id:N}@example.test" });
-            _db.Users.Add(new User($"fixture-{id:N}@example.test", id: id));
+            _db.ApplicationUsers.Add(new ApplicationUser
+            {
+                Id = id,
+                UserName = $"fixture-{id:N}",
+                NormalizedUserName = $"FIXTURE-{id:N}",
+                Email = $"fixture-{id:N}@example.test"
+            });
+
         }
         var track = Track.Create("Migration fixture recording", "Synthetic migration artist");
         _track = track.Id;
         _db.Tracks.Add(track);
-        _db.TasteSignals.Add(TasteSignal.CreateSeedTag(_owner, "jazz", 0.75, "Migration fixture"));
+
         await _db.SaveChangesAsync();
+        foreach (var id in new[] { _owner, _other, _hidden })
+            await _db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "Users" ("Id","Email","TimeZone","DeliveryDay","DeliveryHourUtc","CreatedAt","IsDeleted")
+                VALUES ({id},{$"fixture-{id:N}@example.test"},{"UTC"},{"Sunday"},{8},{Now.UtcDateTime},{false})
+                """);
+        await _db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "TasteSignals" ("Id","UserId","TargetType","TargetValue","NormalizedTargetValue","Weight","Source","Context","CreatedAt","IsDeleted")
+            VALUES ({Guid.NewGuid()},{_owner},{"Tag"},{"jazz"},{"jazz"},{0.75},{"InitialSeedManual"},{"Migration fixture"},{Now.UtcDateTime},{false})
+            """);
         await _db.Users.Where(u => u.Id == _hidden).ExecuteUpdateAsync(s => s.SetProperty(u => u.IsDeleted, true));
 
         for (var i = 0; i < _digests.Length; i++)
@@ -64,8 +78,11 @@ public sealed class DiscoveryMigrationTests : IAsyncLifetime
                 VALUES ({_digests[i]},{owner},{week},{start},{start.AddDays(7)},{"Pending"},{start},{false})
                 """);
         }
-        var score = new ScoreBreakdown { FinalScore = 0.75,
-            UnknownFields = new() { ["futurePreserved"] = JsonSerializer.SerializeToElement(new { marker = "keep", value = 37 }) } };
+        var score = new ScoreBreakdown
+        {
+            FinalScore = 0.75,
+            UnknownFields = new() { ["futurePreserved"] = JsonSerializer.SerializeToElement(new { marker = "keep", value = 37 }) }
+        };
         var json = JsonSerializer.Serialize(score);
         await _db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "WeeklyRecommendations" ("Id","WeeklyDigestId","UserId","TrackId","Rank","ScoreBreakdown",
@@ -180,6 +197,52 @@ public sealed class DiscoveryMigrationTests : IAsyncLifetime
         Assert.False(await _db.DiscoveryJobs.AnyAsync(j => j.ProfileId == _owner));
         Assert.True(await _db.DiscoveryJobs.AnyAsync(j => j.Id == other.Id));
         Assert.True(await _db.Tracks.AnyAsync(t => t.Id == _track));
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task IndependentBatchesRemainPrivateAndAccountAdaptersResolveNonAccountProfileIds()
+    {
+        var profile = ListenerProfile.Guest(Now, TimeSpan.FromDays(7));
+        var first = new DiscoveryBatch(profile.Id, "initial-request", DiscoveryBatchKind.Initial, 0, Now);
+        var second = new DiscoveryBatch(profile.Id, "next-request", DiscoveryBatchKind.OnDemand, 0, Now);
+        var track = await _db.Tracks.SingleAsync(t => t.Id == _track);
+        var pick = WeeklyRecommendation.ForDiscovery(profile.Id, first.Id, null, track, 1, new());
+        var signal = TasteSignal.ForProfile(profile.Id, null, LinerNotes.Domain.Enums.TasteTargetType.Tag,
+            "jazz", 1, LinerNotes.Domain.Enums.TasteSignalSource.InitialSeedManual, "Guest choice");
+        _db.ListenerProfiles.Add(profile);
+        _db.DiscoveryBatches.AddRange(first, second);
+        _db.WeeklyRecommendations.Add(pick);
+        _db.TasteSignals.Add(signal);
+        _db.Entry(track).State = EntityState.Unchanged;
+        await _db.SaveChangesAsync();
+        Assert.Equal(2, await _db.DiscoveryBatches.CountAsync(b => b.ProfileId == profile.Id));
+        Assert.Null(await new WeeklyDigestRepository(_db).GetRecommendationByIdAsync(pick.Id, _owner));
+
+        var account = Guid.NewGuid();
+        _db.ApplicationUsers.Add(new ApplicationUser { Id = account, UserName = "claimed-fixture", Email = "claimed@example.test" });
+        _db.Users.Add(new User("claimed@example.test", id: account, createProfile: false));
+        profile.Attach(account, Now.AddMinutes(1));
+        _db.ListenerProfiles.Update(profile);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        var repo = new TasteSignalRepository(_db);
+        Assert.Equal(profile.Id, Assert.Single(await repo.GetByUserIdAsync(account)).ProfileId);
+        await repo.AddRangeAsync([TasteSignal.CreateSeedArtist(account, "Another synthetic artist", 1, "Legacy adapter")]);
+        await _db.SaveChangesAsync();
+        Assert.All(await repo.GetByUserIdAsync(account), row => Assert.Equal(profile.Id, row.ProfileId));
+        Assert.NotNull(await new WeeklyDigestRepository(_db).GetRecommendationByIdAsync(pick.Id, account));
+        var export = await new DiscoveryProfileReader(_db).GetForAccountAsync(account);
+        Assert.Equal(pick.Id, Assert.Single(export.Recommendations!).Id);
+        Assert.Equal(profile.Id, Assert.Single(export.Recommendations!).ProfileId);
+        Assert.Null(Assert.Single(export.Recommendations!).WeeklyDigestId);
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            Assert.True(await new UserRepository(_db).DeleteOwnedDataAsync(account));
+            await tx.CommitAsync();
+        }
+        Assert.False(await _db.WeeklyRecommendations.IgnoreQueryFilters().AnyAsync(r => r.Id == pick.Id));
+        Assert.True(await _db.Tracks.AnyAsync(t => t.Id == _track));
+        Assert.True(await _db.ListenerProfiles.AnyAsync(p => p.UserId == _owner));
     }
 
     private static DiscoveryJob Job(Guid owner, string key, DiscoveryJobKind kind) =>

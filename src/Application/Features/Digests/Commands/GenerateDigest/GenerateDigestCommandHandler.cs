@@ -34,7 +34,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                 throw new GenerationStoppedException("recording_manifest_unconfigured_or_expired");
             var inputs = await store.ReadInputsAsync(request.UserId, cancellationToken).ConfigureAwait(false);
             if (!inputs.UserExists) return new("stopped", null, [], "user_not_found");
-            var effective = EffectiveTasteInputs.From(request.UserId, inputs.Signals, inputs.Feedback,
+            var effective = EffectiveTasteInputs.FromProfile(inputs.ProfileId ?? request.UserId, inputs.Signals, inputs.Feedback,
                 new(config.FeedbackTagWeight, config.MinimumPositiveFeedbackWeight));
             var artists = effective.PositiveSignals.Where(s => s.TargetType == TasteTargetType.Artist)
                 .Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
@@ -71,10 +71,10 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                     c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
                     c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
                     c.TagScope, c.PopularityMissingReason)
-                    {
-                        TagNormalizationVersion = c.TagNormalizationVersion,
-                        SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray()
-                    })).ToArray();
+                {
+                    TagNormalizationVersion = c.TagNormalizationVersion,
+                    SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray()
+                })).ToArray();
             var picks = scorer.Rank(candidates, taste, effective.FamiliarArtists,
                 effective.ExcludedAliases, request.Week, scoring, config.MaximumPicks);
             if (config.Origin == EvidenceOrigin.Live && picks.Count == 0)

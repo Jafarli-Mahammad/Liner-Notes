@@ -16,7 +16,7 @@ public sealed class ListenerProfileConfiguration : IEntityTypeConfiguration<List
         builder.Property(p => p.Revision).IsConcurrencyToken();
         builder.HasIndex(p => p.UserId).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
         builder.HasIndex(p => p.ExpiresAtUtc).HasFilter("\"ExpiresAtUtc\" IS NOT NULL");
-        builder.HasOne<User>().WithOne().HasForeignKey<ListenerProfile>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<User>().WithOne(u => u.Profile).HasForeignKey<ListenerProfile>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

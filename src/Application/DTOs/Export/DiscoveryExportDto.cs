@@ -16,4 +16,5 @@ public sealed record DiscoveryJobExportDto(Guid Id, Guid ProfileId, string Reque
     DateTimeOffset UpdatedAtUtc, string ProgressCode, string? ErrorCode, Guid? ResultBatchId, JsonElement? ResultJson);
 
 public sealed record DiscoveryExportDto(ListenerProfileExportDto? Profile,
-    IReadOnlyList<DiscoveryBatchExportDto> Batches, IReadOnlyList<DiscoveryJobExportDto> Jobs);
+    IReadOnlyList<DiscoveryBatchExportDto> Batches, IReadOnlyList<DiscoveryJobExportDto> Jobs,
+    IReadOnlyList<LinerNotes.Application.DTOs.Digests.WeeklyRecommendationDto>? Recommendations = null);

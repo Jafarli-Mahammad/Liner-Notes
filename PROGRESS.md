@@ -11,9 +11,10 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
 - **Guest discovery: design and sequential execution approved; C1–C2 locally verified.**
   The bounded synthetic catalog probe passed 15 checks, and the baseline .NET
   suite passed 516 tests with zero skips; the additive profile/batch foundation
-  subsequently passed 526 .NET checks with zero skips. Three isolated SQL measurements support
+  subsequently passed 526 .NET checks with zero skips. Profile ownership cutover
+  subsequently passed 529 .NET checks with zero skips. Three isolated SQL measurements support
   continuing with the profile/batch foundation; they do not prove real catalog
-  coverage, API latency, or VPS capacity. C3–C10 and the guest product flow remain.
+  coverage, API latency, or VPS capacity. C4–C10 and the guest product flow remain.
   A live catalog acquisition manifest is not approved. See the [evidence](docs/renewal/guest-discovery-evidence.md),
   [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), and
   [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md).

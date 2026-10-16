@@ -26,3 +26,11 @@ The additive migration creates one registered profile per existing subscriber, i
 New accounts/digests created by old handlers during the additive stage can still lack the new association. C3 must backfill those records in its stopped-writer cutover before new discovery APIs rely on the relationship. This is not a rolling mixed-binary migration promise.
 
 The C2 down/reapply check covers an isolated populated legacy fixture. A downgrade removes the new metadata tables and is not a recovery strategy for a retained database that has acquired guest data or new on-demand history. Real deployment requires a reviewed backup/recovery procedure before applying schema changes; no retained application database was migrated during C2 verification.
+
+## Ownership cutover (C3)
+
+TasteSignals.ProfileId and WeeklyRecommendations.ProfileId/BatchId now identify the private owner and recommendation request. WeeklyDigests.ProfileId identifies the owner of its batch. The legacy account and weekly recommendation links are nullable for guest and on-demand rows. Every new column is included in the DTO/export and reviewed schema inventory. `discovery.recommendations` includes all profile-owned recommendation rows, including non-weekly rows, with original score JSON and feedback. Shared track records remain outside private profile ownership.
+
+Registered endpoints resolve their account through ListenerProfiles. A profile ID need not equal its account ID. Nullable account backreferences are compatibility metadata; deferred database constraints require any populated backreference to agree with the profile owner. Recommendation batch/profile foreign keys reject cross-owner links. Account deletion removes owned rows through the profile even when their legacy account reference is null.
+
+Apply C3 only with old writers stopped. It repeats the additive backfill for records created since C2, then assigns ownership in place. No score/feedback column is rewritten. Downgrade refuses guest profiles or non-weekly recommendations; restore a reviewed backup rather than discarding those records. No retained database has been migrated in this session.

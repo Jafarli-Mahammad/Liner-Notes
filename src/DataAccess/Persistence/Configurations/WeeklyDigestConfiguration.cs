@@ -13,7 +13,7 @@ public sealed class WeeklyDigestConfiguration : IEntityTypeConfiguration<WeeklyD
 
         builder.HasKey(d => d.Id);
         builder.HasIndex(d => d.BatchId).IsUnique();
-        builder.HasOne<DiscoveryBatch>().WithOne().HasForeignKey<WeeklyDigest>(d => d.BatchId)
+        builder.HasOne(d => d.Batch).WithOne().HasForeignKey<WeeklyDigest>(d => new { d.BatchId, d.ProfileId }).HasPrincipalKey<LinerNotes.Domain.Discovery.DiscoveryBatch>(b => new { b.Id, b.ProfileId })
             .OnDelete(DeleteBehavior.NoAction);
 
         builder.Property(d => d.UserId)

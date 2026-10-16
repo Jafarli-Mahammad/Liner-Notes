@@ -16,7 +16,8 @@ public sealed record BaselineAConfiguration(string Version = "phase6-config-v1",
             Validate();
             var values = new SortedDictionary<string, string>(StringComparer.Ordinal)
             {
-                ["version"] = Version, ["formula"] = "baseline-a-v1",
+                ["version"] = Version,
+                ["formula"] = "baseline-a-v1",
                 ["tag"] = TagWeight.ToString("R", CultureInfo.InvariantCulture),
                 ["novelty"] = NoveltyWeight.ToString("R", CultureInfo.InvariantCulture)
             };
@@ -42,6 +43,17 @@ public sealed class BaselineAScorer
 {
     public ScoreBreakdown Score(BaselineACandidate candidate, WeightedTagVector taste,
         bool familiarArtist, IsoWeek week, BaselineAConfiguration configuration)
+        => ScoreCore(candidate, taste, familiarArtist, week.Value, null, configuration);
+
+    public ScoreBreakdown ScoreForBatch(BaselineACandidate candidate, WeightedTagVector taste,
+        bool familiarArtist, Guid batchId, BaselineAConfiguration configuration)
+    {
+        if (batchId == Guid.Empty) throw new ArgumentException("Batch identity required.");
+        return ScoreCore(candidate, taste, familiarArtist, null, batchId, configuration);
+    }
+
+    private ScoreBreakdown ScoreCore(BaselineACandidate candidate, WeightedTagVector taste,
+        bool familiarArtist, string? week, Guid? batchId, BaselineAConfiguration configuration)
     {
         configuration.Validate();
         var tasteWeights = Ordered(taste);
@@ -64,14 +76,24 @@ public sealed class BaselineAScorer
         {
             Snapshot = new ScoreSnapshot
             {
-                ConfigurationVersion = configuration.Version, ConfigurationSha256 = configuration.Sha256,
+                ConfigurationVersion = configuration.Version,
+                ConfigurationSha256 = configuration.Sha256,
                 ConfigurationPolicy = configuration.Policy ?? new Dictionary<string, string>(),
                 TagNormalizationVersion = candidate.Evidence.TagNormalizationVersion,
-                Weights = new(configuration.TagWeight, configuration.NoveltyWeight), TrackKey = candidate.Track.TrackKey,
-                ArtistName = candidate.Track.ArtistName, Title = candidate.Track.Title, Week = week.Value,
-                TasteWeights = tasteWeights, CandidateWeights = candidateWeights,
-                TasteMagnitude = tasteMagnitude, CandidateMagnitude = candidateMagnitude, Familiarity = familiarArtist,
-                Contributions = contributions, Components = [new("tag_similarity", tagScore), new("novelty", bonus)],
+                Weights = new(configuration.TagWeight, configuration.NoveltyWeight),
+                TrackKey = candidate.Track.TrackKey,
+                ArtistName = candidate.Track.ArtistName,
+                Title = candidate.Track.Title,
+                Week = week,
+                DiscoveryBatchId = batchId,
+                PayloadVersion = batchId.HasValue ? "discovery-score-v2" : "phase6-score-v1",
+                TasteWeights = tasteWeights,
+                CandidateWeights = candidateWeights,
+                TasteMagnitude = tasteMagnitude,
+                CandidateMagnitude = candidateMagnitude,
+                Familiarity = familiarArtist,
+                Contributions = contributions,
+                Components = [new("tag_similarity", tagScore), new("novelty", bonus)],
                 MissingReasons = missing.Concat(candidate.Evidence.Seeds.Where(s => s.MissingReason != null)
                     .Select(s => $"seed:{s.ArtistName}:{s.MissingReason}")).Distinct(StringComparer.Ordinal).ToArray(),
                 Evidence = candidate.Evidence
@@ -93,7 +115,7 @@ public sealed class BaselineAScorer
 
     public ScoreBreakdown Replay(ScoreSnapshot snapshot)
     {
-        if (snapshot.PayloadVersion != "phase6-score-v1" || snapshot.FormulaVersion != "baseline-a-v1" ||
+        if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion != "baseline-a-v1" ||
             snapshot.MaterializationVersion != "positive-signals-v1" ||
             snapshot.TagNormalizationVersion is not ("max-observed-descriptive-count-v1" or "max-observed-artist-tag-votes-v1") ||
             snapshot.RankingPolicyVersion != "score-ordinal-one-artist-v1")
@@ -105,8 +127,12 @@ public sealed class BaselineAScorer
         var track = Track.Create(snapshot.Title, snapshot.ArtistName, mbid: mbid);
         if (track.TrackKey != snapshot.TrackKey) throw new ArgumentException("Stored track identity mismatch.");
         ValidateWeights(snapshot.TasteWeights); ValidateWeights(snapshot.CandidateWeights);
-        return Score(new(track, WeightedTagVector.FromDictionary(snapshot.CandidateWeights), snapshot.Evidence),
-            WeightedTagVector.FromDictionary(snapshot.TasteWeights), snapshot.Familiarity, IsoWeek.Parse(snapshot.Week), configuration);
+        if (snapshot.PayloadVersion == "discovery-score-v2" && (snapshot.Week is not null || !snapshot.DiscoveryBatchId.HasValue || snapshot.DiscoveryBatchId == Guid.Empty))
+            throw new ArgumentException("Invalid discovery snapshot identity.");
+        return ScoreCore(new(track, WeightedTagVector.FromDictionary(snapshot.CandidateWeights), snapshot.Evidence),
+            WeightedTagVector.FromDictionary(snapshot.TasteWeights), snapshot.Familiarity,
+            snapshot.PayloadVersion == "phase6-score-v1" ? IsoWeek.Parse(snapshot.Week!).Value : null,
+            snapshot.PayloadVersion == "discovery-score-v2" ? snapshot.DiscoveryBatchId : null, configuration);
     }
 
     private static SortedDictionary<string, double> Ordered(WeightedTagVector vector)

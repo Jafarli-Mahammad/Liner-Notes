@@ -11,6 +11,16 @@ public sealed record EffectiveTasteInputs(IReadOnlyList<TasteSignal> PositiveSig
 {
     public static EffectiveTasteInputs From(Guid userId, IReadOnlyList<TasteSignal> signals,
         IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
+        => Build(userId, signals.Where(s => s.UserId == userId).ToArray(),
+            recommendations.Where(r => r.UserId == userId).ToArray(), config);
+
+    public static EffectiveTasteInputs FromProfile(Guid profileId, IReadOnlyList<TasteSignal> signals,
+        IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
+        => Build(profileId, signals.Where(s => s.ProfileId == profileId).ToArray(),
+            recommendations.Where(r => r.ProfileId == profileId).ToArray(), config);
+
+    private static EffectiveTasteInputs Build(Guid userId, IReadOnlyList<TasteSignal> signals,
+        IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
     {
         if (!double.IsFinite(config.FeedbackTagWeight) || config.FeedbackTagWeight < 0 ||
             !double.IsFinite(config.MinimumPositiveFeedbackWeight) || config.MinimumPositiveFeedbackWeight is < 0 or > 1)

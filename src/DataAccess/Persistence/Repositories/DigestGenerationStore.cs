@@ -37,18 +37,31 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
 
     public async Task<GenerationInputs> ReadInputsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        bool exists = await db.Users.AnyAsync(u => u.Id == userId, cancellationToken).ConfigureAwait(false);
-        var signals = await db.TasteSignals.Where(s => s.UserId == userId).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+        var profileId = await db.ListenerProfiles.Where(p => p.UserId == userId && db.Users.Any(u => u.Id == userId))
+            .Select(p => (Guid?)p.Id).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        bool exists = profileId.HasValue;
+        var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var feedback = await db.WeeklyRecommendations.Include(r => r.Track)
-            .Where(r => r.UserId == userId && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+            .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId) && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var revision = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
             Exists = exists,
+            ProfileId = profileId,
             Signals = signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
-            Feedback = feedback.Select(r => new { r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt, r.LastModifiedAt,
-                r.Track.TrackKey, r.Track.NormalizedArtistName, r.Track.NormalizedTitle, r.ScoreBreakdown.MatchedTags })
+            Feedback = feedback.Select(r => new
+            {
+                r.Id,
+                r.Feedback,
+                r.Rating,
+                r.FeedbackGivenAt,
+                r.LastModifiedAt,
+                r.Track.TrackKey,
+                r.Track.NormalizedArtistName,
+                r.Track.NormalizedTitle,
+                r.ScoreBreakdown.MatchedTags
+            })
         })));
-        return new(exists, signals, feedback, revision);
+        return new(exists, signals, feedback, revision, profileId);
     }
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)
@@ -72,7 +85,7 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             using var rowHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             long payloadBytes = 0;
             foreach (var (kind, table) in new[]
-                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations") })
+                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations"), ("profile", "ListenerProfiles"), ("batch", "DiscoveryBatches"), ("job", "DiscoveryJobs") })
             {
                 revision.AppendData(Encoding.UTF8.GetBytes(kind));
                 revision.AppendData([0]);
@@ -123,7 +136,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         if (!current.UserExists || current.Revision != inputRevision) throw new GenerationStoppedException("taste_revision_changed");
         await reservation.ValidateAsync(await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         var monday = DateTime.SpecifyKind(System.Globalization.ISOWeek.ToDateTime(week.Year, week.WeekNumber, DayOfWeek.Monday), DateTimeKind.Utc);
-        var digest = WeeklyDigest.Create(userId, week, monday, monday.AddDays(7));
+        var profileId = await db.ListenerProfiles.Where(p => p.UserId == userId).Select(p => p.Id).SingleAsync(ct);
+        var digest = new WeeklyDigest(userId, week, monday, monday.AddDays(7), profileId: profileId);
         foreach (var pick in picks)
         {
             var candidate = pick.Track;

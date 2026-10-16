@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C2 are implemented and locally verified; C3–C10 remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3 are implemented and locally verified; C4–C10 remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -138,13 +138,13 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 
 **Steps:**
 
-- [ ] Move private taste/recommendation ownership to profiles and generalize recommendation/batch relationships. Keep existing recommendation IDs, snapshots, feedback and track links. Reuse physical storage where possible to avoid unnecessary history copies.
-- [ ] Use a short documented migration maintenance window with old writers stopped; do not claim rolling compatibility between old binaries and the cutover schema. Verify migration before any retained deployment is touched.
-- [ ] Preserve public registered endpoints through account-to-profile adapters. Weekly subscriber/week idempotency remains separate from explicit discovery request identity.
-- [ ] Remove weekly identity as a required input to new discovery ranking/snapshots, while preserving historical week data and readers. Version new snapshot fields; do not fabricate a weekly delivery for a guest request.
-- [ ] Make feedback, already-known exclusions, scoring inputs, export, account deletion and local capture continue to use the right owner. Preserve encrypted local-email lifecycle boundaries.
-- [ ] Update exhaustive privacy inventory, account export fixtures, database constraints and architecture checks in the same commit. Assert populated values survive; do not weaken tests to accept missing fields.
-- [ ] Run Domain/Application/DataAccess and affected Presentation/Infrastructure regressions, including existing phase 6–8 PostgreSQL lifecycle tests. Validate accounts cannot read or mutate another profile's data.
+- [x] Move private taste/recommendation ownership to profiles and generalize recommendation/batch relationships. Keep existing recommendation IDs, snapshots, feedback and track links. Reuse physical storage where possible to avoid unnecessary history copies.
+- [x] Use a short documented migration maintenance window with old writers stopped; do not claim rolling compatibility between old binaries and the cutover schema. Verify migration before any retained deployment is touched.
+- [x] Preserve public registered endpoints through account-to-profile adapters. Weekly subscriber/week idempotency remains separate from explicit discovery request identity.
+- [x] Remove weekly identity as a required input to new discovery ranking/snapshots, while preserving historical week data and readers. Version new snapshot fields; do not fabricate a weekly delivery for a guest request.
+- [x] Make feedback, already-known exclusions, scoring inputs, export, account deletion and local capture continue to use the right owner. Preserve encrypted local-email lifecycle boundaries.
+- [x] Update exhaustive privacy inventory, account export fixtures, database constraints and architecture checks in the same commit. Assert populated values survive; do not weaken tests to accept missing fields.
+- [x] Run Domain/Application/DataAccess and affected Presentation/Infrastructure regressions, including existing phase 6–8 PostgreSQL lifecycle tests. Validate accounts cannot read or mutate another profile's data.
 
 **Exit:** Registered functionality has equivalent behavior over the generalized model; multiple distinct discovery batches can coexist in one calendar week.
 

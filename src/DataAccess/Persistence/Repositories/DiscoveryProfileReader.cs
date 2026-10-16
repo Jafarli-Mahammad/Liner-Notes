@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.DTOs.Export;
 using LinerNotes.DataAccess.DataContexts;
@@ -31,6 +32,9 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
                 j.ErrorCode, j.ResultBatchId, j.ResultJson == null ? (JsonElement?)null
                     : JsonSerializer.Deserialize<JsonElement>(j.ResultJson, (JsonSerializerOptions?)null)))
             .ToArrayAsync(cancellationToken).ConfigureAwait(false);
-        return new(profile, batches, jobs);
+        var recommendations = await context.WeeklyRecommendations.IgnoreQueryFilters().AsNoTracking()
+            .Where(r => r.ProfileId == profile.Id).Include(r => r.Track).OrderBy(r => r.BatchId).ThenBy(r => r.Rank)
+            .ToArrayAsync(cancellationToken).ConfigureAwait(false);
+        return new(profile, batches, jobs, recommendations.Select(r => r.ToDto()).ToArray());
     }
 }

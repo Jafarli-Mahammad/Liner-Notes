@@ -32,7 +32,7 @@ public static class MappingExtensions
         signal.Weight,
         signal.Source,
         signal.Context,
-        signal.CreatedAt, signal.LastModifiedAt, signal.CreatedBy, signal.LastModifiedBy, signal.DeletedBy, signal.DeletedAt, signal.IsDeleted);
+        signal.CreatedAt, signal.LastModifiedAt, signal.CreatedBy, signal.LastModifiedBy, signal.DeletedBy, signal.DeletedAt, signal.IsDeleted, signal.ProfileId);
 
     public static TrackDto ToDto(this Track track) => new(
         track.Id,
@@ -54,9 +54,11 @@ public static class MappingExtensions
             m.TagName,
             m.CandidateTagWeight,
             m.UserTasteWeight,
-            m.ContributionProduct) { UnknownFields = m.UnknownFields }).ToList(),
+            m.ContributionProduct)
+        { UnknownFields = m.UnknownFields }).ToList(),
         breakdown.Snapshot, breakdown.TagSimilarityRaw, breakdown.PopularityRaw,
-        breakdown.NoveltyRaw, breakdown.FeedbackPenaltyRaw) { UnknownFields = breakdown.UnknownFields };
+        breakdown.NoveltyRaw, breakdown.FeedbackPenaltyRaw)
+    { UnknownFields = breakdown.UnknownFields };
 
     public static WeeklyRecommendationDto ToDto(this WeeklyRecommendation recommendation) => new(
         recommendation.Id,
@@ -69,7 +71,7 @@ public static class MappingExtensions
         recommendation.FeedbackGivenAt,
         recommendation.Rating, recommendation.UserId, recommendation.WeeklyDigestId,
         recommendation.CreatedAt, recommendation.LastModifiedAt, recommendation.CreatedBy,
-        recommendation.LastModifiedBy, recommendation.DeletedBy, recommendation.DeletedAt, recommendation.IsDeleted);
+        recommendation.LastModifiedBy, recommendation.DeletedBy, recommendation.DeletedAt, recommendation.IsDeleted, recommendation.ProfileId, recommendation.BatchId);
 
     public static WeeklyDigestDto ToDto(this WeeklyDigest digest) => new(
         digest.Id,
@@ -81,7 +83,7 @@ public static class MappingExtensions
         digest.SentAt,
         digest.Recommendations.OrderBy(r => r.Rank).Select(r => r.ToDto()).ToList(),
         digest.CreatedAt, digest.LastModifiedAt, digest.ErrorMessage, digest.CreatedBy,
-        digest.LastModifiedBy, digest.DeletedBy, digest.DeletedAt, digest.IsDeleted, digest.BatchId);
+        digest.LastModifiedBy, digest.DeletedBy, digest.DeletedAt, digest.IsDeleted, digest.BatchId, digest.ProfileId);
 
     public static UserMusicConnectionExportDto ToExportDto(this UserMusicConnection connection) => new(
         connection.ServiceType.ToString(),

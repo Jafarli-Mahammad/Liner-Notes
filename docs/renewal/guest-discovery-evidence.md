@@ -1,6 +1,23 @@
 # Guest discovery evidence
 
-Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C2 are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3 are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C3: profile ownership and registered compatibility
+
+Implemented mandatory private profile ownership for taste and recommendations, batch ownership for recommendations, and owner-consistent weekly links. Legacy account/weekly recommendation references remain nullable for compatibility. Registered accounts create their profile together with the domain subscriber. Legacy taste writers and weekly generation resolve the account's actual profile, including profiles whose IDs differ from the account ID. Export includes every profile-owned recommendation, including non-weekly history; account deletion removes that history without deleting shared tracks.
+
+Historical score JSON is retained in place. `discovery-score-v2` snapshots identify a batch and have no calendar week; historical `phase6-score-v1` replay remains supported. The ranking formula and benchmark expectations are unchanged.
+
+Verification against the isolated C1 PostgreSQL container:
+
+- Full suite: **529 passed, zero failures/skips** (Domain 124, Application 116, DataAccess 93, Presentation 56, Infrastructure 140).
+- After the final generation-input adapter adjustment: Application 116 and PostgreSQL generation/migration 17 checks passed. These are additional checks, not additional unique tests in the full-suite count.
+- Populated legacy migration and down/reapply preserve original recommendation IDs, unknown score fields and feedback. New constraints reject cross-owner batch links. Independent batches coexist without weekly delivery identity.
+- An attached-profile fixture with a profile ID different from its account ID exercises seed adapters, recommendation access, account export and deletion. Guest rows with null legacy account references remain private until attachment and are removed by account deletion afterward.
+- Three initial in-memory repository fixtures lacked the owning account/profile. Fixtures now include it; production ownership checks were retained. The final suite passed.
+- Secret/default, renewal-document and whitespace checks passed. Existing package advisory warnings remain unchanged.
+
+No retained database was migrated. Old writers must be stopped for this schema cutover. Guest HTTP access and new managed writers remain disabled until their lifecycle and storage prerequisites are implemented. C4–C10 remain; no developer confirmation or deployment capacity is claimed.
 
 ## C2: additive profile, batch and job foundation
 

@@ -9,7 +9,8 @@ namespace LinerNotes.Domain.Taste;
 /// </summary>
 public sealed class TasteSignal : AuditableEntity
 {
-    public Guid UserId { get; private set; }
+    public Guid? UserId { get; private set; }
+    public Guid ProfileId { get; private set; }
     public TasteTargetType TargetType { get; private set; }
     public string TargetValue { get; private set; }
     public string NormalizedTargetValue { get; private set; }
@@ -43,6 +44,7 @@ public sealed class TasteSignal : AuditableEntity
 
         if (id.HasValue) Id = id.Value;
         UserId = userId;
+        ProfileId = userId;
         TargetType = targetType;
         TargetValue = targetValue.Trim();
         NormalizedTargetValue = TargetValue.ToLowerInvariant();
@@ -52,8 +54,18 @@ public sealed class TasteSignal : AuditableEntity
         CreatedAt = DateTime.UtcNow;
     }
 
+    public static TasteSignal ForProfile(Guid profileId, Guid? userId, TasteTargetType type, string value, double weight, TasteSignalSource source, string context)
+    {
+        if (profileId == Guid.Empty || userId == Guid.Empty) throw new ArgumentException("Invalid owner.");
+        return new TasteSignal(profileId, type, value, weight, source, context) { UserId = userId };
+    }
+    public void BindRegisteredProfile(Guid userId, Guid profileId)
+    {
+        if (UserId != userId || profileId == Guid.Empty) throw new ArgumentException("Invalid profile binding.");
+        ProfileId = profileId;
+    }
     public static TasteSignal CreateSeedTag(Guid userId, string tag, double weight, string context) =>
-        new(userId, TasteTargetType.Tag, tag, weight, TasteSignalSource.InitialSeedManual, context);
+            new(userId, TasteTargetType.Tag, tag, weight, TasteSignalSource.InitialSeedManual, context);
 
     public static TasteSignal CreateSeedArtist(Guid userId, string artist, double weight, string context) =>
         new(userId, TasteTargetType.Artist, artist, weight, TasteSignalSource.InitialSeedManual, context);

@@ -18,7 +18,7 @@ public sealed class UserRepository : AsyncRepository<User>, IUserRepository
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DataContext.Users
-            .Include(u => u.Connections)
+            .Include(u => u.Profile).Include(u => u.Connections)
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
@@ -26,18 +26,18 @@ public sealed class UserRepository : AsyncRepository<User>, IUserRepository
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
         return await DataContext.Users
-            .Include(u => u.Connections)
+            .Include(u => u.Profile).Include(u => u.Connections)
             .FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
     }
 
     public Task<User?> GetForExportAsync(Guid id, CancellationToken cancellationToken = default) =>
-        DataContext.Users.IgnoreQueryFilters().Include(u => u.Connections)
+        DataContext.Users.IgnoreQueryFilters().Include(u => u.Profile).Include(u => u.Connections)
             .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
 
     public async Task<IReadOnlyList<User>> GetUsersDueForDigestAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         return await DataContext.Users
-            .Include(u => u.Connections)
+            .Include(u => u.Profile).Include(u => u.Connections)
             .Where(u => u.NextDigestAt != null && u.NextDigestAt <= asOfUtc)
             .ToListAsync(cancellationToken);
     }
@@ -52,9 +52,9 @@ public sealed class UserRepository : AsyncRepository<User>, IUserRepository
         // Must run inside the account transaction. Bulk deletes bypass the soft-delete interceptor.
         if (DataContext.Database.CurrentTransaction is null)
             throw new InvalidOperationException("Account deletion requires a transaction.");
-        await DataContext.WeeklyRecommendations.IgnoreQueryFilters().Where(r => r.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await DataContext.WeeklyRecommendations.IgnoreQueryFilters().Where(r => DataContext.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId)).ExecuteDeleteAsync(cancellationToken);
         await DataContext.WeeklyDigests.IgnoreQueryFilters().Where(d => d.UserId == userId).ExecuteDeleteAsync(cancellationToken);
-        await DataContext.TasteSignals.IgnoreQueryFilters().Where(s => s.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await DataContext.TasteSignals.IgnoreQueryFilters().Where(s => DataContext.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).ExecuteDeleteAsync(cancellationToken);
         await DataContext.UserMusicConnections.IgnoreQueryFilters().Where(c => c.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         return await DataContext.Users.IgnoreQueryFilters().Where(u => u.Id == userId).ExecuteDeleteAsync(cancellationToken) == 1;
     }

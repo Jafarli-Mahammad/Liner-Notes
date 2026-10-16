@@ -62,7 +62,8 @@ public sealed record ScoreSnapshot : ExtensibleScoreRecord
     public required string TrackKey { get; init; }
     public required string ArtistName { get; init; }
     public required string Title { get; init; }
-    public required string Week { get; init; }
+    public string? Week { get; init; }
+    public Guid? DiscoveryBatchId { get; init; }
     public required IReadOnlyDictionary<string, double> TasteWeights { get; init; }
     public required IReadOnlyDictionary<string, double> CandidateWeights { get; init; }
     public double TasteMagnitude { get; init; }

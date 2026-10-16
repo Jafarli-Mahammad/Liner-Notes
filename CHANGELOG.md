@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Move taste and recommendation ownership to listener profiles while preserving
+  historical IDs, feedback and score evidence. Add non-weekly recommendation
+  snapshots and include on-demand history in account exports. Registered and
+  weekly APIs remain available; guest access is not enabled by this change alone.
+
 - Add listener profile, discovery batch and pending-job foundations with an
   additive legacy-data backfill. Export 2.3 includes the new owned metadata and
   batch links while excluding operational lease credentials. Guest access and

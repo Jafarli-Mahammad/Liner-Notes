@@ -58,15 +58,24 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
                 return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live,
                     response.StatusCode == HttpStatusCode.TooManyRequests ? "rate_limit" : "http_error", parsed.Reference);
             // No authenticated private endpoints are exposed by this client. Still obey no-store/no-cache.
-            if (parsed.Gaps.IsEmpty && response.Headers.CacheControl is not { NoStore: true } and not { NoCache: true })
+            if (parsed.Gaps.IsEmpty && response.Headers.CacheControl is not { NoStore: true } and not { NoCache: true } and not { Private: true })
             {
                 TimeSpan ttl = TimeSpan.FromSeconds(options.CacheSeconds);
                 if (response.Headers.CacheControl?.MaxAge is { } supplied && supplied < ttl) ttl = supplied;
+                if (response.Headers.CacheControl?.MaxAge is null && response.Content.Headers.Expires is { } expires)
+                {
+                    var lifetime = expires - (response.Headers.Date ?? clock.GetUtcNow());
+                    if (lifetime < ttl) ttl = lifetime;
+                }
                 var apparentAge = clock.GetUtcNow() - (response.Headers.Date ?? clock.GetUtcNow());
                 if (apparentAge < TimeSpan.Zero) apparentAge = TimeSpan.Zero;
                 var age = response.Headers.Age ?? TimeSpan.Zero;
                 ttl -= apparentAge > age ? apparentAge : age;
-                if (ttl > TimeSpan.Zero) cache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = ttl });
+                if (ttl > TimeSpan.Zero)
+                {
+                    parsed = parsed with { SharedCacheUntilUtc = clock.GetUtcNow() + ttl };
+                    cache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = ttl });
+                }
             }
             return parsed;
         }

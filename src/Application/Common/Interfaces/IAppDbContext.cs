@@ -24,5 +24,10 @@ public interface IAppDbContext
     DbSet<DiscoveryJob> DiscoveryJobs { get; }
     DbSet<GuestSession> GuestSessions { get; }
 
+    DbSet<CatalogPublication> CatalogPublications { get; }
+    DbSet<CatalogHead> CatalogHeads { get; }
+    DbSet<CatalogRecord> CatalogRecords { get; }
+    DbSet<CatalogSearchTerm> CatalogSearchTerms { get; }
+    DbSet<AlbumCredit> AlbumCredits { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

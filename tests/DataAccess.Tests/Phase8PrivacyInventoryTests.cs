@@ -11,8 +11,13 @@ public sealed class Phase8PrivacyInventoryTests
     // Explicit review contract. Never derive the expected columns from the model under test.
     internal static readonly IReadOnlyDictionary<string, string[]> ReviewedColumns = new Dictionary<string, string[]>
     {
-        ["public.Albums"] = Columns("ArtistId,ArtistName,Id,Mbid,Title"),
+        ["public.Albums"] = Columns("ArtistId,ArtistName,Id,Mbid,ReleaseGroupMbid,Title"),
         ["public.Artists"] = Columns("Id,Mbid,Name,NormalizedName"),
+        ["public.AlbumCredits"] = Columns("AlbumId,ArtistId,Position"),
+        ["public.CatalogPublications"] = Columns("Id,Source,SourceVersion,SourceUri,Origin,MetadataLicense,TagLicense,Attribution,ContentSha256,ArtifactBytes,ExpectedRecords,ImportedRecords,State,AcquiredAtUtc,ExpiresAtUtc,PublishedAtUtc,NormalizationVersion,IsLookup"),
+        ["public.CatalogHead"] = Columns("Id,PublicationId"),
+        ["public.CatalogRecords"] = Columns("Id,PublicationId,CanonicalId,Kind,ArtistId,AlbumId,DisplayName,ArtistDisplayName,Disambiguation,FirstReleaseDate,AliasesJson,TagsJson,CreditsJson,RowSha256"),
+        ["public.CatalogSearchTerms"] = Columns("RecordId,Kind,NormalizedTerm"),
         ["public.DataProtectionKeys"] = Columns("FriendlyName,Id,Xml"),
         ["public.GuestSessions"] = Columns("ProfileId,CredentialHash,CreatedAtUtc"),
         ["public.ListenerProfiles"] = Columns("Id,UserId,Revision,CreatedAtUtc,LastActiveAtUtc,ExpiresAtUtc"),

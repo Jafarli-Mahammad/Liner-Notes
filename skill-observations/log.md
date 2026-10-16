@@ -4,6 +4,16 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 018: Bind resumed imports to consumed data, not only a cursor
+
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** Data import integrity candidate
+**Type:** open-source
+**Issue:** A hash before a multi-pass import does not bind later reads or already committed chunks if the source changes or a read is interrupted. A saved cursor alone could skip mismatching staged rows on restart.
+**Suggested improvement:** Verify the bytes actually consumed before publication, fingerprint normalized staged rows, and compare committed fingerprints against the approved artifact during resume. Keep publication atomic and the prior searchable version available after failure.
+**Principle:** Resumability requires integrity evidence for both the input stream and the durable prefix.
+
 ### Observation 017: Keep fixture stabilization before the tested persistence boundary
 
 **Status:** OPEN

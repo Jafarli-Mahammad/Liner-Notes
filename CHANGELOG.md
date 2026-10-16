@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Add indexed local artist/album search with aliases, Unicode and typo handling,
+  all album credits, source attribution and versioned catalog publication.
+  Bounded imports resume verified chunks while keeping the last good catalog.
+  Explicit lookup has private status routes and source-policy checks; submission
+  remains disabled until its durable background consumer is installed.
+
 - Add guest credentials, seven-day inactive expiry, private export/clear and
   transactional account attachment/import. Cookie mutations require same-origin
   checks and antiforgery tokens. Guest routes remain disabled pending storage

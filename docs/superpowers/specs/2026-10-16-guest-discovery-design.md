@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution plan approved by the developer on 2026-10-16, including the 30-second cooldown and seven-day inactive guest expiry. C1 resource/source tooling, C2 additive foundations, C3 ownership cutover and C4 guest lifecycle mechanics are locally verified; the guest product flow and later stages remain to implement.**
+Status: **Design and sequential execution plan approved by the developer on 2026-10-16, including the 30-second cooldown and seven-day inactive guest expiry. C1 resource/source tooling, C2 additive foundations, C3 ownership cutover, C4 guest lifecycle and C5 catalog mechanics are locally verified; the guest product flow and later stages remain to implement.**
 
 ## 1. Purpose and confirmed requirements
 

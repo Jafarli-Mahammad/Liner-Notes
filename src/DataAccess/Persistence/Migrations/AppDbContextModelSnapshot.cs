@@ -127,6 +127,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<Guid?>("ReleaseGroupMbid")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -138,7 +141,32 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasIndex("Mbid");
 
+                    b.HasIndex("ReleaseGroupMbid")
+                        .IsUnique()
+                        .HasFilter("\"ReleaseGroupMbid\" IS NOT NULL");
+
                     b.ToTable("Albums", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.AlbumCredit", b =>
+                {
+                    b.Property<Guid>("AlbumId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ArtistId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AlbumId", "Position");
+
+                    b.HasIndex("ArtistId");
+
+                    b.HasIndex("AlbumId", "ArtistId")
+                        .IsUnique();
+
+                    b.ToTable("AlbumCredits", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Artist", b =>
@@ -168,6 +196,205 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasIndex("NormalizedName");
 
                     b.ToTable("Artists", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogHead", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicationId");
+
+                    b.ToTable("CatalogHead", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogPublication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ArtifactBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ExpectedRecords")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ImportedRecords")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsLookup")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetadataLicense")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NormalizationVersion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SourceUri")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SourceVersion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("TagLicense")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("State", "AcquiredAtUtc");
+
+                    b.ToTable("CatalogPublications", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AlbumId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AliasesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ArtistDisplayName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ArtistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CanonicalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreditsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
+                    b.Property<string>("Disambiguation")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("FirstReleaseDate")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RowSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("ArtistId");
+
+                    b.HasIndex("PublicationId", "Kind", "CanonicalId")
+                        .IsUnique();
+
+                    b.ToTable("CatalogRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_CatalogRecords_JsonBound", "octet_length(\"AliasesJson\"::text)<=16384 AND octet_length(\"TagsJson\"::text)<=16384 AND octet_length(\"CreditsJson\"::text)<=16384");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogSearchTerm", b =>
+                {
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NormalizedTerm")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .UseCollation("C");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("RecordId", "NormalizedTerm");
+
+                    b.HasIndex("RecordId", "Kind");
+
+                    b.HasIndex("NormalizedTerm", "Kind", "RecordId");
+
+                    b.ToTable("CatalogSearchTerms", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Track", b =>
@@ -925,6 +1152,58 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ArtistId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.AlbumCredit", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.Album", null)
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LinerNotes.Domain.Catalog.Artist", null)
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogHead", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogPublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogRecord", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.Album", null)
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LinerNotes.Domain.Catalog.Artist", null)
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogPublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogSearchTerm", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RecordId", "Kind")
+                        .HasPrincipalKey("Id", "Kind")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Digest.User", b =>

@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3 and C4 lifecycle mechanics are implemented and locally verified; C5–C10 and C4 integrated generation-race checks remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog mechanics are implemented and locally verified; C6–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -174,13 +174,13 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 
 **Steps:**
 
-- [ ] Store canonical artist/release-group identities, aliases, credited-artist links, normalized search forms, disambiguation and manifest version references. Maintain a separate relationship for multi-artist albums.
-- [ ] Apply the measured prefix/token/trigram indexes. Short queries use bounded prefix behavior; no unbounded fuzzy full-index scan or arbitrary client sorting. Enforce query length, result limit, timeout and safe parameterized SQL.
-- [ ] Implement local `GET /api/catalog/search` and prove its dependency path cannot issue provider HTTP calls. Use useful matches and stable tie-breaks; application scoring remains popularity-neutral.
-- [ ] Add atomic/resumable artifact import with hashes, content bounds, staging reservations, interrupted-import recovery and last-good publication. Do not load the full artifact into memory.
-- [ ] Add explicit lookup submission/status contracts with session ownership, coalesced public acquisition, server-selected provider configuration and existing source gates, using the shared job schema. Reuse existing evidence parsers/replay clients where their formats apply. Keep lookup submission disabled outside controlled tests until C8 enables its consumer; do not leave callers with permanently pending jobs.
-- [ ] Cache successful resolved public entities under their actual source/cache policy; allow arbitrary missing entities to be requested without defining a fixed list of permitted artists or albums. Keep unsupported/ambiguous cases actionable.
-- [ ] Test duplicates, multi-artist albums, aliases, accents, Turkish/Azerbaijani/non-Latin input, short queries, pagination, malformed IDs, unavailable provider, stopped source gates, zero HTTP while typing, cancellation and import quota races.
+- [x] Store canonical artist/release-group identities, aliases, credited-artist links, normalized search forms, disambiguation and manifest version references. Maintain a separate relationship for multi-artist albums.
+- [x] Apply the measured prefix/token/trigram indexes. Short queries use bounded prefix behavior; no unbounded fuzzy full-index scan or arbitrary client sorting. Enforce query length, result limit, timeout and safe parameterized SQL.
+- [x] Implement local `GET /api/catalog/search` and prove its dependency path cannot issue provider HTTP calls. Use useful matches and stable tie-breaks; application scoring remains popularity-neutral.
+- [x] Add atomic/resumable artifact import with hashes, content bounds, staging reservations, interrupted-import recovery and last-good publication. Do not load the full artifact into memory.
+- [x] Add explicit lookup submission/status contracts with session ownership, coalesced public acquisition, server-selected provider configuration and existing source gates, using the shared job schema. Reuse existing evidence parsers/replay clients where their formats apply. Keep lookup submission disabled outside controlled tests until C8 enables its consumer; do not leave callers with permanently pending jobs.
+- [ ] Cache successful resolved public entities under their actual source/cache policy; allow arbitrary missing entities to be requested without defining a fixed list of permitted artists or albums. Keep unsupported/ambiguous cases actionable. **C5 provides the parser, cache-policy deadline and public publication path. End-to-end lookup acquisition/coalescing/publication remains disabled until the C8 consumer.**
+- [ ] Test duplicates, multi-artist albums, aliases, accents, Turkish/Azerbaijani/non-Latin input, short queries, pagination, malformed IDs, unavailable provider, stopped source gates, zero HTTP while typing, cancellation and import quota races. **C5 covers the listed search/schema/source/ownership cases and cancellation; actual reservation races remain for C7 before public writers are enabled.**
 
 **Exit:** A browser-independent local search API works over an operator-prepared catalog. Explicit lookup has tested owner-safe contracts and remains disabled until its worker is available in C8. Catalog breadth is reported honestly.
 

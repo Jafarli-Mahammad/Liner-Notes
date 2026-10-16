@@ -10,6 +10,7 @@ public sealed class Album : BaseEntity
     public string Title { get; private set; }
     public string ArtistName { get; private set; }
     public string? Mbid { get; private set; }
+    public Guid? ReleaseGroupMbid { get; private set; }
     public Guid? ArtistId { get; private set; }
 
     // Parameterless constructor for EF Core
@@ -19,7 +20,7 @@ public sealed class Album : BaseEntity
         ArtistName = string.Empty;
     }
 
-    public Album(string title, string artistName, string? mbid = null, Guid? artistId = null, Guid? id = null)
+    public Album(string title, string artistName, string? mbid = null, Guid? artistId = null, Guid? id = null, Guid? releaseGroupMbid = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Album title cannot be empty.", nameof(title));
@@ -31,6 +32,7 @@ public sealed class Album : BaseEntity
         ArtistName = artistName.Trim();
         Mbid = string.IsNullOrWhiteSpace(mbid) ? null : mbid.Trim();
         ArtistId = artistId;
+        ReleaseGroupMbid = releaseGroupMbid;
     }
 
     public static Album Create(string title, string artistName, string? mbid = null, Guid? artistId = null) =>

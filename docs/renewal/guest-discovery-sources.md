@@ -40,3 +40,37 @@ The probe keeps an on-disk SQLite identity/reference index with a 2 MiB cache in
 - Deployment-specific supplementary-data use/redistribution and permanent candidate-cache policy still require the existing review. These do not prevent independent synthetic implementation and verification.
 - The real importer still needs coordinated reservations, import-overlap/WAL measurements, and full source enforcement. C1's conservative input checks and isolated schema-size check are not the production storage guard.
 - Before enabling any real source, reconcile the actual shared inventory and `GenerationStorage__StopBytes`; no current runtime setting is enlarged by this record.
+
+## Explicit identity lookup verification (C5)
+
+Rechecked 2026-10-16 against [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API),
+[search documentation](https://musicbrainz.org/doc/MusicBrainz_API/Search), and
+[data licensing](https://musicbrainz.org/doc/About/Data_License). The separate rate-limiting
+page returned HTTP 429 during this check; the main API page independently states the
+one-request-per-second limit and meaningful User-Agent requirement. The existing shared
+MetaBrainz pacing gate supplies a minimum 1.05-second interval across local processes.
+The service describes non-commercial use as free and requires commercial usage review;
+no commercial subscription or purchase is introduced.
+
+Artist and release-group searches use fixed MusicBrainz endpoints and escaped literal
+queries. Release-group results supply canonical identities, disambiguation, first-release
+date and all returned artist credits. Search-response tags are deliberately excluded:
+core names/identifiers and supplementary tag assignments have different licenses.
+The product adapter rejects recorded evaluation input as product lookup data. Synthetic
+lookup is explicitly labeled synthetic and never becomes fallback data for a live request.
+
+The response client now propagates the actual permitted shared-cache deadline. No-store,
+no-cache, private, or already-expired responses do not grant a durable cache lifetime.
+C8 must check that deadline before public publication. There has been no live search
+acquisition to establish current endpoint cache headers or real result coverage. HTTP
+client logging is disabled for this client so explicit query text is not copied into
+outbound request logs. Operational logs must not enable query strings or credentials.
+
+Product catalog storage reuses Artist/Album identities; Album.ReleaseGroupMbid is separate
+from the historical release MBID. Versioned search projections and all-credit links support
+local search and atomic publication. Import artifacts are bounded JSONL, hashed before
+writes, validated with a bounded line reader, and staged in at most 250-record transactions.
+A committed cursor supports restart. The active publication pointer changes only after all
+records have committed. A failed import retains the previous searchable publication.
+All public managed writes still require admission; C5's default admission remains closed
+until C7. No live source manifest or source acquisition is approved by these code changes.

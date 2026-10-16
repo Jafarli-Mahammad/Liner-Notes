@@ -35,6 +35,11 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
     public DbSet<DiscoveryBatch> DiscoveryBatches => Set<DiscoveryBatch>();
     public DbSet<DiscoveryJob> DiscoveryJobs => Set<DiscoveryJob>();
     public DbSet<GuestSession> GuestSessions => Set<GuestSession>();
+    public DbSet<CatalogPublication> CatalogPublications => Set<CatalogPublication>();
+    public DbSet<CatalogHead> CatalogHeads => Set<CatalogHead>();
+    public DbSet<CatalogRecord> CatalogRecords => Set<CatalogRecord>();
+    public DbSet<CatalogSearchTerm> CatalogSearchTerms => Set<CatalogSearchTerm>();
+    public DbSet<AlbumCredit> AlbumCredits => Set<AlbumCredit>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     public DataContext(

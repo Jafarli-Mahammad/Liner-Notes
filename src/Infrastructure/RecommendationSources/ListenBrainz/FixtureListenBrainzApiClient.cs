@@ -24,6 +24,17 @@ public sealed class FixtureListenBrainzApiClient : IListenBrainzApiClient
                 artistNames[id] = request.Identity;
                 data = new { count = 1, artists = new[] { new { id, name = request.Identity } } };
                 break;
+            case ListenBrainzRequestKind.AlbumSearch:
+                data = new Dictionary<string, object>
+                {
+                    ["release-groups"] = new[] { new Dictionary<string, object>
+                    {
+                        ["id"] = Id("album:" + request.Identity), ["title"] = request.Identity,
+                        ["disambiguation"] = "Synthetic album fixture", ["first-release-date"] = "2000",
+                        ["artist-credit"] = new[] { new Dictionary<string, object> { ["artist"] = new { id = Id("album-artist:" + request.Identity), name = "Synthetic album artist" } } }
+                    } }
+                };
+                break;
             case ListenBrainzRequestKind.ArtistRadio:
                 data = Enumerable.Range(1, Math.Min(request.Limit, 5)).ToDictionary(Artist,
                     i => new[] { new { recording_mbid = Recording(i), similar_artist_mbid = Artist(i), similar_artist_name = "Synthetic Ensemble " + i } });

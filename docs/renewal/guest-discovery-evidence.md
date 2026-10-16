@@ -1,6 +1,25 @@
 # Guest discovery evidence
 
-Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3 and C4 lifecycle mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle and C5 catalog mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C5: indexed local catalog and explicit lookup contracts
+
+Implemented a versioned catalog over shared Artist/Album identities, separate release-group IDs, all artist-credit relationships, source/license/attribution metadata, aliases, bounded normalized terms and immutable per-version credit projections. Indexed prefix search and kind-specific GiST trigram fallback run only against PostgreSQL. Searches are capped at ten results per page, bounded offsets/candidates and a 250 ms statement timeout. Names in Turkish/Azerbaijani, accented/non-Latin scripts and punctuation-only names are supported; LIKE wildcards are escaped.
+
+Import verifies bounded UTF-8 JSONL and content hashes before writes, stages no more than 250 records per admitted transaction, detaches imported EF entities between chunks and switches the active pointer only after completion. A restart verifies committed normalized-row fingerprints against the approved artifact. The reader also checks the bytes actually consumed, so neither a cursor nor an earlier hash alone authorizes publication. Unpublished records cannot displace valid active fuzzy matches. Interrupted or invalid work leaves the prior publication searchable. The draft schema was consolidated using EF CLI removal/regeneration before commit; only one new C5 migration remains.
+
+The explicit artist/release-group lookup adapter reuses the allowlisted MetaBrainz client, shared pacing and source gates. It resolves album credits, excludes supplementary search-response tags and rejects recorded evaluation material as product data. Actual transport cache deadlines propagate; no-store, no-cache, private and expired responses grant no shared retention. This client does not log outbound query URLs, and Development hosting diagnostics no longer log inbound query strings. No real provider acquisition was performed.
+
+Verification:
+
+- Final five-project suite: **564 passed, zero failures/skips** (Domain 131, Application 116, DataAccess 102, Presentation 65, Infrastructure 150); strict result validation passed.
+- PostgreSQL tests cover alias/Unicode/symbol/typo search, pagination/bounds/cancellation, multi-artist albums, atomic pointer publication, interrupted restart, unchanged last-good results and rejection of a mismatching staged row.
+- HTTP tests prove public search does not allocate a profile, lookup status is owner-scoped and omits raw query payloads, and submission cannot create unprocessable jobs.
+- Parser/client tests cover bounded lines, consumed-byte hashes, scope/license requirements, malformed IDs, recorded-data rejection, fixed endpoint/literal query construction and source cache restrictions. Ordinary tests use fixtures or stub HTTP, never live providers.
+- A fixture initially counted its injected failure threshold from an earlier import; corrected to fail after the intended two subsequent writes. The production cursor/integrity checks remained intact.
+- Secret/default, document and whitespace checks passed. Existing package warnings remain unchanged. C1's SQL-only timing is not an API/VPS capacity measurement; C10 still measures the complete schema/path.
+
+Public writes still fail closed through the unfinished C7 admission dependency; lookup submission remains disabled until its C8 consumer. End-to-end shared lookup caching, actual quota races, album materialization, generation/UI and capacity evidence remain. No retained database migration, real catalog breadth, developer confirmation or production readiness is claimed.
 
 ## C4: guest lifecycle and account preservation
 

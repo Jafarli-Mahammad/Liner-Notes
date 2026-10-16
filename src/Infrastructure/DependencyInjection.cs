@@ -88,7 +88,7 @@ public static class DependencyInjection
         services.Configure<ListenBrainzOptions>(configuration.GetSection(ListenBrainzOptions.SectionName));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ListenBrainzOptions>>().Value);
         services.AddSingleton<IMetaBrainzRequestGate, MetaBrainzRequestGate>();
-        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15))
+        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddScoped<IListenBrainzApiClient>(sp =>
         {
@@ -105,10 +105,12 @@ public static class DependencyInjection
             };
         });
         services.AddScoped<ListenBrainzRecommendationProvider>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource, LinerNotes.Infrastructure.Catalog.MusicBrainzCatalogLookupSource>();
         services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);
         services.AddScoped<ICandidateHydrator>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Hydrator);
 
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogArtifactReader, LinerNotes.Infrastructure.Catalog.CatalogArtifactReader>();
         return services;
     }
 }

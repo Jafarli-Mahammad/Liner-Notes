@@ -46,3 +46,33 @@ New-account registration verifies the current guest cookie and CSRF/origin befor
 Users.WeeklyEmailOptIn is included in subscriber DTOs/account export and the reviewed inventory. It defaults false, including migrated accounts without recorded consent. Weekly selection requires opt-in, verified Identity email, a live account and no unsubscribe timestamp. Onsite discovery does not require email verification. No email transport or verification delivery feature is added here.
 
 Guest routes default disabled. The C4 write coordinator intentionally refuses writes until C7 installs coordinated accounting; HTTP lifecycle tests override it only with a named transactional mechanics fixture. In-flight generation and storage admission race evidence belongs to C7–C8, before the feature is enabled.
+
+## Public catalog inventory (C5)
+
+The reviewed inventory adds public CatalogPublications, CatalogHead, CatalogRecords,
+CatalogSearchTerms and AlbumCredits, plus Albums.ReleaseGroupMbid. They contain no listener
+or account owner. Publications retain source/version/URI, origin, licenses, attribution,
+artifact hash/bytes/counts, import cursor/state, acquisition/publication/expiry timestamps,
+normalization version and whether publication came from an explicit lookup. Head contains
+only the active bulk publication identity.
+
+CatalogRecords contain canonical identity, artist/album references, immutable versioned
+labels/disambiguation/date, aliases/tags/credited-artist JSON and a normalized-row hash.
+Search terms contain record identity, kind and normalized public text. AlbumCredits retain
+all canonical album/artist relationships and credit order. ReleaseGroupMbid distinguishes
+album taste identity from the historical release identifier. These public shared records
+are excluded from account deletion and global account export; selected private evidence
+and references require their own reviewed export/pinning boundary in C6. The schema test
+explicitly lists every column, including all public operational import metadata.
+
+Lookup jobs remain profile-owned. Their status endpoint never returns PayloadJson or raw
+search query text, and owner resolution uses the validated listener context. No jobs can
+be submitted until a consumer is ready. Raw lookup payloads still must be cleared at the
+terminal transition in C7/C8. Shared lookup acquisition/cache keys must not preserve a raw
+per-person search log. Search alone neither allocates a profile nor calls a provider.
+
+Import restart verifies fingerprints of already committed rows against the approved input,
+and the bounded reader verifies the bytes actually consumed before successful completion.
+The active pointer is switched only after complete verification. A saved cursor alone is
+not authority to publish previously staged rows. Public preparation cannot bypass the
+managed-write coordinator while the C7 prerequisite is unfinished.

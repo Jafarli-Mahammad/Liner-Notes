@@ -25,7 +25,8 @@ public sealed class ListenBrainzTransportTests
         var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, Token = token }, gate, cache, TimeProvider.System);
         var artist = new ListenBrainzRequest(ListenBrainzRequestKind.ArtistSearch, "Jakuzi");
         var tags = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "synth pop");
-        await client.SendAsync(artist); await client.SendAsync(tags); await client.SendAsync(tags);
+        var first = await client.SendAsync(artist); await client.SendAsync(tags); await client.SendAsync(tags);
+        Assert.NotNull(first.SharedCacheUntilUtc);
         Assert.Equal(2, requests.Count);
         Assert.Equal("musicbrainz.org", requests[0].Uri.Host);
         Assert.Null(requests[0].Token);
@@ -141,6 +142,30 @@ public sealed class ListenBrainzTransportTests
         var error = await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException>(() =>
             client.SendAsync(new(ListenBrainzRequestKind.TagRadio, "electronic")));
         Assert.Equal("upstream_request_limit", error.Message); Assert.Equal(1, calls);
+    }
+
+    [Theory]
+    [InlineData("no-store")]
+    [InlineData("no-cache")]
+    [InlineData("private")]
+    [InlineData("expired")]
+    public async Task RestrictedResponsesNeverGrantSharedCatalogRetention(string policy)
+    {
+        int requests = 0;
+        using var http = new HttpClient(new Handler(_ =>
+        {
+            requests++;
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+            if (policy == "expired") response.Content.Headers.Expires = DateTimeOffset.UnixEpoch;
+            else response.Headers.CacheControl = System.Net.Http.Headers.CacheControlHeaderValue.Parse(policy);
+            return response;
+        }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true }, new Gate(), cache, TimeProvider.System);
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.ArtistSearch, "Synthetic cache-policy fixture");
+        Assert.Null((await client.SendAsync(request)).SharedCacheUntilUtc);
+        Assert.Null((await client.SendAsync(request)).SharedCacheUntilUtc);
+        Assert.Equal(2, requests);
     }
 
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

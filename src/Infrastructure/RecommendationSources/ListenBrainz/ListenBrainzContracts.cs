@@ -7,7 +7,7 @@ using LinerNotes.Application.Common.Models.Recommendation;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public enum ListenBrainzClientMode { FixtureOnly, Recorded, LiveOnly }
-public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata }
+public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch }
 
 public sealed class ListenBrainzOptions
 {
@@ -33,10 +33,11 @@ public sealed class ListenBrainzOptions
 
 public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Identity, int Limit = 10)
 {
-    public string Provider => Kind == ListenBrainzRequestKind.ArtistSearch ? "MusicBrainz" : "ListenBrainz";
+    public string Provider => Kind is ListenBrainzRequestKind.ArtistSearch or ListenBrainzRequestKind.AlbumSearch ? "MusicBrainz" : "ListenBrainz";
     public string Method => Kind switch
     {
         ListenBrainzRequestKind.ArtistSearch => "artist.search",
+        ListenBrainzRequestKind.AlbumSearch => "release-group.search",
         ListenBrainzRequestKind.ArtistRadio => "lb-radio.artist",
         ListenBrainzRequestKind.TagRadio => "lb-radio.tags",
         ListenBrainzRequestKind.ArtistMetadata => "metadata.artist",
@@ -70,6 +71,8 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         {
             ListenBrainzRequestKind.ArtistSearch => "ws/2/artist/?fmt=json&limit=25&query=" +
                 Uri.EscapeDataString("artist:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
+            ListenBrainzRequestKind.AlbumSearch => "ws/2/release-group/?fmt=json&limit=" + count + "&query=" +
+                Uri.EscapeDataString("releasegroup:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
             ListenBrainzRequestKind.ArtistRadio => $"1/lb-radio/artist/{id}?mode=medium&max_similar_artists={count}&max_recordings_per_artist=2&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.TagRadio => $"1/lb-radio/tags?tag={id}&operator=OR&count={count}&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.ArtistMetadata => $"1/metadata/artist/?artist_mbids={id}&inc=tag",
@@ -82,6 +85,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
 public sealed record ListenBrainzResponse(ResponseReference Reference, JsonElement? Data, ImmutableArray<CoverageGap> Gaps)
 {
     public const int MaximumBytes = 1_000_000;
+    public DateTimeOffset? SharedCacheUntilUtc { get; init; }
     public static ListenBrainzResponse Gap(ListenBrainzRequest request, EvidenceOrigin origin, string reason,
         ResponseReference? received = null)
     {

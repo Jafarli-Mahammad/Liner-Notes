@@ -110,6 +110,43 @@ public sealed class GuestDiscoveryApiTests : IAsyncLifetime
         Assert.False((await db.ApplicationUsers.SingleAsync(u => u.Id == accountId)).EmailConfirmed);
     }
 
+    [PostgresFact]
+    public async Task CatalogSearchIsPublicAndLookupStatusIsPrivateWhileSubmissionIsDisabled()
+    {
+        using var client = _app.CreateClient();
+        using var search = await client.GetAsync("/api/catalog/search?query=missing&kind=Album");
+        Assert.Equal(HttpStatusCode.OK, search.StatusCode);
+        Assert.Empty((await search.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("items").EnumerateArray());
+        await using (var empty = _app.Services.CreateAsyncScope())
+            Assert.False(await empty.ServiceProvider.GetRequiredService<DataContext>().ListenerProfiles.AnyAsync());
+        var bootstrap = await client.GetFromJsonAsync<JsonElement>("/api/discovery/session");
+        var csrf = bootstrap.GetProperty("csrfToken").GetString()!;
+        using var started = await client.SendAsync(Mutation(HttpMethod.Post, "/api/discovery/session", csrf));
+        var profileId = (await started.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        Guid ownJob, foreignJob;
+        await using (var scope = _app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var other = LinerNotes.Domain.Discovery.ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+            db.ListenerProfiles.Add(other);
+            var owned = new LinerNotes.Domain.Discovery.DiscoveryJob(profileId, "lookup-one", new string('a', 64),
+                LinerNotes.Domain.Discovery.DiscoveryJobKind.Lookup, 0, "{\"query\":\"transient private query\"}", DateTimeOffset.UtcNow);
+            var foreign = new LinerNotes.Domain.Discovery.DiscoveryJob(other.Id, "lookup-other", new string('b', 64),
+                LinerNotes.Domain.Discovery.DiscoveryJobKind.Lookup, 0, "{}", DateTimeOffset.UtcNow);
+            db.DiscoveryJobs.AddRange(owned, foreign);
+            await db.SaveChangesAsync(); ownJob = owned.Id; foreignJob = foreign.Id;
+        }
+        using var own = await client.GetAsync($"/api/catalog/lookups/{ownJob}");
+        Assert.Equal(HttpStatusCode.OK, own.StatusCode);
+        Assert.DoesNotContain("transient private query", await own.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/catalog/lookups/{foreignJob}")).StatusCode);
+        using var submit = Mutation(HttpMethod.Post, "/api/catalog/lookup", csrf);
+        submit.Content = JsonContent.Create(new { query = "Any missing favorite", kind = "Album", requestKey = "explicit-lookup" });
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.SendAsync(submit)).StatusCode);
+        await using var check = _app.Services.CreateAsyncScope();
+        Assert.Equal(2, await check.ServiceProvider.GetRequiredService<DataContext>().DiscoveryJobs.CountAsync());
+    }
+
     private static HttpRequestMessage Mutation(HttpMethod method, string path, string? csrf)
     {
         var request = new HttpRequestMessage(method, path);

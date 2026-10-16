@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Interfaces.Catalog;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Repositories;
@@ -65,6 +66,9 @@ public static class DependencyInjection
         services.AddScoped<IAccountProfileReader, AccountProfileReader>();
         services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
         services.AddScoped<IGuestProfileStore, GuestProfileStore>();
+        services.AddScoped<ICatalogReader, CatalogReader>();
+        services.AddScoped<ICatalogImportStore, CatalogImportStore>();
+        services.AddScoped<LinerNotes.Application.Features.Catalog.ICatalogLookupJobs, CatalogLookupJobs>();
         services.AddScoped<IDiscoveryWriteCoordinator, UnavailableDiscoveryWriteCoordinator>();
         services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();

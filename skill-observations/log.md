@@ -2,6 +2,18 @@
 
 Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
+## 2026-10-16
+
+### Observation 014: Inspect ownership and batch identity before adding guest discovery
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Architectural planning
+**Issue:** Adding guest access and repeated discovery to a scheduled recommendation product changes more than its signup interface. Existing taste records may require an authenticated subscriber, while batch uniqueness may allow only one result per calendar period. A fast local search also leaves candidate acquisition and generation locking on the critical path.
+**Suggested improvement:** Before proposing reuse, trace profile ownership, batch uniqueness, feedback ownership, privacy operations, candidate readiness, and lock scope. Specify guest-to-account transfer and repeated-batch identity explicitly. Measure prepared and uncached generation separately from autocomplete.
+**Principle:** Validate the complete path from visitor identity to persisted results before treating a new discovery flow as a UI change.
+
 ## 2026-10-15
 
 ### Observation 013: Validate redundant metadata identities against live envelopes

@@ -1,4 +1,5 @@
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Domain.Enums;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Exceptions;
@@ -22,6 +23,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
     private readonly IAccountProfileReader _accountProfileReader;
+    private readonly IDiscoveryProfileReader _discoveryProfileReader;
 
     /// <summary>Configures export readers and an optional local email archive.</summary>
     /// <remarks>When <paramref name="archive"/> is absent, exports report the archive as incomplete for captured digests, or disabled otherwise.</remarks>
@@ -29,6 +31,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
         IWeeklyDigestRepository weeklyDigestRepository, IAccountProfileReader accountProfileReader,
+        IDiscoveryProfileReader discoveryProfileReader,
         ILocalEmailArchive? archive = null)
     {
         _archive = archive;
@@ -36,9 +39,10 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         _tasteSignalRepository = tasteSignalRepository;
         _weeklyDigestRepository = weeklyDigestRepository;
         _accountProfileReader = accountProfileReader;
+        _discoveryProfileReader = discoveryProfileReader;
     }
 
-    /// <summary>Returns version 2.2 account and taste records, digest history, and the local email archive result.</summary>
+    /// <summary>Returns version 2.3 account, discovery, taste and digest history with explicit security exclusions.</summary>
     /// <remarks>Repository and archive exceptions, including cancellation, propagate; an archive result marked incomplete is retained in the export.</remarks>
     /// <exception cref="NotFoundException">The subscriber or active Identity profile cannot be found.</exception>
     /// <exception cref="InvalidOperationException">A full digest page repeats the preceding cursor.</exception>
@@ -77,7 +81,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         var signalDtos = signals.Select(s => s.ToDto()).ToArray();
 
         return new UserDataExportDto(
-            ExportVersion: "2.2",
+            ExportVersion: "2.3",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
@@ -86,6 +90,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
             LocalEmail: _archive is not null ? await _archive.ReadAsync(request.UserId, digests, cancellationToken)
                 : new(digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? "incomplete" : "disabled", [],
                     digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []),
-            Account: account);
+            Account: account,
+            Discovery: await _discoveryProfileReader.GetForAccountAsync(request.UserId, cancellationToken).ConfigureAwait(false));
     }
 }

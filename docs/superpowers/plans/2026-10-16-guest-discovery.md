@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1 is implemented and locally verified; C2–C10 remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C2 are implemented and locally verified; C3–C10 remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -107,6 +107,8 @@ C1 outcome: [source policy](../../renewal/guest-discovery-sources.md) and [offli
 
 ## Stage 2 / commit C2 — Add profile and batch foundations
 
+C2 outcome: additive schema/backfill, profile/batch/job invariants and export/privacy coverage are implemented. Final full .NET gate passed 526/526 with zero skips. See [C2 evidence](../../renewal/guest-discovery-evidence.md). No retained database was migrated; continue with the separately verified ownership cutover in C3.
+
 **Create or extend:**
 
 - `src/Domain/Discovery/ListenerProfile.cs`, `DiscoveryBatch.cs`, job records, and discovery state/value types.
@@ -118,13 +120,13 @@ C1 outcome: [source policy](../../renewal/guest-discovery-sources.md) and [offli
 
 **Steps:**
 
-- [ ] Add pure ownership/batch invariants without referencing Identity or provider libraries from Domain.
-- [ ] Add profile and batch tables and an explicit existing-account mapping; use existing user IDs as historical profile IDs to simplify deterministic backfill. Add a nullable batch association to weekly delivery records where needed.
-- [ ] Backfill one profile per existing subscriber and one historical batch per existing digest. Preserve existing digest IDs as batch IDs where safe; do not copy every score snapshot into a second permanent table.
-- [ ] Add bounded shared job contracts/schema for lookup and generation, with explicit kind/state/idempotency fields. The lease runner is implemented in C7/C8. Keep current registered flows runnable during this additive stage; do not expose guest/on-demand routes before complete ownership enforcement exists.
-- [ ] Classify the new columns in the reviewed privacy inventory and cover account cleanup/export of the new associations immediately.
-- [ ] Test empty migration and populated pre-migration data: multiple accounts/weeks, feedback, unknown score JSON fields, soft-deleted data, and shared tracks. Verify counts and stable identities, not just schema creation.
-- [ ] Generate the migration with `--context AppDbContext`; inspect SQL for unintended drops, copied secret data, identity-schema changes and unsupported rename conventions. Test upgrade/recovery using disposable databases.
+- [x] Add pure ownership/batch invariants without referencing Identity or provider libraries from Domain.
+- [x] Add profile and batch tables and an explicit existing-account mapping; use existing user IDs as historical profile IDs to simplify deterministic backfill. Add a nullable batch association to weekly delivery records where needed.
+- [x] Backfill one profile per existing subscriber and one historical batch per existing digest. Preserve existing digest IDs as batch IDs where safe; do not copy every score snapshot into a second permanent table.
+- [x] Add bounded shared job contracts/schema for lookup and generation, with explicit kind/state/idempotency fields. The lease runner is implemented in C7/C8. Keep current registered flows runnable during this additive stage; do not expose guest/on-demand routes before complete ownership enforcement exists.
+- [x] Classify the new columns in the reviewed privacy inventory and cover account cleanup/export of the new associations immediately.
+- [x] Test empty migration and populated pre-migration data: multiple accounts/weeks, feedback, unknown score JSON fields, soft-deleted data, and shared tracks. Verify counts and stable identities, not just schema creation.
+- [x] Generate the migration with `--context AppDbContext`; inspect SQL for unintended drops, copied secret data, identity-schema changes and unsupported rename conventions. Test upgrade/recovery using disposable databases.
 
 **Exit:** Existing registered behavior remains usable; profiles and historical batch identities are populated and classified.
 

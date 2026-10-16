@@ -81,7 +81,7 @@ public static class MappingExtensions
         digest.SentAt,
         digest.Recommendations.OrderBy(r => r.Rank).Select(r => r.ToDto()).ToList(),
         digest.CreatedAt, digest.LastModifiedAt, digest.ErrorMessage, digest.CreatedBy,
-        digest.LastModifiedBy, digest.DeletedBy, digest.DeletedAt, digest.IsDeleted);
+        digest.LastModifiedBy, digest.DeletedBy, digest.DeletedAt, digest.IsDeleted, digest.BatchId);
 
     public static UserMusicConnectionExportDto ToExportDto(this UserMusicConnection connection) => new(
         connection.ServiceType.ToString(),

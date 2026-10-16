@@ -4,6 +4,7 @@ using LinerNotes.DataAccess.IdentityEntities;
 using LinerNotes.Domain.Catalog;
 using LinerNotes.Domain.Common;
 using LinerNotes.Domain.Digest;
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Taste;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
@@ -30,6 +31,9 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
     public DbSet<Track> Tracks => Set<Track>();
     public DbSet<Artist> Artists => Set<Artist>();
     public DbSet<Album> Albums => Set<Album>();
+    public DbSet<ListenerProfile> ListenerProfiles => Set<ListenerProfile>();
+    public DbSet<DiscoveryBatch> DiscoveryBatches => Set<DiscoveryBatch>();
+    public DbSet<DiscoveryJob> DiscoveryJobs => Set<DiscoveryJob>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     public DataContext(

@@ -1,5 +1,6 @@
 using LinerNotes.Domain.Catalog;
 using LinerNotes.Domain.Digest;
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Taste;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,9 @@ public interface IAppDbContext
     DbSet<Track> Tracks { get; }
     DbSet<Artist> Artists { get; }
     DbSet<Album> Albums { get; }
+    DbSet<ListenerProfile> ListenerProfiles { get; }
+    DbSet<DiscoveryBatch> DiscoveryBatches { get; }
+    DbSet<DiscoveryJob> DiscoveryJobs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

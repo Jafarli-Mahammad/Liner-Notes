@@ -84,7 +84,7 @@ docker compose --env-file .env.phase9.local run --rm operator --action unsubscri
 Inspection prints sanitized text. The second action prints a private capability
 for local confirmation; keep it out of chat, logs and commits. GET displays a
 confirmation page; POST opts the account out. Later capture is suppressed.
-Authenticated export remains version 2.2 with sanitized copies and stored scores.
+Authenticated export is now version 2.3, adding discovery metadata to sanitized copies and stored scores.
 Account deletion invalidates access and removes owned configured capture files.
 Database keys and shared catalog entries remain under their documented boundaries.
 

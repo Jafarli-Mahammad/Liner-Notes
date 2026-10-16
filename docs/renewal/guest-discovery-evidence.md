@@ -1,6 +1,23 @@
 # Guest discovery evidence
 
-Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1 is implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C2 are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C2: additive profile, batch and job foundation
+
+Implemented listener ownership independent of registration, non-calendar batch identity, bounded pending-job records, schema mappings/constraints and an additive migration. The migration backfills profiles for existing subscribers and batches for existing digests, preserving IDs and leaving taste/recommendation rows and stored score JSON in place. Existing writers can still operate during this additive stage; C3 must cover records created between migrations.
+
+Export 2.3 includes owned profile/batch/job metadata and the new digest batch link. JSON job payload/results remain structured. Operational lease credentials are excluded. The explicit relational inventory covers every new column; populated tests compare stored values with exported values and verify that account deletion removes owned metadata while preserving other accounts and shared tracks. See [privacy inventory](guest-discovery-privacy.md).
+
+Verification:
+
+- Five new Domain behavior tests cover expiry, throttled activity, safe attachment, revision conflicts, separate same-day batches and bounded job inputs.
+- Four PostgreSQL tests cover populated legacy backfill, exact unknown score JSON/feedback preservation, schema constraints/owner isolation, full metadata export, account-deletion cascades, and additive down/reapply recovery.
+- Application export coverage now propagates discovery-reader failures; existing lifecycle expectations correctly assert version 2.3.
+- Final full .NET gate: **526 passed across all five projects, zero failures/skips**, validated by the existing TRX validator.
+- The generated idempotent C2 SQL was inspected: new tables/indexes, a nullable digest link and metadata backfill; no existing table/column or historical score data is dropped by the upgrade.
+- An initial full run found three stale version assertions and one existing capture fixture's fail-closed inventory-change race at its publication barrier. Version expectations were updated without removing content checks. The capture safety assertion was left intact; its focused run and the final full gate passed. This is not evidence of production capture/storage behavior.
+
+No retained application database was migrated. Guest sessions, general ownership cutover, job execution, catalog endpoints and the discovery UI remain for C3–C10. Existing package advisories recorded under C1 remain unresolved.
 
 ## C1: offline source/resource feasibility
 

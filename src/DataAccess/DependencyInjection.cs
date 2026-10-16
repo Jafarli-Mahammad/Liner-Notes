@@ -1,4 +1,5 @@
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.Core;
@@ -62,6 +63,7 @@ public static class DependencyInjection
         // Register repository implementations
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountProfileReader, AccountProfileReader>();
+        services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
         services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();

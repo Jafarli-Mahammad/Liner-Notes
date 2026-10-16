@@ -14,6 +14,7 @@ public sealed class WeeklyDigest : AuditableEntity
     private readonly List<WeeklyRecommendation> _recommendations = new();
 
     public Guid UserId { get; private set; }
+    public Guid? BatchId { get; private set; }
     public IsoWeek Week { get; private set; }
     public string WeekIdentifier => Week.Value;
     public DateTime WeekStartDate { get; private set; }

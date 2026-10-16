@@ -1,5 +1,6 @@
 using LinerNotes.Application.Common.Exceptions;
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.DTOs.Export;
 using LinerNotes.Application.DTOs.Digests;
@@ -36,11 +37,11 @@ public class GetUserDataExportTests
         tasteRepo.GetForExportAsync(userId, Arg.Any<CancellationToken>()).Returns(new List<TasteSignal> { signal });
         digestRepo.GetExportPageAsync(userId, null, null, 100, Arg.Any<CancellationToken>()).Returns(new List<WeeklyDigest> { digest });
 
-        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo, accountReader);
+        var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo, accountReader, EmptyDiscovery());
         var result = await handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("2.2", result.ExportVersion);
+        Assert.Equal("2.3", result.ExportVersion);
         Assert.Equal(account, result.Account);
         Assert.Equal("gdpr@example.com", result.Subscriber.Email);
         Assert.Single(result.Connections);
@@ -63,7 +64,7 @@ public class GetUserDataExportTests
         userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns((User?)null);
 
         var handler = new GetUserDataExportQueryHandler(userRepo, tasteRepo, digestRepo,
-            Substitute.For<IAccountProfileReader>());
+            Substitute.For<IAccountProfileReader>(), EmptyDiscovery());
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None));
@@ -179,7 +180,8 @@ public class GetUserDataExportTests
         new(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), id, null, null, null, null, false);
 
     private static (GetUserDataExportQueryHandler Handler, IAccountProfileReader Reader,
-        ITasteSignalRepository Taste, IWeeklyDigestRepository Digests) Setup(Guid id, ILocalEmailArchive? archive = null)
+        ITasteSignalRepository Taste, IWeeklyDigestRepository Digests) Setup(Guid id, ILocalEmailArchive? archive = null,
+            IDiscoveryProfileReader? discovery = null)
     {
         var users = Substitute.For<IUserRepository>();
         var taste = Substitute.For<ITasteSignalRepository>();
@@ -188,6 +190,30 @@ public class GetUserDataExportTests
         users.GetForExportAsync(id, Arg.Any<CancellationToken>()).Returns(new User("domain@example.test", id: id));
         taste.GetForExportAsync(id, Arg.Any<CancellationToken>()).Returns(Array.Empty<TasteSignal>());
         digests.GetExportPageAsync(id, null, null, 100, Arg.Any<CancellationToken>()).Returns(Array.Empty<WeeklyDigest>());
-        return (new(users, taste, digests, reader, archive), reader, taste, digests);
+        return (new(users, taste, digests, reader, discovery ?? EmptyDiscovery(), archive), reader, taste, digests);
+    }
+
+    private static IDiscoveryProfileReader EmptyDiscovery()
+    {
+        var reader = Substitute.For<IDiscoveryProfileReader>();
+        reader.GetForAccountAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new DiscoveryExportDto(null, [], []));
+        return reader;
+    }
+
+    [Fact]
+    public async Task Handle_ExportsDiscoveryMetadataAndDoesNotHideItsReadFailure()
+    {
+        var id = Guid.NewGuid();
+        var discovery = Substitute.For<IDiscoveryProfileReader>();
+        var metadata = new DiscoveryExportDto(new(id, id, 7, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null), [], []);
+        discovery.GetForAccountAsync(id, Arg.Any<CancellationToken>()).Returns(metadata);
+        var (handler, account, _, _) = Setup(id, discovery: discovery);
+        account.GetAsync(id, Arg.Any<CancellationToken>()).Returns(Profile(id));
+        var exported = await handler.Handle(new(id), CancellationToken.None);
+        Assert.Same(metadata, exported.Discovery);
+        discovery.GetForAccountAsync(id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<DiscoveryExportDto>(new IOException("discovery read failed")));
+        await Assert.ThrowsAsync<IOException>(() => handler.Handle(new(id), CancellationToken.None));
     }
 }

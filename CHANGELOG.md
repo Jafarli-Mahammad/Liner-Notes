@@ -2,6 +2,11 @@
 
 ## Unreleased — renewal
 
+- Add listener profile, discovery batch and pending-job foundations with an
+  additive legacy-data backfill. Export 2.3 includes the new owned metadata and
+  batch links while excluding operational lease credentials. Guest access and
+  on-demand generation are not enabled by this foundation alone.
+
 - Add a bounded synthetic catalog resource probe and source-policy record for
   the approved guest discovery work. Local metadata search feasibility is measured
   separately from recommendation readiness; the guest product flow is not yet implemented.

@@ -20,6 +20,7 @@ public sealed class User : AuditableEntity
     public int DeliveryHourUtc { get; private set; }
     public DateTime? NextDigestAt { get; private set; }
     public DateTime? EmailUnsubscribedAtUtc { get; private set; }
+    public bool WeeklyEmailOptIn { get; private set; }
 
     public void UnsubscribeEmail(DateTime nowUtc)
     {
@@ -45,7 +46,8 @@ public sealed class User : AuditableEntity
         DigestDeliveryDay deliveryDay = DigestDeliveryDay.Sunday,
         int deliveryHourUtc = 8,
         Guid? id = null,
-        bool createProfile = true)
+        bool createProfile = true,
+        bool weeklyEmailOptIn = false)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email cannot be empty.", nameof(email));
@@ -57,6 +59,7 @@ public sealed class User : AuditableEntity
         TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone.Trim();
         DeliveryDay = deliveryDay;
         DeliveryHourUtc = deliveryHourUtc;
+        WeeklyEmailOptIn = weeklyEmailOptIn;
         CreatedAt = DateTime.UtcNow;
         if (createProfile) Profile = ListenerProfile.Registered(Id, new DateTimeOffset(CreatedAt));
     }

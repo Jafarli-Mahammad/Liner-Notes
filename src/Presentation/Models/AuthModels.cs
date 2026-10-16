@@ -12,7 +12,9 @@ public sealed record RegisterRequest(
     DigestDeliveryDay DeliveryDay = DigestDeliveryDay.Sunday,
     int DeliveryHourUtc = 8,
     IReadOnlyList<SeedTagDto>? SeedTags = null,
-    IReadOnlyList<SeedArtistDto>? SeedArtists = null);
+    IReadOnlyList<SeedArtistDto>? SeedArtists = null,
+    bool PreserveGuestProgress = true,
+    bool WeeklyEmailOptIn = false);
 
 public sealed record LoginRequest(
     string Email,

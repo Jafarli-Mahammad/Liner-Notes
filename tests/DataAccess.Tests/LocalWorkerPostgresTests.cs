@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LinerNotes.Application;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
@@ -88,7 +89,21 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         await using(var keys=services.CreateAsyncScope())
             _=keys.ServiceProvider.GetRequiredService<IUnsubscribeTokens>().Create(userId);
         Assert.Equal("reconciled",(await Run("reconcile")).Status);
-        Assert.Equal("generated",(await Run("generate")).Status);
+        for (var attempt = 0; ; attempt++)
+        {
+            var generated = await Run("generate");
+            if (generated.Status == "generated") break;
+            Assert.True(attempt < 2 && generated.Reason == "database_inventory_changed", $"Fixture generation stopped: {generated.Reason}");
+            // Setup only: freshly migrated PostgreSQL can still change physical size. Reconcile only
+            // when the managed-row revision is unchanged and no digest/publication exists yet.
+            await using var check = services.CreateAsyncScope();
+            var state = await check.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync();
+            var inventory = JsonSerializer.Deserialize<GenerationInventory>(await File.ReadAllTextAsync(storage.InventoryPath!))!;
+            Assert.Equal(inventory.DatabaseRevision, state.Revision);
+            Assert.False(await check.ServiceProvider.GetRequiredService<DataContext>().WeeklyDigests.AnyAsync());
+            Assert.Empty(Directory.GetFiles(email.SinkRoot!, "*.eml.enc"));
+            Assert.Equal("reconciled", (await Run("reconcile")).Status);
+        }
         await using(var rows=services.CreateAsyncScope())
         {
             await using var transaction=await rows.ServiceProvider.GetRequiredService<ILocalDigestCaptureStore>().BeginAsync(userId,week,default);

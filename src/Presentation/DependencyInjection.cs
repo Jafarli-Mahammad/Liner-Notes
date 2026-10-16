@@ -60,6 +60,16 @@ public static class DependencyInjection
 
         // 2. Core Presentation Services
         services.AddHttpContextAccessor();
+        services.Configure<LinerNotes.Presentation.Discovery.GuestDiscoveryOptions>(configuration.GetSection("GuestDiscovery"));
+        services.AddScoped<LinerNotes.Presentation.Discovery.IListenerContext, LinerNotes.Presentation.Discovery.ListenerContext>();
+        services.AddAntiforgery(options =>
+        {
+            options.HeaderName = "X-CSRF-TOKEN";
+            options.Cookie.Name = "liner.csrf";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        });
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();

@@ -64,3 +64,15 @@ public sealed class DiscoveryJobConfiguration : IEntityTypeConfiguration<Discove
             .HasPrincipalKey(b => new { b.Id, b.ProfileId }).OnDelete(DeleteBehavior.NoAction);
     }
 }
+
+public sealed class GuestSessionConfiguration : IEntityTypeConfiguration<GuestSession>
+{
+    public void Configure(EntityTypeBuilder<GuestSession> builder)
+    {
+        builder.ToTable("GuestSessions");
+        builder.HasKey(s => s.ProfileId);
+        builder.Property(s => s.CredentialHash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(s => s.CredentialHash).IsUnique();
+        builder.HasOne<ListenerProfile>().WithOne().HasForeignKey<GuestSession>(s => s.ProfileId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

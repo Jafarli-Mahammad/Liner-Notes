@@ -274,6 +274,11 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("WeeklyEmailOptIn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.HasKey("Id")
                         .HasName("PK_Users");
 
@@ -637,6 +642,27 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.GuestSession", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CredentialHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("ProfileId");
+
+                    b.HasIndex("CredentialHash")
+                        .IsUnique();
+
+                    b.ToTable("GuestSessions", (string)null);
+                });
+
             modelBuilder.Entity("LinerNotes.Domain.Discovery.ListenerProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -986,6 +1012,15 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasForeignKey("ResultBatchId", "ProfileId")
                         .HasPrincipalKey("Id", "ProfileId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.GuestSession", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithOne()
+                        .HasForeignKey("LinerNotes.Domain.Discovery.GuestSession", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Discovery.ListenerProfile", b =>

@@ -72,8 +72,8 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
         foreach (var id in new[] { _user, _other })
         {
-            db.ApplicationUsers.Add(new ApplicationUser { Id = id, UserName = "fixture-" + id.ToString("N"), Email = "schedule@example.test" });
-            var user = new User(id == _user ? "schedule@example.test" : "other@example.test", "Asia/Baku", (DigestDeliveryDay)_due.DayOfWeek, _due.Hour, id);
+            db.ApplicationUsers.Add(new ApplicationUser { Id = id, UserName = "fixture-" + id.ToString("N"), Email = "schedule@example.test", EmailConfirmed = true });
+            var user = new User(id == _user ? "schedule@example.test" : "other@example.test", "Asia/Baku", (DigestDeliveryDay)_due.DayOfWeek, _due.Hour, id, weeklyEmailOptIn: true);
             user.SetNextDigestAt(_due); db.Users.Add(user);
             db.TasteSignals.Add(TasteSignal.CreateSeedTag(id, "darkwave", 1, "synthetic schedule fixture"));
             db.UserTokens.Add(new() { UserId = id, LoginProvider = "fixture", Name = "fixture", Value = "fixture-only-not-a-real-credential" });
@@ -97,6 +97,23 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         if (result.Status == "stopped") Console.WriteLine(JsonSerializer.Serialize(result));
         return result;
     }
+    [LocalPostgresMigrationFact]
+    public async Task WeeklySelectionRequiresConsentAndVerifiedEmailAndHasNoGuestSubscribers()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(s => s.SetProperty(u => u.WeeklyEmailOptIn, false));
+        await db.ApplicationUsers.Where(u => u.Id == _other).ExecuteUpdateAsync(s => s.SetProperty(u => u.EmailConfirmed, false));
+        var guest = LinerNotes.Domain.Discovery.ListenerProfile.Guest(_clock.Now, TimeSpan.FromDays(7));
+        db.ListenerProfiles.Add(guest);
+        await db.SaveChangesAsync();
+        var store = scope.ServiceProvider.GetRequiredService<IWeeklyScheduleStore>();
+        Assert.Empty(await store.GetCandidatesAsync([_user, _other, guest.Id], 10, _clock.Now.UtcDateTime, default));
+        await db.Users.Where(u => u.Id == _user).ExecuteUpdateAsync(s => s.SetProperty(u => u.WeeklyEmailOptIn, true));
+        var selected = Assert.Single(await store.GetCandidatesAsync([_user, _other, guest.Id], 10, _clock.Now.UtcDateTime, default));
+        Assert.Equal(_user, selected.Id);
+    }
+
     [LocalPostgresMigrationFact]
     public async Task PersistentInvalidAccount_DoesNotStarveHealthyAccount_AcrossStoreScopes()
     {
@@ -176,8 +193,18 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
     private async Task PrepareCaptureAsync()
     {
         await using var scope = _services.CreateAsyncScope();
-        var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GenerateDigestCommand(_user, WeeklySchedulePolicy.Week(_due)));
-        Assert.Equal("generated", result.Status);
+        for (var attempt = 0; ; attempt++)
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GenerateDigestCommand(_user, WeeklySchedulePolicy.Week(_due)));
+            if (result.Status == "generated") break;
+            Assert.True(attempt < 2 && result.Reason == "database_inventory_changed", $"Fixture generation stopped: {result.Reason}");
+            var state = await scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync();
+            var inventory = JsonSerializer.Deserialize<GenerationInventory>(await File.ReadAllTextAsync(_storage.InventoryPath!))!;
+            Assert.Equal(inventory.DatabaseRevision, state.Revision);
+            Assert.False(await scope.ServiceProvider.GetRequiredService<DataContext>().WeeklyDigests.AnyAsync());
+            Assert.Empty(Directory.GetFiles(_email.SinkRoot!, "*.eml.enc"));
+            await ReconcileAsync();
+        }
         var store = scope.ServiceProvider.GetRequiredService<IWeeklyScheduleStore>();
         await store.GetCandidatesAsync([_user], 1, _clock.Now.UtcDateTime, default);
         await store.GetAsync(_user, default);

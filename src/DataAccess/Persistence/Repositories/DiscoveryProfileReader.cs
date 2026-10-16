@@ -18,6 +18,19 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (profile is null) return new(null, [], []);
 
+        return await ReadAsync(profile, cancellationToken);
+    }
+
+    public async Task<DiscoveryExportDto> GetByProfileAsync(Guid profileId, CancellationToken cancellationToken)
+    {
+        var profile = await context.ListenerProfiles.AsNoTracking().Where(p => p.Id == profileId)
+            .Select(p => new ListenerProfileExportDto(p.Id, p.UserId, p.Revision,
+                p.CreatedAtUtc, p.LastActiveAtUtc, p.ExpiresAtUtc)).SingleOrDefaultAsync(cancellationToken);
+        return profile is null ? new(null, [], []) : await ReadAsync(profile, cancellationToken);
+    }
+
+    private async Task<DiscoveryExportDto> ReadAsync(ListenerProfileExportDto profile, CancellationToken cancellationToken)
+    {
         var batches = await context.DiscoveryBatches.AsNoTracking().Where(b => b.ProfileId == profile.Id)
             .OrderBy(b => b.CreatedAtUtc).ThenBy(b => b.Id)
             .Select(b => new DiscoveryBatchExportDto(b.Id, b.ProfileId, b.RequestId, b.Kind.ToString(),
@@ -35,6 +48,11 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
         var recommendations = await context.WeeklyRecommendations.IgnoreQueryFilters().AsNoTracking()
             .Where(r => r.ProfileId == profile.Id).Include(r => r.Track).OrderBy(r => r.BatchId).ThenBy(r => r.Rank)
             .ToArrayAsync(cancellationToken).ConfigureAwait(false);
-        return new(profile, batches, jobs, recommendations.Select(r => r.ToDto()).ToArray());
+        var signals = await context.TasteSignals.IgnoreQueryFilters().AsNoTracking().Where(s => s.ProfileId == profile.Id)
+            .OrderBy(s => s.Id).ToArrayAsync(cancellationToken);
+        var session = await context.GuestSessions.AsNoTracking().Where(s => s.ProfileId == profile.Id)
+            .Select(s => new GuestSessionExportDto(s.ProfileId, s.CreatedAtUtc)).SingleOrDefaultAsync(cancellationToken);
+        return new(profile, batches, jobs, recommendations.Select(r => r.ToDto()).ToArray(),
+            signals.Select(s => s.ToDto()).ToArray(), session);
     }
 }

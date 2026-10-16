@@ -1,6 +1,25 @@
 # Guest discovery evidence
 
-Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3 are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3 and C4 lifecycle mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C4: guest lifecycle and account preservation
+
+Implemented hashed guest credentials, protected cookie mutations, deliberate profile creation, no-allocation bootstrap, seven-day inactive expiry, hourly activity write throttling, bounded cleanup, private export/clear, same-profile registration attachment and explicit existing-account import. Operational credential hashes and job lease tokens are excluded from exports. Authenticated account ownership takes precedence over an unrelated guest cookie.
+
+Import preserves history IDs/score JSON/feedback, deterministically keeps the account's duplicate manual seeds, namespaces imported request keys, cancels unfinished jobs for both profiles and increments the target revision. Constraints are deferred only within the atomic transfer. New-account attachment removes the guest credential and revokes its cookie after commit.
+
+Users.WeeklyEmailOptIn defaults false, including existing accounts without recorded opt-in. Weekly scheduling additionally requires verified Identity email and no unsubscribe. Onsite use does not require verification. Existing eligible scheduler fixtures explicitly set consent and verification; a new boundary test excludes guests, unconsented and unverified users. No email transport changes were made.
+
+Verification:
+
+- Five-project verification: **541 passed, zero failures/skips** (Domain 124, Application 116, DataAccess 97, Presentation 64, Infrastructure 140). Four project results came from the final solution run; DataAccess was rerun after correcting a missing test-only namespace import. The final result directory contains one passing result per project and passes the strict results checker.
+- PostgreSQL tests cover expiry before cleanup, cleanup bounds, hash exclusion, no guest subscriber, same-profile attachment, revoked credentials, request-key collision handling, seed deduplication and imported score/feedback preservation.
+- HTTP tests use real antiforgery services/cookies. They reject missing/forged tokens, wrong origin, missing/forged credentials; preserve progress on registration; and verify cookie properties. Unit checks cover production HTTPS requirements and simultaneous account/guest identity precedence.
+- An initial HTTP fixture used DataContext for migrations, which has no migration set; it now uses the repository's AppDbContext migration root. This was a fixture defect, not evidence that production boot provisions the schema.
+- Repeated existing capture-fixture stops were traced to database_inventory_changed during initial generation setup. Bounded explicit reconciliation now requires unchanged managed-row revision, no digest and no email artifact. No production guard or post-publication/fault assertion was weakened. Subsequent DataAccess suite passed.
+- Secret/default, renewal-document, results and whitespace checks passed. Existing package warnings remain.
+
+Guest routes still default disabled, and C4's default write admission fails closed. Tests use an explicitly named transactional mechanics admission. C7 must install coordinated accounting; C8 must prove in-flight generation/deletion races and enable consumers before users can submit work. C5–C10 remain. No retained database migration, real-source acquisition, developer confirmation or deployment readiness is claimed.
 
 ## C3: profile ownership and registered compatibility
 

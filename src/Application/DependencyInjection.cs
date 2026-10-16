@@ -22,6 +22,7 @@ public static class DependencyInjection
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(assembly);
         services.AddSingleton<BaselineAScorer>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.GuestLifecycle>();
 
         return services;
     }

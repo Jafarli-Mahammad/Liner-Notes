@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Add guest credentials, seven-day inactive expiry, private export/clear and
+  transactional account attachment/import. Cookie mutations require same-origin
+  checks and antiforgery tokens. Guest routes remain disabled pending storage
+  and background-processing prerequisites. Weekly scheduling now requires
+  explicit email opt-in and a verified address; onsite use stays independent.
+
 - Move taste and recommendation ownership to listener profiles while preserving
   historical IDs, feedback and score evidence. Add non-weekly recommendation
   snapshots and include on-demand history in account exports. Registered and

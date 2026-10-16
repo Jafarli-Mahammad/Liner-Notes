@@ -12,8 +12,8 @@ public sealed class WeeklyScheduleStore(string connectionString) : IWeeklySchedu
     private const long LeaseKey = 1280200760;
     private string ConnectionString => connectionString;
     private const string Eligible = """
-        NOT u."IsDeleted" AND u."EmailUnsubscribedAtUtc" IS NULL
-        AND EXISTS (SELECT 1 FROM identity."Users" i WHERE i."Id" = u."Id" AND NOT i."IsDeleted")
+        NOT u."IsDeleted" AND u."WeeklyEmailOptIn" AND u."EmailUnsubscribedAtUtc" IS NULL
+        AND EXISTS (SELECT 1 FROM identity."Users" i WHERE i."Id" = u."Id" AND NOT i."IsDeleted" AND i."EmailConfirmed")
         """;
 
     public async Task<IScheduledTickLease?> TryAcquireTickAsync(CancellationToken ct)

@@ -245,6 +245,109 @@ public sealed class DiscoveryMigrationTests : IAsyncLifetime
         Assert.True(await _db.ListenerProfiles.AnyAsync(p => p.UserId == _owner));
     }
 
+    [LocalPostgresMigrationFact]
+    public async Task GuestExpiryExportAndBoundedCleanupNeverAllocateSubscribers()
+    {
+        var store = new GuestProfileStore(_db);
+        var hash = new string('a', 64);
+        ListenerProfile guest;
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            guest = await store.CreateAsync(hash, Now, TimeSpan.FromDays(7), default);
+            await tx.CommitAsync();
+        }
+        Assert.Equal(3, await _db.Users.IgnoreQueryFilters().CountAsync());
+        Assert.Null(await store.FindGuestAsync(new string('b', 64), Now, default));
+        Assert.NotNull(await store.FindGuestAsync(hash, Now.AddDays(6), default));
+        Assert.Null(await store.FindGuestAsync(hash, Now.AddDays(7), default));
+        var exported = await store.ExportAsync(guest.Id, default);
+        Assert.Equal(guest.Id, exported.GuestSession!.ProfileId);
+        Assert.DoesNotContain(hash, JsonSerializer.Serialize(exported));
+        Assert.Null(exported.Profile!.UserId);
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            Assert.Equal(1, await store.DeleteExpiredAsync(Now.AddDays(7), 1, default));
+            await tx.CommitAsync();
+        }
+        Assert.Null(await store.FindGuestAsync(hash, Now.AddDays(8), default));
+        Assert.False(await _db.GuestSessions.AnyAsync(s => s.ProfileId == guest.Id));
+        Assert.Equal(3, await _db.Users.IgnoreQueryFilters().CountAsync());
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task RegistrationPreservesGuestIdentityAndRevokesCredentialAtomically()
+    {
+        var store = new GuestProfileStore(_db);
+        var hash = new string('c', 64);
+        Guid profileId;
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            profileId = (await store.CreateAsync(hash, Now, TimeSpan.FromDays(7), default)).Id;
+            await tx.CommitAsync();
+        }
+        var account = Guid.NewGuid();
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            _db.ApplicationUsers.Add(new ApplicationUser { Id = account, UserName = "registration-guest", Email = "registration@example.test" });
+            _db.Users.Add(new User("registration@example.test", id: account, createProfile: false));
+            await _db.SaveChangesAsync();
+            await store.AttachNewAccountAsync(hash, account, Now.AddMinutes(1), default);
+            await tx.CommitAsync();
+        }
+        Assert.Equal(profileId, (await store.FindAccountAsync(account, default))!.Id);
+        Assert.Null(await store.FindGuestAsync(hash, Now.AddMinutes(2), default));
+        Assert.False(await _db.GuestSessions.AnyAsync(s => s.ProfileId == profileId));
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.AttachNewAccountAsync(hash, _other, Now.AddMinutes(2), default));
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task ExplicitImportRetainsHistoryDeduplicatesManualSeedsAndCancelsUnfinishedWork()
+    {
+        var store = new GuestProfileStore(_db);
+        var hash = new string('d', 64);
+        Guid sourceId, pickId;
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            var guest = await store.CreateAsync(hash, Now, TimeSpan.FromDays(7), default);
+            sourceId = guest.Id;
+            var batch = new DiscoveryBatch(guest.Id, "weekly:2026-W41", DiscoveryBatchKind.Initial, 0, Now);
+            _db.DiscoveryBatches.Add(batch);
+            var track = await _db.Tracks.SingleAsync(t => t.Id == _track);
+            var pick = WeeklyRecommendation.ForDiscovery(guest.Id, batch.Id, null, track, 1,
+                new ScoreBreakdown { UnknownFields = new() { ["preserveImportedEvidence"] = JsonSerializer.SerializeToElement(42) } });
+            pickId = pick.Id;
+            pick.RecordFeedback(LinerNotes.Domain.Enums.UserFeedback.Liked, "Preserve imported feedback", 9);
+            _db.WeeklyRecommendations.Add(pick);
+            _db.Entry(track).State = EntityState.Unchanged;
+            _db.TasteSignals.Add(TasteSignal.ForProfile(guest.Id, null, LinerNotes.Domain.Enums.TasteTargetType.Tag,
+                "jazz", 1, LinerNotes.Domain.Enums.TasteSignalSource.InitialSeedManual, "Duplicated explicit seed"));
+            _db.DiscoveryJobs.Add(new DiscoveryJob(guest.Id, "same-request", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", Now));
+            _db.DiscoveryJobs.Add(new DiscoveryJob(_owner, "same-request", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", Now));
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+        Assert.Null(await new WeeklyDigestRepository(_db).GetRecommendationByIdAsync(pickId, _owner));
+        await using (var tx = await _db.Database.BeginTransactionAsync())
+        {
+            await store.ImportIntoAccountAsync(hash, _owner, Now.AddMinutes(2), default);
+            await tx.CommitAsync();
+        }
+        _db.ChangeTracker.Clear();
+        Assert.False(await _db.ListenerProfiles.AnyAsync(p => p.Id == sourceId));
+        Assert.Null(await store.FindGuestAsync(hash, Now.AddMinutes(3), default));
+        var imported = await new WeeklyDigestRepository(_db).GetRecommendationByIdAsync(pickId, _owner);
+        Assert.NotNull(imported);
+        Assert.Equal(9, imported.Rating);
+        Assert.Equal(42, imported.ScoreBreakdown.UnknownFields!["preserveImportedEvidence"].GetInt32());
+        Assert.Equal(1, await _db.TasteSignals.CountAsync(s => s.ProfileId == _owner && s.NormalizedTargetValue == "jazz"));
+        var job = await _db.DiscoveryJobs.SingleAsync(j => j.ProfileId == _owner && j.RequestKey.StartsWith("import:"));
+        Assert.Equal(DiscoveryJobState.Cancelled, job.State);
+        Assert.Equal("{}", job.PayloadJson);
+        Assert.StartsWith("import:", job.RequestKey);
+        Assert.Equal(1, (await store.FindAccountAsync(_owner, default))!.Revision);
+    }
+
     private static DiscoveryJob Job(Guid owner, string key, DiscoveryJobKind kind) =>
         new(owner, key, new string('a', 64), kind, 0, "{\"manual\":\"synthetic owner input\"}", Now);
 

@@ -17,4 +17,8 @@ public sealed record DiscoveryJobExportDto(Guid Id, Guid ProfileId, string Reque
 
 public sealed record DiscoveryExportDto(ListenerProfileExportDto? Profile,
     IReadOnlyList<DiscoveryBatchExportDto> Batches, IReadOnlyList<DiscoveryJobExportDto> Jobs,
-    IReadOnlyList<LinerNotes.Application.DTOs.Digests.WeeklyRecommendationDto>? Recommendations = null);
+    IReadOnlyList<LinerNotes.Application.DTOs.Digests.WeeklyRecommendationDto>? Recommendations = null,
+    IReadOnlyList<LinerNotes.Application.DTOs.Taste.TasteSignalDto>? TasteSignals = null,
+    GuestSessionExportDto? GuestSession = null);
+
+public sealed record GuestSessionExportDto(Guid ProfileId, DateTimeOffset CreatedAtUtc);

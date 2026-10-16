@@ -34,6 +34,7 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
     public DbSet<ListenerProfile> ListenerProfiles => Set<ListenerProfile>();
     public DbSet<DiscoveryBatch> DiscoveryBatches => Set<DiscoveryBatch>();
     public DbSet<DiscoveryJob> DiscoveryJobs => Set<DiscoveryJob>();
+    public DbSet<GuestSession> GuestSessions => Set<GuestSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     public DataContext(

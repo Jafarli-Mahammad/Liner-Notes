@@ -22,6 +22,7 @@ public interface IAppDbContext
     DbSet<ListenerProfile> ListenerProfiles { get; }
     DbSet<DiscoveryBatch> DiscoveryBatches { get; }
     DbSet<DiscoveryJob> DiscoveryJobs { get; }
+    DbSet<GuestSession> GuestSessions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

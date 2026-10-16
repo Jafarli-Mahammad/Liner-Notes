@@ -24,7 +24,9 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
             { typeof(NotFoundException), HandleNotFoundException },
             { typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
             { typeof(InvalidOperationException), HandleInvalidOperationException },
-            { typeof(ArgumentException), HandleArgumentException }
+            { typeof(ArgumentException), HandleArgumentException },
+            { typeof(Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException), HandleAntiforgeryException },
+            { typeof(LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException), HandleDiscoveryStopped }
         };
     }
 
@@ -50,6 +52,18 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
         }
 
         HandleUnknownException(context);
+    }
+
+    private static void HandleAntiforgeryException(ExceptionContext context)
+    {
+        context.Result = new ObjectResult(new ProblemDetails { Status = 403, Title = "Request verification failed." }) { StatusCode = 403 };
+        context.ExceptionHandled = true;
+    }
+
+    private static void HandleDiscoveryStopped(ExceptionContext context)
+    {
+        context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = "Discovery is temporarily unavailable." }) { StatusCode = 503 };
+        context.ExceptionHandled = true;
     }
 
     private void HandleValidationException(ExceptionContext context)

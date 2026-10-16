@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3 are implemented and locally verified; C4–C10 remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3 and C4 lifecycle mechanics are implemented and locally verified; C5–C10 and C4 integrated generation-race checks remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -156,13 +156,13 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 
 **Steps:**
 
-- [ ] Resolve authenticated account ownership and guest credentials separately. A caller-provided GUID never grants access. Browsing/search alone must not allocate permanent guest profiles.
-- [ ] Generate high-entropy credentials, persist only their hashes, issue HttpOnly/SameSite cookies and Secure cookies on HTTPS. Implement explicit development behavior. Apply antiforgery and allowed-origin checks to cookie-authorized mutations, including session/claim flows.
-- [ ] Implement session bootstrap and deliberate creation. Use `TimeProvider` for seven-day inactive expiry. Throttle activity timestamp writes; do not update profile rows for every keystroke.
-- [ ] Add bounded expiry cleanup, guest export and guest-only deletion. Expired credentials fail immediately even before cleanup. Cleanup must stop pending/in-flight persistence from recreating removed private data.
-- [ ] Attach a new registration transactionally after verifying both owners; rotate/revoke guest credentials. Signing into an existing profile requires the explicit import choice, with deterministic handling of duplicated seeds, feedback and history. Preserve progress or fail without partial transfer.
-- [ ] Keep guest profiles out of subscriber scheduling and preserve registered/consented/verified email eligibility. Add boundary tests without adding email transport or rewriting the delivery feature.
-- [ ] Test forged/expired/revoked credentials, CSRF, two-tab attachment, concurrent deletion/generation, account deletion, export field coverage, lost-cookie behavior and authentication precedence. Ensure safe logs and responses contain no credentials.
+- [x] Resolve authenticated account ownership and guest credentials separately. A caller-provided GUID never grants access. Browsing/search alone must not allocate permanent guest profiles.
+- [x] Generate high-entropy credentials, persist only their hashes, issue HttpOnly/SameSite cookies and Secure cookies on HTTPS. Implement explicit development behavior. Apply antiforgery and allowed-origin checks to cookie-authorized mutations, including session/claim flows.
+- [x] Implement session bootstrap and deliberate creation. Use `TimeProvider` for seven-day inactive expiry. Throttle activity timestamp writes; do not update profile rows for every keystroke.
+- [x] Add bounded expiry cleanup, guest export and guest-only deletion. Expired credentials fail immediately even before cleanup. Cleanup must stop pending/in-flight persistence from recreating removed private data.
+- [x] Attach a new registration transactionally after verifying both owners; rotate/revoke guest credentials. Signing into an existing profile requires the explicit import choice, with deterministic handling of duplicated seeds, feedback and history. Preserve progress or fail without partial transfer.
+- [x] Keep guest profiles out of subscriber scheduling and preserve registered/consented/verified email eligibility. Add boundary tests without adding email transport or rewriting the delivery feature.
+- [ ] Test forged/expired/revoked credentials, CSRF, two-tab attachment, concurrent deletion/generation, account deletion, export field coverage, lost-cookie behavior and authentication precedence. Ensure safe logs and responses contain no credentials. **C4 evidence covers credentials, expiry, CSRF, revoked attachment, import and lost-cookie/account precedence; in-flight generation and integrated deletion races remain for C7–C8 before enabling the host.**
 
 **Exit:** Guest ownership and lifecycle are as well isolated as registered ownership, with seven-day expiry and preservation at registration.
 

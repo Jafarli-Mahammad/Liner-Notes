@@ -4,6 +4,16 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 017: Keep fixture stabilization before the tested persistence boundary
+
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** performance-reviewer / PostgreSQL integration testing candidate
+**Type:** open-source
+**Issue:** Freshly migrated disposable PostgreSQL databases can change physical size after an explicit inventory read. A fail-closed generation guard correctly stopped setup with database_inventory_changed, making unrelated capture fault tests intermittent.
+**Suggested improvement:** First report the safe stop code. Permit bounded explicit setup reconciliation only after proving the managed-row revision is unchanged, no digest exists and no email artifact has been published. Never reconcile automatically after the fault/publication boundary or weaken the production guard.
+**Principle:** Test setup can stabilize a real external measurement without erasing the invariant the test is intended to prove.
+
 ### Observation 016: Check what benchmark memory counters actually include
 **Status:** OPEN
 **Date:** 2026-10-16

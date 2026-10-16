@@ -64,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountProfileReader, AccountProfileReader>();
         services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
+        services.AddScoped<IGuestProfileStore, GuestProfileStore>();
+        services.AddScoped<IDiscoveryWriteCoordinator, UnavailableDiscoveryWriteCoordinator>();
         services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();

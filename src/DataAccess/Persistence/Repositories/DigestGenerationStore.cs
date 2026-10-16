@@ -85,13 +85,14 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             using var rowHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             long payloadBytes = 0;
             foreach (var (kind, table) in new[]
-                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations"), ("profile", "ListenerProfiles"), ("batch", "DiscoveryBatches"), ("job", "DiscoveryJobs") })
+                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations"), ("profile", "ListenerProfiles"), ("batch", "DiscoveryBatches"), ("job", "DiscoveryJobs"), ("guest_session", "GuestSessions") })
             {
                 revision.AppendData(Encoding.UTF8.GetBytes(kind));
                 revision.AppendData([0]);
                 await using var rowsCommand = connection.CreateCommand();
                 rowsCommand.Transaction = currentTransaction;
-                rowsCommand.CommandText = $"SELECT \"Id\"::text, to_jsonb(t)::text FROM \"{table}\" t ORDER BY \"Id\"";
+                var key = table == "GuestSessions" ? "ProfileId" : "Id";
+                rowsCommand.CommandText = $"SELECT \"{key}\"::text, to_jsonb(t)::text FROM \"{table}\" t ORDER BY \"{key}\"";
                 await using var reader = await rowsCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 {

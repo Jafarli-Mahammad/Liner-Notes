@@ -8,12 +8,14 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
 
 ## Remaining work
 
-- **Guest discovery: design approved; execution plan awaits review.** The
-  website-first flow supports guests, artist/album/tag inputs, immediate batches,
-  feedback, and explicit Discover more with a 30-second cooldown. Guest data
-  expires after seven inactive days. The execution plan is not approved yet;
-  product implementation and new capacity evidence remain pending. See the [approved design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md)
-  and [implementation plan](docs/superpowers/plans/2026-10-16-guest-discovery.md).
+- **Guest discovery: design and sequential execution approved; C1 locally verified.**
+  The bounded synthetic catalog probe passed 15 checks, and the baseline .NET
+  suite passed 516 tests with zero skips. Three isolated SQL measurements support
+  continuing with the profile/batch foundation; they do not prove real catalog
+  coverage, API latency, or VPS capacity. C2–C10 and the guest product flow remain.
+  A live catalog acquisition manifest is not approved. See the [evidence](docs/renewal/guest-discovery-evidence.md),
+  [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), and
+  [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md).
 
 - **Confirm the ListenBrainz default.** The adapter, coherent provider selection,
   approved replay and explicitly gated live generation are implemented; Last.fm

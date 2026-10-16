@@ -4,6 +4,16 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 016: Check what benchmark memory counters actually include
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** performance-reviewer / brainstorming
+**Type:** open-source
+**Phase/Area:** Resource measurement
+**Issue:** A subprocess benchmark's getrusage maximum included a large value inherited across exec, while its executable-specific high-water memory was much smaller. Container peak also included earlier tests and reclaimable cache, and SQL timing excluded API/network work.
+**Suggested improvement:** Record metric scope and execution history. Compare process-specific current/high-water counters with inherited resource accounting, and distinguish container working set, whole-run peak, pressure events and OOM. Label SQL-only latency and synthetic corpus evidence separately from application capacity.
+**Principle:** Match the accounting boundary and workload behind each measurement to the claim it supports.
+
 ### Observation 015: Check safety prerequisites at every implementation boundary
 **Status:** OPEN
 **Date:** 2026-10-16

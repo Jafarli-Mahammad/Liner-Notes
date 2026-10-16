@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Written for developer review. The design is approved; this execution plan has not yet been approved. No product implementation has started.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1 is implemented and locally verified; C2–C10 remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -81,6 +81,8 @@ Use `202` for accepted pending work, `200` for existing/completed reads and idem
 
 ## Stage 1 / commit C1 — Measure catalog feasibility and resource costs
 
+C1 outcome: [source policy](../../renewal/guest-discovery-sources.md) and [offline evidence](../../renewal/guest-discovery-evidence.md) are written. Fifteen probe tests and three synthetic PostgreSQL measurements passed; baseline .NET tests passed 516/516 with zero skips. Real catalog acquisition/coverage is not claimed. Proceed to C2 under the existing execution approval.
+
 **Create:**
 
 - `docs/renewal/guest-discovery-evidence.md` — evidence ledger and source-policy decisions.
@@ -90,14 +92,14 @@ Use `202` for accepted pending work, `200` for existing/completed reads and idem
 
 **Steps:**
 
-- [ ] Re-check primary documentation for MusicBrainz core identifiers/aliases/release groups and supplementary tag assignments, supported album lookup/tag endpoints, ListenBrainz candidate endpoints, cache directives, rate limits, and public deployment conditions. Record exact sources and date. Do not assume an album-similarity endpoint or a numeric Last.fm allowance.
-- [ ] Specify a compact versioned interchange artifact: canonical entity IDs, aliases, credited artists, album identities, tag observations, source references and checksums. Reject conflicting IDs, invalid Unicode/control characters, unbounded rows, and inconsistent entity links.
-- [ ] Implement an offline streaming probe that can generate a deterministic broad synthetic name/alias/album corpus without loading the source dump into memory. Separate synthetic mechanics from optional operator-supplied real artifacts.
-- [ ] Use a disposable database to measure rows, normalized bytes, index size, import staging/temp cost, query plans, search latency, and process memory at increasing corpus sizes. Record the deployed PostgreSQL version. Benchmark short prefixes, typo cases, common names, accents and non-Latin names.
-- [ ] Inventory compact prepared candidate/evidence samples separately from name metadata; estimate request count and storage per prepared seed without claiming real coverage from fixtures.
-- [ ] For actual source acquisition, prepare the required bounded manifest and obtain the existing applicable permission before running it. Do not create live calls simply to satisfy this checklist. Offline stages may continue when a live evidence gate is open; report the gap explicitly.
-- [ ] Produce a decision table: data fields permitted, artifact source available, working-set size, estimated preparation cost, measured query behavior, and unresolved live/catalog-quality questions. Set final importer/cache quotas from measurements, including update overlap and guard reconciliation.
-- [ ] Verify the probe's malformed/oversized input handling and deterministic output; run document checks and a first PostgreSQL query probe. Record what was and was not actually measured.
+- [x] Re-check primary documentation for MusicBrainz core identifiers/aliases/release groups and supplementary tag assignments, supported album lookup/tag endpoints, ListenBrainz candidate endpoints, cache directives, rate limits, and public deployment conditions. Record exact sources and date. Do not assume an album-similarity endpoint or a numeric Last.fm allowance.
+- [x] Specify a compact versioned interchange artifact: canonical entity IDs, aliases, credited artists, album identities, tag observations, source references and checksums. Reject conflicting IDs, invalid Unicode/control characters, unbounded rows, and inconsistent entity links.
+- [x] Implement an offline streaming probe that can generate a deterministic broad synthetic name/alias/album corpus without loading the source dump into memory. Separate synthetic mechanics from optional operator-supplied real artifacts.
+- [x] Use a disposable database to measure rows, normalized bytes, index size, import staging/temp cost, query plans, search latency, and process memory at increasing corpus sizes. Record the deployed PostgreSQL version. Benchmark short prefixes, typo cases, common names, accents and non-Latin names.
+- [x] Inventory compact prepared candidate/evidence samples separately from name metadata; estimate request count and storage per prepared seed without claiming real coverage from fixtures.
+- [ ] For actual source acquisition, prepare the required bounded manifest and obtain the existing applicable permission before running it. Do not create live calls simply to satisfy this checklist. Offline stages may continue when a live evidence gate is open; report the gap explicitly. **Not run: no real acquisition manifest has been approved; C1 used synthetic input only.**
+- [x] Produce a decision table: data fields permitted, artifact source available, working-set size, estimated preparation cost, measured query behavior, and unresolved live/catalog-quality questions. Set final importer/cache quotas from measurements, including update overlap and guard reconciliation.
+- [x] Verify the probe's malformed/oversized input handling and deterministic output; run document checks and a first PostgreSQL query probe. Record what was and was not actually measured.
 
 **Exit:** A reproducible offline resource baseline and explicit source policy exist. Real breadth/readiness remains unverified unless supported by approved real acquisition. No identity migration depends on unverified provider behavior.
 
@@ -329,6 +331,6 @@ Inspect the exact staged diff before each focused commit. Record actual counts/o
 
 ## First execution checkpoint
 
-After developer review of this plan, begin C1 and report source-policy findings, offline probe results, measured costs and any necessary adjustment before the ownership migration. A missing real acquisition permission leaves real coverage unverified; it does not prevent independent fixture-backed engineering. Do not call the feature complete after the feasibility probe or the onboarding UI alone.
+The developer approved sequential execution. C1 results are recorded in the evidence ledger and reported before the ownership migration. A missing real acquisition permission leaves real coverage unverified; it does not prevent independent fixture-backed engineering. Do not call the feature complete after the feasibility probe or the onboarding UI alone.
 
 The brainstorming workflow requires a written-plan review and an execution-method choice before implementation. The proposed method is sequential execution in this session. The referenced `writing-plans` skill was not installed; this repository checklist is the explicit planning deliverable, with no hidden dependency on an unavailable execution skill.

@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design approved by the developer on 2026-10-16, including the 30-second cooldown and seven-day inactive guest expiry. Product implementation has not started; the written execution plan awaits review.**
+Status: **Design and sequential execution plan approved by the developer on 2026-10-16, including the 30-second cooldown and seven-day inactive guest expiry. C1 resource/source tooling is locally verified; the guest product flow and later stages remain to implement.**
 
 ## 1. Purpose and confirmed requirements
 
@@ -183,7 +183,7 @@ Each authorized implementation stage ends with relevant verification and a focus
 
 ## 12. Review and remaining decisions
 
-The developer approved the design, guest lifetime, and cooldown after reviewing the proposal. The [written execution plan](../plans/2026-10-16-guest-discovery.md) is the next review artifact before product implementation. Design approval does not authorize live acquisition or bypass source-specific gates.
+The developer approved the design, guest lifetime, cooldown and [written execution plan](../plans/2026-10-16-guest-discovery.md), selecting sequential execution. Actual progress belongs in the [evidence ledger](../../renewal/guest-discovery-evidence.md). This approval does not bypass source-specific live acquisition gates.
 
 Engineering questions to resolve in stage 1 rather than guessing now:
 
@@ -192,7 +192,7 @@ Engineering questions to resolve in stage 1 rather than guessing now:
 - What does the complete host inventory leave available after OS, runtime, database, WAL, and recovery overhead?
 - Do actual measurements support the latency targets and proposed cooldown/concurrency? What unprepared-batch latency is acceptable once measured?
 
-The detailed execution checklist is written in the repository and awaits review. The installed brainstorming workflow references a `writing-plans` skill; it was not found in the installed skill directories during this session. The checklist provides explicit files, prerequisites, acceptance criteria, verification commands, and commit boundaries without assuming that missing skill is available. No implementation skill or product code has been invoked.
+The detailed execution checklist is approved and execution has started. The installed brainstorming workflow references a `writing-plans` skill; it was not found in the installed skill directories during this session. The checklist provides explicit files, prerequisites, acceptance criteria, verification commands, and commit boundaries without assuming that missing skill is available.
 
 ## 13. References checked during planning
 

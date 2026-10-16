@@ -2,6 +2,10 @@
 
 ## Unreleased — renewal
 
+- Add a bounded synthetic catalog resource probe and source-policy record for
+  the approved guest discovery work. Local metadata search feasibility is measured
+  separately from recommendation readiness; the guest product flow is not yet implemented.
+
 - Make ListenBrainz the default provider while retaining Last.fm as an operator
   option. Discovery, seed tags and candidate tags resolve together. Add bounded
   public-catalog clients, approved recorded replay and explicitly gated live

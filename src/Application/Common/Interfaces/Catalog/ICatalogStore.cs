@@ -5,7 +5,9 @@ namespace LinerNotes.Application.Common.Interfaces.Catalog;
 public sealed record CatalogItemDto(Guid Id, Guid CanonicalId, CatalogKind Kind, string Name, string? ArtistName,
     string? Disambiguation, string? FirstReleaseDate, IReadOnlyList<string> Tags, string Source,
     string Attribution, Guid Version, CatalogOrigin Origin,
-    IReadOnlyList<CatalogArtistCreditDto>? Artists = null, string MetadataLicense = "", string? TagLicense = null);
+    IReadOnlyList<CatalogArtistCreditDto>? Artists = null, string MetadataLicense = "", string? TagLicense = null,
+    IReadOnlyList<CatalogTagInput>? TagEvidence = null, DateTimeOffset? AcquiredAtUtc = null,
+    DateTimeOffset? ExpiresAtUtc = null, string? ContentSha256 = null, string NormalizationVersion = CatalogText.Version);
 public sealed record CatalogSearchResult(IReadOnlyList<CatalogItemDto> Items, bool HasMore, string NormalizationVersion);
 public sealed record CatalogTagInput(string Name, double Weight, string? Scope = null);
 public sealed record CatalogArtifactRow(Guid Id, CatalogKind Kind, string Name, string[] Aliases, Guid[] ArtistIds,

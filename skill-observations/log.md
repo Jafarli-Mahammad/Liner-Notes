@@ -4,6 +4,18 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 019: Separate cache admission units from clocks and working sets
+
+**Status:** OPEN
+**Date:** 2026-10-17
+**Session context:** Bounded upstream and prepared-evidence caching.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Cache accounting and reproducible verification
+**Issue:** Count-based cache charges ignored payload size. Absolute expirations from a fake clock were interpreted by a cache using the real clock, preventing reuse in deterministic tests. Scoped response dictionaries were separate retained working sets.
+**Suggested improvement:** Audit every writer when changing cache units; distinguish byte estimates, transient working sets and measured RSS. Use a consistent clock or translate policy deadlines to relative lifetimes while independently validating source expiry.
+**Principle:** A cache budget and freshness policy are effective only when all writers and clocks use compatible semantics.
+
 ### Observation 018: Bind resumed imports to consumed data, not only a cursor
 
 **Status:** OPEN

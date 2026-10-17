@@ -74,3 +74,26 @@ A committed cursor supports restart. The active publication pointer changes only
 records have committed. A failed import retains the previous searchable publication.
 All public managed writes still require admission; C5's default admission remains closed
 until C7. No live source manifest or source acquisition is approved by these code changes.
+
+
+## C6 album evidence verification (2026-10-16, rechecked 2026-10-17)
+
+The official [ListenBrainz metadata documentation](https://listenbrainz.readthedocs.io/en/latest/users/api/metadata.html)
+provides `GET /1/metadata/release_group/?release_group_mbids=<uuid>&inc=tag`.
+Release-group tags and artist tags are separate response fields. The adapter reads
+only the exact requested release-group key and its `tag.release_group` votes.
+It does not infer album similarity. Invalid votes remain excluded observations.
+Canonical artist preparation uses the selected MusicBrainz ID directly, avoiding
+name resolution that could substitute a different same-name artist.
+
+The Last.fm bundle remains behind the same provider contracts. Its existing name
+seed path is retained; unsupported canonical/album methods produce an explicit
+coverage gap rather than claiming an exact match. Live Last.fm product generation
+remains prohibited by current generation configuration. No new Last.fm endpoint or
+live acquisition was introduced for this stage.
+
+Public prepared reuse is bounded by the earliest actual source cache deadline.
+Any encountered response that disallows shared retention makes that prepared pool
+ineligible for shared retention. Evaluation recordings are rejected. Process-memory
+caches hold no private profile/feedback state. Durable pool publication and the
+integrated refresh scheduler remain disabled until their C7/C8 dependencies exist.

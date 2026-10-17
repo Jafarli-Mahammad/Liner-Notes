@@ -73,7 +73,9 @@ public sealed class GuestProfileStore(DataContext db) : IGuestProfileStore
             DELETE FROM "TasteSignals" s USING "TasteSignals" t
             WHERE s."ProfileId"={source.Id} AND t."ProfileId"={target.Id}
               AND s."Source"='InitialSeedManual' AND t."Source"=s."Source"
-              AND t."TargetType"=s."TargetType" AND t."NormalizedTargetValue"=s."NormalizedTargetValue";
+              AND t."TargetType"=s."TargetType" AND
+                  ((s."CanonicalEntityId" IS NOT NULL AND t."CanonicalEntityId"=s."CanonicalEntityId") OR
+                   (s."CanonicalEntityId" IS NULL AND t."CanonicalEntityId" IS NULL AND t."NormalizedTargetValue"=s."NormalizedTargetValue"));
             UPDATE "TasteSignals" SET "ProfileId"={target.Id},"UserId"={userId} WHERE "ProfileId"={source.Id};
             UPDATE "DiscoveryBatches" SET "ProfileId"={target.Id},"RequestId"='import:' || replace("Id"::text,'-','') WHERE "ProfileId"={source.Id};
             UPDATE "DiscoveryJobs" SET "ProfileId"={target.Id},"RequestKey"='import:' || replace("Id"::text,'-','') WHERE "ProfileId"={source.Id};

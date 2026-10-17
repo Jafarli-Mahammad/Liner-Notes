@@ -933,6 +933,12 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CanonicalEntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CatalogRecordId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Context")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -966,6 +972,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.Property<Guid>("ProfileId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SelectionJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Source")
                         .IsRequired()

@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountProfileReader, AccountProfileReader>();
         services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
         services.AddScoped<IGuestProfileStore, GuestProfileStore>();
+        services.AddScoped<IDiscoveryTasteStore, DiscoveryTasteStore>();
         services.AddScoped<ICatalogReader, CatalogReader>();
         services.AddScoped<ICatalogImportStore, CatalogImportStore>();
         services.AddScoped<LinerNotes.Application.Features.Catalog.ICatalogLookupJobs, CatalogLookupJobs>();

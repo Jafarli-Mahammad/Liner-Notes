@@ -87,6 +87,8 @@ public sealed class CatalogReader(DataContext db) : ICatalogReader
             row.Record.ArtistDisplayName, row.Record.Disambiguation, row.Record.FirstReleaseDate,
             (JsonSerializer.Deserialize<CatalogTagInput[]>(row.Record.TagsJson) ?? []).Select(t => t.Name).ToArray(),
             row.Publication.Source, row.Publication.Attribution, row.Publication.Id, row.Publication.Origin,
-            JsonSerializer.Deserialize<CatalogArtistCreditDto[]>(row.Record.CreditsJson) ?? [], row.Publication.MetadataLicense, row.Publication.TagLicense)).ToArray();
+            JsonSerializer.Deserialize<CatalogArtistCreditDto[]>(row.Record.CreditsJson) ?? [], row.Publication.MetadataLicense, row.Publication.TagLicense,
+            JsonSerializer.Deserialize<CatalogTagInput[]>(row.Record.TagsJson) ?? [], row.Publication.AcquiredAtUtc,
+            row.Publication.ExpiresAtUtc, row.Publication.ContentSha256, row.Publication.NormalizationVersion)).ToArray();
     }
 }

@@ -76,6 +76,7 @@ public sealed class BaselineAScorer
         {
             Snapshot = new ScoreSnapshot
             {
+                MaterializationVersion = candidate.Evidence.MaterializationVersion,
                 ConfigurationVersion = configuration.Version,
                 ConfigurationSha256 = configuration.Sha256,
                 ConfigurationPolicy = configuration.Policy ?? new Dictionary<string, string>(),
@@ -116,7 +117,7 @@ public sealed class BaselineAScorer
     public ScoreBreakdown Replay(ScoreSnapshot snapshot)
     {
         if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion != "baseline-a-v1" ||
-            snapshot.MaterializationVersion != "positive-signals-v1" ||
+            snapshot.MaterializationVersion is not ("positive-signals-v1" or "canonical-entity-max-v1") ||
             snapshot.TagNormalizationVersion is not ("max-observed-descriptive-count-v1" or "max-observed-artist-tag-votes-v1") ||
             snapshot.RankingPolicyVersion != "score-ordinal-one-artist-v1")
             throw new NotSupportedException("Unsupported stored scoring version.");

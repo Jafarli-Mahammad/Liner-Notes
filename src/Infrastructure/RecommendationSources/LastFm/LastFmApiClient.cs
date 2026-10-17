@@ -1,3 +1,4 @@
+using LinerNotes.Infrastructure.Caching;
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
@@ -22,11 +23,11 @@ public sealed class LastFmApiClient : ILastFmApiClient
     private const int MaximumResponseBytes = 100_000;
 
     public LastFmApiClient(HttpClient httpClient, IOptions<LastFmOptions> options,
-        IMemoryCache cache, LastFmRateLimiter rateLimiter, ILogger<LastFmApiClient> logger)
+        IMemoryCache cache, LastFmRateLimiter rateLimiter, ILogger<LastFmApiClient> logger, DiscoveryMemoryCaches? memoryCaches = null)
     {
         http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        this.cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        this.cache = memoryCaches?.LastFm ?? cache ?? throw new ArgumentNullException(nameof(cache));
         limiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -99,8 +100,8 @@ public sealed class LastFmApiClient : ILastFmApiClient
             if (age < TimeSpan.Zero) age = TimeSpan.Zero;
             var ttl = control?.MaxAge ?? (response.Content.Headers.Expires - (response.Headers.Date ?? reference.RetrievedAtUtc!.Value));
             if (ttl.HasValue) ttl -= apparentAge > age ? apparentAge : age;
-            if (control?.NoStore != true && control?.NoCache != true && ttl is { } supplied && supplied > TimeSpan.Zero && parsed.Gaps.IsEmpty)
-                cache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = supplied, Size = 1 });
+            if (control?.NoStore != true && control?.NoCache != true && control?.Private != true && ttl is { } supplied && supplied > TimeSpan.Zero && parsed.Gaps.IsEmpty)
+                cache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = supplied, Size = DiscoveryMemoryCaches.EstimateBytes(bytes.Length, cacheKey) });
             return parsed;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }

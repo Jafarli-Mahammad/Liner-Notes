@@ -174,6 +174,40 @@ public sealed class CatalogPostgresTests : IAsyncLifetime
         Assert.Empty((await scope.ServiceProvider.GetRequiredService<ICatalogReader>().SearchAsync("injected", CatalogKind.Artist, 10, 0, DateTimeOffset.UtcNow, default)).Items);
     }
 
+    [LocalPostgresMigrationFact]
+    public async Task CanonicalManualReplacementPreservesFeedbackExportsEvidenceAndRejectsStaleRevision()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        Guid first = Guid.NewGuid(), second = Guid.NewGuid();
+        await ImportAsync(services, [new(first, CatalogKind.Artist, "Same synthetic name", [], [], [new("jazz", 1)]),
+            new(second, CatalogKind.Artist, "Same synthetic name", [], [], [new("ambient", 1)])]);
+        var lifecycle = services.GetRequiredService<LinerNotes.Application.Features.Discovery.GuestLifecycle>();
+        var profile = await lifecycle.StartAsync(new string('b', 64), default);
+        var admission = services.GetRequiredService<IDiscoveryWriteCoordinator>();
+        var db = services.GetRequiredService<DataContext>();
+        var feedback = LinerNotes.Domain.Taste.TasteSignal.ForProfile(profile.Id, null, LinerNotes.Domain.Enums.TasteTargetType.Tag,
+            "rock", 1, LinerNotes.Domain.Enums.TasteSignalSource.RecommendationLike, "Synthetic feedback evidence.");
+        await admission.ExecuteAsync(8192, async ct => { db.TasteSignals.Add(feedback); await db.SaveChangesAsync(ct); return true; }, default);
+        var items = (await services.GetRequiredService<ICatalogReader>().SearchAsync("same synthetic", CatalogKind.Artist, 10, 0, DateTimeOffset.UtcNow, default)).Items;
+        var select = services.GetRequiredService<LinerNotes.Application.Features.Discovery.SelectDiscoveryTaste>();
+        Assert.Equal(1, await select.ReplaceAsync(profile.Id, 0, new([items.Single(i => i.CanonicalId == first).Id], ["jazz"]), default));
+        var export = await lifecycle.ExportAsync(profile.Id, default);
+        var saved = Assert.Single(export.TasteSignals!, t => t.CanonicalEntityId == first);
+        Assert.NotNull(saved.SelectionJson);
+        Assert.Contains("generated-fixture", saved.SelectionJson);
+        Assert.Equal(2, await select.ReplaceAsync(profile.Id, 1, new([items.Single(i => i.CanonicalId == second).Id], []), default));
+        var current = await db.TasteSignals.AsNoTracking().Where(t => t.ProfileId == profile.Id).ToArrayAsync();
+        Assert.Equal(2, current.Length);
+        Assert.Contains(current, t => t.Id == feedback.Id);
+        Assert.Contains(current, t => t.CanonicalEntityId == second);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => select.ReplaceAsync(profile.Id, 0, new([], ["pop"]), default));
+        Assert.Equal(2, await db.TasteSignals.AsNoTracking().CountAsync(t => t.ProfileId == profile.Id));
+        await lifecycle.ClearAsync(new string('b', 64), default);
+        Assert.False(await db.TasteSignals.AsNoTracking().AnyAsync(t => t.ProfileId == profile.Id));
+        Assert.Equal(2, await db.CatalogRecords.CountAsync());
+    }
+
     private static MemoryStream Artifact(IReadOnlyList<CatalogArtifactRow> rows) => new(Encoding.UTF8.GetBytes(
         string.Join('\n', rows.Select(row => JsonSerializer.Serialize(row, CatalogArtifactReader.Json))) + "\n"));
     private static CatalogPublication Manifest(MemoryStream artifact, int count) => new(Guid.NewGuid(), "generated-fixture", "fixture-v1", "fixture:catalog",

@@ -27,6 +27,9 @@ public static class DependencyInjection
             options.CompactionPercentage = 0.20;
         });
 
+        services.Configure<LinerNotes.Infrastructure.Caching.DiscoveryCacheOptions>(configuration.GetSection("DiscoveryCache"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LinerNotes.Infrastructure.Caching.DiscoveryCacheOptions>>().Value);
+        services.AddSingleton<LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches>();
         services.Configure<LocalRecordedInputApproval>(configuration.GetSection("LocalRecordedInput"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalRecordedInputApproval>>().Value);
         services.AddSingleton<LocalRecordedInputs>();
@@ -60,6 +63,8 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(15);
         });
 
+        services.Configure<LinerNotes.Application.Features.Discovery.DiscoveryTasteOptions>(configuration.GetSection("DiscoveryTaste"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LinerNotes.Application.Features.Discovery.DiscoveryTasteOptions>>().Value);
         services.Configure<GenerationConfiguration>(configuration.GetSection(GenerationConfiguration.SectionName));
         services.Configure<GenerationStorageOptions>(configuration.GetSection("GenerationStorage"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<GenerationConfiguration>>().Value);
@@ -72,7 +77,7 @@ public static class DependencyInjection
             ILastFmApiClient client = generation.Origin == EvidenceOrigin.Recorded
                 ? new RecordedLastFmApiClient(sp.GetRequiredService<LocalRecordedInputs>().Responses ?? sp.GetServices<RecordedLastFmResponse>())
                 : new LastFmApiClient(new HttpClient(), Options.Create(new LastFmOptions { Mode = LastFmClientMode.FixtureOnly }),
-                    sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<LastFmRateLimiter>(),
+                    sp.GetRequiredService<LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches>().LastFm, sp.GetRequiredService<LastFmRateLimiter>(),
                     sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LastFmApiClient>>());
             return new(client);
         });
@@ -107,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<ListenBrainzRecommendationProvider>();
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource, LinerNotes.Infrastructure.Catalog.MusicBrainzCatalogLookupSource>();
         services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
+        services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);
         services.AddScoped<ICandidateHydrator>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Hydrator);
 

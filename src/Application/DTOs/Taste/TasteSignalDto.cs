@@ -21,4 +21,7 @@ public record TasteSignalDto(
     Guid? DeletedBy = null,
     DateTime? DeletedAt = null,
     bool IsDeleted = false,
-Guid ProfileId = default);
+Guid ProfileId = default,
+    Guid? CatalogRecordId = null,
+    Guid? CanonicalEntityId = null,
+    string? SelectionJson = null);

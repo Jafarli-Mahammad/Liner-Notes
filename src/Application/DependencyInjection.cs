@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly);
         services.AddSingleton<BaselineAScorer>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.GuestLifecycle>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.SelectDiscoveryTaste>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste>();
         services.AddScoped<LinerNotes.Application.Features.Catalog.ImportCatalog>();
 
         return services;

@@ -32,7 +32,7 @@ public static class MappingExtensions
         signal.Weight,
         signal.Source,
         signal.Context,
-        signal.CreatedAt, signal.LastModifiedAt, signal.CreatedBy, signal.LastModifiedBy, signal.DeletedBy, signal.DeletedAt, signal.IsDeleted, signal.ProfileId);
+        signal.CreatedAt, signal.LastModifiedAt, signal.CreatedBy, signal.LastModifiedBy, signal.DeletedBy, signal.DeletedAt, signal.IsDeleted, signal.ProfileId, signal.CatalogRecordId, signal.CanonicalEntityId, signal.SelectionJson);
 
     public static TrackDto ToDto(this Track track) => new(
         track.Id,

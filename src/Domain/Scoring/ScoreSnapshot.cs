@@ -31,11 +31,20 @@ public sealed record StoredDiscoveryPath(string Seed, StoredObservation Match,
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
 }
 public sealed record StoredTasteSignal(Guid Id, string TargetType, string TargetValue, double Weight,
-    string Source, string Context) : ExtensibleScoreRecord;
+    string Source, string Context) : ExtensibleScoreRecord
+{
+    public Guid? CatalogRecordId { get; init; }
+    public Guid? CanonicalEntityId { get; init; }
+    public string? SelectionJson { get; init; }
+}
 public sealed record StoredSeed(string ArtistName, IReadOnlyDictionary<string, double> Weights,
     IReadOnlyList<StoredTag> Tags, StoredResponse Response, string? MissingReason,
     IReadOnlyList<StoredGap> Gaps) : ExtensibleScoreRecord
 {
+    public Guid? SignalId { get; init; }
+    public string? EntityIdentity { get; init; }
+    public string? TagScope { get; init; }
+    public double Influence { get; init; } = 1;
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
 }
 public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
@@ -43,6 +52,7 @@ public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     StoredResponse? CandidateTagResponse, IReadOnlyList<StoredDiscoveryPath> DiscoveryPaths,
     IReadOnlyList<StoredGap> Gaps, string TagScope, string PopularityMissingReason) : ExtensibleScoreRecord
 {
+    public string MaterializationVersion { get; init; } = "positive-signals-v1";
     public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
     public static ScoreEvidence Empty { get; } = new([], [], [], null, [], [], "artist", "not_supplied");

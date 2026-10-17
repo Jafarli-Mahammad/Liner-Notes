@@ -76,3 +76,24 @@ and the bounded reader verifies the bytes actually consumed before successful co
 The active pointer is switched only after complete verification. A saved cursor alone is
 not authority to publish previously staged rows. Public preparation cannot bypass the
 managed-write coordinator while the C7 prerequisite is unfinished.
+
+
+## C6 canonical taste selections
+
+TasteSignals.CatalogRecordId, CanonicalEntityId and SelectionJson are private selections.
+SelectionJson snapshots the chosen public item, credited artists, scoped tag weights,
+source/version/hash, licenses, attribution, normalization and freshness. All three
+fields are included in guest and account taste exports (account export version 2.4)
+and in stored score evidence. They cascade with their profile's taste signals and
+are transferred with explicit registration/import. They are never a shared taste cache.
+The catalog record ID is a historical reference, without a foreign key: the private
+snapshot must remain exportable when an expired public cache version is reclaimed.
+Import deduplication uses kind and canonical identity when present; legacy name-only
+signals are deduplicated separately. Distinct same-name canonical artists survive.
+
+Prepared pools contain public per-artist/tag candidate evidence only. They contain no
+profile, guest credential, selections, ratings or exclusions. C6 retains these pools
+only in byte-budgeted process memory; durable prepared publication stays disabled
+until C7 can reserve it. No-store, private, expired, or restricted evaluation evidence
+is ineligible for shared cache retention. Byte estimates bound cache admission;
+they are not process RSS measurements or a complete host memory bound.

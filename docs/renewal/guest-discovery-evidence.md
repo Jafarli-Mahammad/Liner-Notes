@@ -1,6 +1,45 @@
 # Guest discovery evidence
 
-Updated: 2026-10-16. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle and C5 catalog mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-17. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle, C5 catalog and C6 taste/preparation mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C6: canonical album taste and bounded public preparation
+
+Locally verified on 2026-10-17: canonical selection snapshots, five artist/album
+plus five style bounds, atomic manual replacement preserving feedback, canonical
+account-import deduplication, scoped release-group tags and configurable 0.35
+credited-artist fallback. Pure materialization deduplicates repeated entity influence;
+versioned scores retain the selected evidence and replay without a fabricated week.
+Canonical ListenBrainz artist acquisition bypasses ambiguous name resolution.
+Unsupported provider capabilities are explicit gaps, not exact-match claims.
+
+Three dedicated caches admit conservative retained-byte estimates: Last.fm 16 MiB,
+MetaBrainz 16 MiB, prepared public pools 32 MiB, aggregate 64 MiB by default.
+Fixed synchronization stripes coalesce identical process-local preparation, with
+45-second work deadlines and a 2 MiB serialized pool limit. Pools preserve response
+provenance, hashes and normalization; actual source cache deadlines govern reuse.
+No private taste/feedback state or restricted evaluation data is shared. The
+ListenBrainz scoped response working set has a separate 32 MiB estimate bound.
+These estimates are not measured RSS or a complete VPS memory budget.
+
+Verification used pinned SDK 10.0.401 and a newly isolated PostgreSQL 18.6 container
+(512 MiB, one CPU). All 579 .NET tests passed, zero failures/skips: Domain 134,
+Application 120, DataAccess 103, Presentation 65, Infrastructure 157. Required-project
+TRX validation, secret-default, documentation and whitespace checks passed.
+Temporary final evidence: `/tmp/liner-guest-c6-7_udsfmm/c6-final-results` and
+`c6-final-tests.log`; these are disposable local records, not durable release artifacts.
+The resumed first run caught an export-version assertion and a fake-clock/cache-clock
+mismatch. Final checks include real source-expiry invalidation and deterministic
+prepared-evidence hashing that excludes transient domain object IDs.
+
+The generated additive migration preserves legacy selections and guards destructive
+downgrade once canonical data exists. Account export is now 2.4. Private historical
+selection snapshots do not depend on public cache rows surviving eviction.
+
+No live provider calls or real catalog acquisition were run. Durable prepared
+publication, cross-process acquisition coalescing, integrated refresh scheduling,
+C7/C8 race checks, web enablement, constrained-host measurements, developer
+confirmation and real recommendation quality remain outstanding.
+
 
 ## C5: indexed local catalog and explicit lookup contracts
 

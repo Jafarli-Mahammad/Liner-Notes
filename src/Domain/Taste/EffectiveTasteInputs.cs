@@ -27,7 +27,7 @@ public sealed record EffectiveTasteInputs(IReadOnlyList<TasteSignal> PositiveSig
             throw new ArgumentException("Invalid positive feedback configuration.");
         var positives = signals.Where(s => s.Source is not (TasteSignalSource.RecommendationLike or
             TasteSignalSource.RecommendationDislike or TasteSignalSource.RecommendationAlreadyKnown or TasteSignalSource.RecommendationRating))
-            .Where(s => s.Weight > 0 && s.TargetType is TasteTargetType.Artist or TasteTargetType.Tag).ToList();
+            .Where(s => s.Weight > 0 && s.TargetType is TasteTargetType.Artist or TasteTargetType.Tag or TasteTargetType.Album).ToList();
         if (signals.Any(s => !double.IsFinite(s.Weight))) throw new ArgumentException("Nonfinite taste signal.");
         var excluded = new HashSet<string>(StringComparer.Ordinal);
         var feedback = recommendations.OrderByDescending(r => r.FeedbackGivenAt)

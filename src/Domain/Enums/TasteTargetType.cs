@@ -7,5 +7,6 @@ public enum TasteTargetType
 {
     Tag = 1,
     Artist = 2,
-    Track = 3
+    Track = 3,
+    Album = 4
 }

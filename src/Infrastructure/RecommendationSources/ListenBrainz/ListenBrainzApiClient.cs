@@ -1,3 +1,4 @@
+using LinerNotes.Infrastructure.Caching;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -9,9 +10,10 @@ namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 /// <summary>Only fixed, allowlisted public metadata endpoints. Tokens never reach MusicBrainz.</summary>
 public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions options,
-    IMetaBrainzRequestGate gate, IMemoryCache cache, TimeProvider clock) : IListenBrainzApiClient
+    IMetaBrainzRequestGate gate, IMemoryCache cache, TimeProvider clock, DiscoveryMemoryCaches? memoryCaches = null) : IListenBrainzApiClient
 {
     private int sentRequests;
+    private readonly IMemoryCache responseCache = memoryCaches?.Metadata ?? cache;
     public async Task<ListenBrainzResponse> SendAsync(ListenBrainzRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -20,7 +22,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live, "listenbrainz_live_use_unapproved");
         string root = request.Provider == "MusicBrainz" ? "https://musicbrainz.org/" : "https://api.listenbrainz.org/";
         string cacheKey = "metabrainz-public-v1:" + root + request.Key;
-        if (cache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
+        if (responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
         try
         {
             if (Interlocked.Increment(ref sentRequests) > options.MaximumRequests)
@@ -74,7 +76,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
                 if (ttl > TimeSpan.Zero)
                 {
                     parsed = parsed with { SharedCacheUntilUtc = clock.GetUtcNow() + ttl };
-                    cache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = ttl });
+                    responseCache.Set(cacheKey, parsed, new MemoryCacheEntryOptions { Size = DiscoveryMemoryCaches.EstimateBytes(output.Length, cacheKey), AbsoluteExpirationRelativeToNow = ttl });
                 }
             }
             return parsed;

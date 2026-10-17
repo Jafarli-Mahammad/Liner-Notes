@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog mechanics are implemented and locally verified; C6–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog and C6 taste/preparation mechanics are implemented and locally verified; C7–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -192,14 +192,14 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 
 **Steps:**
 
-- [ ] Implement the approved new-flow seed bounds and canonical-ID resolution. Treat manual selection replacement as replacement of manual seeds, preserving feedback-derived signals. Record profile revision changes atomically.
-- [ ] Materialize actual album evidence when supplied by a verified endpoint/artifact. Artist-based fallbacks must carry the correct tag scope, missing reason and configurable influence; never invent album-specific tags. Handle multi-artist credits and deduplicate repeated entity influence.
-- [ ] Keep external discovery behind `IRecommendationSource` and related seed/hydration contracts. Reuse `LastFmEvidenceParser` and `RecordedLastFmApiClient` where applicable. Do not add unsupported provider calls or pull source-specific code into Domain/Application.
-- [ ] Share prepared candidates across profiles but rank per profile. Preserve origin, acquisition time, evidence hashes, normalization version and source conditions. Enforce policy-driven freshness; restricted evaluation/held-out material is ineligible.
-- [ ] Bound preparation by seeds/candidates/calls/time/bytes; coalesce identical work and honor cross-process source pacing. Refresh in bounded slices. A missing/expired cache entry becomes explicit acquisition work or a coverage gap, never fixture fallback in a real request.
-- [ ] Implement a 64 MiB aggregate application cache budget with byte accounting across relevant caches. Audit existing `.Set(... Size = 1)` users; do not change a shared cache's units and leave its writers charging inconsistent sizes.
-- [ ] Reserve durable public-cache growth through the current conservative managed-write guard until C7 introduces improved coordination. If the current mechanism cannot safely reserve a new write class, keep that persistent preparation path disabled until it can; an already-accounted bounded artifact can support offline verification. Do not bypass the guard between commits.
-- [ ] Run benchmark seed fixtures, baseline scorer reconstruction/replay, permutation/culture determinism, sparse/empty evidence, feedback and provider parity tests. Report quality as unverified unless supported by separately authorized evaluation.
+- [x] Implement the approved new-flow seed bounds and canonical-ID resolution. Treat manual selection replacement as replacement of manual seeds, preserving feedback-derived signals. Record profile revision changes atomically.
+- [x] Materialize actual album evidence when supplied by a verified endpoint/artifact. Artist-based fallbacks must carry the correct tag scope, missing reason and configurable influence; never invent album-specific tags. Handle multi-artist credits and deduplicate repeated entity influence.
+- [x] Keep external discovery behind `IRecommendationSource` and related seed/hydration contracts. Reuse `LastFmEvidenceParser` and `RecordedLastFmApiClient` where applicable. Do not add unsupported provider calls or pull source-specific code into Domain/Application.
+- [x] Share prepared candidates across profiles but rank per profile. Preserve origin, acquisition time, evidence hashes, normalization version and source conditions. Enforce policy-driven freshness; restricted evaluation/held-out material is ineligible.
+- [ ] Bound preparation by seeds/candidates/calls/time/bytes; coalesce identical work and honor cross-process source pacing. Refresh in bounded slices. **C6 implements bounded process-memory pools and coalescing; durable acquisition ownership and integrated refresh remain C7/C8 dependencies.** A missing/expired cache entry becomes explicit acquisition work or a coverage gap, never fixture fallback in a real request.
+- [x] Implement a 64 MiB aggregate application cache budget with byte accounting across relevant caches. Audit existing `.Set(... Size = 1)` users; do not change a shared cache's units and leave its writers charging inconsistent sizes.
+- [x] Reserve durable public-cache growth through the current conservative managed-write guard until C7 introduces improved coordination. If the current mechanism cannot safely reserve a new write class, keep that persistent preparation path disabled until it can; an already-accounted bounded artifact can support offline verification. Do not bypass the guard between commits.
+- [x] Run benchmark seed fixtures, baseline scorer reconstruction/replay, permutation/culture determinism, sparse/empty evidence, feedback and provider parity tests. Report quality as unverified unless supported by separately authorized evaluation.
 
 **Exit:** Album and explicit tag inputs affect documented taste evidence; prepared candidates can be reused without losing personal ranking or provenance.
 

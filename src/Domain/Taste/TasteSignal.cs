@@ -9,6 +9,21 @@ namespace LinerNotes.Domain.Taste;
 /// </summary>
 public sealed class TasteSignal : AuditableEntity
 {
+    public Guid? CatalogRecordId { get; private set; }
+    public Guid? CanonicalEntityId { get; private set; }
+    public string? SelectionJson { get; private set; }
+
+    public void SetCatalogSelection(Guid recordId, Guid canonicalId, string evidenceJson)
+    {
+        if (Source != TasteSignalSource.InitialSeedManual || TargetType is not (TasteTargetType.Artist or TasteTargetType.Album) ||
+            recordId == Guid.Empty || canonicalId == Guid.Empty || string.IsNullOrWhiteSpace(evidenceJson) ||
+            System.Text.Encoding.UTF8.GetByteCount(evidenceJson) > 24_576)
+            throw new ArgumentException("invalid_catalog_selection");
+        CatalogRecordId = recordId;
+        CanonicalEntityId = canonicalId;
+        SelectionJson = evidenceJson;
+    }
+
     public Guid? UserId { get; private set; }
     public Guid ProfileId { get; private set; }
     public TasteTargetType TargetType { get; private set; }
@@ -58,6 +73,12 @@ public sealed class TasteSignal : AuditableEntity
     {
         if (profileId == Guid.Empty || userId == Guid.Empty) throw new ArgumentException("Invalid owner.");
         return new TasteSignal(profileId, type, value, weight, source, context) { UserId = userId };
+    }
+    public void AttachRegisteredOwner(Guid userId, Guid profileId)
+    {
+        if (userId == Guid.Empty || ProfileId != profileId || (UserId.HasValue && UserId != userId))
+            throw new ArgumentException("Invalid profile owner.");
+        UserId = userId;
     }
     public void BindRegisteredProfile(Guid userId, Guid profileId)
     {

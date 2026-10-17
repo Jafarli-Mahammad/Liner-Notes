@@ -4,8 +4,8 @@ using LinerNotes.Domain.Catalog;
 
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
-public sealed class ListenBrainzRecommendationProvider(IListenBrainzApiClient client)
-    : IRecommendationSource, ICandidateHydrator, ISeedTagSource
+public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiClient client)
+    : IRecommendationSource, ICandidateHydrator, ISeedTagSource, ICanonicalRecommendationSource, ICanonicalSeedTagSource, IPublicEvidenceFreshness
 {
     public string SourceName => "ListenBrainz";
     private readonly Dictionary<string, ListenBrainzResponse> responses = new(StringComparer.Ordinal);
@@ -18,6 +18,13 @@ public sealed class ListenBrainzRecommendationProvider(IListenBrainzApiClient cl
         var response = await client.SendAsync(request, ct).ConfigureAwait(false);
         if (response.Reference.Provider != request.Provider || response.Reference.Method != request.Method || response.Reference.RequestIdentity != request.Identity)
             throw new GenerationStoppedException("provider_response_provenance_mismatch");
+        workingBytes = checked(workingBytes + (response.Data is { } data ? System.Text.Encoding.UTF8.GetByteCount(data.GetRawText()) * 8L : 1024));
+        if (workingBytes > 32 * 1024 * 1024) throw new GenerationStoppedException("provider_working_set_limit");
+        if (response.Reference.Origin != EvidenceOrigin.Synthetic)
+        {
+            if (response.SharedCacheUntilUtc is not { } deadline) sharedCachingProhibited = true;
+            else if (SharedUntilUtc is null || deadline < SharedUntilUtc) SharedUntilUtc = deadline;
+        }
         responses[request.Key] = response;
         return response;
     }
@@ -27,7 +34,7 @@ public sealed class ListenBrainzRecommendationProvider(IListenBrainzApiClient cl
     public Task<IngestionResult<RawCandidateTrack>> GetCandidatesByTagsAsync(IReadOnlyList<string> tags,
         int limitPerTag = 10, CancellationToken cancellationToken = default) => DiscoverAsync(tags, limitPerTag, true, cancellationToken);
 
-    private async Task<IngestionResult<RawCandidateTrack>> DiscoverAsync(IReadOnlyList<string> seeds, int limit, bool byTag, CancellationToken ct)
+    private async Task<IngestionResult<RawCandidateTrack>> DiscoverAsync(IReadOnlyList<string> seeds, int limit, bool byTag, CancellationToken ct, bool canonical = false)
     {
         ct.ThrowIfCancellationRequested();
         if (limit is < 1 or > 10 || seeds.Count > 20) throw new ArgumentException("listenbrainz_discovery_limit");
@@ -42,6 +49,7 @@ public sealed class ListenBrainzRecommendationProvider(IListenBrainzApiClient cl
             ListenBrainzResponse? search = null;
             ListenBrainzRequest request;
             if (byTag) request = new(ListenBrainzRequestKind.TagRadio, identity, limit);
+            else if (canonical) request = new(ListenBrainzRequestKind.ArtistRadio, identity, limit);
             else
             {
                 search = await SendAsync(new(ListenBrainzRequestKind.ArtistSearch, identity), ct).ConfigureAwait(false);

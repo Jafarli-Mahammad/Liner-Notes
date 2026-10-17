@@ -19,7 +19,8 @@ public static class GenerationEvidenceMapping
         value.Tags.Select(Store).ToArray(), value.Response.Store(), value.MissingReason, value.Gaps.Select(Store).ToArray())
         { SupportingResponses = value.SupportingResponses.Select(Store).ToArray() };
     public static StoredTasteSignal Store(this TasteSignal value) => new(value.Id, value.TargetType.ToString(),
-        value.TargetValue, value.Weight, value.Source.ToString(), value.Context);
+        value.TargetValue, value.Weight, value.Source.ToString(), value.Context)
+        { CatalogRecordId = value.CatalogRecordId, CanonicalEntityId = value.CanonicalEntityId, SelectionJson = value.SelectionJson };
     public static StoredDiscoveryPath Store(this DiscoveryPath value) => new(value.Seed, value.Match.Store(),
         value.SimilarityResponse?.Store(), value.TrackResponse.Store(), value.UpstreamPosition, value.TrackUrl,
         value.ArtistUrl, value.TrackListeners.Store(), value.RawRank, value.DiscoveredArtist, value.SimilarityPosition)

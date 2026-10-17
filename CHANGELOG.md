@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Add canonical artist/album selections and style validation, scoped album taste
+  evidence with configurable credited-artist fallback, and reusable public candidate
+  pools. Provider and prepared caches now have a combined 64 MiB admission budget.
+  Export 2.4 includes selection provenance. The onsite product flow remains disabled
+  until the durable runner and storage coordination stages are complete.
+
 - Add indexed local artist/album search with aliases, Unicode and typo handling,
   all album credits, source attribution and versioned catalog publication.
   Bounded imports resume verified chunks while keeping the last good catalog.

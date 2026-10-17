@@ -19,7 +19,7 @@ public sealed class ListenBrainzTransportTests
             requests.Add((request.RequestUri!, request.Headers.Authorization?.Scheme, request.Headers.Authorization?.Parameter));
             return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
         }));
-        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 10 });
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 1024 * 1024 });
         var gate = new Gate();
         string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
         var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, Token = token }, gate, cache, TimeProvider.System);

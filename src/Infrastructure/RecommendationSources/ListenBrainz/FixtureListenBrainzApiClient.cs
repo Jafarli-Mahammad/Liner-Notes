@@ -47,6 +47,11 @@ public sealed class FixtureListenBrainzApiClient : IListenBrainzApiClient
                     i => new { recording = new { name = "Synthetic Discovery " + i }, artist = new { name = "Synthetic Ensemble " + i,
                         artists = new[] { new { artist_mbid = Artist(i), name = "Synthetic Ensemble " + i } } } });
                 break;
+            case ListenBrainzRequestKind.AlbumMetadata:
+                data = new Dictionary<string, object> { [request.Identity] = new {
+                    tag = new { release_group = new[] { new { tag = "electronic", count = 10 }, new { tag = "ambient", count = 5 } } }
+                }};
+                break;
             case ListenBrainzRequestKind.ArtistMetadata:
                 data = request.Identity.Split(',').Select(artist => new { artist_mbid = artist, name = artistNames.GetValueOrDefault(artist, "Synthetic Ensemble"),
                     tag = new { artist = new[] { "rock", "electronic", "synthpop", "alternative" }

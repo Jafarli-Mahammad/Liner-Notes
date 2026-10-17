@@ -7,7 +7,7 @@ using LinerNotes.Application.Common.Models.Recommendation;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public enum ListenBrainzClientMode { FixtureOnly, Recorded, LiveOnly }
-public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch }
+public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch, AlbumMetadata }
 
 public sealed class ListenBrainzOptions
 {
@@ -41,6 +41,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         ListenBrainzRequestKind.ArtistRadio => "lb-radio.artist",
         ListenBrainzRequestKind.TagRadio => "lb-radio.tags",
         ListenBrainzRequestKind.ArtistMetadata => "metadata.artist",
+        ListenBrainzRequestKind.AlbumMetadata => "metadata.release_group",
         ListenBrainzRequestKind.RecordingMetadata => "metadata.recording",
         _ => throw new ArgumentException("listenbrainz_request_invalid")
     };
@@ -51,7 +52,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         if (!Enum.IsDefined(Kind) || Limit is < 1 or > 100 || string.IsNullOrWhiteSpace(Identity) || Identity.Length > 4000 ||
             Identity.Any(char.IsControl) || Identity != Identity.Trim())
             throw new ArgumentException("listenbrainz_request_invalid");
-        if (Kind is ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata)
+        if (Kind is ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata or ListenBrainzRequestKind.AlbumMetadata)
         {
             var ids = Identity.Split(',');
             if (ids.Length > 100 || (Kind == ListenBrainzRequestKind.ArtistRadio && ids.Length != 1) ||
@@ -76,6 +77,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
             ListenBrainzRequestKind.ArtistRadio => $"1/lb-radio/artist/{id}?mode=medium&max_similar_artists={count}&max_recordings_per_artist=2&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.TagRadio => $"1/lb-radio/tags?tag={id}&operator=OR&count={count}&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.ArtistMetadata => $"1/metadata/artist/?artist_mbids={id}&inc=tag",
+            ListenBrainzRequestKind.AlbumMetadata => $"1/metadata/release_group/?release_group_mbids={id}&inc=tag",
             ListenBrainzRequestKind.RecordingMetadata => $"1/metadata/recording/?recording_mbids={id}&inc=artist%20tag",
             _ => throw new ArgumentException("listenbrainz_request_invalid")
         };

@@ -23,7 +23,7 @@ public sealed class Phase8PrivacyInventoryTests
         ["public.ListenerProfiles"] = Columns("Id,UserId,Revision,CreatedAtUtc,LastActiveAtUtc,ExpiresAtUtc"),
         ["public.DiscoveryBatches"] = Columns("Id,ProfileId,RequestId,Kind,InputRevision,CreatedAtUtc,CompletedAtUtc,CatalogVersion,EvidenceVersion"),
         ["public.DiscoveryJobs"] = Columns("Id,ProfileId,RequestKey,RequestHash,Kind,State,InputRevision,PayloadJson,Attempts,LeaseToken,LeaseExpiresAtUtc,NextAttemptAtUtc,CreatedAtUtc,UpdatedAtUtc,ProgressCode,ErrorCode,ResultBatchId,ResultJson"),
-        ["public.TasteSignals"] = Columns("Context,CreatedAt,CreatedBy,DeletedAt,DeletedBy,Id,IsDeleted,LastModifiedAt,LastModifiedBy,NormalizedTargetValue,ProfileId,Source,TargetType,TargetValue,UserId,Weight"),
+        ["public.TasteSignals"] = Columns("CanonicalEntityId,CatalogRecordId,SelectionJson,Context,CreatedAt,CreatedBy,DeletedAt,DeletedBy,Id,IsDeleted,LastModifiedAt,LastModifiedBy,NormalizedTargetValue,ProfileId,Source,TargetType,TargetValue,UserId,Weight"),
         ["public.Tracks"] = Columns("AlbumTitle,ArtistName,DurationSeconds,ExternalSpotifyUrl,ExternalYoutubeUrl,Id,Mbid,NormalizedArtistName,NormalizedTitle,Title"),
         ["public.UserMusicConnections"] = Columns("CreatedAt,CreatedBy,DeletedAt,DeletedBy,EncryptedToken,ExternalUsername,Id,IsActive,IsDeleted,LastModifiedAt,LastModifiedBy,LastSyncedAt,ServiceType,UserId"),
         ["public.Users"] = Columns("CreatedAt,CreatedBy,DeletedAt,DeletedBy,DeliveryDay,DeliveryHourUtc,Email,EmailUnsubscribedAtUtc,Id,IsDeleted,LastModifiedAt,LastModifiedBy,NextDigestAt,TimeZone,WeeklyEmailOptIn"),

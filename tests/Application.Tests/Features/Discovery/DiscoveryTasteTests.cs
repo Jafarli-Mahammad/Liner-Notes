@@ -13,6 +13,19 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class DiscoveryTasteTests
 {
     [Fact]
+    public async Task PreparedOnlyMaterializationUsesCatalogTagsAndNeverFallsThroughToProvider()
+    {
+        var source = Substitute.For<ISeedTagSource, ICanonicalSeedTagSource>();
+        var builder = Builder(source);
+        var local = await builder.BuildAsync([Album(Guid.NewGuid(), Guid.NewGuid(), [new("ambient", 1, "synthetic-release-group")])], false, default);
+        Assert.Equal(1, local.Vector.Weights["ambient"]);
+        await Assert.ThrowsAsync<DiscoveryPreparationRequiredException>(() => builder.BuildAsync(
+            [Album(Guid.NewGuid(), Guid.NewGuid(), [])], false, default));
+        await ((ICanonicalSeedTagSource)source).DidNotReceiveWithAnyArgs().GetAlbumAsync(default, default!, default);
+        await source.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
+    }
+
+    [Fact]
     public async Task TagOnlySelectionIsAllowedButOversizedOrUnknownStylesAreRejected()
     {
         var catalog = Substitute.For<ICatalogReader>();

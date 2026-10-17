@@ -11,6 +11,11 @@ public interface ICanonicalSeedTagSource
 }
 public interface IPublicEvidenceFreshness { DateTimeOffset? SharedUntilUtc { get; } }
 public sealed record DiscoveryPoolRequest(Guid? ArtistId, string Seed, bool IsTag);
+public sealed record DiscoverySeedRequest(Guid? EntityId, string Name, bool IsAlbum);
+public interface IDiscoverySeedPreparation
+{
+    Task<SeedTagSnapshot> GetAsync(DiscoverySeedRequest request, bool allowAcquisition, CancellationToken ct);
+}
 public sealed record PreparedDiscoveryPool(string Key, string Provider, EvidenceOrigin Origin, DateTimeOffset PreparedAtUtc,
     DateTimeOffset? ExpiresAtUtc, string NormalizationVersion, IReadOnlyList<HydratedCandidateTrack> Candidates,
     IReadOnlyList<CoverageGap> Gaps, long SerializedBytes, string ContentSha256);
@@ -18,4 +23,6 @@ public sealed record PreparedDiscoveryPool(string Key, string Provider, Evidence
 public interface IDiscoveryPreparation
 {
     Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, CancellationToken ct);
+    Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct)
+        => allowAcquisition ? GetAsync(request, ct) : throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException();
 }

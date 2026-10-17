@@ -23,9 +23,11 @@ public sealed record MaterializedDiscoveryTaste(WeightedTagVector Vector, IReadO
     IReadOnlySet<string> FamiliarArtists);
 
 public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver resolver, GenerationConfiguration configuration,
-    DiscoveryTasteOptions options, TimeProvider clock)
+    DiscoveryTasteOptions options, TimeProvider clock, IDiscoverySeedPreparation? preparation = null)
 {
-    public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, CancellationToken ct)
+    public Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, CancellationToken ct)
+        => BuildAsync(signals, true, ct);
+    public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, bool allowAcquisition, CancellationToken ct)
     {
         options.Validate();
         var provider = resolver.Resolve();
@@ -42,7 +44,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             if (signal.SelectionJson is null || signal.CanonicalEntityId is null)
             {
                 // Preserve legacy name seeds without pretending they identify a canonical entity.
-                var legacy = await provider.SeedTags.GetAsync(signal.TargetValue, ct);
+                var legacy = await Seed(new(null, signal.TargetValue, false));
                 Add(signal, legacy, "legacy-artist:" + signal.NormalizedTargetValue, "artist", 1, null);
                 familiar.Add(signal.NormalizedTargetValue);
                 continue;
@@ -73,9 +75,8 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
                 snapshot = new(item.Name, WeightedTagVector.FromDictionary(local.GroupBy(t => t.Name.Trim().ToLowerInvariant(), StringComparer.Ordinal)
                     .ToDictionary(g => g.Key, g => g.Max(t => t.Weight), StringComparer.Ordinal)), [], response, null, []);
             }
-            else if (provider.SeedTags is ICanonicalSeedTagSource canonical)
-                snapshot = item.Kind == CatalogKind.Artist ? await canonical.GetArtistAsync(item.CanonicalId, item.Name, ct) :
-                    await canonical.GetAlbumAsync(item.CanonicalId, item.Name, ct);
+            else if (preparation is not null || provider.SeedTags is ICanonicalSeedTagSource)
+                snapshot = await Seed(new(item.CanonicalId, item.Name, item.Kind == CatalogKind.Album));
             else snapshot = new(item.Name, WeightedTagVector.Empty, [],
                 new(provider.Id, "seed.tags", identity, configuration.Origin, null, null), "canonical_seed_tags_not_supported", []);
             Add(signal, snapshot, identity, scope, 1, null);
@@ -84,8 +85,8 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
                 gaps.Add(new(identity, "album.tags", "album_tags_missing_using_credited_artists", snapshot.Response));
                 foreach (var credit in credits)
                 {
-                    if (provider.SeedTags is not ICanonicalSeedTagSource canonical) continue;
-                    var fallback = await canonical.GetArtistAsync(credit.CanonicalId, credit.Name, ct);
+                    if (preparation is null && provider.SeedTags is not ICanonicalSeedTagSource) continue;
+                    var fallback = await Seed(new(credit.CanonicalId, credit.Name, false));
                     Add(signal, fallback, "artist:" + credit.CanonicalId.ToString("D"), "artist", options.AlbumArtistFallbackInfluence,
                         "album_tags_missing_using_credited_artist");
                 }
@@ -96,6 +97,14 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             positives.Where(s => s.TargetType == TasteTargetType.Tag).Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal).Take(configuration.MaximumTagSeeds).ToArray(), gaps.Distinct().ToArray(), familiar);
 
+        async Task<SeedTagSnapshot> Seed(DiscoverySeedRequest request)
+        {
+            if (preparation is not null) return await preparation.GetAsync(request, allowAcquisition, ct);
+            if (!allowAcquisition) throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException();
+            if (request.EntityId is { } id && provider.SeedTags is ICanonicalSeedTagSource canonical)
+                return request.IsAlbum ? await canonical.GetAlbumAsync(id, request.Name, ct) : await canonical.GetArtistAsync(id, request.Name, ct);
+            return await provider.SeedTags.GetAsync(request.Name, ct);
+        }
         void Add(TasteSignal signal, SeedTagSnapshot snapshot, string identity, string scope, double influence, string? missing)
         {
             if (snapshot.Response.Origin != configuration.Origin || snapshot.Response.Origin == EvidenceOrigin.Recorded ||

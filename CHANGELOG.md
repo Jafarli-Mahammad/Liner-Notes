@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+- Reuse durable public artist/album seed and candidate evidence after memory
+  restart. Prepared-only work cannot fall through to upstream acquisition.
 - Add leased, quota-bounded public evidence storage and compact per-profile
   recommendation identity history. Export 2.5 includes history and batch coverage.
   The background consumer and onsite generation flow remain pending.

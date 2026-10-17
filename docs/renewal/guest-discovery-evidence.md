@@ -274,3 +274,15 @@ expensive score snapshots and are included in export 2.5. The migration verifies
 and rebases storage accounting around schema changes and backfills aliases.
 The background consumer, cache adapter, endpoints and website are still pending.
 These checks establish local mechanics only; no real acquisition was performed.
+
+### C8 persistent preparation adapter
+
+A subsequent full offline run passed 600 checks with zero failures or skips
+(Domain 136, Application 121, DataAccess 112, Presentation 65, Infrastructure 166).
+Prepared-only pool/seed misses perform neither acquisition nor writes; durable
+pools and seeds serve after memory restart. Expired evidence is rejected and
+non-retainable responses are returned only to their current acquisition. Provider
+resolution runs outside managed admission. Local catalog album tags can
+materialize taste without provider fallback. This adapter is wired in DI; the
+job consumer and onsite routes are still pending. Private TRX directory:
+`c8-adapter-verified-results`.

@@ -116,7 +116,12 @@ public static class DependencyInjection
         services.AddScoped<ListenBrainzRecommendationProvider>();
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource, LinerNotes.Infrastructure.Catalog.MusicBrainzCatalogLookupSource>();
         services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
-        services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
+        services.Configure<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>(configuration.GetSection("DiscoveryRuntime"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>>().Value);
+        services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedPublicEvidence>();
+        services.AddSingleton<IDiscoverySeedPreparation, LinerNotes.Infrastructure.Discovery.SharedSeedPreparation>();
+        services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
+        services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.PersistentDiscoveryPreparation>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);
         services.AddScoped<ICandidateHydrator>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Hydrator);
 

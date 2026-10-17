@@ -13,16 +13,34 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
 {
     // Fixed stripes bound synchronization memory independently of query diversity.
     private readonly SemaphoreSlim[] stripes = Enumerable.Range(0, 32).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
-    public async Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, CancellationToken ct)
+    public string KeyFor(DiscoveryPoolRequest request)
     {
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         if (string.IsNullOrWhiteSpace(request.Seed) || request.Seed.Length > 200 || request.Seed.Any(char.IsControl) ||
             request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue)) throw new ArgumentException("invalid_pool_seed");
-        string hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
+        return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
             Version = "public-pool-v1", Configuration = configuration, request.ArtistId,
             Seed = request.ArtistId.HasValue ? null : request.Seed.Trim().ToLowerInvariant(), request.IsTag
         })));
+    }
+    public PreparedDiscoveryPool? TryGet(DiscoveryPoolRequest request)
+    {
+        string key = "pool:" + KeyFor(request);
+        return caches.Prepared.TryGetValue<PreparedDiscoveryPool>(key, out var hit) && hit!.ExpiresAtUtc > clock.GetUtcNow() ? hit : null;
+    }
+    public void Remember(PreparedDiscoveryPool pool)
+    {
+        if (pool.ExpiresAtUtc is not { } expiry || expiry <= clock.GetUtcNow()) return;
+        string key = "pool:" + pool.Key;
+        caches.Prepared.Set(key, pool, new MemoryCacheEntryOptions {
+            Size = DiscoveryMemoryCaches.EstimateBytes(pool.SerializedBytes, key),
+            AbsoluteExpirationRelativeToNow = expiry - clock.GetUtcNow()
+        });
+    }
+    public async Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, CancellationToken ct)
+    {
+        string hash = KeyFor(request);
         string key = "pool:" + hash;
         if (caches.Prepared.TryGetValue<PreparedDiscoveryPool>(key, out var hit) && hit!.ExpiresAtUtc > clock.GetUtcNow()) return hit;
         var gate = stripes[Convert.ToInt32(hash[..2], 16) % stripes.Length];

@@ -76,6 +76,10 @@ public sealed class GuestProfileStore(DataContext db) : IGuestProfileStore
               AND t."TargetType"=s."TargetType" AND
                   ((s."CanonicalEntityId" IS NOT NULL AND t."CanonicalEntityId"=s."CanonicalEntityId") OR
                    (s."CanonicalEntityId" IS NULL AND t."CanonicalEntityId" IS NULL AND t."NormalizedTargetValue"=s."NormalizedTargetValue"));
+            INSERT INTO "RecommendedIdentities" ("ProfileId","Alias","FirstRecommendedAtUtc")
+              SELECT {target.Id},"Alias","FirstRecommendedAtUtc" FROM "RecommendedIdentities" WHERE "ProfileId"={source.Id}
+              ON CONFLICT ("ProfileId","Alias") DO UPDATE SET "FirstRecommendedAtUtc"=LEAST("RecommendedIdentities"."FirstRecommendedAtUtc",EXCLUDED."FirstRecommendedAtUtc");
+            DELETE FROM "RecommendedIdentities" WHERE "ProfileId"={source.Id};
             UPDATE "TasteSignals" SET "ProfileId"={target.Id},"UserId"={userId} WHERE "ProfileId"={source.Id};
             UPDATE "DiscoveryBatches" SET "ProfileId"={target.Id},"RequestId"='import:' || replace("Id"::text,'-','') WHERE "ProfileId"={source.Id};
             UPDATE "DiscoveryJobs" SET "ProfileId"={target.Id},"RequestKey"='import:' || replace("Id"::text,'-','') WHERE "ProfileId"={source.Id};

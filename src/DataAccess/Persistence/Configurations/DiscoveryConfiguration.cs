@@ -24,7 +24,8 @@ public sealed class DiscoveryBatchConfiguration : IEntityTypeConfiguration<Disco
 {
     public void Configure(EntityTypeBuilder<DiscoveryBatch> builder)
     {
-        builder.ToTable("DiscoveryBatches");
+        builder.ToTable("DiscoveryBatches", t => t.HasCheckConstraint("CK_DiscoveryBatches_Coverage", "\"CoverageJson\" IS NULL OR octet_length(\"CoverageJson\"::text)<=32768"));
+        builder.Property(b => b.CoverageJson).HasColumnType("jsonb");
         builder.HasKey(b => b.Id);
         builder.HasAlternateKey(b => new { b.Id, b.ProfileId });
         builder.Property(b => b.RequestId).HasMaxLength(80).IsRequired();

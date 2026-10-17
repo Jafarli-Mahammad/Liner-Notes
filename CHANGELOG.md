@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add leased, quota-bounded public evidence storage and compact per-profile
+  recommendation identity history. Export 2.5 includes history and batch coverage.
+  The background consumer and onsite generation flow remain pending.
 
 - Add durable discovery job leases, idempotent queue admission and coordinated
   storage reservations. Database accounting avoids scanning private history for

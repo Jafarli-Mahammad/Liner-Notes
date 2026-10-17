@@ -134,6 +134,87 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.ToTable("ManagedStorageLedger", (string)null);
                 });
 
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.PublicEvidenceCacheEntry", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .UseCollation("C");
+
+                    b.Property<DateTimeOffset?>("AcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContentSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Origin")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long>("StoredBytes")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasComputedColumnSql("COALESCE(octet_length(\"PayloadJson\"),0)", true);
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("ExpiresAtUtc", "Key");
+
+                    b.ToTable("PublicEvidenceCache", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PublicEvidenceCache_Origin", "\"Origin\" IS NULL OR \"Origin\" IN ('Live','Synthetic')");
+
+                            t.HasCheckConstraint("CK_PublicEvidenceCache_Payload", "\"PayloadJson\" IS NULL OR (octet_length(\"PayloadJson\") <= 2097152 AND jsonb_typeof(\"PayloadJson\"::jsonb)='object')");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Alias")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .UseCollation("C");
+
+                    b.Property<DateTimeOffset>("FirstRecommendedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProfileId", "Alias");
+
+                    b.ToTable("RecommendedIdentities", (string)null);
+                });
+
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Album", b =>
                 {
                     b.Property<Guid>("Id")
@@ -770,6 +851,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CoverageJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -800,7 +884,10 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasIndex("ProfileId", "CreatedAtUtc", "Id");
 
-                    b.ToTable("DiscoveryBatches", (string)null);
+                    b.ToTable("DiscoveryBatches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DiscoveryBatches_Coverage", "\"CoverageJson\" IS NULL OR octet_length(\"CoverageJson\"::text)<=32768");
+                        });
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Discovery.DiscoveryJob", b =>
@@ -1178,6 +1265,15 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("UserTokens", "identity");
+                });
+
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Album", b =>

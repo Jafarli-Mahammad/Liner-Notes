@@ -7,7 +7,7 @@ public sealed record ListenerProfileExportDto(Guid Id, Guid? UserId, long Revisi
 
 public sealed record DiscoveryBatchExportDto(Guid Id, Guid ProfileId, string RequestId, string Kind,
     long InputRevision, DateTimeOffset CreatedAtUtc, DateTimeOffset? CompletedAtUtc,
-    string? CatalogVersion, string? EvidenceVersion);
+    string? CatalogVersion, string? EvidenceVersion, JsonElement? CoverageJson = null);
 
 /// <summary>Operational lease tokens are security internals and are deliberately excluded.</summary>
 public sealed record DiscoveryJobExportDto(Guid Id, Guid ProfileId, string RequestKey, string RequestHash,
@@ -19,6 +19,8 @@ public sealed record DiscoveryExportDto(ListenerProfileExportDto? Profile,
     IReadOnlyList<DiscoveryBatchExportDto> Batches, IReadOnlyList<DiscoveryJobExportDto> Jobs,
     IReadOnlyList<LinerNotes.Application.DTOs.Digests.WeeklyRecommendationDto>? Recommendations = null,
     IReadOnlyList<LinerNotes.Application.DTOs.Taste.TasteSignalDto>? TasteSignals = null,
-    GuestSessionExportDto? GuestSession = null);
+    GuestSessionExportDto? GuestSession = null, IReadOnlyList<RecommendedIdentityExportDto>? RecommendedHistory = null);
 
 public sealed record GuestSessionExportDto(Guid ProfileId, DateTimeOffset CreatedAtUtc);
+
+public sealed record RecommendedIdentityExportDto(Guid ProfileId, string Alias, DateTimeOffset FirstRecommendedAtUtc);

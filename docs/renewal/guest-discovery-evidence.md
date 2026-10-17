@@ -259,3 +259,18 @@ python3 scripts/catalog/catalog_probe.py postgres --input /tmp/catalog-normalize
 The default input/output ceilings are 512 MiB, one million unique entities and 32 KiB per line. PostgreSQL probe admission conservatively checks four times the normalized artifact size against its configurable schema budget and checks actual schema bytes after import. This is an isolated probe bound, not a promise that peak import/WAL growth cannot overshoot that estimate; the production importer requires real reservations.
 
 Do not commit actual recordings, private environment files or raw operator reports. Follow the existing acquisition/evaluation boundaries for any future real artifact. Later stages must add their own evidence here instead of presenting C1 as a working guest recommendation feature.
+
+## C8 shared-cache and history checkpoint (2026-10-17)
+
+The full offline suite passed 595 checks with zero failures or skips:
+Domain 136, Application 120, DataAccess 112, Presentation 65, Infrastructure 162.
+Evidence is in the private temporary `c8-cache-verified-results` TRX directory.
+PostgreSQL checks cover shared acquisition lease fencing, exact payload checksums
+and expiry. Codec checks preserve public evidence without transient track IDs.
+
+Public cache entries are bounded by bytes, count and expiry; they contain no
+profile identity. Compact private recommendation aliases survive removal of
+expensive score snapshots and are included in export 2.5. The migration verifies
+and rebases storage accounting around schema changes and backfills aliases.
+The background consumer, cache adapter, endpoints and website are still pending.
+These checks establish local mechanics only; no real acquisition was performed.

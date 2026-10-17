@@ -114,3 +114,16 @@ Retryable work retains its bounded input only until retry or terminal cleanup.
 Deletion/import invalidates in-flight publication through owner, revision and
 lease checks. Source acquisition and actual recommendation publication checks are
 integrated in C8; this stage does not enable browser submissions.
+
+## C8 cache/history foundation
+
+`PublicEvidenceCache` is shared operational/public data: hashed public key, kind,
+provider, origin, version, exact payload and SHA-256, computed stored bytes,
+acquisition/expiry/update timestamps and acquisition lease token/deadline. It
+contains no profile ownership or raw personal query. Lease tokens are excluded
+from exports. `RecommendedIdentities` is private: ProfileId, Alias and
+FirstRecommendedAtUtc are exported and cascade on profile deletion. Explicit
+account import merges aliases using their earliest recommendation timestamp.
+`DiscoveryBatches.CoverageJson` is exported as structured JSON. Export version
+2.5 includes every new owned field; cache quota eviction never removes private
+recommendation history. The consumer is not enabled by this checkpoint.

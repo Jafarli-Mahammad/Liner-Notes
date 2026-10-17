@@ -264,6 +264,28 @@ public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
     }
 
     [LocalPostgresMigrationFact]
+    public async Task PublicEvidenceLeasesCoalesceFenceAndPreserveExactChecksummedBytes()
+    {
+        string key = new string('a', 64); var now = DateTimeOffset.UtcNow;
+        now = now.AddTicks(-(now.Ticks % 10)); // PostgreSQL timestamps retain microseconds.
+        var first = await WriteAsync((s, ct) => s.GetRequiredService<IPublicEvidenceStore>().ClaimAsync(key, PublicEvidenceKind.Pool, now, TimeSpan.FromSeconds(15), ct));
+        Assert.NotNull(first);
+        Assert.Null(await WriteAsync((s, ct) => s.GetRequiredService<IPublicEvidenceStore>().ClaimAsync(key, PublicEvidenceKind.Pool, now, TimeSpan.FromSeconds(15), ct)));
+        var reclaimedAt = first!.ExpiresAtUtc;
+        var second = await WriteAsync((s, ct) => s.GetRequiredService<IPublicEvidenceStore>().ClaimAsync(key, PublicEvidenceKind.Pool, reclaimedAt, TimeSpan.FromSeconds(15), ct));
+        var document = LinerNotes.Infrastructure.Discovery.PublicEvidenceCodec.Document(key, PublicEvidenceKind.Pool, "listenbrainz",
+            LinerNotes.Application.Common.Models.Recommendation.EvidenceOrigin.Synthetic, "fixture-v1", new { Facts = new[] { "Synthetic music" } }, now, now.AddMinutes(10));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IPublicEvidenceStore>().PublishAsync(first, document, reclaimedAt, 1_048_576, 10, ct); return true; }));
+        await WriteAsync(async (s, ct) => { await s.GetRequiredService<IPublicEvidenceStore>().PublishAsync(second!, document, reclaimedAt,
+            1_048_576, 10, ct); return true; });
+        await using var read = services.CreateAsyncScope();
+        var saved = await read.ServiceProvider.GetRequiredService<IPublicEvidenceStore>().FindAsync(key, reclaimedAt, default);
+        Assert.Equal(document, saved);
+        Assert.Null(await read.ServiceProvider.GetRequiredService<IPublicEvidenceStore>().FindAsync(key, document.ExpiresAtUtc, default));
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task KillingBackendBeforeCommitRollsBackRowsLedgerAndAllowsFreshAdmission()
     {
         var entered = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);

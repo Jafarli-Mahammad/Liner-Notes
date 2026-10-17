@@ -15,6 +15,14 @@ public sealed class DiscoveryBatch : BaseEntity
     public DateTimeOffset? CompletedAtUtc { get; private set; }
     public string? CatalogVersion { get; private set; }
     public string? EvidenceVersion { get; private set; }
+    public string? CoverageJson { get; private set; }
+    public void RecordEvidence(string? catalogVersion, string evidenceVersion, string coverageJson)
+    {
+        if (catalogVersion?.Length > 128 || string.IsNullOrWhiteSpace(evidenceVersion) || evidenceVersion.Length > 128 ||
+            string.IsNullOrWhiteSpace(coverageJson) || System.Text.Encoding.UTF8.GetByteCount(coverageJson) > 32768)
+            throw new ArgumentException("batch_evidence_invalid");
+        CatalogVersion = catalogVersion; EvidenceVersion = evidenceVersion; CoverageJson = coverageJson;
+    }
 
     private DiscoveryBatch() { }
 

@@ -34,7 +34,7 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
         var batches = await context.DiscoveryBatches.AsNoTracking().Where(b => b.ProfileId == profile.Id)
             .OrderBy(b => b.CreatedAtUtc).ThenBy(b => b.Id)
             .Select(b => new DiscoveryBatchExportDto(b.Id, b.ProfileId, b.RequestId, b.Kind.ToString(),
-                b.InputRevision, b.CreatedAtUtc, b.CompletedAtUtc, b.CatalogVersion, b.EvidenceVersion))
+                b.InputRevision, b.CreatedAtUtc, b.CompletedAtUtc, b.CatalogVersion, b.EvidenceVersion, b.CoverageJson == null ? (JsonElement?)null : JsonSerializer.Deserialize<JsonElement>(b.CoverageJson, (JsonSerializerOptions?)null)))
             .ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var jobs = await context.DiscoveryJobs.AsNoTracking().Where(j => j.ProfileId == profile.Id)
             .OrderBy(j => j.CreatedAtUtc).ThenBy(j => j.Id)
@@ -52,7 +52,10 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
             .OrderBy(s => s.Id).ToArrayAsync(cancellationToken);
         var session = await context.GuestSessions.AsNoTracking().Where(s => s.ProfileId == profile.Id)
             .Select(s => new GuestSessionExportDto(s.ProfileId, s.CreatedAtUtc)).SingleOrDefaultAsync(cancellationToken);
+        var history = await context.Set<LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity>().AsNoTracking()
+            .Where(h => h.ProfileId == profile.Id).OrderBy(h => h.Alias)
+            .Select(h => new RecommendedIdentityExportDto(h.ProfileId, h.Alias, h.FirstRecommendedAtUtc)).ToArrayAsync(cancellationToken);
         return new(profile, batches, jobs, recommendations.Select(r => r.ToDto()).ToArray(),
-            signals.Select(s => s.ToDto()).ToArray(), session);
+            signals.Select(s => s.ToDto()).ToArray(), session, history);
     }
 }

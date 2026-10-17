@@ -385,7 +385,7 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         await CaptureAfterExplicitReconciliationAsync();
         await using var scope = _services.CreateAsyncScope(); var sp = scope.ServiceProvider; var db = sp.GetRequiredService<DataContext>();
         var export = await sp.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(_user));
-        Assert.Equal("2.4", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
+        Assert.Equal("2.5", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
         Assert.Equal(_due.AddDays(7), export.Subscriber.NextDigestAt);
         var digest = Assert.Single(export.Digests); Assert.Equal(WeeklySchedulePolicy.Week(_due).Value, digest.Week);
         Assert.NotEmpty(digest.Recommendations); Assert.All(digest.Recommendations, pick => Assert.NotNull(pick.ScoreBreakdown.Snapshot));

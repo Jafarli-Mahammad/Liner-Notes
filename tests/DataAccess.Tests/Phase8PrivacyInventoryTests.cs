@@ -12,6 +12,8 @@ public sealed class Phase8PrivacyInventoryTests
     internal static readonly IReadOnlyDictionary<string, string[]> ReviewedColumns = new Dictionary<string, string[]>
     {
         ["public.ManagedStorageLedger"] = Columns("Id,Revision,LogicalBytes,RowCount,CoreRevision,CoreLogicalBytes"),
+        ["public.PublicEvidenceCache"] = Columns("Key,Kind,Provider,Origin,Version,PayloadJson,ContentSha256,StoredBytes,AcquiredAtUtc,ExpiresAtUtc,LeaseToken,LeaseExpiresAtUtc,UpdatedAtUtc"),
+        ["public.RecommendedIdentities"] = Columns("ProfileId,Alias,FirstRecommendedAtUtc"),
         ["public.Albums"] = Columns("ArtistId,ArtistName,Id,Mbid,ReleaseGroupMbid,Title"),
         ["public.Artists"] = Columns("Id,Mbid,Name,NormalizedName"),
         ["public.AlbumCredits"] = Columns("AlbumId,ArtistId,Position"),
@@ -22,7 +24,7 @@ public sealed class Phase8PrivacyInventoryTests
         ["public.DataProtectionKeys"] = Columns("FriendlyName,Id,Xml"),
         ["public.GuestSessions"] = Columns("ProfileId,CredentialHash,CreatedAtUtc"),
         ["public.ListenerProfiles"] = Columns("Id,UserId,Revision,CreatedAtUtc,LastActiveAtUtc,ExpiresAtUtc"),
-        ["public.DiscoveryBatches"] = Columns("Id,ProfileId,RequestId,Kind,InputRevision,CreatedAtUtc,CompletedAtUtc,CatalogVersion,EvidenceVersion"),
+        ["public.DiscoveryBatches"] = Columns("Id,ProfileId,RequestId,Kind,InputRevision,CreatedAtUtc,CompletedAtUtc,CatalogVersion,EvidenceVersion,CoverageJson"),
         ["public.DiscoveryJobs"] = Columns("Id,ProfileId,RequestKey,RequestHash,Kind,State,InputRevision,PayloadJson,Attempts,LeaseToken,LeaseExpiresAtUtc,NextAttemptAtUtc,CreatedAtUtc,UpdatedAtUtc,ProgressCode,ErrorCode,ResultBatchId,ResultJson"),
         ["public.TasteSignals"] = Columns("CanonicalEntityId,CatalogRecordId,SelectionJson,Context,CreatedAt,CreatedBy,DeletedAt,DeletedBy,Id,IsDeleted,LastModifiedAt,LastModifiedBy,NormalizedTargetValue,ProfileId,Source,TargetType,TargetValue,UserId,Weight"),
         ["public.Tracks"] = Columns("AlbumTitle,ArtistName,DurationSeconds,ExternalSpotifyUrl,ExternalYoutubeUrl,Id,Mbid,NormalizedArtistName,NormalizedTitle,Title"),

@@ -114,6 +114,18 @@ public sealed class BaselineAScorer
             .DistinctBy(c => c.Track.NormalizedArtistName, StringComparer.Ordinal).Take(count).ToArray();
     }
 
+    public IReadOnlyList<BaselineAPick> RankForBatch(IEnumerable<BaselineACandidate> candidates, WeightedTagVector taste,
+        IReadOnlySet<string> familiarArtists, IReadOnlySet<string> excludedAliases, Guid batchId,
+        BaselineAConfiguration configuration, int count = 5)
+    {
+        if (count is < 0 or > 5) throw new ArgumentOutOfRangeException(nameof(count));
+        return candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excludedAliases.Contains))
+            .Select(c => new BaselineAPick(c.Track, ScoreForBatch(c, taste,
+                familiarArtists.Contains(c.Track.NormalizedArtistName), batchId, configuration)))
+            .OrderByDescending(c => c.Breakdown.FinalScore).ThenBy(c => c.Track.TrackKey, StringComparer.Ordinal)
+            .DistinctBy(c => c.Track.NormalizedArtistName, StringComparer.Ordinal).Take(count).ToArray();
+    }
+
     public ScoreBreakdown Replay(ScoreSnapshot snapshot)
     {
         if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion != "baseline-a-v1" ||

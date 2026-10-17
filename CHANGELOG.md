@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add replayable discovery batch preparation and atomic score/history/job
+  completion, with bounded feedback reads and stale evidence/revision checks.
+  The onsite runner and website integration remain pending.
 - Reuse durable public artist/album seed and candidate evidence after memory
   restart. Prepared-only work cannot fall through to upstream acquisition.
 - Add leased, quota-bounded public evidence storage and compact per-profile

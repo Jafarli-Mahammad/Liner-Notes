@@ -286,3 +286,21 @@ resolution runs outside managed admission. Local catalog album tags can
 materialize taste without provider fallback. This adapter is wired in DI; the
 job consumer and onsite routes are still pending. Private TRX directory:
 `c8-adapter-verified-results`.
+
+### C8 batch preparation/persistence checkpoint
+
+The full suite passed 604 checks with zero failures or skips (Domain 137,
+Application 122, DataAccess 114, Presentation 65, Infrastructure 166), recorded in
+private `c8-pipeline-verified-results`. Batch ranking matches the existing weekly
+policy on the benchmark fixture and stores replayable discovery batch identity.
+Prepared candidates merge discovery paths and exclude compact private history.
+The history lookup is limited to aliases of the bounded current candidate set.
+Taste reads bound feedback to a configurable recent window (default 20); this
+limits scoring inputs without deleting retained feedback. Public pool, seed and
+catalog tag deadlines constrain completion.
+
+PostgreSQL tests commit scores, batch metadata, recommendation aliases and job
+completion together. Compact suppression survives score-snapshot deletion and
+cascades on profile deletion. Expired evidence and changed profile revisions
+cannot publish a batch. The submission handler and hosted consumer are still
+being connected; this is not an enabled onsite product flow.

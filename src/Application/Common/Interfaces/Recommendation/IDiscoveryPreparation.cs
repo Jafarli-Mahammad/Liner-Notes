@@ -23,6 +23,5 @@ public sealed record PreparedDiscoveryPool(string Key, string Provider, Evidence
 public interface IDiscoveryPreparation
 {
     Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, CancellationToken ct);
-    Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct)
-        => allowAcquisition ? GetAsync(request, ct) : throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException();
+    Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct);
 }

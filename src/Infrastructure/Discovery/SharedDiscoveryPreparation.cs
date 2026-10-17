@@ -86,5 +86,8 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
         }
         finally { gate.Release(); }
     }
+    public Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct)
+        => allowAcquisition ? GetAsync(request, ct) : Task.FromResult(TryGet(request)
+            ?? throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException());
     public void Dispose() { foreach (var gate in stripes) gate.Dispose(); }
 }

@@ -20,7 +20,7 @@ public sealed class DiscoveryTasteOptions
 public sealed record CanonicalArtistSeed(Guid Id, string Name);
 public sealed record MaterializedDiscoveryTaste(WeightedTagVector Vector, IReadOnlyList<StoredSeed> Seeds,
     IReadOnlyList<CanonicalArtistSeed> Artists, IReadOnlyList<string> Tags, IReadOnlyList<CoverageGap> Gaps,
-    IReadOnlySet<string> FamiliarArtists);
+    IReadOnlySet<string> FamiliarArtists, DateTimeOffset? EvidenceExpiresAtUtc = null);
 
 public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver resolver, GenerationConfiguration configuration,
     DiscoveryTasteOptions options, TimeProvider clock, IDiscoverySeedPreparation? preparation = null)
@@ -36,9 +36,10 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         var artists = new Dictionary<Guid, CanonicalArtistSeed>();
         var familiar = new HashSet<string>(StringComparer.Ordinal);
         var gaps = new List<CoverageGap>();
+        var expiries = new List<DateTimeOffset>();
         var positives = signals.Where(s => s.Weight > 0).ToArray();
         if (positives.Length > 200) throw new GenerationStoppedException("taste_evidence_limit");
-        foreach (var signal in positives.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album))
+        foreach (var signal in positives.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album).OrderBy(s => s.Source != TasteSignalSource.InitialSeedManual))
         {
             ct.ThrowIfCancellationRequested();
             if (signal.SelectionJson is null || signal.CanonicalEntityId is null)
@@ -69,6 +70,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             SeedTagSnapshot snapshot;
             if (local.Length > 0)
             {
+                if (item.ExpiresAtUtc is { } localExpiry) expiries.Add(localExpiry);
                 var origin = item.Origin == CatalogOrigin.Synthetic ? EvidenceOrigin.Synthetic : EvidenceOrigin.Live;
                 var response = new ResponseReference(item.Source, "catalog.tags", identity + ":" + item.Version.ToString("D"), origin,
                     item.ContentSha256, item.AcquiredAtUtc);
@@ -93,9 +95,9 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             }
         }
         return new(DiscoveryTasteMaterializer.Build(positives, evidence), stored,
-            artists.Values.OrderBy(a => a.Id).Take(configuration.MaximumArtistSeeds).ToArray(),
+            artists.Values.Take(configuration.MaximumArtistSeeds).OrderBy(a => a.Id).ToArray(),
             positives.Where(s => s.TargetType == TasteTargetType.Tag).Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal).Take(configuration.MaximumTagSeeds).ToArray(), gaps.Distinct().ToArray(), familiar);
+                .Order(StringComparer.Ordinal).Take(configuration.MaximumTagSeeds).ToArray(), gaps.Distinct().ToArray(), familiar, expiries.Count == 0 ? null : expiries.Min());
 
         async Task<SeedTagSnapshot> Seed(DiscoverySeedRequest request)
         {
@@ -107,6 +109,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         }
         void Add(TasteSignal signal, SeedTagSnapshot snapshot, string identity, string scope, double influence, string? missing)
         {
+            if (snapshot.SharedUntilUtc is { } expiry) expiries.Add(expiry);
             if (snapshot.Response.Origin != configuration.Origin || snapshot.Response.Origin == EvidenceOrigin.Recorded ||
                 snapshot.Tags.Any(t => t.Response.Origin != configuration.Origin) || snapshot.SupportingResponses.Any(r => r.Origin != configuration.Origin))
                 throw new GenerationStoppedException("seed_evidence_origin_mismatch");

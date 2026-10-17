@@ -29,6 +29,7 @@ public sealed record SeedTagSnapshot(string ArtistName, LinerNotes.Domain.Catalo
     IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps)
 {
     public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
+    public DateTimeOffset? SharedUntilUtc { get; init; }
 }
 
 public interface IGenerationStorage

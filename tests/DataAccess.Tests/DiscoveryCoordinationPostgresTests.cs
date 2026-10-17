@@ -17,6 +17,70 @@ namespace LinerNotes.DataAccess.Tests;
 
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
+    [LocalPostgresMigrationFact]
+    public async Task BatchCompletionAtomicallyStoresScoresHistoryAndJobThenHistorySurvivesSnapshotRemoval()
+    {
+        var profile = await GuestAsync('a');
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id, "initial", new string('a', 64),
+            DiscoveryJobKind.Generation, profile.Revision, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var lease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        Guid batchId = Guid.NewGuid();
+        var track = new LinerNotes.Domain.Catalog.Track("Song", "Artist", mbid: Guid.NewGuid().ToString("D"));
+        var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
+        var scorer = new LinerNotes.Domain.Scoring.BaselineAScorer();
+        var breakdown = scorer.ScoreForBatch(new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batchId, new());
+        await WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(lease!.Id, lease.LeaseToken!.Value, batchId,
+                DiscoveryBatchKind.Initial, [new(track, breakdown)], "{}", DateTimeOffset.UtcNow.AddMinutes(1), DateTimeOffset.UtcNow, ct);
+            return true;
+        }, 1_048_576);
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            Assert.Equal(DiscoveryJobState.Completed, (await db.DiscoveryJobs.SingleAsync()).State);
+            Assert.Equal(batchId, (await db.WeeklyRecommendations.SingleAsync()).ScoreBreakdown.Snapshot!.DiscoveryBatchId);
+            Assert.Equal(2, await db.Set<LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity>().CountAsync());
+        }
+        await WriteAsync(async (s, ct) => { await s.GetRequiredService<DataContext>().WeeklyRecommendations.ExecuteDeleteAsync(ct); return true; });
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IDiscoveryBatchStore>();
+            Assert.Equal(2, (await store.FindExcludedAsync(profile.Id, LinerNotes.Domain.Scoring.TrackIdentity.Aliases(track).ToArray(), default)).Count);
+        }
+        await WriteAsync(async (s, ct) => { await s.GetRequiredService<DataContext>().ListenerProfiles.ExecuteDeleteAsync(ct); return true; });
+        await using var verify = services.CreateAsyncScope();
+        Assert.Equal(0, await verify.ServiceProvider.GetRequiredService<DataContext>().Set<LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity>().CountAsync());
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task StaleProfileRevisionAndExpiredEvidenceCannotPublishBatch()
+    {
+        var profile = await GuestAsync('b');
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id, "initial", new string('a', 64),
+            DiscoveryJobKind.Generation, profile.Revision, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var lease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(lease!.Id, lease.LeaseToken!.Value, Guid.NewGuid(),
+                DiscoveryBatchKind.Initial, [], "{}", DateTimeOffset.UtcNow.AddSeconds(-1), DateTimeOffset.UtcNow, ct); return true;
+        }));
+        await WriteAsync(async (s, ct) => {
+            var db = s.GetRequiredService<DataContext>();
+            var current = await db.ListenerProfiles.AsTracking().SingleAsync(ct);
+            current.ChangeInputs(current.Revision); await db.SaveChangesAsync(ct); return true;
+        });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(lease!.Id, lease.LeaseToken!.Value, Guid.NewGuid(),
+                DiscoveryBatchKind.Initial, [], "{}", null, DateTimeOffset.UtcNow, ct); return true;
+        }));
+        await using var scope = services.CreateAsyncScope();
+        var verify = scope.ServiceProvider.GetRequiredService<DataContext>();
+        Assert.Equal(0, await verify.DiscoveryBatches.CountAsync());
+        Assert.Equal(0, await verify.WeeklyRecommendations.CountAsync());
+        Assert.Equal(DiscoveryJobState.Running, (await verify.DiscoveryJobs.SingleAsync()).State);
+    }
+
     private readonly string name = "liner_coord_c7_" + Guid.NewGuid().ToString("N");
     private readonly string root = Path.Combine(Path.GetTempPath(), "liner-coord-c7-" + Guid.NewGuid().ToString("N"));
     private string admin = "", connection = "";

@@ -26,7 +26,7 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
         })));
         string memoryKey = "seed:" + key;
         if (caches.Prepared.TryGetValue<PublicEvidenceDocument>(memoryKey, out var hit) && hit!.ExpiresAtUtc > clock.GetUtcNow())
-            return PublicEvidenceCodec.DecodeSeed(hit);
+            return Decode(hit);
         var document = await evidence.GetAsync(key, PublicEvidenceKind.Seed, PublicEvidenceCodec.SeedVersion,
             allowAcquisition, async token => {
                 await using var scope = scopes.CreateAsyncScope();
@@ -53,6 +53,11 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
                 Size = DiscoveryMemoryCaches.EstimateBytes(System.Text.Encoding.UTF8.GetByteCount(document.PayloadJson), memoryKey),
                 AbsoluteExpirationRelativeToNow = remaining
             });
-        return PublicEvidenceCodec.DecodeSeed(document);
+        return Decode(document);
     }
+    private static SeedTagSnapshot Decode(PublicEvidenceDocument document)
+        => PublicEvidenceCodec.DecodeSeed(document) with {
+            SharedUntilUtc = document.ExpiresAtUtc > document.AcquiredAtUtc ? document.ExpiresAtUtc : null
+        };
+
 }

@@ -226,3 +226,12 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Issue:** The progress file repeated completed implementation details across several sections, contained stale historical claims and malformed fragments, and made open gates hard to identify.
 **Suggested improvement:** Keep the tracker focused on current implementation status, concrete remaining decisions and execution gates. Retain detailed verification and historical rationale in linked evidence documents; check claims against the current checkout before pruning.
 **Principle:** A progress tracker should answer what is done and what remains; evidence documents should carry the detailed record.
+
+### 021 — Schema changes and exact public payload checksums
+
+Adding a column changes PostgreSQL to_jsonb(row) storage-accounting estimates
+without firing row triggers. Verify the old accounting baseline before schema
+DDL, then explicitly rebase after DDL/backfill. Public JSON payloads with exact
+byte checksums need TEXT storage; JSONB normalizes representation. Test decoded
+immutable collections by sequence contents and normalize timestamp fixtures to
+PostgreSQL microsecond precision. Keep these checks in migration/cache tests.

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using System.Text;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
@@ -19,7 +20,7 @@ public sealed record GenerationInventory(DateTimeOffset MeasuredAtUtc, bool Reco
     long DatabaseBytes, string DatabaseRevision, Dictionary<string, ArtifactMeasurement> Categories);
 
 /// <summary>Explicit local roots and reconciled inventory under one cross-process batch lease.</summary>
-public sealed class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage, ILocalEmailStorage
+public sealed partial class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage, ILocalEmailStorage, ICoordinatedGenerationStorage
 {
     private long OverheadBytesPerPick => options.DatabaseOverheadBytesPerPick!.Value;
     public const long StopBytes = 1_000_000_000;
@@ -88,6 +89,14 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
         catch (UnauthorizedAccessException) { throw new GenerationStoppedException("storage_lease_unavailable"); }
     }
 
+    private static bool LegacyRevisionEquals(string first, string second)
+    {
+        if (first == second) return true;
+        var a = first.Split(':'); var b = second.Split(':');
+        return a.Length == 6 && b.Length == 6 && a[0] == "managed-v1" && b[0] == a[0] &&
+            a[1] == b[1] && a[2] == b[2] && a[5] == b[5];
+    }
+
     private static bool Within(string file, string root) => Path.GetFullPath(file).StartsWith(
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
         Path.GetFullPath(file) == Path.GetFullPath(root);
@@ -117,10 +126,10 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
             throw new GenerationStoppedException("stale_or_unknown_storage_inventory");
     }
 
-    private async Task ValidateAsync(GenerationInventory inventory, GenerationStorageState database, CancellationToken ct)
+    private async Task ValidateAsync(GenerationInventory inventory, GenerationStorageState database, CancellationToken ct, bool coordinatedMode = false)
     {
         CheckInventory(inventory);
-        if (database.DatabaseBytes < 0 || database.DatabaseBytes != inventory.DatabaseBytes || database.Revision != inventory.DatabaseRevision)
+        if (database.DatabaseBytes < 0 || database.DatabaseBytes != inventory.DatabaseBytes || (!LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision) || (coordinatedMode && database.Revision != inventory.DatabaseRevision)))
             throw new GenerationStoppedException("database_inventory_changed");
         await ValidateArtifactsAsync(inventory, ct).ConfigureAwait(false);
         if (Total(inventory) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
@@ -204,7 +213,7 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
             ct.ThrowIfCancellationRequested();
             if (inventory is null) return; // Receipt reconciliation creates no file and is available at the stop.
             owner.CheckInventory(inventory);
-            if (database != new GenerationStorageState(inventory.DatabaseBytes, inventory.DatabaseRevision))
+            if (database.DatabaseBytes != inventory.DatabaseBytes || !LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision))
                 throw new GenerationStoppedException("database_inventory_changed");
             var actual = await owner.MeasureAsync(ct, ownedPaths).ConfigureAwait(false);
             if (Categories.Any(c => actual[c] != baseline![c])) throw new GenerationStoppedException("artifact_inventory_changed");
@@ -218,27 +227,34 @@ public sealed class LocalGenerationStorage(GenerationStorageOptions options, Tim
         public ValueTask DisposeAsync() => file.DisposeAsync();
     }
 
-    private sealed class Lease(LocalGenerationStorage owner, FileStream file, GenerationInventory inventory) : IGenerationStorageLease
+    private sealed class Lease(LocalGenerationStorage owner, FileStream file, GenerationInventory inventory, bool coordinatedMode = false) : ICoordinatedStorageLease
     {
         public async Task<IGenerationStorageReservation> ReserveAsync(long serializedBytes, int pickCount,
             GenerationStorageState database, CancellationToken cancellationToken = default)
         {
-            await owner.ValidateAsync(inventory, database, cancellationToken).ConfigureAwait(false);
+            await owner.ValidateAsync(inventory, database, cancellationToken, coordinatedMode).ConfigureAwait(false);
             if (serializedBytes < 0 || pickCount is < 0 or > 5) throw new GenerationStoppedException("invalid_storage_reservation");
             long allowance = checked(serializedBytes + owner.OverheadBytesPerPick * Math.Max(pickCount, 1));
+            if (coordinatedMode) owner.coordinated!.RequireHeadroom(allowance, owner.filesystemProbe);
             if (checked(Total(inventory) + allowance) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
-            return new Reservation(owner, inventory, allowance);
+            return new Reservation(owner, inventory, allowance, coordinatedMode);
         }
+        public Task PublishCommittedInventoryAsync(GenerationStorageState committed, CancellationToken ct) =>
+            owner.PublishCommittedAsync(inventory, committed, ct);
         public ValueTask DisposeAsync() => file.DisposeAsync();
     }
 
-    private sealed class Reservation(LocalGenerationStorage owner, GenerationInventory inventory, long allowance) : IGenerationStorageReservation
+    private sealed class Reservation(LocalGenerationStorage owner, GenerationInventory inventory, long allowance, bool coordinatedMode = false) : IGenerationStorageReservation
     {
-        public Task ValidateAsync(GenerationStorageState database, CancellationToken cancellationToken = default) =>
-            owner.ValidateAsync(inventory, database, cancellationToken);
+        public Task ValidateAsync(GenerationStorageState database, CancellationToken cancellationToken = default)
+        {
+            if (coordinatedMode) owner.coordinated!.RequireHeadroom(allowance, owner.filesystemProbe);
+            return owner.ValidateAsync(inventory, database, cancellationToken, coordinatedMode);
+        }
         public async Task VerifyStoredAsync(long actualColumnBytes, GenerationStorageState database, CancellationToken cancellationToken = default)
         {
             await owner.ValidateArtifactsAsync(inventory, cancellationToken).ConfigureAwait(false);
+            if (coordinatedMode) owner.coordinated!.RequireHeadroom(0, owner.filesystemProbe);
             long growth = Math.Max(0, database.DatabaseBytes - inventory.DatabaseBytes);
             if (actualColumnBytes < 0 || actualColumnBytes > allowance || growth > allowance ||
                 checked(Total(inventory) + Math.Max(growth, actualColumnBytes)) >= StopBytes)

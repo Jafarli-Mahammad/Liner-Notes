@@ -1,6 +1,52 @@
 # Guest discovery evidence
 
-Updated: 2026-10-17. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle, C5 catalog and C6 taste/preparation mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-17. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle, C5 catalog, C6 taste/preparation and C7 job/admission mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+
+## C7: durable jobs and coordinated admission
+
+Locally verified on 2026-10-17: idempotent owner-scoped job admission, cooldown and
+queue backpressure, expiring leases, bounded retries, fencing after reclaim,
+terminal payload clearing and deletion checks. Private selections and jobs share
+the caller's admitted transaction. A failed reservation rolls both back.
+
+The generated accounting migration backfills global/legacy-core counters and
+installs row/TRUNCATE triggers. Normal admission reads counters plus schema
+metadata instead of hashing every private row. Explicit reconciliation independently
+checks totals against actual rows and fails without repairing mismatches. A short
+coordinator reserves logical/physical growth, checks configured filesystem
+headroom and atomically publishes committed inventory. No source I/O belongs in
+its write callback. See [the storage contract](guest-discovery-storage.md).
+
+Full verification passed 592 .NET tests with zero failures/skips: Domain 136,
+Application 120, DataAccess 111, Presentation 65, Infrastructure 160. Required TRX,
+secret-default, documentation and whitespace gates passed. After strengthening the
+accepted-input rollback assertion and removing the unused unavailable-coordinator
+placeholder, all eight coordination PostgreSQL tests passed again. Results:
+`/tmp/liner-guest-c6-7_udsfmm/c7-complete-results` and
+`c7-final-atomic-results`. Environment: SDK 10.0.401 and isolated PostgreSQL 18.6,
+512 MiB/one CPU, existing IDE database untouched.
+
+Evidence includes real backend termination with observed server rollback, fresh
+scope/restart lease reclaim, revoked stale tokens, guest deletion during work,
+unknown schema/external writes, corruption detection and TRUNCATE accounting.
+Near-cutoff occupancy is injected while real PostgreSQL transactions compete;
+the developer's actual disk is not filled. Filesystem-full/unavailable and failed
+post-commit inventory publication are controlled faults. These checks prove guard
+mechanics, not the later constrained-host capacity targets.
+
+The first complete run exposed legacy weekly bookkeeping scope differences;
+separate core/all-write counters restored its original guard boundary. One legacy
+capture test also stopped at physical inventory drift on an intermediate run;
+its isolated rerun and two subsequent complete runs passed. Diagnostic logging
+retains size/revision-equality evidence without weakening post-fault assertions.
+Each trigger now updates both counters in one atomic row update.
+
+C8 must integrate the consumer, safe source-error policy, periodic inventory
+maintenance, remaining legacy website writers, public preparation quotas/coalescing
+and the weekly acquisition refactor before enabling the product flow. C9/C10,
+real catalog acquisition, live quality, deployment and developer confirmation
+remain outstanding. No live provider calls were made.
+
 
 ## C6: canonical album taste and bounded public preparation
 

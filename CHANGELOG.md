@@ -2,6 +2,10 @@
 
 ## Unreleased — renewal
 
+- Add durable discovery job leases, idempotent queue admission and coordinated
+  storage reservations. Database accounting avoids scanning private history for
+  every new write. The onsite runner and website flow remain pending.
+
 - Add canonical artist/album selections and style validation, scoped album taste
   evidence with configurable credited-artist fallback, and reusable public candidate
   pools. Provider and prepared caches now have a combined 64 MiB admission budget.

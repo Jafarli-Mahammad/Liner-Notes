@@ -83,7 +83,11 @@ public static class DependencyInjection
         });
         services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
         services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().SeedTags);
+        services.AddSingleton<IStorageFreeSpaceProbe, DriveStorageFreeSpaceProbe>();
         services.AddScoped<LocalGenerationStorage>();
+        services.Configure<CoordinatedStorageOptions>(configuration.GetSection("DiscoveryStorage"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<CoordinatedStorageOptions>>().Value);
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.ICoordinatedGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
         services.AddScoped<IGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
         services.AddScoped<ILocalEmailStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
 

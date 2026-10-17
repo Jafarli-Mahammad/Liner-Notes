@@ -72,7 +72,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         services = registrations.BuildServiceProvider();
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-        await context.Database.EnsureCreatedAsync();
+        await scope.ServiceProvider.GetRequiredService<LinerNotes.DataAccess.Persistence.AppDbContext>().Database.MigrateAsync();
         context.ApplicationUsers.Add(new ApplicationUser { Id = userId, UserName = "phase6", Email = "phase6@example.test" });
         context.Users.Add(new User("phase6@example.test", "UTC", id: userId));
         context.TasteSignals.Add(TasteSignal.CreateSeedArtist(userId, "Seed Artist", 1, "manual"));

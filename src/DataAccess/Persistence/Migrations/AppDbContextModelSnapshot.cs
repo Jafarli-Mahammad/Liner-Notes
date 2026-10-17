@@ -109,6 +109,31 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.ToTable("Users", "identity");
                 });
 
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageLedger", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("CoreLogicalBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CoreRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("LogicalBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RowCount")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ManagedStorageLedger", (string)null);
+                });
+
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Album", b =>
                 {
                     b.Property<Guid>("Id")

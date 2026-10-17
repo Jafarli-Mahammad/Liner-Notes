@@ -15,6 +15,7 @@ public sealed class DiscoveryTasteStore(DataContext db) : IDiscoveryTasteStore
         var profile = await db.ListenerProfiles.FromSqlInterpolated($"""
             SELECT * FROM "ListenerProfiles" WHERE "Id"={profileId} FOR UPDATE
             """).AsTracking().SingleOrDefaultAsync(ct) ?? throw new UnauthorizedAccessException();
+        await db.Entry(profile).ReloadAsync(ct);
         if (profile.IsExpired(now)) throw new UnauthorizedAccessException();
         if (await db.DiscoveryJobs.AnyAsync(j => j.ProfileId == profileId && j.Kind == LinerNotes.Domain.Discovery.DiscoveryJobKind.Generation &&
             (j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Pending || j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Running ||

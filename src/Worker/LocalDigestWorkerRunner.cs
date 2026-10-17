@@ -25,6 +25,8 @@ public sealed class LocalDigestWorkerRunner(IServiceProvider services)
         {
             // Provision shared keys before measuring the whole database. Token is never logged or retained here.
             if(sp.GetRequiredService<LocalEmailOptions>().Enabled) _=sp.GetRequiredService<IUnsubscribeTokens>().Create(options.UserId);
+            await using var batch=await sp.GetRequiredService<IDigestGenerationStore>().AcquireBatchAsync(ct);
+            await sp.GetRequiredService<LinerNotes.Application.Common.Interfaces.Discovery.IManagedStorageIntegrity>().VerifyAsync(ct);
             var state=await sp.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync(ct);
             var inventory=await sp.GetRequiredService<LocalGenerationStorage>().ReconcileAsync(state,ct);
             return new("reconciled",AccountedBytes:inventory.DatabaseBytes+inventory.Categories.Values.Sum(c=>c.Bytes));

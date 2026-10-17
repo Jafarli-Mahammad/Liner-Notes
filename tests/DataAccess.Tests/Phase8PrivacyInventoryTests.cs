@@ -11,6 +11,7 @@ public sealed class Phase8PrivacyInventoryTests
     // Explicit review contract. Never derive the expected columns from the model under test.
     internal static readonly IReadOnlyDictionary<string, string[]> ReviewedColumns = new Dictionary<string, string[]>
     {
+        ["public.ManagedStorageLedger"] = Columns("Id,Revision,LogicalBytes,RowCount,CoreRevision,CoreLogicalBytes"),
         ["public.Albums"] = Columns("ArtistId,ArtistName,Id,Mbid,ReleaseGroupMbid,Title"),
         ["public.Artists"] = Columns("Id,Mbid,Name,NormalizedName"),
         ["public.AlbumCredits"] = Columns("AlbumId,ArtistId,Position"),

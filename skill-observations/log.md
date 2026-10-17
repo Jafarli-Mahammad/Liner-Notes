@@ -4,6 +4,18 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
 
+### Observation 020: Preserve writer coverage and validation scope when replacing scans
+
+**Status:** OPEN
+**Date:** 2026-10-17
+**Session context:** Replaced repeated history hashing with PostgreSQL accounting.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Database integrity and compatibility
+**Issue:** A broader mutation counter caused a legacy guard to reject scheduler bookkeeping that its original revision intentionally excluded. Schema-only test creation also omits custom accounting triggers.
+**Suggested improvement:** Inventory all writers, including raw SQL, cascade deletion and TRUNCATE. Preserve existing guard scope explicitly while maintaining a complete counter for new admission. Run generated migrations in integration tests and keep an independent reconciliation check against actual rows.
+**Principle:** Faster accounting must preserve both mutation coverage and the meaning of the validation boundary.
+
 ### Observation 019: Separate cache admission units from clocks and working sets
 
 **Status:** OPEN

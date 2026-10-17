@@ -67,10 +67,12 @@ public static class DependencyInjection
         services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
         services.AddScoped<IGuestProfileStore, GuestProfileStore>();
         services.AddScoped<IDiscoveryTasteStore, DiscoveryTasteStore>();
+        services.AddScoped<IDiscoveryJobStore, DiscoveryJobStore>();
+        services.AddScoped<IManagedStorageIntegrity, LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageIntegrity>();
         services.AddScoped<ICatalogReader, CatalogReader>();
         services.AddScoped<ICatalogImportStore, CatalogImportStore>();
         services.AddScoped<LinerNotes.Application.Features.Catalog.ICatalogLookupJobs, CatalogLookupJobs>();
-        services.AddScoped<IDiscoveryWriteCoordinator, UnavailableDiscoveryWriteCoordinator>();
+        services.AddScoped<IDiscoveryWriteCoordinator, DiscoveryWriteCoordinator>();
         services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();

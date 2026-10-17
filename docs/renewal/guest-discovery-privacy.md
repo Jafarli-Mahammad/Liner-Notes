@@ -97,3 +97,20 @@ only in byte-budgeted process memory; durable prepared publication stays disable
 until C7 can reserve it. No-store, private, expired, or restricted evaluation evidence
 is ineligible for shared cache retention. Byte estimates bound cache admission;
 they are not process RSS measurements or a complete host memory bound.
+
+
+## C7 operational accounting and durable job transitions
+
+ManagedStorageLedger.Id, Revision, LogicalBytes, RowCount, CoreRevision and
+CoreLogicalBytes are global operational counters. They contain no profile/user
+reference or copied user payload and are excluded from individual exports. They
+are explicitly covered by the relational inventory test. Trigger accounting also
+covers security tables without copying their values into another stored table.
+
+Job ownership/export columns are unchanged. Lease tokens remain excluded; attempts,
+state, safe error/progress codes and dates remain included. Completion, terminal
+failure, exhausted attempts and cancellation clear PayloadJson and revoke leases.
+Retryable work retains its bounded input only until retry or terminal cleanup.
+Deletion/import invalidates in-flight publication through owner, revision and
+lease checks. Source acquisition and actual recommendation publication checks are
+integrated in C8; this stage does not enable browser submissions.

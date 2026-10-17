@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog and C6 taste/preparation mechanics are implemented and locally verified; C7–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog and C6 taste/preparation and C7 job/admission mechanics are implemented and locally verified; C8–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -211,13 +211,13 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 
 **Steps:**
 
-- [ ] Implement the shared job store over the C2 schema: atomic enqueue, unique profile/idempotency keys, a partial uniqueness constraint for one unfinished generation per profile, bounded payloads and explicit cleanup rules. Initial enqueue and accepted input changes share a transaction.
-- [ ] Implement lease acquisition/renewal/recovery, bounded retry scheduling, stale lease fencing and terminal failures. Distinguish retryable transport failures from permission/configuration/schema failures. Store safe codes rather than raw HTTP bodies or private runtime values.
-- [ ] Add short transactional managed-storage reservations for profiles, jobs, catalog publication, shared evidence and recommendation snapshots. Document conservative overhead, physical database growth, WAL/filesystem headroom, inventory changes and operator reconciliation. No class of new managed writes is silently unaccounted.
-- [ ] Replace repeated full-history revision scans on the new generation path with a proven coordinated accounting/revision mechanism. Keep an explicit bounded reconciliation/integrity procedure and compatibility with the existing local Worker. The guard remains mandatory and fail-closed.
-- [ ] Serialize only the short admission/accounting/persistence sections that require it. No global storage/database lease may span provider I/O. Source processes and account deletion must participate in compatible coordination.
-- [ ] Prove reservation races near cutoff, stale inventory, external/untracked growth, interrupted publication, uncertain filesystem inventory, actual bytes exceeding estimate, lease expiry and concurrent deletion. Use real PostgreSQL transactions/process termination for crash boundaries; wait for actual server rollback before asserting outcomes.
-- [ ] Validate that a failed required reservation rolls back accepted private input/job changes when they were part of the same action, or returns the documented existing state. Do not leave orphaned jobs or advertise a successfully queued generation that cannot exist.
+- [x] Implement the shared job store over the C2 schema: atomic enqueue, unique profile/idempotency keys, a partial uniqueness constraint for one unfinished generation per profile, bounded payloads and explicit cleanup rules. Initial enqueue and accepted input changes share a transaction.
+- [x] Implement lease acquisition/renewal/recovery, bounded retry scheduling, stale lease fencing and terminal failures. Distinguish retryable transport failures from permission/configuration/schema failures. Store safe codes rather than raw HTTP bodies or private runtime values. **C7 establishes state/store mechanics; source-failure classification is wired by the C8 consumer.**
+- [x] Add short transactional managed-storage reservations for profiles, jobs, catalog publication, shared evidence and recommendation snapshots. Document conservative overhead, physical database growth, WAL/filesystem headroom, inventory changes and operator reconciliation. No class of new managed writes is silently unaccounted.
+- [x] Replace repeated full-history revision scans on the new generation path with a proven coordinated accounting/revision mechanism. Keep an explicit bounded reconciliation/integrity procedure and compatibility with the existing local Worker. The guard remains mandatory and fail-closed.
+- [ ] Serialize only the short admission/accounting/persistence sections that require it. No global storage/database lease may span provider I/O. Source processes and account deletion must participate in compatible coordination. **The new coordinator is short-lived; legacy weekly acquisition and remaining website writers are integrated in C8 before enabling the host.**
+- [x] Prove reservation races near cutoff, stale inventory, external/untracked growth, interrupted publication, uncertain filesystem inventory, actual bytes exceeding estimate, lease expiry and concurrent deletion. Use real PostgreSQL transactions/process termination for crash boundaries; wait for actual server rollback before asserting outcomes.
+- [x] Validate that a failed required reservation rolls back accepted private input/job changes when they were part of the same action, or returns the documented existing state. Do not leave orphaned jobs or advertise a successfully queued generation that cannot exist.
 
 **Exit:** Durable ownership and resource admission are safe before the web host starts accepting background generation work.
 

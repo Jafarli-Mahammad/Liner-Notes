@@ -68,53 +68,31 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
     {
         var connection = db.Database.GetDbConnection();
         bool opened = connection.State != ConnectionState.Open;
-        if (opened) await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        if (opened) await db.Database.OpenConnectionAsync(cancellationToken);
         try
         {
-            await using var consistencyTransaction = db.Database.CurrentTransaction is null
-                ? await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false)
-                : null;
-            var currentTransaction = db.Database.CurrentTransaction?.GetDbTransaction();
-            await using var sizeCommand = connection.CreateCommand();
-            sizeCommand.Transaction = currentTransaction;
-            sizeCommand.CommandText = "SELECT pg_database_size(current_database())";
-            long databaseBytes = Convert.ToInt64(await sizeCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
-                System.Globalization.CultureInfo.InvariantCulture);
-
-            using var revision = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            using var rowHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            long payloadBytes = 0;
-            foreach (var (kind, table) in new[]
-                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations"), ("profile", "ListenerProfiles"), ("batch", "DiscoveryBatches"), ("job", "DiscoveryJobs"), ("guest_session", "GuestSessions") })
-            {
-                revision.AppendData(Encoding.UTF8.GetBytes(kind));
-                revision.AppendData([0]);
-                await using var rowsCommand = connection.CreateCommand();
-                rowsCommand.Transaction = currentTransaction;
-                var key = table == "GuestSessions" ? "ProfileId" : "Id";
-                rowsCommand.CommandText = $"SELECT \"{key}\"::text, to_jsonb(t)::text FROM \"{table}\" t ORDER BY \"{key}\"";
-                await using var reader = await rowsCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    string id = reader.GetString(0);
-                    string payload = reader.GetString(1);
-                    rowHash.AppendData(Encoding.UTF8.GetBytes(id));
-                    rowHash.AppendData([0]);
-                    rowHash.AppendData(Encoding.UTF8.GetBytes(payload));
-                    revision.AppendData(rowHash.GetHashAndReset());
-                    payloadBytes = checked(payloadBytes + Encoding.UTF8.GetByteCount(payload));
-                }
-            }
-            var result = new GenerationStorageState(Math.Max(databaseBytes, payloadBytes),
-                Convert.ToHexStringLower(revision.GetHashAndReset()));
-            if (consistencyTransaction is not null)
-                await consistencyTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            return result;
+            await using var command = connection.CreateCommand();
+            command.Transaction = db.Database.CurrentTransaction?.GetDbTransaction();
+            command.CommandText = """
+                SELECT pg_database_size(current_database()),l."Revision",l."LogicalBytes",l."CoreRevision",l."CoreLogicalBytes",
+                  (SELECT md5(string_agg(n.nspname||'.'||c.relname||':'||c.oid::text||':'||c.relfilenode::text||':'||
+                     COALESCE((SELECT string_agg(a.attname||':'||a.atttypid::text||':'||a.attnotnull::text,',' ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),'')||':'||
+                     COALESCE((SELECT string_agg(t.tgname||':'||t.tgenabled::text,',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal),''),',' ORDER BY n.nspname,c.relname))
+                   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','i','S','v') AND n.nspname IN ('public','identity'))
+                FROM "ManagedStorageLedger" l WHERE l."Id"=1 AND current_setting('session_replication_role')='origin'
+                  AND NOT EXISTS (SELECT 1 FROM pg_tables t WHERE t.schemaname IN ('public','identity')
+                    AND t.tablename NOT IN ('__EFMigrationsHistory','ManagedStorageLedger')
+                    AND (NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
+                      AND g.tgname='liner_storage_delta' AND g.tgenabled='O') OR
+                      NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
+                      AND g.tgname='liner_storage_truncate' AND g.tgenabled='O')))
+                """;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken)) throw new GenerationStoppedException("managed_storage_ledger_missing_or_schema_uncovered");
+            long size = reader.GetInt64(0), revision = reader.GetInt64(1), logical = reader.GetInt64(2);
+            return new(Math.Max(size, logical), $"managed-v1:{reader.GetInt64(3)}:{reader.GetInt64(4)}:{revision}:{logical}:{reader.GetString(5)}");
         }
-        finally
-        {
-            if (opened) await db.Database.CloseConnectionAsync().ConfigureAwait(false);
-        }
+        finally { if (opened) await db.Database.CloseConnectionAsync(); }
     }
 
     public Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,

@@ -20,4 +20,6 @@ public interface IGuestProfileStore
 public interface IDiscoveryWriteCoordinator
 {
     Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct);
+    // For deletion only. The transaction must not increase the tracked logical byte total.
+    Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct);
 }

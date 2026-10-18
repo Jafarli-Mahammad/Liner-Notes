@@ -219,6 +219,7 @@ public sealed class CatalogPostgresTests : IAsyncLifetime
     }
     private sealed class TransactionalAdmission(IUnitOfWork uow) : IDiscoveryWriteCoordinator
     {
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct) => ExecuteAsync(0, delete, ct);
         private int _writes;
         public int FailAfter { get; set; } = int.MaxValue;
         public void AllowNextWrites(int count) => FailAfter = _writes + count;

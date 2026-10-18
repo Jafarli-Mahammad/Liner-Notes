@@ -28,7 +28,7 @@ public sealed class GuestLifecycle(IGuestProfileStore store, IDiscoveryWriteCoor
     }
 
     public Task<DiscoveryExportDto> ExportAsync(Guid profileId, CancellationToken ct) => store.ExportAsync(profileId, ct);
-    public Task ClearAsync(string hash, CancellationToken ct) => admission.ExecuteAsync(0, async token =>
+    public Task ClearAsync(string hash, CancellationToken ct) => admission.ReclaimAsync(async token =>
     {
         await store.DeleteGuestAsync(hash, clock.GetUtcNow(), token);
         return true;
@@ -38,6 +38,6 @@ public sealed class GuestLifecycle(IGuestProfileStore store, IDiscoveryWriteCoor
         await store.ImportIntoAccountAsync(hash, userId, clock.GetUtcNow(), token);
         return true;
     }, ct);
-    public Task<int> CleanupAsync(int limit, CancellationToken ct) => admission.ExecuteAsync(0,
+    public Task<int> CleanupAsync(int limit, CancellationToken ct) => admission.ReclaimAsync(
         token => store.DeleteExpiredAsync(clock.GetUtcNow(), limit, token), ct);
 }

@@ -457,3 +457,25 @@ profile and creates its Identity principal. Full final verification passed 633
 tests, zero failures/skips across five projects, plus result/secret/doc gates.
 Account deletion/reclamation, inventory maintenance, optional weekly metadata
 writers and the guest website/host activation remain pending.
+
+### Known inventory refresh and non-growing reclamation (2026-10-18)
+
+Known-inventory refresh requires the exact full database ledger/schema revision,
+rechecks artifact hashes and filesystem headroom, and rejects future timestamps.
+It can renew an idle baseline and account for physical database growth without
+accepting unknown row/schema changes. The application maintenance use case uses
+only storage/store interfaces; periodic hosting is not registered yet.
+
+A separate reclamation lease supports guest clear/expiry cleanup and enabled
+account deletion at the managed cutoff. The coordinator checks full revision
+before the transaction, locks accounting, rejects schema changes or any increase
+in logical bytes, checks artifact integrity/free disk, then publishes the committed
+revision. Unknown baselines stay blocked. It does not promise PostgreSQL immediately
+returns physical pages to the filesystem. Account ownership is acquired before
+reclamation; optional local email archive coexistence remains unfinished.
+
+Targeted verification passed: one PostgreSQL rollback/deletion case, six storage
+guard cases and eight guest/account endpoint cases; a subsequent five-case account
+controller run covers enabled reclamation routing. All five projects compiled.
+The latest complete suite remains the earlier 633-test pass; a complete run of
+this slice is pending the next integration checkpoint.

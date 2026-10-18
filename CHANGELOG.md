@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Allow guest/account data reclamation at the managed storage cutoff while
+  rejecting transactions that grow tracked data. Keep disk, revision and artifact
+  guards. Add known-inventory refresh without accepting an unknown baseline.
 - Coordinate authentication, legacy taste and feedback writes when discovery
   jobs are enabled. Taste/feedback revisions cancel stale generation atomically;
   independent catalog lookup stays queued. MVC action exceptions roll back writes.

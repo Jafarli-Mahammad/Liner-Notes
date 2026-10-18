@@ -198,6 +198,7 @@ public sealed class GuestDiscoveryApiTests : IAsyncLifetime
     // Mechanics-only fixture. Production remains fail-closed until C7 installs accounting.
     private sealed class TransactionalTestAdmission(IUnitOfWork uow) : IDiscoveryWriteCoordinator
     {
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct) => ExecuteAsync(0, delete, ct);
         public Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct) =>
             uow.ExecuteInTransactionAsync(write, ct);
     }

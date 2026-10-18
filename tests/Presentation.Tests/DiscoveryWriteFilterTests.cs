@@ -59,6 +59,7 @@ public sealed class DiscoveryWriteFilterTests
 
     private sealed class Admission : IDiscoveryWriteCoordinator
     {
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct) => ExecuteAsync(0, delete, ct);
         public bool Active { get; private set; }
         public bool Committed { get; private set; }
         public async Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)

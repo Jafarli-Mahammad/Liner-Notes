@@ -4,6 +4,52 @@ using Xunit;
 namespace LinerNotes.Infrastructure.Tests.Storage;
 public sealed class CoordinatedStorageTests : IAsyncLifetime
 {
+    [Fact]
+    public async Task ReclamationWorksAtManagedCutoffButKeepsDiskAndRevisionGuards()
+    {
+        var over = Before with { DatabaseBytes = 1_000_000_001 };
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(over, default));
+        clock.Advance(TimeSpan.FromMinutes(6));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireReclamationAsync(
+            over with { Revision = "managed-v1:changed:0:fixture" }, default));
+        await using (var reclaim = await storage.AcquireReclamationAsync(over, default))
+        {
+            probe.Free = 0;
+            await Assert.ThrowsAsync<GenerationStoppedException>(() => reclaim.VerifyAsync(over, default));
+            probe.Free = 2_000_000_000;
+            await reclaim.VerifyAsync(over, default);
+            await reclaim.PublishCommittedInventoryAsync(over, default);
+        }
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(over, default));
+        await using var nextDeletion = await storage.AcquireReclamationAsync(over, default);
+    }
+    [Fact]
+    public async Task KnownInventoryCanRefreshAfterIdleWithoutAcceptingChangedRevision()
+    {
+        clock.Advance(TimeSpan.FromMinutes(6));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(Before, default));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.RefreshKnownInventoryAsync(
+            Before with { Revision = "managed-v1:2:changed:fixture" }, default));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(Before, default));
+
+        var grown = Before with { DatabaseBytes = Before.DatabaseBytes + 4096 };
+        await storage.RefreshKnownInventoryAsync(grown, default);
+        await using var admitted = await storage.AcquireCoordinatedAsync(grown, default);
+        await admitted.ReserveAsync(1024, 0, grown);
+    }
+
+    [Fact]
+    public async Task MaintenanceRetainsFilesystemAndClockGuards()
+    {
+        clock.Advance(TimeSpan.FromMinutes(-1));
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.RefreshKnownInventoryAsync(Before, default));
+        clock.Advance(TimeSpan.FromMinutes(7));
+        probe.Free = 0;
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.RefreshKnownInventoryAsync(Before, default));
+        probe.Free = 2_000_000_000;
+        await storage.RefreshKnownInventoryAsync(Before, default);
+        await using var admitted = await storage.AcquireCoordinatedAsync(Before, default);
+    }
     private readonly string root = Path.Combine(Path.GetTempPath(), "liner-storage-c7-" + Guid.NewGuid().ToString("N"));
     private readonly Clock clock = new(); private readonly Probe probe = new();
     private LocalGenerationStorage storage = null!;

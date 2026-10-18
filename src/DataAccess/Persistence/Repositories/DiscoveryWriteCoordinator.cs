@@ -12,6 +12,42 @@ public sealed class DiscoveryWriteCoordinator(DataContext db, IUnitOfWork unit,
 {
     private bool active;
     private long outerEstimate;
+    public async Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct)
+    {
+        if (active || db.Database.CurrentTransaction is not null)
+            throw new GenerationStoppedException("storage_requires_outer_reclamation");
+        await using var databaseLease = await inventory.AcquireBatchAsync(ct);
+        var before = await inventory.ReadStorageAsync(ct);
+        await using var lease = await storage.AcquireReclamationAsync(before, ct);
+        GenerationStorageState? committed = null;
+        active = true;
+        T result;
+        try
+        {
+            result = await unit.ExecuteInTransactionAsync(async token =>
+            {
+                await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(1280200758)", token);
+                var logicalBefore = await ReadLogicalBytesAsync(lockRow: true, token);
+                if ((await inventory.ReadStorageAsync(token)).Revision != before.Revision)
+                    throw new GenerationStoppedException("database_inventory_changed");
+                await lease.VerifyAsync(before, token);
+                var value = await delete(token);
+                var after = await inventory.ReadStorageAsync(token);
+                if (after.Revision[(after.Revision.LastIndexOf(':') + 1)..] !=
+                    before.Revision[(before.Revision.LastIndexOf(':') + 1)..])
+                    throw new GenerationStoppedException("managed_storage_schema_changed");
+                if (await ReadLogicalBytesAsync(lockRow: false, token) > logicalBefore)
+                    throw new GenerationStoppedException("reclamation_increased_storage");
+                await lease.VerifyAsync(after, token);
+                committed = after;
+                return value;
+            }, ct);
+        }
+        finally { active = false; }
+        using var publicationDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await lease.PublishCommittedInventoryAsync(committed ?? throw new GenerationStoppedException("storage_commit_unknown"), publicationDeadline.Token);
+        return result;
+    }
     public async Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)
     {
         if (estimatedBytes is < 0 or > 67_108_864) throw new GenerationStoppedException("storage_estimate_invalid");

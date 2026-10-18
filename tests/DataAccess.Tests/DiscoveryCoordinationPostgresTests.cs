@@ -18,6 +18,31 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
     [LocalPostgresMigrationFact]
+    public async Task ReclamationRejectsGrowthAndAllowsActualGuestDeletion()
+    {
+        var profile = await GuestAsync('a');
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var writes = scope.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>();
+            var failure = await Assert.ThrowsAsync<GenerationStoppedException>(() => writes.ReclaimAsync(async ct =>
+            {
+                db.ListenerProfiles.Add(ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7)));
+                await db.SaveChangesAsync(ct);
+                return true;
+            }, default));
+            Assert.Equal("reclamation_increased_storage", failure.Message);
+        }
+        await using (var scope = services.CreateAsyncScope())
+        {
+            Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<DataContext>().ListenerProfiles.CountAsync());
+            await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().ClearAsync(new string('a', 64), default);
+        }
+        await using (var scope = services.CreateAsyncScope())
+            Assert.False(await scope.ServiceProvider.GetRequiredService<DataContext>().ListenerProfiles.AnyAsync(p => p.Id == profile.Id));
+        await GuestAsync('b'); // Committed reclamation published the next usable inventory revision.
+    }
+    [LocalPostgresMigrationFact]
     public async Task LegacyInputChangesAdvanceRevisionAndCancelOnlyGenerationAtomically()
     {
         var profile = await WriteAsync(async (s, ct) =>

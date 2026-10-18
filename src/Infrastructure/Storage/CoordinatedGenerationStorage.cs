@@ -34,6 +34,57 @@ public sealed class CoordinatedStorageOptions
 
 public sealed partial class LocalGenerationStorage
 {
+    public async Task<IStorageReclamationLease> AcquireReclamationAsync(GenerationStorageState database, CancellationToken ct)
+    {
+        if (coordinated is null) throw new GenerationStoppedException("discovery_filesystem_inventory_unconfigured");
+        coordinated.RequireHeadroom(0, filesystemProbe);
+        var file = OpenLease();
+        try
+        {
+            var inventory = await ReadInventoryAsync(ct);
+            var now = clock.GetUtcNow();
+            if (inventory.MeasuredAtUtc > now) throw new GenerationStoppedException("stale_or_unknown_storage_inventory");
+            inventory = inventory with { MeasuredAtUtc = now };
+            CheckInventory(inventory);
+            if (database.DatabaseBytes < 0 || !database.Revision.StartsWith("managed-v1:", StringComparison.Ordinal) ||
+                inventory.DatabaseRevision != database.Revision)
+                throw new GenerationStoppedException("database_inventory_changed");
+            await ValidateArtifactsAsync(inventory, ct);
+            return new ReclamationLease(this, file, inventory);
+        }
+        catch { await file.DisposeAsync(); throw; }
+    }
+
+    private sealed class ReclamationLease(LocalGenerationStorage owner, FileStream file, GenerationInventory inventory)
+        : IStorageReclamationLease
+    {
+        public async Task VerifyAsync(GenerationStorageState database, CancellationToken ct)
+        {
+            if (database.DatabaseBytes < 0) throw new GenerationStoppedException("database_inventory_changed");
+            owner.coordinated!.RequireHeadroom(0, owner.filesystemProbe);
+            await owner.ValidateArtifactsAsync(inventory, ct);
+        }
+        public Task PublishCommittedInventoryAsync(GenerationStorageState committed, CancellationToken ct) =>
+            owner.PublishCommittedAsync(inventory, committed, ct, reclamation: true);
+        public ValueTask DisposeAsync() => file.DisposeAsync();
+    }
+    public async Task RefreshKnownInventoryAsync(GenerationStorageState database, CancellationToken ct)
+    {
+        if (coordinated is null) throw new GenerationStoppedException("discovery_filesystem_inventory_unconfigured");
+        await using var lease = OpenLease();
+        var previous = await ReadInventoryAsync(ct);
+        var now = clock.GetUtcNow();
+        if (previous.MeasuredAtUtc > now) throw new GenerationStoppedException("stale_or_unknown_storage_inventory");
+        previous = previous with { MeasuredAtUtc = now };
+        CheckInventory(previous);
+        if (database.DatabaseBytes < 0 || !database.Revision.StartsWith("managed-v1:", StringComparison.Ordinal) ||
+            previous.DatabaseRevision != database.Revision)
+            throw new GenerationStoppedException("database_inventory_changed");
+        await PublishCommittedAsync(previous, database with
+        {
+            DatabaseBytes = Math.Max(previous.DatabaseBytes, database.DatabaseBytes)
+        }, ct);
+    }
     // Set by DI through a separate constructor, keeping legacy direct construction source-compatible.
     private readonly CoordinatedStorageOptions? coordinated;
     private readonly IStorageFreeSpaceProbe filesystemProbe = new DriveStorageFreeSpaceProbe();
@@ -60,13 +111,13 @@ public sealed partial class LocalGenerationStorage
         }
         catch { await file.DisposeAsync(); throw; }
     }
-    private async Task PublishCommittedAsync(GenerationInventory previous, GenerationStorageState committed, CancellationToken ct)
+    private async Task PublishCommittedAsync(GenerationInventory previous, GenerationStorageState committed, CancellationToken ct, bool reclamation = false)
     {
         if (coordinated is null) throw new GenerationStoppedException("discovery_filesystem_inventory_unconfigured");
         coordinated.RequireHeadroom(0, filesystemProbe);
         await ValidateArtifactsAsync(previous, ct);
         var current = previous with { DatabaseBytes = committed.DatabaseBytes, DatabaseRevision = committed.Revision, MeasuredAtUtc = clock.GetUtcNow() };
-        if (Total(current) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+        if (!reclamation && Total(current) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
         string temporary = options.InventoryPath! + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {

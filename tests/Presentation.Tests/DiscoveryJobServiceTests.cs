@@ -110,6 +110,7 @@ public sealed class DiscoveryJobServiceTests
     }
     private sealed class Admission : IDiscoveryWriteCoordinator
     {
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct) => ExecuteAsync(0, delete, ct);
         private readonly SemaphoreSlim gate = new(1, 1);
         public bool Active;
         public async Task<T> ExecuteAsync<T>(long bytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)

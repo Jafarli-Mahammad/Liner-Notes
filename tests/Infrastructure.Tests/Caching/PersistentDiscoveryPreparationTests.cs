@@ -89,6 +89,7 @@ public sealed class PersistentDiscoveryPreparationTests
     }
     private sealed class Coordinator : IDiscoveryWriteCoordinator
     {
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct) => ExecuteAsync(0, delete, ct);
         public bool Active;
         public int Writes;
         public async Task<T> ExecuteAsync<T>(long bytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)

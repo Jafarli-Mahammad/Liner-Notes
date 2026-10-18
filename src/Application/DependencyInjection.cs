@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<LinerNotes.Application.Features.Discovery.SelectDiscoveryTaste>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.RunDiscoveryJob>();
         services.AddScoped<LinerNotes.Application.Features.Catalog.ImportCatalog>();
 
         return services;

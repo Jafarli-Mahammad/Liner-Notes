@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add idempotent discovery submission, transactional cooldown checks and taste
+  changes that cancel stale work. Separate prepared and acquisition lanes keep
+  prepared profiles responsive while source work waits. The runner remains
+  unregistered until endpoint and storage/legacy integration is complete.
 - Add replayable discovery batch preparation and atomic score/history/job
   completion, with bounded feedback reads and stale evidence/revision checks.
   The onsite runner and website integration remain pending.

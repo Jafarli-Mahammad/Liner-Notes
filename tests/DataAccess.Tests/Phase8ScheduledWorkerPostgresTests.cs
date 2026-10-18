@@ -389,7 +389,9 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         Assert.Equal(_due.AddDays(7), export.Subscriber.NextDigestAt);
         var digest = Assert.Single(export.Digests); Assert.Equal(WeeklySchedulePolicy.Week(_due).Value, digest.Week);
         Assert.NotEmpty(digest.Recommendations); Assert.All(digest.Recommendations, pick => Assert.NotNull(pick.ScoreBreakdown.Snapshot));
-        var copy = Assert.Single(export.LocalEmail!.Copies); Assert.Contains("capability-removed", copy.PlainText);
+        Assert.True(export.LocalEmail!.Copies.Count == 1,
+            $"Archive status={export.LocalEmail.Status}; issues={string.Join(',', export.LocalEmail.Issues)}");
+        var copy = Assert.Single(export.LocalEmail.Copies); Assert.Contains("capability-removed", copy.PlainText);
         Assert.DoesNotContain("fixture-only-not-a-real-credential", JsonSerializer.Serialize(export));
         var keyCount = await db.DataProtectionKeys.CountAsync();
         await sp.GetRequiredService<IUnsubscribeStore>().UnsubscribeAsync(_user, _clock.Now.UtcDateTime, default);

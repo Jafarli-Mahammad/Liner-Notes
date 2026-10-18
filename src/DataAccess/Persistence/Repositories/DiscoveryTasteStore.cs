@@ -17,11 +17,12 @@ public sealed class DiscoveryTasteStore(DataContext db) : IDiscoveryTasteStore
             """).AsTracking().SingleOrDefaultAsync(ct) ?? throw new UnauthorizedAccessException();
         await db.Entry(profile).ReloadAsync(ct);
         if (profile.IsExpired(now)) throw new UnauthorizedAccessException();
-        if (await db.DiscoveryJobs.AnyAsync(j => j.ProfileId == profileId && j.Kind == LinerNotes.Domain.Discovery.DiscoveryJobKind.Generation &&
-            (j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Pending || j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Running ||
-             j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Retryable), ct))
-            throw new InvalidOperationException("discovery_generation_busy");
         profile.ChangeInputs(expectedRevision);
+        var pending = await db.DiscoveryJobs.AsTracking().Where(j => j.ProfileId == profileId &&
+            j.Kind == LinerNotes.Domain.Discovery.DiscoveryJobKind.Generation &&
+            (j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Pending || j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Running ||
+             j.State == LinerNotes.Domain.Discovery.DiscoveryJobState.Retryable)).ToArrayAsync(ct);
+        foreach (var job in pending) job.Cancel(now, "taste_changed");
         await db.TasteSignals.Where(s => s.ProfileId == profileId && s.Source == TasteSignalSource.InitialSeedManual).ExecuteDeleteAsync(ct);
         foreach (var signal in signals)
         {

@@ -304,3 +304,32 @@ completion together. Compact suppression survives score-snapshot deletion and
 cascades on profile deletion. Expired evidence and changed profile revisions
 cannot publish a batch. The submission handler and hosted consumer are still
 being connected; this is not an enabled onsite product flow.
+
+### C8 submission/runner checkpoint (2026-10-18)
+
+Full offline verification passed 618 tests with zero failures or skips:
+Domain 138, Application 127, DataAccess 116, Presentation 66, Infrastructure 171.
+The recreated private test root contains `dispatch-final-results`; the earlier
+temporary environment was removed by the session reset. No retained database
+was touched and the existing IDE database was left running.
+
+A real hosted-runner test blocks one profile in acquisition while another
+profile completes on the prepared lane. PostgreSQL tests cover lane handoff
+without spending retry budget, exhausted lease recovery, normalized idempotent
+replay, cooldown rollback of taste/cancellation changes, and revision conflicts.
+Retained favorites can be selected after public catalog eviction only through
+the same owner's stored selection. HTTP tests distinguish permission failures,
+not-found coverage and retryable availability; failures do not become successful
+empty batches. The runner class is not yet registered in the website host.
+
+An intermediate run exposed an outdated test comparing full physical database
+size for logical revision stability. PostgreSQL allocated pages while the
+ledger/schema revision stayed unchanged; the assertion now checks the revision.
+A separate intermediate scheduled-email archive assertion failed once and passed
+in isolated and later complete runs; its cause was not established. The check
+now includes safe archive status/issue codes if it recurs. No guard or export
+assertion was weakened to make either failure pass.
+
+Explicit lookup, endpoint wiring, maintenance, compatible legacy writers, the
+website flow and measured capacity remain pending. Source coverage, live
+recommendation quality and developer confirmation remain unverified.

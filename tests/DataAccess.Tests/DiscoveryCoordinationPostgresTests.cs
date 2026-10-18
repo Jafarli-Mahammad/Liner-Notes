@@ -17,6 +17,74 @@ namespace LinerNotes.DataAccess.Tests;
 
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
+    private sealed class SubmissionClock : TimeProvider
+    {
+        public DateTimeOffset Now = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task SubmissionReplaysBeforeChangingTasteAndCooldownRollsBackCancellationAndInputs()
+    {
+        await services.DisposeAsync();
+        var clock = new SubmissionClock();
+        registrations.AddSingleton<TimeProvider>(clock);
+        registrations.AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true });
+        services = registrations.BuildServiceProvider();
+        await ReconcileAsync();
+        var profile = await GuestAsync('a');
+        async Task<DiscoveryJob> Submit(string key, long revision, DiscoveryTasteSelection? selection)
+        {
+            await using var scope = services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<MediatR.IMediator>().Send(new SubmitDiscovery(profile.Id, revision, key, selection));
+        }
+        var initial = await Submit("initial", 0, new([], ["jazz"]));
+        Assert.Equal(initial.Id, (await Submit("initial", 0, new([], ["JAZZ"]))).Id);
+        await Assert.ThrowsAsync<DiscoveryRequestConflictException>(() => Submit("initial", 0, new([], ["ambient"])));
+        await Assert.ThrowsAsync<DiscoveryBusyException>(() => Submit("changed", 1, new([], ["ambient"])));
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            Assert.Equal(1, (await db.ListenerProfiles.SingleAsync()).Revision);
+            Assert.Equal("jazz", (await db.TasteSignals.SingleAsync()).NormalizedTargetValue);
+            Assert.Equal(DiscoveryJobState.Pending, (await db.DiscoveryJobs.SingleAsync()).State);
+        }
+        clock.Now += TimeSpan.FromSeconds(31);
+        var changed = await Submit("changed", 1, new([], ["ambient"]));
+        Assert.Equal(2, changed.InputRevision);
+        await Assert.ThrowsAsync<DiscoveryRequestConflictException>(() => Submit("stale", 1, null));
+        await using var verify = services.CreateAsyncScope();
+        var final = verify.ServiceProvider.GetRequiredService<DataContext>();
+        Assert.Equal("ambient", (await final.TasteSignals.SingleAsync()).NormalizedTargetValue);
+        Assert.Equal(DiscoveryJobState.Cancelled, (await final.DiscoveryJobs.SingleAsync(j => j.Id == initial.Id)).State);
+        Assert.Equal(2, await final.DiscoveryJobs.CountAsync());
+    }
+    [LocalPostgresMigrationFact]
+    public async Task PreparedLaneSkipsAcquisitionWaitAndHandoffDoesNotConsumeAttempt()
+    {
+        var first = await GuestAsync('a'); var second = await GuestAsync('b');
+        foreach (var profile in new[] { first, second })
+            await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id, "initial", new string('a', 64),
+                DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var leased = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Generation,
+            DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 1, ct, DiscoveryJobLane.Prepared));
+        Assert.Equal(first.Id, leased!.ProfileId);
+        await WriteAsync(async (s, ct) => { await s.GetRequiredService<IDiscoveryJobStore>().DeferAsync(leased.Id,
+            leased.LeaseToken!.Value, DateTimeOffset.UtcNow, TimeSpan.Zero, "waiting_for_music", ct); return true; });
+        var prepared = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Generation,
+            DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 1, ct, DiscoveryJobLane.Prepared));
+        Assert.Equal(second.Id, prepared!.ProfileId);
+        var acquisition = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Generation,
+            DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 1, ct, DiscoveryJobLane.Acquisition));
+        Assert.Equal(first.Id, acquisition!.ProfileId);
+        Assert.Equal(1, acquisition.Attempts);
+        await using var scope = services.CreateAsyncScope();
+        Assert.True(await scope.ServiceProvider.GetRequiredService<IDiscoveryJobStore>().HasReadyAsync(DiscoveryJobKind.Generation,
+            DiscoveryJobLane.Prepared, DateTimeOffset.UtcNow.AddMinutes(2), 1, default));
+        Assert.Null(await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Generation,
+            DateTimeOffset.UtcNow.AddMinutes(2), TimeSpan.FromSeconds(60), 1, ct, DiscoveryJobLane.Prepared)));
+        Assert.All(await scope.ServiceProvider.GetRequiredService<DataContext>().DiscoveryJobs.ToArrayAsync(), j => Assert.Equal(DiscoveryJobState.Cancelled, j.State));
+    }
     [LocalPostgresMigrationFact]
     public async Task BatchCompletionAtomicallyStoresScoresHistoryAndJobThenHistorySurvivesSnapshotRemoval()
     {

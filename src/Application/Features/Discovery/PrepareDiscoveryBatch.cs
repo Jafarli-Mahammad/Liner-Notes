@@ -38,6 +38,10 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             .Distinct().ToArray();
         if (pools.Sum(p => p.Candidates.Count) > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var hydrated = Merge(pools.SelectMany(p => p.Candidates));
+        if (gaps.Any(g => g.Reason is "permission_denied" or "http_error" or "invalid_json" or "invalid_discovery_shape_or_identifier"))
+            throw new DiscoverySourceException("source_configuration_or_response_invalid", false);
+        if (hydrated.Count == 0 && gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "request_timeout" or "upstream_unavailable"))
+            throw new DiscoverySourceException("source_temporarily_unavailable", true);
         if (hydrated.Count > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var aliases = hydrated.SelectMany(c => TrackIdentity.Aliases(c.Track)).Distinct(StringComparer.Ordinal).ToArray();
         var excluded = (await store.FindExcludedAsync(inputs.Profile.Id, aliases, ct)).Concat(effective.ExcludedAliases).ToHashSet(StringComparer.Ordinal);

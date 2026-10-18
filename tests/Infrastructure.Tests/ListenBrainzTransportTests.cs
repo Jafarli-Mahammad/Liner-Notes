@@ -10,6 +10,20 @@ namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class ListenBrainzTransportTests
 {
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "permission_denied")]
+    [InlineData(HttpStatusCode.Forbidden, "permission_denied")]
+    [InlineData(HttpStatusCode.NotFound, "not_found")]
+    [InlineData(HttpStatusCode.InternalServerError, "upstream_unavailable")]
+    [InlineData(HttpStatusCode.BadRequest, "http_error")]
+    public async Task HttpFailuresDistinguishPermissionAndRetryableAvailability(HttpStatusCode status, string expected)
+    {
+        using var http = new HttpClient(new Handler(_ => new(status) { Content = new StringContent("{}") }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true }, new Gate(), cache, TimeProvider.System);
+        var response = await client.SendAsync(new(ListenBrainzRequestKind.TagRadio, "jazz", 5));
+        Assert.Equal(expected, Assert.Single(response.Gaps).Reason);
+    }
     [Fact]
     public async Task TokenIsSentOnlyToListenBrainzAndCacheAvoidsFurtherCalls()
     {

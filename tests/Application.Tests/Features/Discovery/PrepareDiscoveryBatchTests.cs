@@ -15,6 +15,28 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 
 public sealed class PrepareDiscoveryBatchTests
 {
+    [Theory]
+    [InlineData("rate_limit", true)]
+    [InlineData("transport_error", true)]
+    [InlineData("permission_denied", false)]
+    [InlineData("invalid_json", false)]
+    public async Task SourceFailuresDoNotBecomeSuccessfulEmptyBatches(string reason, bool retryable)
+    {
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(
+            new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, null,
+                CatalogText.Version, [], [new("jazz", "discovery", reason)], 0, new string('b', 64)));
+        var profile = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+        var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "Selected style.");
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation,
+            Substitute.For<IDiscoveryBatchStore>(), configuration, new());
+        var error = await Assert.ThrowsAsync<DiscoverySourceException>(() => runner.PrepareAsync(new(profile, [signal], []), Guid.NewGuid(), true, default));
+        Assert.Equal(retryable, error.Retryable);
+    }
     [Fact]
     public async Task MergesPublicPathsSuppressesHistoryAndPersistsReplayableBatchEvidence()
     {

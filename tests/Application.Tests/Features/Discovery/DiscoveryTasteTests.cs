@@ -13,6 +13,16 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class DiscoveryTasteTests
 {
     [Fact]
+    public async Task RetainedFavoriteCanBeReselectedAfterCatalogEvictionOnlyForItsOwner()
+    {
+        var catalog = Substitute.For<ICatalogReader>();
+        var prior = Album(Guid.NewGuid(), Guid.NewGuid(), [], DateTimeOffset.UnixEpoch);
+        var select = new SelectDiscoveryTaste(catalog, Substitute.For<IDiscoveryTasteStore>(), Substitute.For<IDiscoveryWriteCoordinator>(), TimeProvider.System);
+        var result = await select.ResolveAsync(prior.ProfileId, new([prior.CatalogRecordId!.Value], []), default, [prior]);
+        Assert.Equal(prior.CanonicalEntityId, Assert.Single(result).CanonicalEntityId);
+        await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(Guid.NewGuid(), new([prior.CatalogRecordId.Value], []), default, [prior]));
+    }
+    [Fact]
     public async Task PreparedOnlyMaterializationUsesCatalogTagsAndNeverFallsThroughToProvider()
     {
         var source = Substitute.For<ISeedTagSource, ICanonicalSeedTagSource>();

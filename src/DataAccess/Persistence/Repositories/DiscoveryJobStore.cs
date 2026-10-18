@@ -6,6 +6,13 @@ namespace LinerNotes.DataAccess.Persistence.Repositories;
 public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
 {
     private static readonly DiscoveryJobState[] Unfinished = [DiscoveryJobState.Pending, DiscoveryJobState.Running, DiscoveryJobState.Retryable];
+    public Task<bool> HasReadyAsync(DiscoveryJobKind kind, DiscoveryJobLane lane, DateTimeOffset now, int maximumAttempts, CancellationToken ct)
+        => db.DiscoveryJobs.AsNoTracking().AnyAsync(j => j.Kind == kind &&
+            (j.Attempts < maximumAttempts || j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now) &&
+            (lane == DiscoveryJobLane.Acquisition ? j.ProgressCode == "waiting_for_music" : j.ProgressCode != "waiting_for_music") &&
+            db.ListenerProfiles.Any(p => p.Id == j.ProfileId && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)) &&
+            ((j.State == DiscoveryJobState.Pending || j.State == DiscoveryJobState.Retryable) && j.NextAttemptAtUtc <= now ||
+             j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now), ct);
     public Task<DiscoveryJob?> FindAsync(Guid profileId, Guid jobId, DateTimeOffset now, CancellationToken ct) =>
         db.DiscoveryJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == jobId && j.ProfileId == profileId &&
             db.ListenerProfiles.Any(p => p.Id == profileId && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)), ct);
@@ -39,9 +46,11 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         var job = new DiscoveryJob(profileId, key, hash, kind, revision, payloadJson, now);
         db.DiscoveryJobs.Add(job); await db.SaveChangesAsync(ct); return job;
     }
-    public async Task<DiscoveryJob?> LeaseNextAsync(DiscoveryJobKind kind, DateTimeOffset now, TimeSpan duration, int maximumAttempts, CancellationToken ct)
+    public async Task<DiscoveryJob?> LeaseNextAsync(DiscoveryJobKind kind, DateTimeOffset now, TimeSpan duration, int maximumAttempts, CancellationToken ct, DiscoveryJobLane? lane = null)
     {
         RequireTransaction();
+        bool anyLane = lane is null;
+        bool acquisition = lane == DiscoveryJobLane.Acquisition;
         string kindText = kind.ToString();
         var exhausted = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j WHERE j."Kind"={kindText} AND j."State" IN ('Pending','Retryable','Running')
@@ -53,6 +62,8 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         var next = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j JOIN "ListenerProfiles" p ON p."Id"=j."ProfileId"
             WHERE j."Kind"={kindText} AND j."Attempts"<{maximumAttempts}
+              AND ({anyLane} OR ({acquisition} AND j."ProgressCode"='waiting_for_music') OR
+                (NOT {acquisition} AND j."ProgressCode"<>'waiting_for_music'))
             AND (p."ExpiresAtUtc" IS NULL OR p."ExpiresAtUtc">{now}) AND
               ((j."State" IN ('Pending','Retryable') AND j."NextAttemptAtUtc"<={now}) OR
                (j."State"='Running' AND j."LeaseExpiresAtUtc"<={now}))
@@ -81,6 +92,12 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
             (job.Kind == DiscoveryJobKind.Generation && profile.Revision != job.InputRevision))
             throw new InvalidOperationException("job_inputs_changed");
         return job;
+    }
+    public async Task DeferAsync(Guid jobId, Guid token, DateTimeOffset now, TimeSpan delay, string progress, CancellationToken ct)
+    {
+        var job = await LockLeasedAsync(jobId, token, now, ct);
+        job.DeferLease(token, now, delay, progress);
+        await db.SaveChangesAsync(ct);
     }
     public async Task RenewAsync(Guid jobId, Guid token, DateTimeOffset now, TimeSpan duration, string progress, CancellationToken ct)
     {

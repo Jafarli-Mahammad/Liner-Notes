@@ -96,6 +96,17 @@ public sealed class DiscoveryJob : BaseEntity
         NextAttemptAtUtc = now.Add(delay);
         ClearLease(now, clearPayload: State == DiscoveryJobState.Failed);
     }
+    public void DeferLease(Guid token, DateTimeOffset now, TimeSpan delay, string progress)
+    {
+        RequireLease(token, now);
+        if (delay < TimeSpan.Zero || delay > TimeSpan.FromMinutes(10)) throw new ArgumentException("job_retry_invalid");
+        ProgressCode = Code(progress);
+        State = DiscoveryJobState.Retryable;
+        Attempts--;
+        ErrorCode = null;
+        NextAttemptAtUtc = now.Add(delay);
+        ClearLease(now, clearPayload: false);
+    }
     public void Cancel(DateTimeOffset now, string code)
     {
         if (!IsUnfinished) return;

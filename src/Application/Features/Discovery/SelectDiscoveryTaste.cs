@@ -18,7 +18,7 @@ public sealed class SelectDiscoveryTaste(ICatalogReader catalog, IDiscoveryTaste
         "country", "reggae", "dub", "afrobeat", "latin", "soundtrack", "downtempo", "acoustic", "noise", "world"
     });
     // Resolve reads outside admission. No provider I/O occurs here.
-    public async Task<IReadOnlyList<TasteSignal>> ResolveAsync(Guid profileId, DiscoveryTasteSelection selection, CancellationToken ct)
+    public async Task<IReadOnlyList<TasteSignal>> ResolveAsync(Guid profileId, DiscoveryTasteSelection selection, CancellationToken ct, IReadOnlyList<TasteSignal>? retained = null)
     {
         if (selection.CatalogRecordIds is null || selection.Tags is null || selection.CatalogRecordIds.Count > 5 ||
             selection.Tags.Count > 5 || selection.CatalogRecordIds.Count + selection.Tags.Count == 0 ||
@@ -31,7 +31,19 @@ public sealed class SelectDiscoveryTaste(ICatalogReader catalog, IDiscoveryTaste
         var identities = new HashSet<(CatalogKind, Guid)>();
         foreach (var id in selection.CatalogRecordIds)
         {
-            var item = await catalog.GetAsync(id, clock.GetUtcNow(), ct) ?? throw new ArgumentException("catalog_selection_unavailable");
+            var item = await catalog.GetAsync(id, clock.GetUtcNow(), ct);
+            if (item is null && retained is not null)
+            {
+                var prior = retained.FirstOrDefault(s => s.ProfileId == profileId && s.Source == TasteSignalSource.InitialSeedManual &&
+                    s.CatalogRecordId == id && s.SelectionJson is not null);
+                if (prior is not null)
+                {
+                    var snapshot = JsonSerializer.Deserialize<CatalogSelectionSnapshot>(prior.SelectionJson!);
+                    if (snapshot?.Version == "catalog-selection-v1" && snapshot.Item.Id == id && snapshot.Item.CanonicalId == prior.CanonicalEntityId)
+                        item = snapshot.Item;
+                }
+            }
+            if (item is null) throw new ArgumentException("catalog_selection_unavailable");
             if (!identities.Add((item.Kind, item.CanonicalId))) throw new ArgumentException("duplicate_catalog_selection");
             var signal = TasteSignal.ForProfile(profileId, null, item.Kind == CatalogKind.Artist ? TasteTargetType.Artist : TasteTargetType.Album,
                 item.Name, 1, TasteSignalSource.InitialSeedManual, "Selected from the music catalog.");

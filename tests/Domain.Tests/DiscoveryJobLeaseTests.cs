@@ -5,6 +5,20 @@ public sealed class DiscoveryJobLeaseTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.UnixEpoch;
     [Fact]
+    public void PreparationHandoffReleasesLeaseWithoutConsumingRetryBudget()
+    {
+        var job = new DiscoveryJob(Guid.NewGuid(), "handoff", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", Now);
+        Guid token = Guid.NewGuid();
+        job.AcquireLease(token, Now, TimeSpan.FromSeconds(10), 1);
+        job.DeferLease(token, Now.AddSeconds(1), TimeSpan.FromSeconds(2), "waiting_for_music");
+        Assert.Equal(0, job.Attempts);
+        Assert.Equal("waiting_for_music", job.ProgressCode);
+        Assert.Null(job.LeaseToken);
+        Assert.Throws<InvalidOperationException>(() => job.Complete(token, Now.AddSeconds(2), Guid.NewGuid(), null));
+        job.AcquireLease(Guid.NewGuid(), Now.AddSeconds(3), TimeSpan.FromSeconds(10), 1);
+        Assert.Equal(1, job.Attempts);
+    }
+    [Fact]
     public void ExpiredLeaseCanBeReclaimedButOldWorkerCannotRenewOrPublish()
     {
         var job = new DiscoveryJob(Guid.NewGuid(), "retry", new string('a', 64), DiscoveryJobKind.Lookup, 0, "{\"query\":\"synthetic\"}", Now);

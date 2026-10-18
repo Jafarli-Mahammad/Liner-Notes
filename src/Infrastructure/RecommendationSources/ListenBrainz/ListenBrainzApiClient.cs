@@ -58,7 +58,10 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             var parsed = ListenBrainzResponse.Parse(request, output.ToArray(), EvidenceOrigin.Live, clock.GetUtcNow());
             if (!response.IsSuccessStatusCode)
                 return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live,
-                    response.StatusCode == HttpStatusCode.TooManyRequests ? "rate_limit" : "http_error", parsed.Reference);
+                    response.StatusCode == HttpStatusCode.TooManyRequests ? "rate_limit" :
+                    response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? "permission_denied" :
+                    response.StatusCode == HttpStatusCode.NotFound ? "not_found" :
+                    (int)response.StatusCode >= 500 ? "upstream_unavailable" : "http_error", parsed.Reference);
             // No authenticated private endpoints are exposed by this client. Still obey no-store/no-cache.
             if (parsed.Gaps.IsEmpty && response.Headers.CacheControl is not { NoStore: true } and not { NoCache: true } and not { Private: true })
             {

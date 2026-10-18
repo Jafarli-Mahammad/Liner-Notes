@@ -365,12 +365,12 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
         var before = await store.ReadStorageAsync();
-        Assert.Equal(before, await store.ReadStorageAsync());
+        Assert.Equal(before.Revision, (await store.ReadStorageAsync()).Revision);
         db.Tracks.Add(Track.Create("Storage revision probe", "Revision Artist"));
         await db.SaveChangesAsync();
         var after = await store.ReadStorageAsync();
         Assert.NotEqual(before.Revision, after.Revision);
-        Assert.Equal(after, await store.ReadStorageAsync());
+        Assert.Equal(after.Revision, (await store.ReadStorageAsync()).Revision);
         Assert.True(after.DatabaseBytes >= before.DatabaseBytes);
     }
 

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Keep the conservative reconciled storage charge when PostgreSQL physical
+  size decreases without a tracked revision change. Growth and revision changes
+  retain their guards, avoiding false capture failures after a commit.
 - Add idempotent discovery submission, transactional cooldown checks and taste
   changes that cancel stale work. Separate prepared and acquisition lanes keep
   prepared profiles responsive while source work waits. The runner remains

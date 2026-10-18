@@ -129,7 +129,8 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
     private async Task ValidateAsync(GenerationInventory inventory, GenerationStorageState database, CancellationToken ct, bool coordinatedMode = false)
     {
         CheckInventory(inventory);
-        if (database.DatabaseBytes < 0 || database.DatabaseBytes != inventory.DatabaseBytes || (!LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision) || (coordinatedMode && database.Revision != inventory.DatabaseRevision)))
+        // Physical shrink does not reduce the reconciled charge; growth still stops.
+        if (database.DatabaseBytes < 0 || database.DatabaseBytes > inventory.DatabaseBytes || (!LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision) || (coordinatedMode && database.Revision != inventory.DatabaseRevision)))
             throw new GenerationStoppedException("database_inventory_changed");
         await ValidateArtifactsAsync(inventory, ct).ConfigureAwait(false);
         if (Total(inventory) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
@@ -213,7 +214,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
             ct.ThrowIfCancellationRequested();
             if (inventory is null) return; // Receipt reconciliation creates no file and is available at the stop.
             owner.CheckInventory(inventory);
-            if (database.DatabaseBytes != inventory.DatabaseBytes || !LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision))
+            if (database.DatabaseBytes < 0 || database.DatabaseBytes > inventory.DatabaseBytes || !LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision))
                 throw new GenerationStoppedException("database_inventory_changed");
             var actual = await owner.MeasureAsync(ct, ownedPaths).ConfigureAwait(false);
             if (Categories.Any(c => actual[c] != baseline![c])) throw new GenerationStoppedException("artifact_inventory_changed");

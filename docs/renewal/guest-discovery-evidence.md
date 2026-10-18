@@ -333,3 +333,19 @@ assertion was weakened to make either failure pass.
 Explicit lookup, endpoint wiring, maintenance, compatible legacy writers, the
 website flow and measured capacity remain pending. Source coverage, live
 recommendation quality and developer confirmation remain unverified.
+
+### Conservative physical-shrink guard correction (2026-10-18)
+
+A lookup verification run exposed a legacy capture stop after its SQL commit:
+the recorded physical charge was 9,877,183 bytes and the observed size became
+9,716,239 bytes, with the same complete ledger/schema revision. The legacy guard
+now accepts decreases while retaining the larger reconciled charge. Negative
+measurements, increases above that charge and incompatible revisions still fail.
+The inventory is not rewritten to claim reclaimed capacity.
+
+Verification passed all 172 Infrastructure tests and all eight LocalWorker
+PostgreSQL recovery/publication tests, with zero skips or failures. A targeted
+new test exercises both generation and capture reservations, unchanged charge,
+physical shrink, growth and changed-revision rejection. Private evidence:
+`shrink-infra-results` and `shrink-postgres-results`. This does not enable the
+new website host or remove remaining C8 compatibility work.

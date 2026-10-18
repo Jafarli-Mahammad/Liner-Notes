@@ -13,6 +13,82 @@ namespace LinerNotes.Application.Tests.Features.Digests;
 
 public sealed class GenerateDigestTests
 {
+    [Fact]
+    public async Task EnabledWeeklyDiscoveryUsesSharedPreparationAndKeepsIsoWeekScoreIdentity()
+    {
+        EmptyGeneration(); config.Origin = EvidenceOrigin.Synthetic;
+        var profile = LinerNotes.Domain.Discovery.ListenerProfile.Registered(userId, DateTimeOffset.UtcNow);
+        var batchStore = Substitute.For<LinerNotes.Application.Common.Interfaces.Discovery.IDiscoveryBatchStore>();
+        batchStore.ReadInputsAsync(userId, Arg.Any<DateTimeOffset>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryInputs(profile, [TasteSignal.CreateSeedTag(userId, "rock", 1, "manual")], []));
+        batchStore.FindExcludedAsync(userId, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()));
+        var response = new ResponseReference("fixture", "radio", "rock", EvidenceOrigin.Synthetic, new string('a', 64), DateTimeOffset.UtcNow);
+        var path = new DiscoveryPath("rock", new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
+        var vector = WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["rock"] = 1 });
+        var candidate = new HydratedCandidateTrack(new Track("Song", "Artist"), vector, new("Song", "Artist", null, [path]), [], response, null);
+        var pools = Substitute.For<IDiscoveryPreparation>();
+        pools.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(new PreparedDiscoveryPool(
+            new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(10),
+            CatalogText.Version, [candidate], [], 1000, new string('b', 64)));
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", source, hydrator, seeds));
+        var shared = new LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch(
+            new(resolver, config, new(), TimeProvider.System), pools, batchStore, config, new());
+        IReadOnlyList<BaselineAPick>? observed = null;
+        store.PersistAsync(userId, Arg.Any<IsoWeek>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<BaselineAPick>>(), Arg.Any<IGenerationStorageReservation>(), Arg.Any<CancellationToken>())
+            .Returns(c => { observed = c.Arg<IReadOnlyList<BaselineAPick>>();
+                var digest = new WeeklyDigest(userId, c.Arg<IsoWeek>(), DateTime.UtcNow, DateTime.UtcNow.AddDays(7));
+                foreach (var pick in observed) digest.AddRecommendation(pick.Track, pick.Breakdown, 1);
+                return Task.FromResult(digest);
+            });
+        var handler = new GenerateDigestCommandHandler(store, source, hydrator, seeds, storage, config, new(),
+            sharedPreparation: shared, discoveryStore: batchStore, runtime: new() { RunJobs = true });
+        var week = new IsoWeek(2026, 41);
+        Assert.Equal("generated", (await handler.Handle(new(userId, week), default)).Status);
+        var snapshot = Assert.Single(observed!).Breakdown.Snapshot!;
+        Assert.Equal(week.Value, snapshot.Week); Assert.Null(snapshot.DiscoveryBatchId);
+        Assert.Equal("canonical-entity-max-v1", snapshot.MaterializationVersion);
+        Assert.Equal(Assert.Single(observed!).Breakdown.FinalScore, new BaselineAScorer().Replay(snapshot).FinalScore);
+        await source.DidNotReceiveWithAnyArgs().GetCandidatesByArtistsAsync(default!, default, default);
+        await source.DidNotReceiveWithAnyArgs().GetCandidatesByTagsAsync(default!, default, default);
+    }
+    [Fact]
+    public async Task ProviderCallsRunOutsideDatabaseAndFilesystemLeasesAndPersistenceReacquiresBoth()
+    {
+        EmptyGeneration();
+        bool databaseHeld = false, filesystemHeld = false;
+        store.ReadInputsAsync(userId, Arg.Any<CancellationToken>()).Returns(new GenerationInputs(true,
+            [TasteSignal.CreateSeedArtist(userId, "Artist", 1, "manual"), TasteSignal.CreateSeedTag(userId, "rock", 1, "manual")], [], "rev"));
+        store.AcquireBatchAsync(Arg.Any<CancellationToken>()).Returns(_ => {
+            Assert.False(databaseHeld); databaseHeld = true;
+            var lease = Substitute.For<IAsyncDisposable>();
+            lease.DisposeAsync().Returns(_ => { databaseHeld = false; return ValueTask.CompletedTask; });
+            return Task.FromResult(lease);
+        });
+        storage.AcquireAsync(Arg.Any<GenerationStorageState>(), Arg.Any<CancellationToken>()).Returns(_ => {
+            Assert.True(databaseHeld); Assert.False(filesystemHeld); filesystemHeld = true;
+            var lease = Substitute.For<IGenerationStorageLease>();
+            lease.DisposeAsync().Returns(_ => { filesystemHeld = false; return ValueTask.CompletedTask; });
+            lease.ReserveAsync(Arg.Any<long>(), Arg.Any<int>(), Arg.Any<GenerationStorageState>(), Arg.Any<CancellationToken>())
+                .Returns(Substitute.For<IGenerationStorageReservation>());
+            return Task.FromResult(lease);
+        });
+        void CheckReleased() { Assert.False(databaseHeld); Assert.False(filesystemHeld); }
+        seeds.GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => {
+            CheckReleased(); return Task.FromResult(new SeedTagSnapshot("artist", WeightedTagVector.Empty, [],
+                new("fixture", "tags", "artist", EvidenceOrigin.Recorded, new string('a', 64), DateTimeOffset.UtcNow), null, []));
+        });
+        source.GetCandidatesByArtistsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(_ => { CheckReleased(); return Task.FromResult(new IngestionResult<RawCandidateTrack>([])); });
+        source.GetCandidatesByTagsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(_ => { CheckReleased(); return Task.FromResult(new IngestionResult<RawCandidateTrack>([])); });
+        store.PersistAsync(userId, Arg.Any<IsoWeek>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<BaselineAPick>>(), Arg.Any<IGenerationStorageReservation>(), Arg.Any<CancellationToken>())
+            .Returns(c => { Assert.True(databaseHeld); Assert.True(filesystemHeld);
+                return Task.FromResult(new WeeklyDigest(userId, c.Arg<IsoWeek>(), DateTime.UtcNow, DateTime.UtcNow.AddDays(7))); });
+        Assert.Equal("generated", (await Handler.Handle(new(userId, new(2026, 41)), default)).Status);
+        CheckReleased();
+    }
     private readonly Guid userId = Guid.NewGuid();
     private readonly IDigestGenerationStore store = Substitute.For<IDigestGenerationStore>();
     private readonly IRecommendationSource source = Substitute.For<IRecommendationSource>();

@@ -17,7 +17,7 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
   subsequently passed 564 .NET checks with zero skips. Canonical album taste and
   bounded public preparation subsequently passed 579 .NET checks with zero skips.
   Durable job/admission mechanics subsequently passed 592 .NET checks with zero skips.
-  C8 shared-cache/history, batch preparation/persistence and submission/runner, explicit lookup and discovery endpoint mechanics passed 623 .NET checks with zero skips;
+  C8 shared-cache/history, batch preparation/persistence and submission/runner, explicit lookup and discovery endpoint/weekly adapter mechanics passed 625 .NET checks with zero skips;
   legacy writer/maintenance integration and the website flow remain unfinished.
   Three isolated SQL measurements support
   continuing with the profile/batch foundation; they do not prove real catalog

@@ -9,12 +9,12 @@ using LinerNotes.Domain.Taste;
 namespace LinerNotes.Application.Features.Discovery;
 
 public sealed record PreparedDiscoveryBatch(Guid Id, IReadOnlyList<BaselineAPick> Picks, string CoverageJson,
-    DateTimeOffset? EvidenceExpiry, long ReservationBytes);
+    DateTimeOffset? EvidenceExpiry, long ReservationBytes, IReadOnlyList<CoverageGap>? Gaps = null);
 
 public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer, IDiscoveryPreparation preparation,
     IDiscoveryBatchStore store, GenerationConfiguration configuration, BaselineAScorer scorer)
 {
-    public async Task<PreparedDiscoveryBatch> PrepareAsync(DiscoveryInputs inputs, Guid batchId, bool allowAcquisition, CancellationToken ct)
+    public async Task<PreparedDiscoveryBatch> PrepareAsync(DiscoveryInputs inputs, Guid batchId, bool allowAcquisition, CancellationToken ct, LinerNotes.Domain.Digest.IsoWeek? week = null)
     {
         var scoring = configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
@@ -55,7 +55,8 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                 SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray()
             })).ToArray();
         var familiar = effective.FamiliarArtists.Concat(taste.FamiliarArtists).ToHashSet(StringComparer.Ordinal);
-        var picks = scorer.RankForBatch(candidates, taste.Vector, familiar, excluded, batchId, scoring, configuration.MaximumPicks);
+        var picks = week is null ? scorer.RankForBatch(candidates, taste.Vector, familiar, excluded, batchId, scoring, configuration.MaximumPicks)
+            : scorer.Rank(candidates, taste.Vector, familiar, excluded, week, scoring, configuration.MaximumPicks);
         long bytes = 65_536;
         foreach (var pick in picks)
         {
@@ -72,7 +73,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         });
         DateTimeOffset? expiry = pools.Where(p => p.ExpiresAtUtc > p.PreparedAtUtc).Select(p => p.ExpiresAtUtc)
             .Append(taste.EvidenceExpiresAtUtc).Min();
-        return new(batchId, picks, coverage, expiry, bytes);
+        return new(batchId, picks, coverage, expiry, bytes, gaps);
     }
 
     private static IReadOnlyList<HydratedCandidateTrack> Merge(IEnumerable<HydratedCandidateTrack> candidates)

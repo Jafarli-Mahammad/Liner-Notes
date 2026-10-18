@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Release weekly generation storage leases during provider acquisition, then
+  reacquire and recheck before persistence. Enabled discovery reuses shared
+  artist/album preparation while keeping ISO-week score identity and recorded
+  replay compatibility.
 - Add private discovery overview/status/results and feedback endpoints. Responses
   include saved explanations and bounded history; feedback retries preserve
   scores and accepted changes cancel stale generation. Cooldown/conflict errors

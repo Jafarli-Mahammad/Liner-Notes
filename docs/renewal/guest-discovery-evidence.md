@@ -395,3 +395,22 @@ feedback while compact suppression still covers the retained history.
 The runner remains unregistered. Legacy weekly acquisition/writers, inventory
 maintenance, reclamation and guest activity handling must be integrated before
 enabling the host. C9 website and C10 constrained resource evidence remain.
+
+### C8 weekly adapter checkpoint (2026-10-18)
+
+Full offline verification passed 625 tests with zero failures or skips:
+Domain 138, Application 129, DataAccess 119, Presentation 67, Infrastructure 172.
+Private evidence: `weekly-final-results`. A lease-lifetime test proves seed and
+candidate acquisition runs without either global database or filesystem lease,
+while persistence reacquires both and rechecks existing weekly identity.
+
+When discovery jobs are enabled, non-recorded weekly generation uses shared
+preparation/materialization and bounded feedback inputs, preserves ISO-week
+score identity and checks compact recommendation history again before writing.
+A stored-score replay test covers this adapter. Approved recorded evaluation
+continues through the legacy path and does not enter the product public cache.
+The legacy revision reader still reads its full weekly input set; this is not
+a claim that every weekly history read has been optimized.
+
+Compatible legacy metadata writers, inventory maintenance/reclamation and guest
+activity remain before host activation. C9 UI and C10 resource evidence remain.

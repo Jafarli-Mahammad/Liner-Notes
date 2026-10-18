@@ -14,6 +14,7 @@ namespace LinerNotes.Presentation.Services;
 /// <summary>
 /// Implementation of IAuthService backed by ASP.NET Core Identity.
 /// </summary>
+
 public sealed class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;

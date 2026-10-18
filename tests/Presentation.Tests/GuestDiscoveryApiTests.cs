@@ -18,6 +18,46 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class GuestDiscoveryApiTests : IAsyncLifetime
 {
+    [PostgresFact]
+    public async Task DiscoverySubmissionUsesCsrfAndPrivateStatusWithSafeCooldownAndConflictResponses()
+    {
+        using var client = _app.CreateClient();
+        var overview = await client.GetFromJsonAsync<JsonElement>("/api/discovery");
+        Assert.Equal(JsonValueKind.Null, overview.GetProperty("page").ValueKind);
+        Assert.Contains(overview.GetProperty("styles").EnumerateArray(), x => x.GetString() == "jazz");
+        string csrf = (await client.GetFromJsonAsync<JsonElement>("/api/discovery/session")).GetProperty("csrfToken").GetString()!;
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(Mutation(HttpMethod.Post, "/api/discovery/session", csrf))).StatusCode);
+        _app.Services.GetRequiredService<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>().RunJobs = true;
+        object Body(string key, string tag, long revision = 0) => new { revision, requestKey = key, selection = new { catalogRecordIds = Array.Empty<Guid>(), tags = new[] { tag } } };
+        using (var missing = Mutation(HttpMethod.Post, "/api/discovery/batches", null)) {
+            missing.Content = JsonContent.Create(Body("initial", "jazz"));
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(missing)).StatusCode);
+        }
+        async Task<HttpResponseMessage> Submit(object body) {
+            using var request = Mutation(HttpMethod.Post, "/api/discovery/batches", csrf);
+            request.Content = JsonContent.Create(body); return await client.SendAsync(request);
+        }
+        using var accepted = await Submit(Body("initial", "jazz"));
+        Assert.Equal(HttpStatusCode.Accepted, accepted.StatusCode);
+        var job = await accepted.Content.ReadFromJsonAsync<JsonElement>();
+        Guid id = job.GetProperty("id").GetGuid();
+        Assert.DoesNotContain("lease", job.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("payload", job.ToString(), StringComparison.OrdinalIgnoreCase);
+        using var replay = await Submit(Body("initial", "JAZZ"));
+        Assert.Equal(id, (await replay.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid());
+        using var status = await client.GetAsync($"/api/discovery/jobs/{id}");
+        Assert.Equal(HttpStatusCode.OK, status.StatusCode); Assert.True(status.Headers.CacheControl!.NoStore);
+        using var cooldown = await Submit(new { revision = 1, requestKey = "more" });
+        Assert.Equal(HttpStatusCode.TooManyRequests, cooldown.StatusCode);
+        Assert.True(cooldown.Headers.RetryAfter!.Delta > TimeSpan.Zero);
+        using var conflict = await Submit(Body("initial", "ambient"));
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        using var stranger = _app.CreateClient();
+        string foreignCsrf = (await stranger.GetFromJsonAsync<JsonElement>("/api/discovery/session")).GetProperty("csrfToken").GetString()!;
+        Assert.Equal(HttpStatusCode.OK, (await stranger.SendAsync(Mutation(HttpMethod.Post, "/api/discovery/session", foreignCsrf))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/api/discovery/jobs/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/discovery/batches/{Guid.NewGuid()}")).StatusCode);
+    }
     private readonly string _database = "liner_guest_api_" + Guid.NewGuid().ToString("N");
     private string _admin = "";
     private TestApp _app = null!;

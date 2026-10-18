@@ -12,6 +12,41 @@ namespace LinerNotes.DataAccess.Persistence.Repositories;
 
 public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs, TimeProvider clock) : IDiscoveryBatchStore
 {
+    public async Task<long> SaveFeedbackAsync(Guid profileId, Guid recommendationId, long expectedRevision,
+        UserFeedback feedback, int? rating, string? comment, DateTimeOffset now, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("feedback_requires_coordinated_transaction");
+        var profile = await db.ListenerProfiles.FromSqlInterpolated($"""
+            SELECT * FROM "ListenerProfiles" WHERE "Id"={profileId} FOR UPDATE
+            """).AsTracking().SingleOrDefaultAsync(ct) ?? throw new UnauthorizedAccessException();
+        await db.Entry(profile).ReloadAsync(ct);
+        if (profile.IsExpired(now)) throw new UnauthorizedAccessException();
+        var pick = await db.WeeklyRecommendations.FromSqlInterpolated($"""
+            SELECT * FROM "WeeklyRecommendations" WHERE "Id"={recommendationId} AND "ProfileId"={profileId} FOR UPDATE
+            """).AsTracking().Include(r => r.Track).SingleOrDefaultAsync(ct)
+            ?? throw new LinerNotes.Application.Common.Exceptions.NotFoundException("recommendation", recommendationId);
+        await db.Entry(pick).ReloadAsync(ct);
+        if (pick.Feedback == feedback && pick.Rating == rating && pick.FeedbackComment == comment) return profile.Revision;
+        if (profile.Revision != expectedRevision) throw new DiscoveryRequestConflictException("profile_revision_conflict");
+        bool retainKnown = !(feedback == UserFeedback.None && rating is null) && (feedback == UserFeedback.AlreadyKnown || pick.Feedback == UserFeedback.AlreadyKnown);
+        string prefix = "rec:" + recommendationId;
+        var previous = await db.TasteSignals.AsTracking().Where(t => t.ProfileId == profileId && t.Context.StartsWith(prefix) &&
+            (t.Source == TasteSignalSource.RecommendationLike || t.Source == TasteSignalSource.RecommendationDislike ||
+             t.Source == TasteSignalSource.RecommendationAlreadyKnown || t.Source == TasteSignalSource.RecommendationRating)).ToArrayAsync(ct);
+        retainKnown |= !(feedback == UserFeedback.None && rating is null) && previous.Any(t => t.Source == TasteSignalSource.RecommendationAlreadyKnown);
+        db.TasteSignals.RemoveRange(previous);
+        pick.RecordFeedback(feedback, comment, rating);
+        if (retainKnown)
+            db.TasteSignals.Add(LinerNotes.Domain.Taste.TasteSignal.ForProfile(profileId, profile.UserId, TasteTargetType.Track,
+                pick.Track.TrackKey, 0, TasteSignalSource.RecommendationAlreadyKnown, prefix + " - Marked familiar."));
+        profile.ChangeInputs(expectedRevision);
+        var pending = await db.DiscoveryJobs.AsTracking().Where(j => j.ProfileId == profileId && j.Kind == DiscoveryJobKind.Generation &&
+            (j.State == DiscoveryJobState.Pending || j.State == DiscoveryJobState.Running || j.State == DiscoveryJobState.Retryable)).ToArrayAsync(ct);
+        foreach (var job in pending) job.Cancel(now, "feedback_changed");
+        await db.SaveChangesAsync(ct);
+        return profile.Revision;
+    }
+
     public async Task<DiscoveryInputs?> ReadInputsAsync(Guid profileId, DateTimeOffset now, int feedbackWindow, CancellationToken ct)
     {
         if (feedbackWindow is < 1 or > 40) throw new ArgumentOutOfRangeException(nameof(feedbackWindow));

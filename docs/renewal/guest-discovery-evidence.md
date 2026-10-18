@@ -373,3 +373,25 @@ microsecond precision before deriving their stable resumable identity.
 The hosted class remains unregistered pending discovery endpoint, compatible
 writer and maintenance integration. All source evidence in this checkpoint is
 synthetic; no real acquisition manifest was run.
+
+### C8 discovery endpoint checkpoint (2026-10-18)
+
+Full offline verification passed 623 tests with zero failures or skips:
+Domain 138, Application 127, DataAccess 119, Presentation 67, Infrastructure 172.
+Private TRX evidence: `endpoints-final-results`. The HTTP fixture covers lazy
+overview, CSRF-protected submission, normalized retries, owner-private status,
+no-store responses and safe 429/409 replies. This fixture uses the named
+transactional test admission; actual accounting is covered separately by the
+PostgreSQL coordinator tests.
+
+The PostgreSQL feedback/read check rejects cross-profile access, preserves the
+stored score JSON hash, accepts idempotent feedback retries, increments input
+revision and cancels stale generation on accepted feedback. Clearing feedback
+removes its scoring effect; stale conflicting feedback is rejected. Result DTOs
+carry saved explanations and top matched tags instead of full score snapshots;
+full owned evidence remains in export. Reads query bounded recent batches and
+feedback while compact suppression still covers the retained history.
+
+The runner remains unregistered. Legacy weekly acquisition/writers, inventory
+maintenance, reclamation and guest activity handling must be integrated before
+enabling the host. C9 website and C10 constrained resource evidence remain.

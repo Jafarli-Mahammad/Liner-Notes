@@ -17,6 +17,47 @@ namespace LinerNotes.DataAccess.Tests;
 
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
+    [LocalPostgresMigrationFact]
+    public async Task DiscoveryReadsAndFeedbackAreOwnedAndFeedbackCancelsStaleWorkWithoutRewritingScores()
+    {
+        var profile = await GuestAsync('a'); var other = await GuestAsync('b');
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id, "first", new string('a', 64),
+            DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var leased = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Generation,
+            DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        Guid batchId = Guid.NewGuid();
+        var track = new LinerNotes.Domain.Catalog.Track("Song", "Artist");
+        var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
+        var breakdown = new LinerNotes.Domain.Scoring.BaselineAScorer().ScoreForBatch(
+            new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batchId, new());
+        await WriteAsync(async (s, ct) => { await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(leased!.Id,
+            leased.LeaseToken!.Value, batchId, DiscoveryBatchKind.Initial, [new(track, breakdown)], "{}", null, DateTimeOffset.UtcNow, ct); return true; }, 1_048_576);
+        await using var scope = services.CreateAsyncScope();
+        var reader = scope.ServiceProvider.GetRequiredService<IDiscoveryReader>();
+        Assert.Null(await reader.ReadBatchAsync(other.Id, batchId, DateTimeOffset.UtcNow, default));
+        var batch = await reader.ReadBatchAsync(profile.Id, batchId, DateTimeOffset.UtcNow, default);
+        var pick = Assert.Single(batch!.Picks);
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        Task<string> Hash() => db.Database.SqlQuery<string>($"SELECT md5(\"ScoreBreakdown\"::text) AS \"Value\" FROM \"WeeklyRecommendations\" WHERE \"Id\"={pick.Id}").SingleAsync();
+        string before = await Hash();
+        var pending = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id, "next", new string('b', 64),
+            DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var sender = scope.ServiceProvider.GetRequiredService<MediatR.ISender>();
+        await Assert.ThrowsAsync<LinerNotes.Application.Common.Exceptions.NotFoundException>(() => sender.Send(new RecordDiscoveryFeedback(other.Id,
+            pick.Id, 0, LinerNotes.Domain.Enums.UserFeedback.Liked)));
+        var feedback = new RecordDiscoveryFeedback(profile.Id, pick.Id, 0, LinerNotes.Domain.Enums.UserFeedback.Liked, 8, "Fixture comment.");
+        Assert.Equal(1, await sender.Send(feedback));
+        Assert.Equal(1, await sender.Send(feedback));
+        Assert.Equal(before, await Hash());
+        Assert.Equal(DiscoveryJobState.Cancelled, (await db.DiscoveryJobs.AsNoTracking().SingleAsync(j => j.Id == pending.Id)).State);
+        var page = await reader.ReadAsync(profile.Id, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(30), default);
+        Assert.Equal(1, page!.Revision);
+        var after = Assert.Single((await reader.ReadBatchAsync(profile.Id, batchId, DateTimeOffset.UtcNow, default))!.Picks);
+        Assert.Equal(8, after.Rating); Assert.Equal("Fixture comment.", after.Comment);
+        Assert.Equal(2, await sender.Send(new RecordDiscoveryFeedback(profile.Id, pick.Id, 1, LinerNotes.Domain.Enums.UserFeedback.None)));
+        await Assert.ThrowsAsync<DiscoveryRequestConflictException>(() => sender.Send(feedback));
+        Assert.Equal(before, await Hash());
+    }
     private sealed class CountingLookup : LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource
     {
         public int Calls;

@@ -25,6 +25,8 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
             { typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
             { typeof(InvalidOperationException), HandleInvalidOperationException },
             { typeof(ArgumentException), HandleArgumentException },
+            { typeof(LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryRequestConflictException), HandleDiscoveryConflict },
+            { typeof(LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryBusyException), HandleDiscoveryBusy },
             { typeof(Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException), HandleAntiforgeryException },
             { typeof(LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException), HandleDiscoveryStopped }
         };
@@ -63,6 +65,19 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
     private static void HandleDiscoveryStopped(ExceptionContext context)
     {
         context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = "Discovery is temporarily unavailable." }) { StatusCode = 503 };
+        context.ExceptionHandled = true;
+    }
+    private static void HandleDiscoveryConflict(ExceptionContext context)
+    {
+        context.Result = new ObjectResult(new ProblemDetails { Status = 409, Title = "Your taste or request changed. Refresh and try again." }) { StatusCode = 409 };
+        context.ExceptionHandled = true;
+    }
+    private static void HandleDiscoveryBusy(ExceptionContext context)
+    {
+        var error = (LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryBusyException)context.Exception;
+        int seconds = (int)Math.Clamp(Math.Ceiling(error.RetryAfter.TotalSeconds), 1, 600);
+        context.HttpContext.Response.Headers["Retry-After"] = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        context.Result = new ObjectResult(new ProblemDetails { Status = 429, Title = "Please wait before requesting more music." }) { StatusCode = 429 };
         context.ExceptionHandled = true;
     }
 

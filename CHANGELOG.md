@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add private discovery overview/status/results and feedback endpoints. Responses
+  include saved explanations and bounded history; feedback retries preserve
+  scores and accepted changes cancel stale generation. Cooldown/conflict errors
+  use safe responses and retry guidance.
 - Connect explicit artist/album lookup to durable jobs, shared acquisition and
   expiring local publication. Lookup and generation alternate on the acquisition
   lane. Search typing remains local; the website runner is not yet registered.

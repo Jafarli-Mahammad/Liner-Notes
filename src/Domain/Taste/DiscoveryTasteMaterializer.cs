@@ -12,8 +12,10 @@ public static class DiscoveryTasteMaterializer
     public static WeightedTagVector Build(IReadOnlyList<TasteSignal> signals, IReadOnlyList<EntityTasteEvidence> evidence)
     {
         if (signals.Count > 200 || evidence.Count > 200) throw new ArgumentException("taste_evidence_limit");
-        var weights = signals.ToDictionary(s => s.Id, s => s.Weight);
-        if (weights.Values.Any(w => !double.IsFinite(w) || w < 0)) throw new ArgumentException("invalid_signal_weight");
+        if (signals.Any(s => !double.IsFinite(s.Weight) || s.Weight < 0)) throw new ArgumentException("invalid_signal_weight");
+        // Derived artist and tag signals can share recommendation provenance; only entities index tag evidence.
+        var weights = signals.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album)
+            .ToDictionary(s => s.Id, s => s.Weight);
         var entities = new SortedDictionary<string, SortedDictionary<string, double>>(StringComparer.Ordinal);
         foreach (var item in evidence)
         {

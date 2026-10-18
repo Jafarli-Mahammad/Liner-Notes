@@ -503,3 +503,17 @@ is request backpressure, not a total-user cap or measured capacity claim.
 The full local suite passed 643 tests across five projects, zero failures/skips,
 plus result/secret/documentation gates. The website UI, real browser integration,
 constrained-host measurements and optional Worker/email coexistence remain open.
+
+### Feedback provenance regression found by browser flow (2026-10-18)
+
+The first real browser flow reached guest generation, feedback, registration and
+explicit guest import, then Discover more failed. A preparation-only reproduction
+against that synthetic profile traced a duplicate-key exception to materialization:
+EffectiveTasteInputs deliberately shares recommendation provenance between its
+derived artist and tag signals, while the materializer indexed every signal by ID.
+The materializer now indexes only artist/album entity evidence, preserving each
+explicit/derived tag's own weight and the existing provenance identity. A failing
+regression test reproduced the collision before the fix. All 139 Domain tests,
+including benchmark/replay fixtures, then passed; the exact failing synthetic
+profile prepared successfully with zero new picks, as expected after suppression.
+The full browser flow is being rerun; this is not a complete website verification.

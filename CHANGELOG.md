@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+- Fix discovery after positive feedback: derived artist and tag inputs can share
+  recommendation provenance without colliding or sharing their distinct weights.
 - Activate website discovery consumers only through DiscoveryRuntime:RunJobs,
   with periodic known-inventory refresh and bounded guest expiry cleanup.
   Concurrent local email capture remains blocked pending writer integration.

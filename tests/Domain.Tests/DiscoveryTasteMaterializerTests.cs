@@ -7,6 +7,23 @@ namespace LinerNotes.Domain.Tests;
 public sealed class DiscoveryTasteMaterializerTests
 {
     [Fact]
+    public void FeedbackArtistAndTagCanShareProvenanceWithoutSharingWeights()
+    {
+        var profile = Guid.NewGuid();
+        var feedbackId = Guid.NewGuid();
+        TasteSignal[] signals =
+        [
+            new(profile, TasteTargetType.Artist, "Synthetic artist", 1, TasteSignalSource.RecommendationLike, "Derived artist", feedbackId),
+            new(profile, TasteTargetType.Tag, "jazz", .5, TasteSignalSource.RecommendationLike, "Derived tag", feedbackId)
+        ];
+        var artistTags = WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["ambient"] = 1 });
+        var result = DiscoveryTasteMaterializer.Build(signals,
+            [new(feedbackId, "artist:synthetic", "artist", artistTags, 1, null)]);
+
+        Assert.Equal(1, result["ambient"]);
+        Assert.Equal(.5, result["jazz"]);
+    }
+    [Fact]
     public void ArtistAndRepeatedAlbumFallbackUseMaximumInfluenceWhileAlbumTagsRemainIndependent()
     {
         var profile = Guid.NewGuid();

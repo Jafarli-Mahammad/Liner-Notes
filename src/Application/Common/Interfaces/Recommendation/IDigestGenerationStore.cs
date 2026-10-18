@@ -15,6 +15,9 @@ public interface IDigestGenerationStore
     Task<WeeklyDigest?> GetExistingAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default);
     Task<GenerationInputs> ReadInputsAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default);
+    // Caller owns coordinated write admission and publishes its committed inventory.
+    Task<WeeklyDigest> PersistWithinAdmissionAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, CancellationToken cancellationToken = default);
     Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,
         IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation reservation,
         CancellationToken cancellationToken = default);

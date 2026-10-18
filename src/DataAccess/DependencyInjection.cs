@@ -74,7 +74,9 @@ public static class DependencyInjection
         services.AddScoped<ICatalogImportStore, CatalogImportStore>();
         services.AddScoped<ICatalogMaintenance, CatalogImportStore>();
         services.AddScoped<IDiscoveryWriteCoordinator, DiscoveryWriteCoordinator>();
-        services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
+        services.AddScoped<IWeeklyScheduleStore>(sp => new WeeklyScheduleStore(connectionString,
+            sp.GetRequiredService<DataContext>(), sp.GetRequiredService<IDiscoveryWriteCoordinator>(),
+            sp.GetService<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>()));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();

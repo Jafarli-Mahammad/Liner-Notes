@@ -35,9 +35,10 @@ Create six empty private artifact directories. Configure each as index `0` of
 the lease/inventory inside them. All applicable filesystem paths must be included
 in free-space checks. The managed 1 GB stop is separate from whole-host capacity.
 
-The current combined guest/local email capture mode is blocked until its remaining
-writers are integrated. Do not run the independent legacy Worker against an active
-guest-runtime inventory in this local run.
+Weekly generation, schedule updates and unsubscribe writes use discovery admission
+when `DiscoveryRuntime__RunJobs=true`; use that same setting for a development
+Worker sharing this inventory. Concurrent local email capture remains blocked in
+both hosts. External delivery is outside this local synthetic run.
 
 ## Prepare and run
 

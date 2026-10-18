@@ -15,7 +15,8 @@ namespace LinerNotes.Application.Features.Digests.Commands.GenerateDigest;
 public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, IRecommendationSource source,
     ICandidateHydrator hydrator, ISeedTagSource seedTags, IGenerationStorage storage, GenerationConfiguration config,
     BaselineAScorer scorer, TimeProvider? timeProvider = null, PrepareDiscoveryBatch? sharedPreparation = null,
-    IDiscoveryBatchStore? discoveryStore = null, DiscoveryRuntimeOptions? runtime = null) : IRequestHandler<GenerateDigestCommand, GenerateDigestResult>
+    IDiscoveryBatchStore? discoveryStore = null, DiscoveryRuntimeOptions? runtime = null,
+    IDiscoveryWriteCoordinator? admission = null) : IRequestHandler<GenerateDigestCommand, GenerateDigestResult>
 {
     public async Task<GenerateDigestResult> Handle(GenerateDigestCommand request, CancellationToken cancellationToken)
     {
@@ -43,7 +44,10 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             }
             IReadOnlyList<BaselineAPick> picks;
             DateTimeOffset? preparedExpiry = null;
-            bool useShared = runtime?.RunJobs == true && config.Origin != EvidenceOrigin.Recorded && sharedPreparation is not null && discoveryStore is not null;
+            long preparedReservationBytes = 0;
+            bool useShared = runtime?.RunJobs == true;
+            if (useShared && (config.Origin == EvidenceOrigin.Recorded || sharedPreparation is null || discoveryStore is null || admission is null))
+                throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
             if (useShared)
             {
                 var profileInputs = await discoveryStore!.ReadInputsAsync(inputs.ProfileId ?? request.UserId,
@@ -51,6 +55,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                     ?? throw new GenerationStoppedException("user_not_found");
                 var prepared = await sharedPreparation!.PrepareAsync(profileInputs, Guid.NewGuid(), true, cancellationToken, request.Week);
                 picks = prepared.Picks; preparedExpiry = prepared.EvidenceExpiry;
+                preparedReservationBytes = prepared.ReservationBytes;
                 gaps.AddRange(prepared.Gaps ?? []);
             }
             else
@@ -106,15 +111,24 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                 if (length > config.MaximumSnapshotBytes) throw new GenerationStoppedException("snapshot_limit");
                 bytes = checked(bytes + length);
             }
+            if (useShared)
+            {
+                return await admission!.ExecuteAsync(preparedReservationBytes, async token =>
+                {
+                    var existing = await store.GetExistingAsync(request.UserId, request.Week, token);
+                    if (existing is not null) return new GenerateDigestResult("existing", existing.ToDto(), []);
+                    var aliases = picks.SelectMany(p => TrackIdentity.Aliases(p.Track)).Distinct(StringComparer.Ordinal).ToArray();
+                    if ((await discoveryStore!.FindExcludedAsync(inputs.ProfileId ?? request.UserId, aliases, token)).Count > 0)
+                        throw new GenerationStoppedException("recommendation_history_changed");
+                    if (preparedExpiry.HasValue && preparedExpiry <= (timeProvider ?? TimeProvider.System).GetUtcNow())
+                        throw new GenerationStoppedException("prepared_evidence_expired");
+                    var digest = await store.PersistWithinAdmissionAsync(request.UserId, request.Week, inputs.Revision, picks, token);
+                    return new GenerateDigestResult("generated", digest.ToDto(), gaps.Distinct().ToArray());
+                }, cancellationToken);
+            }
             await using var batch = await store.AcquireBatchAsync(cancellationToken).ConfigureAwait(false);
             var completedMeanwhile = await store.GetExistingAsync(request.UserId, request.Week, cancellationToken).ConfigureAwait(false);
             if (completedMeanwhile is not null) return new("existing", completedMeanwhile.ToDto(), []);
-            if (useShared)
-            {
-                var aliases = picks.SelectMany(p => TrackIdentity.Aliases(p.Track)).Distinct(StringComparer.Ordinal).ToArray();
-                if ((await discoveryStore!.FindExcludedAsync(inputs.ProfileId ?? request.UserId, aliases, cancellationToken)).Count > 0)
-                    throw new GenerationStoppedException("recommendation_history_changed");
-            }
             await using var lease = await storage.AcquireAsync(await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
             var reservation = await lease.ReserveAsync(bytes, picks.Count, await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
             var guardedReservation = new ExpiryReservation(reservation,

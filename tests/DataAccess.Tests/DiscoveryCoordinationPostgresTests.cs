@@ -18,6 +18,49 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
     [LocalPostgresMigrationFact]
+    public async Task WeeklyScheduleDigestAndUnsubscribeLeaveDiscoveryInventoryUsable()
+    {
+        await services.DisposeAsync();
+        registrations.AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true });
+        services = registrations.BuildServiceProvider();
+        var userId = await WriteAsync(async (s, ct) =>
+        {
+            var db = s.GetRequiredService<DataContext>();
+            var user = new LinerNotes.Domain.Digest.User("weekly-coordination@example.test", weeklyEmailOptIn: true);
+            user.SetNextDigestAt(new DateTime(2026, 10, 18, 8, 0, 0, DateTimeKind.Utc));
+            db.ApplicationUsers.Add(new LinerNotes.DataAccess.IdentityEntities.ApplicationUser
+            {
+                Id = user.Id, UserName = "weekly-coordination", NormalizedUserName = "WEEKLY-COORDINATION",
+                Email = user.Email, NormalizedEmail = "WEEKLY-COORDINATION@EXAMPLE.TEST", EmailConfirmed = true
+            });
+            db.Users.Add(user);
+            await db.SaveChangesAsync(ct);
+            return user.Id;
+        });
+        var now = new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc);
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var schedule = scope.ServiceProvider.GetRequiredService<LinerNotes.Application.Common.Interfaces.IWeeklyScheduleStore>();
+            var selected = Assert.Single(await schedule.GetCandidatesAsync([userId], 10, now, default));
+            var week = LinerNotes.Domain.Digest.IsoWeek.FromDate(now);
+            var handler = scope.ServiceProvider.GetRequiredService<MediatR.ISender>();
+            var result = await handler.Send(new LinerNotes.Application.Features.Digests.Commands.GenerateDigest.GenerateDigestCommand(userId, week));
+            Assert.Equal("generated", result.Status);
+            Assert.NotNull(result.Digest);
+            Assert.True(await schedule.AdvanceAsync(selected, new DateTime(2026, 10, 25, 8, 0, 0, DateTimeKind.Utc), now, default));
+            await scope.ServiceProvider.GetRequiredService<LinerNotes.Application.Common.Interfaces.IUnsubscribeStore>()
+                .UnsubscribeAsync(userId, now, default);
+            Assert.Empty(await schedule.GetCandidatesAsync([userId], 10, now.AddDays(8), default));
+        }
+        Assert.NotNull(await GuestAsync('e'));
+        await using var verification = services.CreateAsyncScope();
+        await verification.ServiceProvider.GetRequiredService<IManagedStorageIntegrity>().VerifyAsync(default);
+        var dbCheck = verification.ServiceProvider.GetRequiredService<DataContext>();
+        Assert.Equal(1, await dbCheck.WeeklyDigests.CountAsync());
+        Assert.Equal(1, await dbCheck.DiscoveryBatches.CountAsync());
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task EmptySupportedBatchCompletesWithoutWritingRecommendations()
     {
         var profile = await GuestAsync('a');
@@ -578,6 +621,9 @@ public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
         public Task<GenerationInputs> ReadInputsAsync(Guid user, CancellationToken ct = default) => inner.ReadInputsAsync(user, ct);
         public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken ct = default)
         { var state = await inner.ReadStorageAsync(ct); return state with { DatabaseBytes = checked(state.DatabaseBytes + offset) }; }
+        public Task<LinerNotes.Domain.Digest.WeeklyDigest> PersistWithinAdmissionAsync(Guid user, LinerNotes.Domain.Digest.IsoWeek week, string revision,
+            IReadOnlyList<LinerNotes.Domain.Scoring.BaselineAPick> picks, CancellationToken ct = default) =>
+            inner.PersistWithinAdmissionAsync(user, week, revision, picks, ct);
         public Task<LinerNotes.Domain.Digest.WeeklyDigest> PersistAsync(Guid user, LinerNotes.Domain.Digest.IsoWeek week, string revision,
             IReadOnlyList<LinerNotes.Domain.Scoring.BaselineAPick> picks, IGenerationStorageReservation reservation, CancellationToken ct = default)
             => inner.PersistAsync(user, week, revision, picks, reservation, ct);

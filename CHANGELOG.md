@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Coordinate weekly digest saves, schedule activity and unsubscribe updates with
+  onsite discovery storage. Reject unsupported concurrent local email capture
+  in the development Worker as well as the website.
 - Reclaim expired public recommendation evidence and catalog search records in
   bounded maintenance passes. Preserve the active catalog, fresh lookups,
   resumable imports, canonical identities and private taste/history evidence.

@@ -95,8 +95,20 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         finally { if (opened) await db.Database.CloseConnectionAsync(); }
     }
 
+    public Task<WeeklyDigest> PersistWithinAdmissionAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, CancellationToken cancellationToken = default)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new GenerationStoppedException("weekly_write_requires_admission");
+        return PersistCoreAsync(userId, week, inputRevision, picks, null, cancellationToken);
+    }
+
     public Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,
         IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation reservation,
+        CancellationToken cancellationToken = default) => PersistCoreAsync(userId, week, inputRevision, picks, reservation, cancellationToken);
+
+    private Task<WeeklyDigest> PersistCoreAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation? reservation,
         CancellationToken cancellationToken = default) => unitOfWork.ExecuteInTransactionAsync(async ct =>
     {
         bool leased = await db.Database.SqlQueryRaw<bool>("""
@@ -113,7 +125,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         if (existing is not null) return existing;
         var current = await ReadInputsAsync(userId, ct).ConfigureAwait(false);
         if (!current.UserExists || current.Revision != inputRevision) throw new GenerationStoppedException("taste_revision_changed");
-        await reservation.ValidateAsync(await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        if (reservation is not null)
+            await reservation.ValidateAsync(await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         var monday = DateTime.SpecifyKind(System.Globalization.ISOWeek.ToDateTime(week.Year, week.WeekNumber, DayOfWeek.Monday), DateTimeKind.Utc);
         var profileId = await db.ListenerProfiles.Where(p => p.UserId == userId).Select(p => p.Id).SingleAsync(ct);
         var digest = new WeeklyDigest(userId, week, monday, monday.AddDays(7), profileId: profileId);
@@ -133,7 +146,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             SELECT COALESCE(SUM(pg_column_size("ScoreBreakdown")), 0)::bigint AS "Value"
             FROM "WeeklyRecommendations" WHERE "WeeklyDigestId" = {digest.Id}
             """).SingleAsync(ct).ConfigureAwait(false);
-        await reservation.VerifyStoredAsync(bytes, await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        if (reservation is not null)
+            await reservation.VerifyStoredAsync(bytes, await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return digest;
     }, cancellationToken);

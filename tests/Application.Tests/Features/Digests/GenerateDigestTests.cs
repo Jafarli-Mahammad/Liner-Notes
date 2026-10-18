@@ -36,14 +36,17 @@ public sealed class GenerateDigestTests
         var shared = new LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch(
             new(resolver, config, new(), TimeProvider.System), pools, batchStore, config, new());
         IReadOnlyList<BaselineAPick>? observed = null;
-        store.PersistAsync(userId, Arg.Any<IsoWeek>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<BaselineAPick>>(), Arg.Any<IGenerationStorageReservation>(), Arg.Any<CancellationToken>())
+        store.PersistWithinAdmissionAsync(userId, Arg.Any<IsoWeek>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<BaselineAPick>>(), Arg.Any<CancellationToken>())
             .Returns(c => { observed = c.Arg<IReadOnlyList<BaselineAPick>>();
                 var digest = new WeeklyDigest(userId, c.Arg<IsoWeek>(), DateTime.UtcNow, DateTime.UtcNow.AddDays(7));
                 foreach (var pick in observed) digest.AddRecommendation(pick.Track, pick.Breakdown, 1);
                 return Task.FromResult(digest);
             });
+        var admission = Substitute.For<LinerNotes.Application.Common.Interfaces.Discovery.IDiscoveryWriteCoordinator>();
+        admission.ExecuteAsync(Arg.Any<long>(), Arg.Any<Func<CancellationToken, Task<GenerateDigestResult>>>(), Arg.Any<CancellationToken>())
+            .Returns(c => c.Arg<Func<CancellationToken, Task<GenerateDigestResult>>>()(c.Arg<CancellationToken>()));
         var handler = new GenerateDigestCommandHandler(store, source, hydrator, seeds, storage, config, new(),
-            sharedPreparation: shared, discoveryStore: batchStore, runtime: new() { RunJobs = true });
+            sharedPreparation: shared, discoveryStore: batchStore, runtime: new() { RunJobs = true }, admission: admission);
         var week = new IsoWeek(2026, 41);
         Assert.Equal("generated", (await handler.Handle(new(userId, week), default)).Status);
         var snapshot = Assert.Single(observed!).Breakdown.Snapshot!;

@@ -1,4 +1,5 @@
 using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.DTOs.Export;
 using LinerNotes.Domain.Discovery;
 
@@ -18,13 +19,21 @@ public sealed class GuestLifecycle(IGuestProfileStore store, IDiscoveryWriteCoor
     {
         var now = clock.GetUtcNow();
         var profile = await store.FindGuestAsync(hash, now, ct);
-        if (touch && profile is not null && now - profile.LastActiveAtUtc >= ActivityInterval)
+        if (!touch || profile is null || now - profile.LastActiveAtUtc < ActivityInterval) return profile;
+        try
+        {
             await admission.ExecuteAsync(16_384, async token =>
             {
                 await store.TouchAsync(profile.Id, now, Inactivity, ActivityInterval, token);
                 return true;
             }, ct);
-        return profile is not null && touch ? await store.FindGuestAsync(hash, now, ct) : profile;
+        }
+        catch (GenerationStoppedException)
+        {
+            // Activity renewal must not hide saved results when managed writes stop.
+            return profile;
+        }
+        return await store.FindGuestAsync(hash, now, ct);
     }
 
     public Task<DiscoveryExportDto> ExportAsync(Guid profileId, CancellationToken ct) => store.ExportAsync(profileId, ct);

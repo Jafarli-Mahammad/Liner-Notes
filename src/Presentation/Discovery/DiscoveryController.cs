@@ -17,7 +17,7 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
     {
         if (!listener.Enabled) return NotFound();
         Response.Headers.CacheControl = "no-store";
-        var profile = await listener.ResolveAsync(false, ct);
+        var profile = await listener.ResolveAsync(true, ct);
         var page = profile is null ? null : await reader.ReadAsync(profile.Id, clock.GetUtcNow(), TimeSpan.FromSeconds(options.CooldownSeconds), ct);
         return Ok(new { page, styles = SelectDiscoveryTaste.Styles, cooldownSeconds = options.CooldownSeconds });
     }
@@ -40,7 +40,7 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
     public async Task<IActionResult> Status(Guid id, CancellationToken ct)
     {
         if (!listener.Enabled) return NotFound();
-        var profile = await listener.ResolveAsync(false, ct);
+        var profile = await listener.ResolveAsync(true, ct);
         if (profile is null) return Unauthorized();
         Response.Headers.CacheControl = "no-store";
         var job = await jobs.FindAsync(profile.Id, id, clock.GetUtcNow(), ct);
@@ -53,7 +53,7 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
     public async Task<IActionResult> Batch(Guid id, CancellationToken ct)
     {
         if (!listener.Enabled) return NotFound();
-        var profile = await listener.ResolveAsync(false, ct);
+        var profile = await listener.ResolveAsync(true, ct);
         if (profile is null) return Unauthorized();
         Response.Headers.CacheControl = "no-store";
         var batch = await reader.ReadBatchAsync(profile.Id, id, clock.GetUtcNow(), ct);

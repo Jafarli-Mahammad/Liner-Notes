@@ -48,6 +48,11 @@ public static class DependencyInjection
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            var guestStarts = configuration.GetValue<int?>("RateLimits:GuestStartsPerMinute") ?? 60;
+            if (guestStarts is < 1 or > 6000) throw new InvalidOperationException("Invalid guest start request rate.");
+            options.AddPolicy("guest-start", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+                { PermitLimit = guestStarts, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
             options.AddPolicy("catalog", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
                 { PermitLimit = 1200, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));

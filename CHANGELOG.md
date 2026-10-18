@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased — renewal
+- Activate website discovery consumers only through DiscoveryRuntime:RunJobs,
+  with periodic known-inventory refresh and bounded guest expiry cleanup.
+  Concurrent local email capture remains blocked pending writer integration.
+- Renew guest activity hourly on visits; storage stops keep saved data readable
+  and cookies retain the actual server expiry. Separate configurable guest-start
+  pacing from password authentication limits.
 - Allow guest/account data reclamation at the managed storage cutoff while
   rejecting transactions that grow tracked data. Keep disk, revision and artifact
   guards. Add known-inventory refresh without accepting an unknown baseline.

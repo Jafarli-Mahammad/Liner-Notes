@@ -8,6 +8,7 @@ public sealed class CoordinatedStorageTests : IAsyncLifetime
     public async Task ReclamationWorksAtManagedCutoffButKeepsDiskAndRevisionGuards()
     {
         var over = Before with { DatabaseBytes = 1_000_000_001 };
+        await storage.RefreshKnownInventoryAsync(over, default);
         await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(over, default));
         clock.Advance(TimeSpan.FromMinutes(6));
         await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireReclamationAsync(

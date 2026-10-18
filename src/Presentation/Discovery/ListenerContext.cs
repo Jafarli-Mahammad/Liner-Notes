@@ -54,7 +54,7 @@ public sealed class ListenerContext(IHttpContextAccessor accessor, IGuestProfile
         }
         var profile = CredentialHash is { } hash ? await lifecycle.ResolveGuestAsync(hash, touch, ct) : null;
         if (profile is not null && touch)
-            Http.Response.Cookies.Append(CookieName, Http.Request.Cookies[CookieName]!, CookieOptions());
+            Http.Response.Cookies.Append(CookieName, Http.Request.Cookies[CookieName]!, CookieOptions(profile.ExpiresAtUtc));
         return profile;
     }
 
@@ -90,10 +90,11 @@ public sealed class ListenerContext(IHttpContextAccessor accessor, IGuestProfile
     }
 
     public void RevokeCookie() => Http.Response.Cookies.Delete(CookieName, CookieOptions());
-    private CookieOptions CookieOptions() => new()
+    private CookieOptions CookieOptions(DateTimeOffset? expiresAt = null) => new()
     {
         HttpOnly = true, Secure = !environment.IsDevelopment() || Http.Request.IsHttps,
-        SameSite = SameSiteMode.Strict, Path = "/", MaxAge = GuestLifecycle.Inactivity,
+        SameSite = SameSiteMode.Strict, Path = "/", MaxAge = expiresAt is { } expiry
+            ? TimeSpan.FromSeconds(Math.Max(0, (expiry - clock.GetUtcNow()).TotalSeconds)) : GuestLifecycle.Inactivity,
         IsEssential = true
     };
 }

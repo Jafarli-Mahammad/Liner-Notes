@@ -479,3 +479,27 @@ guard cases and eight guest/account endpoint cases; a subsequent five-case accou
 controller run covers enabled reclamation routing. All five projects compiled.
 The latest complete suite remains the earlier 633-test pass; a complete run of
 this slice is pending the next integration checkpoint.
+
+### Opt-in website runtime and activity (2026-10-18)
+
+DiscoveryRuntime:RunJobs registers maintenance and prepared/acquisition consumers
+only when GuestDiscovery:Enabled is true. Concurrent LocalEmail:Enabled is
+explicitly rejected until its remaining writers are integrated; the independent
+legacy Worker must not be run against active guest-runtime inventory meanwhile.
+Recorded evaluation cannot start the product runtime. Provider resolution verifies
+configured adapter gates without making HTTP requests. Defaults remain disabled.
+
+Maintenance refreshes only known revisions and deletes at most 50 expired guest
+profiles per minute. A storage failure keeps the host alive for saved-data reads;
+it never establishes an unknown accounting baseline. Known refresh may publish
+at the managed cutoff; ordinary allocations remain blocked. Existing guest
+visits renew activity at most hourly and keep actual server expiry in cookies.
+If renewal is stopped, saved data stays readable without claiming an extension.
+No-renewal reads avoid the previous extra profile lookup. Guest start pacing
+uses RateLimits:GuestStartsPerMinute (default 60 requests/minute/IP); bootstrap
+reads use catalog pacing rather than the password authentication bucket. This
+is request backpressure, not a total-user cap or measured capacity claim.
+
+The full local suite passed 643 tests across five projects, zero failures/skips,
+plus result/secret/documentation gates. The website UI, real browser integration,
+constrained-host measurements and optional Worker/email coexistence remain open.

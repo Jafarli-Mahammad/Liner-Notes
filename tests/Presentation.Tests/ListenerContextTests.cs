@@ -12,6 +12,31 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class ListenerContextTests
 {
+    [Fact]
+    public async Task FailedRenewalCookieKeepsTheActualStoredExpiry()
+    {
+        var clock = new FixedClock();
+        var credential = new string('a', 64);
+        var profile = LinerNotes.Domain.Discovery.ListenerProfile.Guest(clock.GetUtcNow().AddHours(-2), GuestLifecycle.Inactivity);
+        var http = new DefaultHttpContext();
+        http.Request.Headers.Cookie = "liner.guest=" + credential;
+        var store = Substitute.For<IGuestProfileStore>();
+        store.FindGuestAsync(ListenerContext.HashCredential(credential)!, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(profile);
+        var writes = Substitute.For<IDiscoveryWriteCoordinator>();
+        writes.ExecuteAsync(16_384, Arg.Any<Func<CancellationToken, Task<bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<bool>(new LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException("storage_headroom")));
+        var listener = new ListenerContext(new HttpContextAccessor { HttpContext = http }, store,
+            new GuestLifecycle(store, writes, clock), Substitute.For<IAntiforgery>(),
+            Microsoft.Extensions.Options.Options.Create(new GuestDiscoveryOptions { Enabled = true }), Substitute.For<IHostEnvironment>(), clock);
+
+        Assert.Same(profile, await listener.ResolveAsync(true, default));
+        Assert.Contains("max-age=597600", http.Response.Headers.SetCookie.ToString());
+    }
+
+    private sealed class FixedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(2026, 10, 18, 12, 0, 0, TimeSpan.Zero);
+    }
     [Theory]
     [InlineData(null)]
     [InlineData("")]

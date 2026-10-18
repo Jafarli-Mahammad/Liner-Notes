@@ -65,7 +65,7 @@ public sealed partial class LocalGenerationStorage
             await owner.ValidateArtifactsAsync(inventory, ct);
         }
         public Task PublishCommittedInventoryAsync(GenerationStorageState committed, CancellationToken ct) =>
-            owner.PublishCommittedAsync(inventory, committed, ct, reclamation: true);
+            owner.PublishCommittedAsync(inventory, committed, ct, allowAtCutoff: true);
         public ValueTask DisposeAsync() => file.DisposeAsync();
     }
     public async Task RefreshKnownInventoryAsync(GenerationStorageState database, CancellationToken ct)
@@ -83,7 +83,7 @@ public sealed partial class LocalGenerationStorage
         await PublishCommittedAsync(previous, database with
         {
             DatabaseBytes = Math.Max(previous.DatabaseBytes, database.DatabaseBytes)
-        }, ct);
+        }, ct, allowAtCutoff: true);
     }
     // Set by DI through a separate constructor, keeping legacy direct construction source-compatible.
     private readonly CoordinatedStorageOptions? coordinated;
@@ -111,13 +111,13 @@ public sealed partial class LocalGenerationStorage
         }
         catch { await file.DisposeAsync(); throw; }
     }
-    private async Task PublishCommittedAsync(GenerationInventory previous, GenerationStorageState committed, CancellationToken ct, bool reclamation = false)
+    private async Task PublishCommittedAsync(GenerationInventory previous, GenerationStorageState committed, CancellationToken ct, bool allowAtCutoff = false)
     {
         if (coordinated is null) throw new GenerationStoppedException("discovery_filesystem_inventory_unconfigured");
         coordinated.RequireHeadroom(0, filesystemProbe);
         await ValidateArtifactsAsync(previous, ct);
         var current = previous with { DatabaseBytes = committed.DatabaseBytes, DatabaseRevision = committed.Revision, MeasuredAtUtc = clock.GetUtcNow() };
-        if (!reclamation && Total(current) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+        if (!allowAtCutoff && Total(current) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
         string temporary = options.InventoryPath! + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {

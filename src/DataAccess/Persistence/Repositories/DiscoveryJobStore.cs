@@ -9,7 +9,8 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
     public Task<bool> HasReadyAsync(DiscoveryJobKind kind, DiscoveryJobLane lane, DateTimeOffset now, int maximumAttempts, CancellationToken ct)
         => db.DiscoveryJobs.AsNoTracking().AnyAsync(j => j.Kind == kind &&
             (j.Attempts < maximumAttempts || j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now) &&
-            (lane == DiscoveryJobLane.Acquisition ? j.ProgressCode == "waiting_for_music" : j.ProgressCode != "waiting_for_music") &&
+            (lane == DiscoveryJobLane.Acquisition ? kind == DiscoveryJobKind.Lookup || j.ProgressCode == "waiting_for_music" :
+                kind != DiscoveryJobKind.Lookup && j.ProgressCode != "waiting_for_music") &&
             db.ListenerProfiles.Any(p => p.Id == j.ProfileId && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)) &&
             ((j.State == DiscoveryJobState.Pending || j.State == DiscoveryJobState.Retryable) && j.NextAttemptAtUtc <= now ||
              j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now), ct);
@@ -34,7 +35,7 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
             if (existing.RequestHash != hash || existing.Kind != kind) throw new DiscoveryRequestConflictException("idempotency_key_reused");
             return existing;
         }
-        if (profile.Revision != revision) throw new DiscoveryRequestConflictException("profile_revision_conflict");
+        if (kind == DiscoveryJobKind.Generation && profile.Revision != revision) throw new DiscoveryRequestConflictException("profile_revision_conflict");
         if (await db.DiscoveryJobs.AnyAsync(j => j.ProfileId == profileId && j.Kind == kind && Unfinished.Contains(j.State), ct))
             throw new DiscoveryBusyException("discovery_busy", TimeSpan.FromSeconds(2));
         var last = await db.DiscoveryJobs.Where(j => j.ProfileId == profileId && j.Kind == kind)
@@ -51,6 +52,7 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         RequireTransaction();
         bool anyLane = lane is null;
         bool acquisition = lane == DiscoveryJobLane.Acquisition;
+        bool lookup = kind == DiscoveryJobKind.Lookup;
         string kindText = kind.ToString();
         var exhausted = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j WHERE j."Kind"={kindText} AND j."State" IN ('Pending','Retryable','Running')
@@ -62,8 +64,8 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         var next = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j JOIN "ListenerProfiles" p ON p."Id"=j."ProfileId"
             WHERE j."Kind"={kindText} AND j."Attempts"<{maximumAttempts}
-              AND ({anyLane} OR ({acquisition} AND j."ProgressCode"='waiting_for_music') OR
-                (NOT {acquisition} AND j."ProgressCode"<>'waiting_for_music'))
+              AND ({anyLane} OR ({acquisition} AND ({lookup} OR j."ProgressCode"='waiting_for_music')) OR
+                (NOT {acquisition} AND NOT {lookup} AND j."ProgressCode"<>'waiting_for_music'))
             AND (p."ExpiresAtUtc" IS NULL OR p."ExpiresAtUtc">{now}) AND
               ((j."State" IN ('Pending','Retryable') AND j."NextAttemptAtUtc"<={now}) OR
                (j."State"='Running' AND j."LeaseExpiresAtUtc"<={now}))

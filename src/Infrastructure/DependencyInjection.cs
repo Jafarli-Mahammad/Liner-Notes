@@ -119,6 +119,7 @@ public static class DependencyInjection
         services.Configure<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>(configuration.GetSection("DiscoveryRuntime"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>>().Value);
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedPublicEvidence>();
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupPreparation, LinerNotes.Infrastructure.Discovery.SharedCatalogLookup>();
         services.AddSingleton<IDiscoverySeedPreparation, LinerNotes.Infrastructure.Discovery.SharedSeedPreparation>();
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
         services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.PersistentDiscoveryPreparation>();

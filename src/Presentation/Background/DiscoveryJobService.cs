@@ -1,3 +1,4 @@
+using LinerNotes.Application.Features.Catalog;
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Features.Discovery;
@@ -17,18 +18,25 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
     private async Task LaneAsync(bool acquisition, CancellationToken ct)
     {
         var lane = acquisition ? DiscoveryJobLane.Acquisition : DiscoveryJobLane.Prepared;
+        bool preferLookup = true;
         while (!ct.IsCancellationRequested)
         {
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
                 var jobs = scope.ServiceProvider.GetRequiredService<IDiscoveryJobStore>();
-                if (!await jobs.HasReadyAsync(DiscoveryJobKind.Generation, lane, clock.GetUtcNow(), options.MaximumAttempts, ct))
-                { await Task.Delay(TimeSpan.FromSeconds(1), clock, ct); continue; }
-                var admission = scope.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>();
-                var job = await admission.ExecuteAsync(16_384, token => jobs.LeaseNextAsync(DiscoveryJobKind.Generation,
-                    clock.GetUtcNow(), TimeSpan.FromSeconds(options.LeaseSeconds), options.MaximumAttempts, token, lane), ct);
-                if (job is null) continue;
+                DiscoveryJob? job = null;
+                var order = !acquisition ? new[] { DiscoveryJobKind.Generation } : preferLookup
+                    ? [DiscoveryJobKind.Lookup, DiscoveryJobKind.Generation] : [DiscoveryJobKind.Generation, DiscoveryJobKind.Lookup];
+                foreach (var kind in order)
+                {
+                    if (!await jobs.HasReadyAsync(kind, lane, clock.GetUtcNow(), options.MaximumAttempts, ct)) continue;
+                    job = await scope.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384,
+                        token => jobs.LeaseNextAsync(kind, clock.GetUtcNow(), TimeSpan.FromSeconds(options.LeaseSeconds), options.MaximumAttempts, token, lane), ct);
+                    if (job is not null) break;
+                }
+                if (job is null) { await Task.Delay(TimeSpan.FromSeconds(1), clock, ct); continue; }
+                if (acquisition) preferLookup = !preferLookup;
                 await ProcessAsync(job, acquisition, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
@@ -51,7 +59,9 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         try
         {
             await using var scope = scopes.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<RunDiscoveryJob>().ExecuteAsync(job, acquisition, work.Token);
+            if (job.Kind == DiscoveryJobKind.Lookup)
+                await scope.ServiceProvider.GetRequiredService<RunCatalogLookup>().ExecuteAsync(job, work.Token);
+            else await scope.ServiceProvider.GetRequiredService<RunDiscoveryJob>().ExecuteAsync(job, acquisition, work.Token);
         }
         catch (DiscoveryPreparationRequiredException) { defer = true; }
         catch (PublicPreparationBusyException) { defer = true; }

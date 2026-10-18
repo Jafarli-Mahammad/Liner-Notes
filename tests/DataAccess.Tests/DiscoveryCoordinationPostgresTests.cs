@@ -17,6 +17,85 @@ namespace LinerNotes.DataAccess.Tests;
 
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
+    private sealed class CountingLookup : LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource
+    {
+        public int Calls;
+        public bool Retainable = true;
+        private readonly LinerNotes.Infrastructure.Catalog.MusicBrainzCatalogLookupSource source = new(
+            new LinerNotes.Infrastructure.RecommendationSources.ListenBrainz.FixtureListenBrainzApiClient(), TimeProvider.System);
+        public Task<LinerNotes.Application.Common.Interfaces.Catalog.CatalogLookupResult> SearchAsync(string query,
+            LinerNotes.Domain.Catalog.CatalogKind kind, CancellationToken ct)
+        { return Search(); async Task<LinerNotes.Application.Common.Interfaces.Catalog.CatalogLookupResult> Search() {
+            Calls++; var result = await source.SearchAsync(query, kind, ct);
+            return Retainable ? result : result with { CacheUntilUtc = result.AcquiredAtUtc };
+        } }
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task LookupWithoutRetentionPermissionCannotPublishSelectableCatalogData()
+    {
+        await services.DisposeAsync();
+        registrations.AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true });
+        registrations.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource>(new CountingLookup { Retainable = false });
+        services = registrations.BuildServiceProvider(); await ReconcileAsync();
+        var profile = await GuestAsync('a');
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<MediatR.ISender>().Send(new LinerNotes.Application.Features.Catalog.SubmitCatalogLookup(
+            profile.Id, "Synthetic album", LinerNotes.Domain.Catalog.CatalogKind.Album, "lookup"));
+        var lease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Lookup,
+            DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct, DiscoveryJobLane.Acquisition));
+        var error = await Assert.ThrowsAsync<GenerationStoppedException>(() => scope.ServiceProvider
+            .GetRequiredService<LinerNotes.Application.Features.Catalog.RunCatalogLookup>().ExecuteAsync(lease!, default));
+        Assert.Equal("catalog_lookup_not_retainable", error.Message);
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        Assert.Equal(0, await db.CatalogPublications.CountAsync());
+        Assert.Equal(0, await db.Set<LinerNotes.DataAccess.Persistence.Accounting.PublicEvidenceCacheEntry>().CountAsync());
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task ExplicitAlbumLookupPublishesLocallyAndReusesPublicAcquisitionAcrossProfiles()
+    {
+        await services.DisposeAsync();
+        var source = new CountingLookup();
+        registrations.AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true });
+        registrations.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource>(source);
+        services = registrations.BuildServiceProvider(); await ReconcileAsync();
+        var first = await GuestAsync('a'); var second = await GuestAsync('b');
+        await using (var tasteScope = services.CreateAsyncScope())
+            await tasteScope.ServiceProvider.GetRequiredService<SelectDiscoveryTaste>().ReplaceAsync(first.Id, 0, new([], ["jazz"]), default);
+        Guid? publication = null;
+        foreach (var profile in new[] { first, second })
+        {
+            await using var scope = services.CreateAsyncScope();
+            var sender = scope.ServiceProvider.GetRequiredService<MediatR.ISender>();
+            var accepted = await sender.Send(new LinerNotes.Application.Features.Catalog.SubmitCatalogLookup(profile.Id,
+                profile.Id == first.Id ? "Synthetic album" : "SYNTHETIC ALBUM", LinerNotes.Domain.Catalog.CatalogKind.Album, "lookup"));
+            Assert.Equal("Pending", accepted.State);
+            var lease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(DiscoveryJobKind.Lookup,
+                DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct, DiscoveryJobLane.Acquisition));
+            Assert.NotNull(lease);
+            await scope.ServiceProvider.GetRequiredService<LinerNotes.Application.Features.Catalog.RunCatalogLookup>().ExecuteAsync(lease, default);
+            var result = await sender.Send(new LinerNotes.Application.Features.Catalog.GetCatalogLookup(profile.Id, lease.Id));
+            Assert.Equal("Completed", result!.State);
+            var item = Assert.Single(result.Items!);
+            Assert.Equal(LinerNotes.Domain.Catalog.CatalogKind.Album, item.Kind);
+            Assert.NotEmpty(item.Artists!);
+            publication ??= item.Version; Assert.Equal(publication, item.Version);
+            Assert.Equal(accepted.Id, (await sender.Send(new LinerNotes.Application.Features.Catalog.SubmitCatalogLookup(profile.Id,
+                "synthetic album", LinerNotes.Domain.Catalog.CatalogKind.Album, "lookup"))).Id);
+            Assert.Null(await sender.Send(new LinerNotes.Application.Features.Catalog.GetCatalogLookup(
+                profile.Id == first.Id ? second.Id : first.Id, lease.Id)));
+        }
+        Assert.Equal(1, source.Calls);
+        await using var verify = services.CreateAsyncScope();
+        var db = verify.ServiceProvider.GetRequiredService<DataContext>();
+        Assert.Equal(1, await db.CatalogPublications.CountAsync());
+        Assert.Null((await db.CatalogHeads.SingleAsync()).PublicationId);
+        Assert.All(await db.DiscoveryJobs.ToArrayAsync(), j => { Assert.Equal("{}", j.PayloadJson); Assert.DoesNotContain("Synthetic album", j.ResultJson!); });
+        var catalog = verify.ServiceProvider.GetRequiredService<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogReader>();
+        Assert.NotEmpty((await catalog.SearchAsync("synthetic", LinerNotes.Domain.Catalog.CatalogKind.Album, 10, 0, DateTimeOffset.UtcNow, default)).Items);
+        Assert.Equal(1, source.Calls);
+    }
     private sealed class SubmissionClock : TimeProvider
     {
         public DateTimeOffset Now = DateTimeOffset.UtcNow;

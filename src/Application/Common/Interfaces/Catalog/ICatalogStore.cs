@@ -33,6 +33,10 @@ public interface ICatalogLookupSource
 {
     Task<CatalogLookupResult> SearchAsync(string query, CatalogKind kind, CancellationToken ct);
 }
+public interface ICatalogLookupPreparation
+{
+    Task<CatalogLookupResult> SearchAsync(string query, CatalogKind kind, CancellationToken ct);
+}
 
 public interface ICatalogArtifactReader
 {

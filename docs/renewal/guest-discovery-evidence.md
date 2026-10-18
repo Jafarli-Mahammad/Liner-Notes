@@ -349,3 +349,27 @@ new test exercises both generation and capture reservations, unchanged charge,
 physical shrink, growth and changed-revision rejection. Private evidence:
 `shrink-infra-results` and `shrink-postgres-results`. This does not enable the
 new website host or remove remaining C8 compatibility work.
+
+### C8 explicit lookup checkpoint (2026-10-18)
+
+Full offline verification passed 621 checks with zero failures or skips:
+Domain 138, Application 127, DataAccess 118, Presentation 66, Infrastructure 172.
+Private TRX evidence is in `lookup-final-results`. A PostgreSQL integration test
+submits a synthetic album lookup, runs its durable consumer, publishes artist
+credits without replacing the bulk catalog head, repeats it under another
+profile using one public acquisition, and verifies local-only search afterward.
+Status is owner-filtered, normalized retries return the original request and
+completed private payloads are cleared. Jobs store public record IDs for status
+rather than copies of response bodies or query text. A response with no retention
+permission cannot publish selectable catalog data.
+
+Lookup orchestration now lives in Application; the DataAccess placeholder was
+removed. The acquisition lane alternates lookup and generation when both are
+ready. Public query keys preserve accents and normalize compatibility/case;
+they do not store per-profile search logs. Lookup artifacts use the existing
+strict snake-case import format. Publication timestamps are floored to PostgreSQL
+microsecond precision before deriving their stable resumable identity.
+
+The hosted class remains unregistered pending discovery endpoint, compatible
+writer and maintenance integration. All source evidence in this checkpoint is
+synthetic; no real acquisition manifest was run.

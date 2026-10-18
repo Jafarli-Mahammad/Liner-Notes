@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Connect explicit artist/album lookup to durable jobs, shared acquisition and
+  expiring local publication. Lookup and generation alternate on the acquisition
+  lane. Search typing remains local; the website runner is not yet registered.
 - Keep the conservative reconciled storage charge when PostgreSQL physical
   size decreases without a tracked revision change. Growth and revision changes
   retain their guards, avoiding false capture failures after a commit.

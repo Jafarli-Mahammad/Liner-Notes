@@ -28,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.RunDiscoveryJob>();
         services.AddScoped<LinerNotes.Application.Features.Catalog.ImportCatalog>();
+        services.AddScoped<LinerNotes.Application.Features.Catalog.RunCatalogLookup>();
+        services.AddScoped<LinerNotes.Application.Features.Catalog.ICatalogLookupJobs, LinerNotes.Application.Features.Catalog.CatalogLookupJobs>();
 
         return services;
     }

@@ -15,7 +15,10 @@ public sealed class MusicBrainzCatalogLookupSource(IListenBrainzApiClient client
         if (!Enum.IsDefined(kind) || string.IsNullOrWhiteSpace(query) || query.Length > 128 || query.Any(char.IsControl))
             throw new ArgumentException("catalog_lookup_query_invalid");
         var response = await client.SendAsync(new(kind == CatalogKind.Artist ? ListenBrainzRequestKind.ArtistSearch : ListenBrainzRequestKind.AlbumSearch, query.Trim(), 10), ct);
-        if (!response.Gaps.IsEmpty || response.Data is not { } root || response.Reference.ResponseSha256 is not { } hash ||
+        if (!response.Gaps.IsEmpty)
+            throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException("catalog_source_unavailable",
+                response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "request_timeout" or "upstream_unavailable"));
+        if (response.Data is not { } root || response.Reference.ResponseSha256 is not { } hash ||
             response.Reference.RetrievedAtUtc is not { } acquired)
             throw new GenerationStoppedException("catalog_lookup_unavailable");
         if (response.Reference.Origin is not (EvidenceOrigin.Live or EvidenceOrigin.Synthetic)) throw new GenerationStoppedException("catalog_lookup_recording_not_product_eligible");

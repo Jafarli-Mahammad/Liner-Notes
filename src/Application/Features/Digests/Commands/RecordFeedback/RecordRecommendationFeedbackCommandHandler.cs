@@ -17,17 +17,20 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
 {
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IListenerProfileRepository _profiles;
     private readonly ITasteSignalRepository? _tasteSignalRepository;
     private readonly GenerationConfiguration _configuration;
 
     public RecordRecommendationFeedbackCommandHandler(
         IWeeklyDigestRepository weeklyDigestRepository,
         IUnitOfWork unitOfWork,
+        IListenerProfileRepository profiles,
         ITasteSignalRepository? tasteSignalRepository = null,
         GenerationConfiguration? configuration = null)
     {
         _weeklyDigestRepository = weeklyDigestRepository;
         _unitOfWork = unitOfWork;
+        _profiles = profiles;
         _tasteSignalRepository = tasteSignalRepository;
         _configuration = configuration ?? new GenerationConfiguration();
     }
@@ -38,6 +41,7 @@ public sealed class RecordRecommendationFeedbackCommandHandler : IRequestHandler
     {
         return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
+            await _profiles.ChangeInputsAsync(request.UserId, ct);
         var recommendation = await _weeklyDigestRepository.GetRecommendationForUpdateAsync(
             request.RecommendationId,
             request.UserId,

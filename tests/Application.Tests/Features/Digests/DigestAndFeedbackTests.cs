@@ -99,7 +99,7 @@ public class DigestAndFeedbackTests
         repo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns(recommendation);
 
-        var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork);
+        var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork, Substitute.For<IListenerProfileRepository>());
         var command = new RecordRecommendationFeedbackCommand(
             RecommendationId: recId,
             UserId: userId,
@@ -130,7 +130,7 @@ public class DigestAndFeedbackTests
         repo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns((WeeklyRecommendation?)null);
 
-        var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork);
+        var handler = new RecordRecommendationFeedbackCommandHandler(repo, unitOfWork, Substitute.For<IListenerProfileRepository>());
         var command = new RecordRecommendationFeedbackCommand(recId, userId, UserFeedback.Disliked, null);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -209,7 +209,7 @@ public class DigestAndFeedbackTests
         digestRepo.GetRecommendationForUpdateAsync(recId, userId, Arg.Any<CancellationToken>())
             .Returns(recommendation);
 
-        var handler = new RecordRecommendationFeedbackCommandHandler(digestRepo, unitOfWork, tasteRepo);
+        var handler = new RecordRecommendationFeedbackCommandHandler(digestRepo, unitOfWork, Substitute.For<IListenerProfileRepository>(), tasteRepo);
         var command = new RecordRecommendationFeedbackCommand(
             RecommendationId: recId,
             UserId: userId,

@@ -19,6 +19,7 @@ namespace LinerNotes.Presentation.Controllers;
 /// Authentication endpoints for subscriber registration, login, and profile resolution.
 /// </summary>
 [EnableRateLimiting("auth")]
+[ServiceFilter(typeof(LinerNotes.Presentation.Filters.DiscoveryWriteFilter))]
 public sealed class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;

@@ -54,6 +54,7 @@ public static class DependencyInjection
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IListenerProfileRepository, ListenerProfileRepository>();
 
         // Register generic repository open type
         services.AddScoped(typeof(IAsyncRepository<>), typeof(AsyncRepository<>));

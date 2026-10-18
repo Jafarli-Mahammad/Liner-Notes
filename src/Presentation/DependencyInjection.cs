@@ -77,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ApiExceptionFilterAttribute>();
+        services.AddScoped<DiscoveryWriteFilter>();
 
         // 3. ASP.NET Core Identity Configuration
         services.AddIdentityCore<ApplicationUser>(options =>

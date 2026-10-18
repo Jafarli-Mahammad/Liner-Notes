@@ -15,6 +15,7 @@ public sealed record SeedTasteProfileRequest(
 /// Taste profile seeding and taste signal inspection endpoints.
 /// </summary>
 [Authorize]
+[ServiceFilter(typeof(LinerNotes.Presentation.Filters.DiscoveryWriteFilter))]
 public sealed class TasteController : ApiControllerBase
 {
     /// <summary>

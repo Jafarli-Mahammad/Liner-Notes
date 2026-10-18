@@ -440,3 +440,20 @@ source/hydrator/seed bundle without editing resolver or core workflow. Unknown
 provider registrations still fail closed and Last.fm cannot resolve a live client.
 The full local suite passed 628 tests, zero failures/skips across five projects,
 plus result/secret/documentation gates. Guest host/UI activation remains pending.
+
+### Existing account write integration (2026-10-18)
+
+With discovery jobs enabled, authentication POST actions and legacy taste/feedback
+actions use the existing coordinated write interface. MVC-captured unhandled
+action exceptions are rethrown before admission commits; reads and disabled
+runtime bypass this filter. No provider I/O is enclosed by these actions.
+Legacy seed/feedback handlers now use a profile repository that locks the owner
+first, advances its revision, and cancels unfinished generation in the same
+transaction. Lookup jobs remain independent. No EF types cross into Application.
+PostgreSQL tests verify both committed changes and rollback preserving revision
+and pending jobs. Initial failures were fixture setup errors (duplicate profile,
+then missing Identity principal); the corrected fixture uses the User-owned
+profile and creates its Identity principal. Full final verification passed 633
+tests, zero failures/skips across five projects, plus result/secret/doc gates.
+Account deletion/reclamation, inventory maintenance, optional weekly metadata
+writers and the guest website/host activation remain pending.

@@ -18,6 +18,54 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
     [LocalPostgresMigrationFact]
+    public async Task LegacyInputChangesAdvanceRevisionAndCancelOnlyGenerationAtomically()
+    {
+        var profile = await WriteAsync(async (s, ct) =>
+        {
+            var db = s.GetRequiredService<DataContext>();
+            var user = new LinerNotes.Domain.Digest.User("input-version@example.test", "UTC");
+            var owner = user.Profile!;
+            db.ApplicationUsers.Add(new LinerNotes.DataAccess.IdentityEntities.ApplicationUser
+            {
+                Id = user.Id, UserName = "input-version", NormalizedUserName = "INPUT-VERSION",
+                Email = user.Email, NormalizedEmail = "INPUT-VERSION@EXAMPLE.TEST"
+            });
+            db.Users.Add(user);
+            await db.SaveChangesAsync(ct);
+            return owner;
+        });
+        foreach (var kind in new[] { DiscoveryJobKind.Generation, DiscoveryJobKind.Lookup })
+            await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
+                kind.ToString(), new string('a', 64), kind, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+
+        async Task<bool> Change(IServiceProvider s, CancellationToken ct)
+        {
+            await s.GetRequiredService<LinerNotes.Application.Common.Interfaces.Repositories.IListenerProfileRepository>()
+                .ChangeInputsAsync(profile.UserId!.Value, ct);
+            await s.GetRequiredService<DataContext>().SaveChangesAsync(ct);
+            return true;
+        }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync<bool>(async (s, ct) =>
+        {
+            await Change(s, ct);
+            throw new InvalidOperationException("synthetic rollback");
+        }));
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            Assert.Equal(0, (await db.ListenerProfiles.SingleAsync(p => p.Id == profile.Id)).Revision);
+            Assert.All(await db.DiscoveryJobs.ToArrayAsync(), j => Assert.Equal(DiscoveryJobState.Pending, j.State));
+        }
+        await WriteAsync(Change);
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+            Assert.Equal(1, (await db.ListenerProfiles.SingleAsync(p => p.Id == profile.Id)).Revision);
+            Assert.Equal(DiscoveryJobState.Cancelled, (await db.DiscoveryJobs.SingleAsync(j => j.Kind == DiscoveryJobKind.Generation)).State);
+            Assert.Equal(DiscoveryJobState.Pending, (await db.DiscoveryJobs.SingleAsync(j => j.Kind == DiscoveryJobKind.Lookup)).State);
+        }
+    }
+    [LocalPostgresMigrationFact]
     public async Task DiscoveryReadsAndFeedbackAreOwnedAndFeedbackCancelsStaleWorkWithoutRewritingScores()
     {
         var profile = await GuestAsync('a'); var other = await GuestAsync('b');

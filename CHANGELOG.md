@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Coordinate authentication, legacy taste and feedback writes when discovery
+  jobs are enabled. Taste/feedback revisions cancel stale generation atomically;
+  independent catalog lookup stays queued. MVC action exceptions roll back writes.
 - Resolve recommendation bundles through registered adapter keys; provider-specific
   live-use restrictions stay in adapter registration. Existing scoring policy
   identifiers remain unchanged by default.

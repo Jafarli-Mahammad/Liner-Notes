@@ -15,15 +15,17 @@ public sealed class SeedTasteProfileCommandHandler : IRequestHandler<SeedTastePr
     private readonly IUserRepository _userRepository;
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IListenerProfileRepository _profiles;
 
     public SeedTasteProfileCommandHandler(
         IUserRepository userRepository,
         ITasteSignalRepository tasteSignalRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork, IListenerProfileRepository profiles)
     {
         _userRepository = userRepository;
         _tasteSignalRepository = tasteSignalRepository;
         _unitOfWork = unitOfWork;
+        _profiles = profiles;
     }
 
     public async Task<int> Handle(
@@ -62,9 +64,12 @@ public sealed class SeedTasteProfileCommandHandler : IRequestHandler<SeedTastePr
             }
         }
 
-        await _tasteSignalRepository.AddRangeAsync(signals, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return signals.Count;
+        return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await _profiles.ChangeInputsAsync(request.UserId, ct);
+            await _tasteSignalRepository.AddRangeAsync(signals, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+            return signals.Count;
+        }, cancellationToken);
     }
 }

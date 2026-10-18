@@ -106,10 +106,12 @@ public class SeedTasteProfileTests
         var userRepo = Substitute.For<IUserRepository>();
         var tasteRepo = Substitute.For<ITasteSignalRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<int>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<int>>>()(call.Arg<CancellationToken>()));
 
         userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
 
-        var handler = new SeedTasteProfileCommandHandler(userRepo, tasteRepo, unitOfWork);
+        var handler = new SeedTasteProfileCommandHandler(userRepo, tasteRepo, unitOfWork, Substitute.For<IListenerProfileRepository>());
         var command = new SeedTasteProfileCommand(
             UserId: userId,
             Tags: new List<SeedTagDto>
@@ -139,10 +141,12 @@ public class SeedTasteProfileTests
         var userRepo = Substitute.For<IUserRepository>();
         var tasteRepo = Substitute.For<ITasteSignalRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task<int>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<int>>>()(call.Arg<CancellationToken>()));
 
         userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns((User?)null);
 
-        var handler = new SeedTasteProfileCommandHandler(userRepo, tasteRepo, unitOfWork);
+        var handler = new SeedTasteProfileCommandHandler(userRepo, tasteRepo, unitOfWork, Substitute.For<IListenerProfileRepository>());
         var command = new SeedTasteProfileCommand(
             UserId: userId,
             Tags: new List<SeedTagDto> { new("ambient", 0.8), new("drone", 0.7), new("experimental", 0.6) },

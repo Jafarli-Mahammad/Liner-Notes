@@ -30,6 +30,7 @@ public sealed class DiscoveryInventoryService(IServiceScopeFactory scopes, TimeP
                 await using var scope = scopes.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<MaintainDiscoveryStorage>().ExecuteAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().CleanupAsync(50, stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<CleanupPublicDiscovery>().ExecuteAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
             catch (Exception)

@@ -400,6 +400,8 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasIndex("State", "AcquiredAtUtc");
 
+                    b.HasIndex("State", "ExpiresAtUtc", "Id");
+
                     b.ToTable("CatalogPublications", (string)null);
                 });
 

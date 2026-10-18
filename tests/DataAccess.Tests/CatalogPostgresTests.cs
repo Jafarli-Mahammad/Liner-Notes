@@ -208,6 +208,46 @@ public sealed class CatalogPostgresTests : IAsyncLifetime
         Assert.Equal(2, await db.CatalogRecords.CountAsync());
     }
 
+    [LocalPostgresMigrationFact]
+    public async Task ExpiredCatalogCleanupIsBoundedAndPreservesTheHeadFreshLookupAndStaging()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var now = DateTimeOffset.UtcNow;
+        async Task Publish(int count, DateTimeOffset expires, bool lookup)
+        {
+            var rows = Enumerable.Range(0, count).Select(i => new CatalogArtifactRow(Guid.NewGuid(),
+                CatalogKind.Artist, $"Synthetic cleanup artist {i}", [], [], [])).ToArray();
+            using var stream = Artifact(rows);
+            var publication = new CatalogPublication(Guid.NewGuid(), "generated-fixture", "cleanup-v1", "fixture:catalog",
+                CatalogOrigin.Synthetic, "synthetic-fixture", null, "Synthetic mechanics only",
+                Convert.ToHexStringLower(SHA256.HashData(stream.ToArray())), stream.Length, count, now, expires, lookup);
+            await services.GetRequiredService<ImportCatalog>().RunAsync(publication, stream, false, false, default);
+        }
+        await Publish(3, now.AddDays(1), false);
+        await Publish(1, now.AddDays(4), true);
+        await Publish(1, now.AddDays(1), false);
+        var db = services.GetRequiredService<DataContext>();
+        var staging = new CatalogPublication(Guid.NewGuid(), "generated-fixture", "staging-v1", "fixture:catalog",
+            CatalogOrigin.Synthetic, "synthetic-fixture", null, "Synthetic mechanics only", new string('a', 64), 10, 1,
+            now, now.AddDays(1));
+        var admission = services.GetRequiredService<IDiscoveryWriteCoordinator>();
+        await admission.ExecuteAsync(8192, async ct =>
+        {
+            await services.GetRequiredService<ICatalogImportStore>().StartAsync(staging, ct);
+            return true;
+        }, default);
+        var maintenance = services.GetRequiredService<ICatalogMaintenance>();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => maintenance.DeleteExpiredAsync(now.AddDays(2), 1, default));
+        Assert.Equal(1, await admission.ReclaimAsync(ct => maintenance.DeleteExpiredAsync(now.AddDays(2), 1, ct), default));
+        Assert.Equal(3, await admission.ReclaimAsync(ct => maintenance.DeleteExpiredAsync(now.AddDays(2), 100, ct), default));
+        Assert.Equal(0, await admission.ReclaimAsync(ct => maintenance.DeleteExpiredAsync(now.AddDays(2), 100, ct), default));
+        Assert.Equal(2, await db.CatalogRecords.CountAsync());
+        Assert.Equal(3, await db.CatalogPublications.CountAsync());
+        Assert.True(await db.CatalogPublications.AnyAsync(p => p.Id == staging.Id));
+        Assert.Equal(5, await db.Artists.CountAsync());
+    }
+
     private static MemoryStream Artifact(IReadOnlyList<CatalogArtifactRow> rows) => new(Encoding.UTF8.GetBytes(
         string.Join('\n', rows.Select(row => JsonSerializer.Serialize(row, CatalogArtifactReader.Json))) + "\n"));
     private static CatalogPublication Manifest(MemoryStream artifact, int count) => new(Guid.NewGuid(), "generated-fixture", "fixture-v1", "fixture:catalog",

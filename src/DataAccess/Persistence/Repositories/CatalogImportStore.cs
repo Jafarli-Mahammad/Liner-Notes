@@ -6,8 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LinerNotes.DataAccess.Persistence.Repositories;
 
-public sealed class CatalogImportStore(DataContext db) : ICatalogImportStore
+public sealed class CatalogImportStore(DataContext db) : ICatalogImportStore, ICatalogMaintenance
 {
+    public async Task<int> DeleteExpiredAsync(DateTimeOffset now, int limit, CancellationToken ct)
+    {
+        RequireTransaction();
+        if (limit is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(limit));
+        var publications = await db.CatalogPublications.AsNoTracking()
+            .Where(p => p.State == CatalogPublicationState.Published && p.ExpiresAtUtc <= now &&
+                !db.CatalogHeads.Any(h => h.PublicationId == p.Id))
+            .OrderBy(p => p.ExpiresAtUtc).ThenBy(p => p.Id).Select(p => p.Id).Take(10).ToArrayAsync(ct);
+        var records = await db.CatalogRecords.AsNoTracking().Where(r => publications.Contains(r.PublicationId))
+            .OrderBy(r => r.Id).Select(r => r.Id).Take(limit).ToArrayAsync(ct);
+        int removed = await db.CatalogRecords.Where(r => records.Contains(r.Id)).ExecuteDeleteAsync(ct);
+        // Search terms cascade with records. Canonical identities may still back private taste/history.
+        removed += await db.CatalogPublications.Where(p => publications.Contains(p.Id) &&
+            !db.CatalogRecords.Any(r => r.PublicationId == p.Id)).ExecuteDeleteAsync(ct);
+        return removed;
+    }
+
     public Task<CatalogPublication?> FindAsync(Guid publicationId, CancellationToken ct) =>
         db.CatalogPublications.AsNoTracking().SingleOrDefaultAsync(p => p.Id == publicationId, ct);
 

@@ -554,3 +554,9 @@ projects with zero failures/skips, plus result/secret/documentation gates and No
 syntax checks. The synthetic setup was executed successfully. See the
 [local runbook](guest-discovery-local-run.md). Constrained-host/load measurement,
 public catalog housekeeping and optional Worker/email writer coexistence remain.
+
+## Bounded public cleanup (2026-10-18)
+
+The runtime now reclaims expired public evidence and published catalog records under the existing non-growing storage transaction. One minute-long maintenance cycle attempts at most 100 evidence entries, 100 catalog records (search terms cascade), and ten empty catalog publications. An expiry index bounds publication selection. The current catalog head, fresh lookup publications and staged imports are preserved; staged imports remain explicitly resumable. Canonical artist/album identities are retained because private taste and recommendation history can reference them. Saved selection snapshots survive public record expiry. PostgreSQL may retain freed physical pages; this is logical reclamation, not a promise of immediate disk shrinkage.
+
+Seven catalog PostgreSQL integration checks passed, including a regression covering record limits, active-head protection, fresh lookup retention and staged-import retention. The isolated database runs PostgreSQL 18.6 with a 512 MiB memory cap; this checkpoint does not establish application capacity.

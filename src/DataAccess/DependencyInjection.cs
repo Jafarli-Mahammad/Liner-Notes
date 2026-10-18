@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<IManagedStorageIntegrity, LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageIntegrity>();
         services.AddScoped<ICatalogReader, CatalogReader>();
         services.AddScoped<ICatalogImportStore, CatalogImportStore>();
+        services.AddScoped<ICatalogMaintenance, CatalogImportStore>();
         services.AddScoped<IDiscoveryWriteCoordinator, DiscoveryWriteCoordinator>();
         services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();

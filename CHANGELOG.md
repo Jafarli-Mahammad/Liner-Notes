@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Reclaim expired public recommendation evidence and catalog search records in
+  bounded maintenance passes. Preserve the active catalog, fresh lookups,
+  resumable imports, canonical identities and private taste/history evidence.
 - Add the onsite guest website: artist/album autocomplete, styles, explicit
   catalog lookup, durable progress, saved explanations, feedback, history,
   cooldown, export/clear, preserved registration and explicit account import.

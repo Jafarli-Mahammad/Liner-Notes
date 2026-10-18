@@ -17,6 +17,7 @@ public sealed class CatalogPublicationConfiguration : IEntityTypeConfiguration<C
         b.Property(p => p.State).HasConversion<string>().HasMaxLength(16);
         b.Property(p => p.ImportedRecords).IsConcurrencyToken();
         b.HasIndex(p => new { p.State, p.AcquiredAtUtc });
+        b.HasIndex(p => new { p.State, p.ExpiresAtUtc, p.Id });
     }
 }
 public sealed class CatalogHeadConfiguration : IEntityTypeConfiguration<CatalogHead>

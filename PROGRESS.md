@@ -17,7 +17,7 @@ Provider selection uses registered polymorphic bundles. Application workflows do
 Remaining guest-discovery work:
 
 - Measure memory, CPU, disk use, latency, and overload behavior under the constrained-host profile. No VPS-capacity claim has been established.
-- Add bounded cleanup for expired public catalog and lookup data while preserving the active catalog publication and private taste snapshots.
+- Bounded public cleanup is now implemented and PostgreSQL-verified: each maintenance pass removes at most 100 expired evidence entries, 100 catalog records with their search terms, and ten empty expired publications. It preserves the active catalog, fresh lookups, resumable imports, and canonical identities used by private taste/history. Seven catalog integration checks passed after this change.
 - Integrate remaining Worker and local-email writes with discovery storage coordination before allowing those writers concurrently. The website currently rejects that configuration at startup. No external email transport is configured.
 - A live catalog acquisition manifest is not approved, and no real catalog has been imported. Catalog coverage, recommendation quality, and live-provider latency remain unverified.
 

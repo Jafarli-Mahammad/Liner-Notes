@@ -88,3 +88,40 @@ evidence only; it does not benchmark live provider latency.
 Stop the demo process after use. Remove only the disposable database/state created
 for this run when no further browser or load checks need them. State under `/tmp`
 may disappear between sessions.
+
+## Routine operation and recovery
+
+Keep the guest feature and consumer enabled together. Local search reads only the
+catalog; returning to results does not submit another batch. An empty result is
+reported honestly. Source or storage failures leave saved data readable when the
+database itself remains available. Use each returned job ID with the owned
+`/api/discovery/jobs/{id}` route to inspect bounded progress/error codes. Never log
+guest credentials, lease tokens, private payloads or exports.
+
+Known inventory is renewed once per minute. The same cycle reclaims up to 50
+expired guest profiles, 100 expired public evidence entries, 100 expired catalog
+records and ten empty publications. Guest inactivity expiry is seven days;
+activity renewal is limited to once per hour. Catalog cleanup preserves the head
+and staged imports; saved favorite evidence does not depend on a public row
+remaining present. Canonical artist/album identities can remain for private
+references. Physical PostgreSQL pages and WAL need their own operating budget.
+
+An unknown revision, interrupted inventory publication or failed space check stops
+new writes. Do not zero counters or auto-establish a baseline. Stop writers,
+investigate the mismatch, verify accounting and explicitly reconcile using the
+existing [storage procedure](guest-discovery-storage.md). Apply migrations with
+writers stopped and a verified database/key backup; restore the matching database,
+keys and artifacts together if recovery is needed. The synthetic preparation
+script handles only a new disposable database and cannot repair retained state.
+
+Use the [capacity report](guest-discovery-capacity.md) for the measured limits and
+load driver. Its server memory caps are a tested starting profile, not deployment
+approval. Reserve host space for the OS, logs, WAL, backups and staging; include
+all relevant volumes in free-space checks. Use stable published PostgreSQL ports
+when testing restarts, and keep runtime state/key mounts persistent.
+
+Real acquisition needs its approved source manifest and the existing provider
+[configuration and approval gates](listenbrainz-provider-runbook.md). No real
+bulk source is enabled by the synthetic script. Weekly generation sharing this
+inventory must enable discovery admission. Both hosts reject concurrent optional
+local email capture; the onsite workflow works with that feature disabled.

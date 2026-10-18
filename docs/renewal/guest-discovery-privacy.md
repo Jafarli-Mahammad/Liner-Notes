@@ -1,5 +1,12 @@
 # Discovery ownership and privacy inventory
 
+Current checkpoint (2026-10-19): the opt-in guest website and job consumer are
+implemented. The final suite passed 648 checks and 12 real-browser fixture checks;
+SQL verified all load-fixture private profiles/jobs/recommendations/subscribers
+were deleted. Expired public records can be reclaimed without deleting private
+favorite evidence. See [current evidence](guest-discovery-evidence.md). The
+phase-specific descriptions below include historical migration checkpoints.
+
 C2 introduces additive profile, batch and job metadata. Guest HTTP access and job consumption are not enabled by this stage. Existing taste/recommendation rows retain their current ownership until C3.
 
 ## New records

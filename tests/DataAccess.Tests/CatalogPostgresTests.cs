@@ -225,9 +225,16 @@ public sealed class CatalogPostgresTests : IAsyncLifetime
             await services.GetRequiredService<ImportCatalog>().RunAsync(publication, stream, false, false, default);
         }
         await Publish(3, now.AddDays(1), false);
+        var db = services.GetRequiredService<DataContext>();
+        var favoriteId = await db.CatalogRecords.OrderBy(r => r.Id).Select(r => r.Id).FirstAsync();
+        var profile = await services.GetRequiredService<LinerNotes.Application.Features.Discovery.GuestLifecycle>()
+            .StartAsync(new string('c', 64), default);
+        await services.GetRequiredService<LinerNotes.Application.Features.Discovery.SelectDiscoveryTaste>()
+            .ReplaceAsync(profile.Id, 0, new([favoriteId], []), default);
+        string? savedSelection = (await db.TasteSignals.AsNoTracking().SingleAsync(t => t.ProfileId == profile.Id)).SelectionJson;
+        Assert.NotNull(savedSelection);
         await Publish(1, now.AddDays(4), true);
         await Publish(1, now.AddDays(1), false);
-        var db = services.GetRequiredService<DataContext>();
         var staging = new CatalogPublication(Guid.NewGuid(), "generated-fixture", "staging-v1", "fixture:catalog",
             CatalogOrigin.Synthetic, "synthetic-fixture", null, "Synthetic mechanics only", new string('a', 64), 10, 1,
             now, now.AddDays(1));
@@ -246,6 +253,10 @@ public sealed class CatalogPostgresTests : IAsyncLifetime
         Assert.Equal(3, await db.CatalogPublications.CountAsync());
         Assert.True(await db.CatalogPublications.AnyAsync(p => p.Id == staging.Id));
         Assert.Equal(5, await db.Artists.CountAsync());
+        Assert.False(await db.CatalogRecords.AnyAsync(r => r.Id == favoriteId));
+        var retained = await db.TasteSignals.AsNoTracking().SingleAsync(t => t.ProfileId == profile.Id);
+        Assert.Equal(favoriteId, retained.CatalogRecordId);
+        Assert.Equal(savedSelection, retained.SelectionJson);
     }
 
     private static MemoryStream Artifact(IReadOnlyList<CatalogArtifactRow> rows) => new(Encoding.UTF8.GetBytes(

@@ -1,6 +1,6 @@
 # Guest discovery evidence
 
-Updated: 2026-10-17. Design and sequential execution plan are developer-approved. C1–C3, C4 lifecycle, C5 catalog, C6 taste/preparation and C7 job/admission mechanics are implemented and locally verified; the guest website feature and later stages are not yet implemented or developer-confirmed.
+Updated: 2026-10-19. The onsite guest implementation, bounded public cleanup and coordinated weekly writes are locally verified. The final full suite passed 648 checks with zero failures/skips, followed by seven strengthened catalog checks; the constrained Release host passed 12 browser checks and the 50-profile load driver. See [resource measurements and limits](guest-discovery-capacity.md). Developer confirmation, real catalog acquisition/quality, deployment readiness and concurrent optional local email capture remain separate gates. Earlier sections below preserve historical checkpoints.
 
 ## C7: durable jobs and coordinated admission
 

@@ -244,3 +244,12 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** An interface exposed vendor collection and transaction types despite having no application consumers. A provider migration also prompted a correction about excessive coupling.
 **Suggested improvement:** Audit public contract types and implementation references before extending workflows; remove unused vendor-shaped contracts and test the application assembly boundary.
 **Principle:** Polymorphism supports substitution only when contracts hide implementation details.
+
+### Observation 025: Verify original content before repairing compressed output
+**Status:** OPEN
+**Date:** 2026-10-19
+**Skill:** task-observer; coding workflows
+**Type:** open-source
+**Issue:** Tool-output compression removed words and generic type syntax, making valid source and documentation appear truncated. That presentation can prompt unnecessary or incorrect repairs.
+**Suggested improvement:** Retrieve original output or inspect small exact slices before editing. Distinguish a tool presentation failure from file corruption. Recreate disposable test environments from pinned inputs when they expire, and verify dynamically assigned ports again after restarts.
+**Principle:** Work from verified source and recoverable test inputs; summaries are navigation aids, not mutation authority.

@@ -119,8 +119,10 @@ An opt-in local flow accepts favorite artists, albums and styles, then shows
 recommendations onsite. It includes local catalog search, explicit lookup,
 feedback, guest export/clear and account conversion preserving history. The
 [synthetic local run](docs/renewal/guest-discovery-local-run.md) is verified with
-a real browser; real catalog coverage, recommendation quality, constrained-host
-capacity and concurrent local email capture remain unverified or unfinished.
+a real browser. A [constrained local resource run](docs/renewal/guest-discovery-capacity.md)
+also exercised 50 persisted profiles and search bursts. Real catalog coverage,
+recommendation quality, production capacity and concurrent optional local email
+capture remain separate gates.
 
 ## For developers
 

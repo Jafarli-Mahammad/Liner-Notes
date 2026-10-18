@@ -2,7 +2,7 @@
 
 Date: 2026-10-16
 
-Status: **Design and sequential execution approved by the developer on 2026-10-16. C1–C3, C4 lifecycle and C5 catalog and C6 taste/preparation and C7 job/admission mechanics are implemented and locally verified; C8–C10 and the documented integrated checks remain. See the evidence ledger for actual outcomes and open gates.**
+Status: **The onsite implementation and bounded maintenance are locally verified as of 2026-10-19: 648 .NET checks, 12 browser checks, and the constrained 50-profile load scenario passed. C8 weekly/account writers are coordinated; concurrent optional local email capture remains a separate integration gate. C10 has measured local resource evidence, including missed burst-latency targets and unmeasured live/production cases. Developer confirmation remains pending. Historical stage checklists below describe the original plan; current outcomes and limits are in the [resource report](../../renewal/guest-discovery-capacity.md) and evidence ledger.**
 
 Design: [Guest discovery and immediate recommendations](../specs/2026-10-16-guest-discovery-design.md).
 
@@ -254,7 +254,7 @@ C2 outcome: additive schema/backfill, profile/batch/job invariants and export/pr
 - [ ] Render 3–5 eligible recommendations, stored explanations, feedback and Discover more. Show server-derived cooldown and busy/retry states. Preserve selected inputs after failure; handle partial coverage, missing evidence and empty batches without fabricating content.
 - [ ] Implement guest expiry disclosure, export/Clear my data, registration preservation, and explicit existing-account import choice. Email remains separate and never starts as a side effect of guest discovery.
 - [ ] Reuse the current lightweight frontend and design language. Verify keyboard, focus, loading announcements, small screens, reduced motion, touch targets, error placement and safe output encoding. No frontend framework or image-generation work is required by this plan.
-- [ ] Run browser assertions over the real fixture-backed application and disposable database, including search → submit → wait → results → feedback → more → register → retained history. Stubbed UI checks alone cannot establish end-to-end correctness. Keep live-provider verification separate.
+- [x] Run browser assertions over the real fixture-backed application and disposable database, including search → submit → wait → results → feedback → more → register → retained history. Stubbed UI checks alone cannot establish end-to-end correctness. Keep live-provider verification separate.
 - [ ] Update user-visible changelog and manual QA instructions with the actual behavior and known evidence limits.
 
 **Exit:** A visitor completes the website discovery loop as a guest and can retain it by registering.

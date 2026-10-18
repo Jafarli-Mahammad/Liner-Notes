@@ -10,18 +10,22 @@ Phase 9 includes pinned build inputs, non-root web and Worker images, local Comp
 
 The guest-first discovery design and sequential implementation were approved. The first onsite flow now supports artist, album, and style-tag selection; immediate synthetic recommendations with persisted explanations; explicit catalog lookup; feedback; export; registration with guest data preservation; explicit import into an existing account; and guest data deletion.
 
-The implementation passed 646 .NET checks with zero skips and 12 synthetic browser checks. The browser run covered stale search responses, artist and album selection, explicit lookup, generation, return visits, feedback, export, registration/import, cooldown, sparse results, and deletion. The first synthetic batch took about 4.4 seconds on the development machine. This is fixture evidence only; it does not measure live-provider latency or VPS capacity.
+The implementation passed 648 .NET checks with zero failures/skips and 12 synthetic browser checks. Seven catalog integration checks also passed after strengthening private-evidence retention assertions. The browser covered search, artist/album selection, explicit lookup, generation, return visits, feedback, export, registration/import, cooldown, sparse results and deletion.
 
-Provider selection uses registered polymorphic bundles. Application workflows do not depend on Last.fm or ListenBrainz implementations. Persistence-facing discovery contracts are in Application and EF Core/PostgreSQL implementations are in DataAccess. A database change still requires a schema and data migration, but should not require rewriting product workflows.
+Provider selection uses registered polymorphic bundles. Application workflows do not depend on provider implementations or EF Core types. Persistence contracts live in Application; database-specific SQL and mappings remain in DataAccess. A database change still needs schema/data migration, but should not rewrite product workflows.
 
-Remaining guest-discovery work:
+Bounded public cleanup now preserves the active catalog, fresh lookups, staged imports, canonical identities and private favorite snapshots. Weekly saves, scheduler activity and unsubscribe updates use discovery admission when its runtime is enabled; PostgreSQL verification confirmed a subsequent guest write still succeeds.
 
-- Measure memory, CPU, disk use, latency, and overload behavior under the constrained-host profile. No VPS-capacity claim has been established.
-- Bounded public cleanup is now implemented and PostgreSQL-verified: each maintenance pass removes at most 100 expired evidence entries, 100 catalog records with their search terms, and ten empty expired publications. It preserves the active catalog, fresh lookups, resumable imports, and canonical identities used by private taste/history. Seven catalog integration checks passed after this change.
-- Weekly digest persistence, scheduler writes and unsubscribe updates now use discovery storage coordination when its runtime is enabled. The PostgreSQL regression generated a weekly digest, advanced its schedule, unsubscribed, and then successfully created another guest profile while verifying storage integrity. Optional local email capture remains a separate integration gate: both composition roots reject its concurrent use with the guest runtime. No external email transport is configured.
-- A live catalog acquisition manifest is not approved, and no real catalog has been imported. Catalog coverage, recommendation quality, and live-provider latency remain unverified.
+The constrained Release runtime passed the 50-profile load scenario with five generating visitors and 5/20/50 concurrent search clients. The final warm search p95 values were 28/123/323 ms; five synthetic batches completed in 2.11–2.27 seconds. A separate run recovered five unfinished requests across a forced website restart. Earlier burst runs were slower; the provisional 100 ms burst target is not met. This is local synthetic evidence, not a production capacity guarantee. See [resource measurements and limits](docs/renewal/guest-discovery-capacity.md).
 
-See the [guest discovery evidence](docs/renewal/guest-discovery-evidence.md), [storage notes](docs/renewal/guest-discovery-storage.md), [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md), and [synthetic local runbook](docs/renewal/guest-discovery-local-run.md).
+Remaining confirmation and deployment gates:
+
+- Developer review of the concrete onsite flow remains pending.
+- A real catalog acquisition manifest is not approved or imported. Coverage, recommendation quality and live-provider latency remain unverified.
+- Optional local email capture is excluded from concurrent guest-runtime operation in both hosts. It needs separate file/key write coordination before that combination is enabled. No external email transport is configured.
+- Production hosting, full-disk operating limits, backups, real-catalog load and broader saturation behavior need deployment-specific verification. There is no configured total-user ceiling.
+
+See the [evidence](docs/renewal/guest-discovery-evidence.md), [storage notes](docs/renewal/guest-discovery-storage.md), [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md), and [synthetic runbook](docs/renewal/guest-discovery-local-run.md).
 
 ## Provider status
 

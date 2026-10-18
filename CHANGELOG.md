@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add a dependency-free synthetic load driver and document measured resource use,
+  search latency, queued recovery and disk budgeting on a constrained runtime.
 - Coordinate weekly digest saves, schedule activity and unsubscribe updates with
   onsite discovery storage. Reject unsupported concurrent local email capture
   in the development Worker as well as the website.

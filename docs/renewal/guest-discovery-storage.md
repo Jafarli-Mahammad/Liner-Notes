@@ -56,12 +56,14 @@ volume fails closed. `MinimumFreeBytes` defaults to 512 MiB. Operator configurat
 must describe the actual deployment mounts; the application cannot infer remote
 database free space from its own root filesystem.
 
-The inventory has a five-minute freshness requirement. C8 must add its bounded
-maintenance integration and wrap remaining legacy website writers before enabling
-the product flow. The legacy weekly acquisition lock still needs the planned C8
-refactor. Dedicated prepared-cache/catalog quotas, public acquisition coalescing
-and source-specific retention remain their own gates; this general guard does
-not establish them or authorize source use.
+The inventory has a five-minute freshness requirement. The enabled runtime renews
+only a known baseline every minute and reclaims expired guests and public evidence
+in bounded passes. Account writes, weekly persistence, scheduler activity and
+unsubscribe updates use coordinated admission. Provider acquisition occurs before
+the short final write lease. Concurrent optional local email capture remains
+blocked in both hosts. Public-cache quotas and coalescing are implemented; source
+approval and real-catalog coverage remain independent gates. See the measured
+[resource profile](guest-discovery-capacity.md) and [local runbook](guest-discovery-local-run.md).
 
 ## Explicit reconciliation
 
@@ -92,6 +94,6 @@ before the job, matching deletion/import order. Completion rechecks the stored
 lease and current profile revision; stale tracked objects are reloaded before
 fencing. Terminal outcomes revoke leases and clear raw input payloads.
 
-C8 supplies the consumer, safe error classification, source fairness, progress API
-and transactional recommendation publication. No routes may accept work before
-that consumer and its source/storage configuration are ready.
+The runtime supplies the consumer, safe error classification, source fairness,
+progress API and transactional publication. Routes remain opt-in; start the
+consumer with valid source/storage configuration before accepting requests.

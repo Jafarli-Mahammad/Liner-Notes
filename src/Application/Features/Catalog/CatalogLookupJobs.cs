@@ -25,7 +25,7 @@ public sealed class CatalogLookupJobs(IDiscoveryJobStore jobs, IDiscoveryWriteCo
         })));
         string payload = JsonSerializer.Serialize(new CatalogLookupPayload(query.Trim(), kind));
         var job = await admission.ExecuteAsync(65_536, token => jobs.EnqueueAsync(profileId, requestKey, hash, DiscoveryJobKind.Lookup,
-            0, payload, clock.GetUtcNow(), options.QueueCapacity, TimeSpan.FromSeconds(options.CooldownSeconds), token), ct);
+            0, payload, clock.GetUtcNow(), options.QueueCapacity, TimeSpan.FromSeconds(options.LookupCooldownSeconds), token), ct);
         return (await FindAsync(profileId, job.Id, ct))!;
     }
 

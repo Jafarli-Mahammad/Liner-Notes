@@ -18,7 +18,7 @@
       <p class="sidebar-label">Your music</p>
       <nav class="primary-nav" aria-label="Your music">
         <button id="nav-discovery" class="nav-link active" type="button" aria-current="page" aria-controls="tab-discovery" data-nav-tab data-action="tab" data-tab="discovery">
-          <span class="nav-icon" aria-hidden="true">♫</span><span>Weekly discovery</span>
+          <span class="nav-icon" aria-hidden="true">♫</span><span>Discover music</span>
         </button>
         <button id="nav-seeding" class="nav-link" type="button" aria-controls="tab-seeding" data-nav-tab data-action="tab" data-tab="seeding">
           <span class="nav-icon" aria-hidden="true">⌁</span><span>Taste profile</span>
@@ -43,14 +43,14 @@
       <div class="page-heading">
         <p class="page-kicker">A clearer way to find your next favorite</p>
         <h1>Music discovery, with the reasons attached.</h1>
-        <p class="page-lede">Liner Notes finds tracks from your taste and shows what contributed to each pick. Start with a few artists or styles you like.</p>
+        <p class="page-lede">Liner Notes finds tracks from your taste and shows what contributed to each pick. Start with artists, albums or styles you like.</p>
       </div>
 
       <section id="tab-discovery" class="tab-pane active" role="region" aria-labelledby="nav-discovery" tabindex="0">
         <div class="section-heading">
           <div>
-            <h2>Weekly discovery</h2>
-            <p>Your latest picks and the details behind them.</p>
+            <h2>Your discoveries</h2>
+            <p>Your picks and the reasons behind them.</p>
           </div>
         </div>
         <div id="discovery-container" class="content-stack"></div>
@@ -140,6 +140,8 @@
                 <label class="field-label" for="reg-password">Password</label>
                 <input type="password" id="reg-password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters">
               </div>
+              <label class="discovery-check" id="reg-preserve-label" hidden><input type="checkbox" id="reg-preserve" checked> Keep my guest taste and discoveries</label>
+              <label class="discovery-check"><input type="checkbox" id="reg-weekly-email"> Send weekly recommendations after my email is verified</label>
               <button class="button button-primary button-full" type="submit">Create account</button>
             </form>
           </div>
@@ -171,5 +173,6 @@
   </div>
 
   <script src="/app.js"></script>
+  <script src="/discovery.js"></script>
 </body>
 </html>

@@ -68,7 +68,15 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         catch (DiscoverySourceException ex) { error = ex.Message; retry = ex.Retryable; }
         catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested) { error = "preparation_timeout"; retry = true; }
         catch (GenerationStoppedException) { error = "generation_unavailable"; }
-        catch (Exception) when (!stoppingToken.IsCancellationRequested) { error = "generation_failed"; }
+        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            // Code locations help operators diagnose faults without logging messages, payloads or provider bodies.
+            var locations = (new System.Diagnostics.StackTrace(ex, false).GetFrames() ?? []).Take(4).Select(frame =>
+                $"{frame.GetMethod()?.DeclaringType?.FullName}.{frame.GetMethod()?.Name}");
+            logger.LogWarning("Discovery job failed with {FailureType} in {CodeLocations}.",
+                ex.GetType().FullName, string.Join(" > ", locations));
+            error = "generation_failed";
+        }
         finally
         {
             await heartbeatStop.CancelAsync();

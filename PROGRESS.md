@@ -17,11 +17,12 @@ Phase 9 is the latest completed implementation. Its pinned build inputs, non-roo
   subsequently passed 564 .NET checks with zero skips. Canonical album taste and
   bounded public preparation subsequently passed 579 .NET checks with zero skips.
   Durable job/admission mechanics subsequently passed 592 .NET checks with zero skips.
-  C8 shared-cache/history, batch preparation/persistence and submission/runner, explicit lookup and discovery endpoint/weekly adapter mechanics and provider/storage boundary checks passed 643 .NET checks with zero skips;
+  C8 shared-cache/history, batch preparation/persistence and submission/runner, explicit lookup and discovery endpoint/weekly adapter mechanics and provider/storage boundary checks passed 646 .NET checks with zero skips;
   account writes, reclamation, maintenance hosting and guest activity are integrated.
   Website consumers are opt-in and reject concurrent local email capture while
-  its writer integration remains open. The website flow and constrained-host
-  measurements remain unfinished.
+  its writer integration remains open. The website flow passed 12 synthetic browser checks, including
+  registration/import and deletion. Constrained-host measurements, public cache/catalog
+  housekeeping and remaining optional Worker/email writers are still unfinished.
   Three isolated SQL measurements support
   continuing with the profile/batch foundation; they do not prove real catalog
   coverage, API latency, or VPS capacity. C8–C10, integrated generation/deletion/quota races and the guest product flow remain.

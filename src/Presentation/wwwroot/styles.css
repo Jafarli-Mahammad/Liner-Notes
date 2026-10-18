@@ -18,6 +18,56 @@
   --radius: 12px;
   --shadow: 0 1px 3px rgb(23 35 46 / 7%), 0 8px 24px rgb(23 35 46 / 4%);
 }
+[hidden] { display: none !important; }
+
+.discovery-message:empty { display: none; }
+.discovery-message { margin: 0 0 1rem; color: var(--green); }
+.discovery-error { color: var(--red); }
+.discovery-welcome { padding: clamp(1.5rem, 4vw, 3rem); }
+.discovery-welcome h3 { max-width: 22ch; font-size: clamp(1.5rem, 3vw, 2rem); }
+.discovery-editor { display: grid; gap: 1rem; }
+.discovery-editor p, .discovery-pick p { margin-top: 0; }
+.discovery-search-row { display: grid; grid-template-columns: 9rem 1fr; gap: 1rem; align-items: end; }
+.discovery-search-row label, .discovery-feedback-fields label { display: grid; gap: .4rem; font-weight: 600; }
+.discovery-search-row input, .discovery-search-row select, .discovery-feedback-fields input, .discovery-feedback-fields select {
+  min-height: 44px; width: 100%; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 6px;
+  color: var(--ink); background: var(--surface); font: inherit;
+}
+.discovery-hits { max-height: 24rem; overflow-y: auto; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; list-style: none; }
+.discovery-hits[hidden] { display: none; }
+.discovery-hits li { display: grid; gap: .15rem; padding: .8rem 1rem; cursor: pointer; border-bottom: 1px solid var(--line); }
+.discovery-hits li:last-child { border-bottom: 0; }
+.discovery-hits li:hover, .discovery-hits [aria-selected="true"] { background: var(--teal-soft); }
+.discovery-hits span, .discovery-hits small { color: var(--muted); }
+.discovery-favorites { display: flex; gap: .6rem; flex-wrap: wrap; }
+.discovery-selection { display: inline-flex; gap: .6rem; align-items: center; padding: .4rem .5rem .4rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-soft); }
+.discovery-selection small { display: block; color: var(--muted); }
+.discovery-selection button { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--ink); font-size: 1.5rem; cursor: pointer; }
+.discovery-styles, .discovery-feedback { padding: 0; margin: 0; border: 0; min-width: 0; }
+.discovery-styles legend, .discovery-feedback legend { margin-bottom: .8rem; font-weight: 600; }
+.discovery-styles [aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+.discovery-batch-heading, .discovery-pick-heading { display: flex; gap: 1rem; align-items: center; }
+.discovery-batch-heading { justify-content: space-between; flex-wrap: wrap; }
+.discovery-batch-heading time { color: var(--muted); font-size: .9rem; }
+.discovery-pick { margin-bottom: 1rem; }
+.discovery-pick-heading h3 { margin: 0; }
+.discovery-pick-heading p { margin: .2rem 0 0; color: var(--muted); }
+.discovery-rank { display: grid; place-items: center; flex: 0 0 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--teal-soft); color: var(--teal-dark); font-weight: 700; }
+.discovery-explanation { padding-top: 1rem; }
+.discovery-feedback { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.discovery-feedback [aria-pressed="true"] { border-color: var(--teal); background: var(--teal-soft); color: var(--teal-dark); }
+.discovery-feedback-fields { display: grid; grid-template-columns: 7rem 1fr auto; gap: .8rem; align-items: end; margin: 1rem 0; }
+.discovery-check { display: flex; align-items: start; gap: .6rem; font-size: .9rem; }
+.discovery-check[hidden] { display: none; }
+.discovery-check input { width: 1.1rem; min-width: 1.1rem; height: 1.1rem; margin-top: .2rem; }
+.discovery-editor :focus-visible, .discovery-pick :focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+@media (max-width: 620px) {
+  .primary-nav .nav-icon { display: none; }
+  .primary-nav .nav-link { flex: 1 1 0; justify-content: center; }
+  .discovery-search-row, .discovery-feedback-fields { grid-template-columns: 1fr; }
+  .discovery-pick-heading { align-items: start; }
+  .discovery-pick .action-row { gap: .6rem; }
+}
 *,
 *::before,
 *::after {

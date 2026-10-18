@@ -18,6 +18,27 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
     [LocalPostgresMigrationFact]
+    public async Task EmptySupportedBatchCompletesWithoutWritingRecommendations()
+    {
+        var profile = await GuestAsync('a');
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
+            "empty-batch", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var job = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        var batch = Guid.NewGuid();
+        await WriteAsync(async (s, ct) =>
+        {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(job!.Id, job.LeaseToken!.Value, batch,
+                DiscoveryBatchKind.OnDemand, [], "{\"SupportedPicks\":0}", DateTimeOffset.UtcNow.AddMinutes(1), DateTimeOffset.UtcNow, ct);
+            return true;
+        });
+        await using var scope = services.CreateAsyncScope();
+        var view = await scope.ServiceProvider.GetRequiredService<IDiscoveryReader>().ReadBatchAsync(profile.Id, batch, DateTimeOffset.UtcNow, default);
+        Assert.NotNull(view); Assert.Empty(view.Picks);
+        Assert.Equal(DiscoveryJobState.Completed, (await scope.ServiceProvider.GetRequiredService<DataContext>().DiscoveryJobs.SingleAsync()).State);
+        Assert.False(await scope.ServiceProvider.GetRequiredService<DataContext>().WeeklyRecommendations.AnyAsync());
+    }
+    [LocalPostgresMigrationFact]
     public async Task ReclamationRejectsGrowthAndAllowsActualGuestDeletion()
     {
         var profile = await GuestAsync('a');

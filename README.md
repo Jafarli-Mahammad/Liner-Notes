@@ -113,6 +113,15 @@ privacy compliance and exactly-once email delivery are not claimed.
 [Verification evidence](docs/renewal/phase-1-evidence.md) ·
 [Changelog](CHANGELOG.md)
 
+### Onsite guest discovery
+
+An opt-in local flow accepts favorite artists, albums and styles, then shows
+recommendations onsite. It includes local catalog search, explicit lookup,
+feedback, guest export/clear and account conversion preserving history. The
+[synthetic local run](docs/renewal/guest-discovery-local-run.md) is verified with
+a real browser; real catalog coverage, recommendation quality, constrained-host
+capacity and concurrent local email capture remain unverified or unfinished.
+
 ## For developers
 
 The code is organized around a pure Domain, an Application layer for orchestration,

@@ -517,3 +517,40 @@ regression test reproduced the collision before the fix. All 139 Domain tests,
 including benchmark/replay fixtures, then passed; the exact failing synthetic
 profile prepared successfully with zero new picks, as expected after suppression.
 The full browser flow is being rerun; this is not a complete website verification.
+
+### Onsite website checkpoint (2026-10-18)
+
+The existing vanilla website now supports artists/albums/styles, 150 ms local
+search debounce with cancellation and stale-response guards, keyboard selection,
+explicit durable lookup, first-batch submission, resumed progress/results, stored
+explanations, rating/note feedback, bounded history, explicit Discover more and
+server cooldown. Guest export/clear and same-profile registration are wired;
+existing-account import remains explicit. Session credentials stay in memory or
+HttpOnly cookies; logout clears private rendered state. Existing music-service
+search links are reused through the shared helper. Synthetic catalog entries and
+results are labelled. A safe failure diagnostic logs exception type/code locations
+without exception messages, request payloads or provider bodies.
+
+Lookup now has independent configurable LookupCooldownSeconds (default 1, range
+1–60); generation retains its 30-second default. One unfinished lookup per profile,
+shared caching and adapter request pacing remain enforced. The overview exposes
+evidence origin so UI/test tooling can identify synthetic mode before generation.
+
+A new guarded script created a disposable loopback database and imported 100
+synthetic artists and 20 synthetic albums. The complete real Chromium browser run
+passed 12 checks: stale response handling, local artist/album search, explicit
+lookup, guest results, return without generation, feedback/note encoding, export,
+registration preserving profile/history, mobile layout, explicit existing-account
+import, cooldown/exhausted coverage and account/guest deletion. Initial browser
+execution exposed the feedback provenance bug documented above; the final run
+passed after its fix. Cached Chromium 155.0.8059.12 was driven by the installed
+stable Playwright 1.64.0 module because the connector's Chrome path was absent.
+No application browser dependency was added or installed.
+
+The final run's first synthetic batch took 4,365 ms on this development machine,
+using previously populated durable public caches. This is not live-provider latency
+or a VPS capacity result. The full backend checkpoint passed 646 tests across five
+projects with zero failures/skips, plus result/secret/documentation gates and Node
+syntax checks. The synthetic setup was executed successfully. See the
+[local runbook](guest-discovery-local-run.md). Constrained-host/load measurement,
+public catalog housekeeping and optional Worker/email writer coexistence remain.

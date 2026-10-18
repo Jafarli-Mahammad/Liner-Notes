@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add the onsite guest website: artist/album autocomplete, styles, explicit
+  catalog lookup, durable progress, saved explanations, feedback, history,
+  cooldown, export/clear, preserved registration and explicit account import.
+  Synthetic catalog entries/results are labelled; returning does not regenerate.
+- Pace explicit catalog lookup independently from recommendation generation,
+  retaining the 30-second generation default. Add a synthetic-only local setup
+  and browser verification script.
 - Fix discovery after positive feedback: derived artist and tag inputs can share
   recommendation provenance without colliding or sharing their distinct weights.
 - Activate website discovery consumers only through DiscoveryRuntime:RunJobs,

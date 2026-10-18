@@ -1,5 +1,6 @@
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Features.Discovery;
+using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Domain.Enums;
 using LinerNotes.Presentation.Controllers;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace LinerNotes.Presentation.Discovery;
 [Route("api/discovery")]
 [EnableRateLimiting("catalog")]
 public sealed class DiscoveryController(IListenerContext listener, IDiscoveryReader reader,
-    IDiscoveryJobStore jobs, DiscoveryRuntimeOptions options, TimeProvider clock) : ApiControllerBase
+    IDiscoveryJobStore jobs, DiscoveryRuntimeOptions options, TimeProvider clock, GenerationConfiguration generation) : ApiControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Overview(CancellationToken ct)
@@ -19,7 +20,8 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
         Response.Headers.CacheControl = "no-store";
         var profile = await listener.ResolveAsync(true, ct);
         var page = profile is null ? null : await reader.ReadAsync(profile.Id, clock.GetUtcNow(), TimeSpan.FromSeconds(options.CooldownSeconds), ct);
-        return Ok(new { page, styles = SelectDiscoveryTaste.Styles, cooldownSeconds = options.CooldownSeconds });
+        return Ok(new { page, styles = SelectDiscoveryTaste.Styles, cooldownSeconds = options.CooldownSeconds,
+            evidenceOrigin = generation.Origin.ToString() });
     }
 
     public sealed record BatchRequest(long Revision, string RequestKey, DiscoveryTasteSelection? Selection = null);

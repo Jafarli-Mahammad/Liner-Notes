@@ -21,6 +21,7 @@ function acceptSession(data) {
   state.token = data.accessToken;
   state.refreshToken = data.refreshToken;
   state.user = data.user;
+  window.discoveryApp?.sessionChanged();
 }
 
 async function refreshSession(epoch) {
@@ -47,8 +48,8 @@ async function apiFetch(url, options = {}) {
   if (!url.startsWith(`${API_BASE}/`)) throw new Error('Invalid API address.');
   const epoch = state.sessionEpoch;
   const token = state.token;
-  const send = () => fetch(url, { ...options, credentials: 'omit', cache: 'no-store',
-    headers: { ...options.headers, Authorization: `Bearer ${state.token}` } });
+  const send = () => fetch(url, { ...options, credentials: options.credentials ?? 'omit', cache: 'no-store',
+    headers: { ...options.headers, ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) } });
   let response = await send();
   if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
   if (response.status === 401 && state.refreshToken) {
@@ -57,7 +58,7 @@ async function apiFetch(url, options = {}) {
     response = await send();
     if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
   }
-  if (response.status === 401) logout();
+  if (response.status === 401 && state.token) logout();
   return response;
 }
 
@@ -172,6 +173,7 @@ function renderTrackCard(track, isGuest = false) {
 }
 
 async function loadDiscovery() {
+  if (window.discoveryApp && await window.discoveryApp.renderDiscovery()) return;
   const container = document.getElementById('discovery-container');
   const epoch = state.sessionEpoch;
 
@@ -383,6 +385,7 @@ async function submitSeeds() {
 }
 
 async function loadYourData() {
+  if (window.discoveryApp && await window.discoveryApp.renderData()) return;
   const container = document.getElementById('export-container');
   const epoch = state.sessionEpoch;
   if (!state.token) {
@@ -483,10 +486,13 @@ async function handleRegister(e) {
   const password = document.getElementById('reg-password').value;
 
   try {
+    const guest = await window.discoveryApp?.registrationOptions() ?? {};
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userName, email, password })
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(guest.csrf ? { 'X-CSRF-TOKEN': guest.csrf } : {}) },
+      body: JSON.stringify({ userName, email, password, preserveGuestProgress: guest.preserve ?? false,
+        weeklyEmailOptIn: document.getElementById('reg-weekly-email').checked })
     });
     if (attemptId !== state.authAttemptId) return;
 
@@ -543,6 +549,7 @@ function logout() {
   state.refreshToken = null;
   refreshInFlight = null;
   state.user = null;
+  window.discoveryApp?.sessionChanged();
   localStorage.removeItem('linernotes_token');
   document.getElementById('export-container').replaceChildren();
   document.getElementById('discovery-container').replaceChildren();
@@ -560,19 +567,23 @@ function updateAuthUI() {
 }
 
 function switchTab(tabName) {
+  window.discoveryApp?.leave();
+  document.querySelector('.page-heading').hidden = tabName !== 'discovery';
   state.activeTab = tabName;
   document.querySelectorAll('.tab-pane').forEach(panel => {
     const active = panel.id === `tab-${tabName}`;
     panel.classList.toggle('active', active);
     panel.hidden = !active;
   });
-  document.querySelectorAll('[role="tab"]').forEach(tab => {
+  document.querySelectorAll('[data-nav-tab]').forEach(tab => {
     const active = tab.dataset.tab === tabName;
     tab.classList.toggle('active', active);
-    tab.setAttribute('aria-selected', String(active));
+    if (active) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
   });
   if (tabName === 'discovery') loadDiscovery();
   if (tabName === 'your-data') loadYourData();
+  if (tabName === 'seeding') window.discoveryApp?.renderTaste();
 }
 
 document.addEventListener('click', event => {

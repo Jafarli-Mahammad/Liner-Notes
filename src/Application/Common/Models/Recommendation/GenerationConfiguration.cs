@@ -7,6 +7,7 @@ public sealed class GenerationConfiguration
 {
     public const string SectionName = "Generation";
     public string Provider { get; set; } = "listenbrainz";
+    public string IngestionPolicyVersion { get; set; } = "artist-tags-v1";
     public string ConfigurationVersion { get; set; } = "phase6-config-v1";
     public double TagWeight { get; set; } = 1;
     public double NoveltyWeight { get; set; } = 0.2;
@@ -25,11 +26,13 @@ public sealed class GenerationConfiguration
 
     public BaselineAConfiguration Scoring()
     {
-        if (Provider is not ("lastfm" or "listenbrainz") ||
+        if (string.IsNullOrWhiteSpace(Provider) || Provider.Length > 64 ||
+            Provider.Any(c => !char.IsAsciiLetterLower(c) && !char.IsAsciiDigit(c) && c != '-') ||
+            string.IsNullOrWhiteSpace(IngestionPolicyVersion) || IngestionPolicyVersion.Length > 128 ||
             MaximumArtistSeeds is < 1 or > 20 || MaximumTagSeeds is < 1 or > 20 || DiscoveryLimit is < 1 or > 10 ||
             MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
             (Origin is not (EvidenceOrigin.Recorded or EvidenceOrigin.Synthetic) &&
-                !(Origin == EvidenceOrigin.Live && LiveEnabled && Provider == "listenbrainz")) ||
+                !(Origin == EvidenceOrigin.Live && LiveEnabled)) ||
             !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
             !double.IsFinite(MinimumPositiveFeedbackWeight) || MinimumPositiveFeedbackWeight is < 0 or > 1)
             throw new ArgumentException("Invalid generation configuration, origin approval or mechanical limits.");
@@ -37,7 +40,7 @@ public sealed class GenerationConfiguration
         {
             [nameof(Provider)] = Provider,
             [nameof(LiveEnabled)] = LiveEnabled.ToString(CultureInfo.InvariantCulture),
-            ["IngestionPolicy"] = Provider == "lastfm" ? "lastfm-artist-tags-v1" : "listenbrainz-artist-tags-v1",
+            ["IngestionPolicy"] = $"{Provider}-{IngestionPolicyVersion}",
             [nameof(MaximumArtistSeeds)] = MaximumArtistSeeds.ToString(CultureInfo.InvariantCulture),
             [nameof(MaximumTagSeeds)] = MaximumTagSeeds.ToString(CultureInfo.InvariantCulture),
             [nameof(DiscoveryLimit)] = DiscoveryLimit.ToString(CultureInfo.InvariantCulture),

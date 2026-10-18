@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased — renewal
+- Resolve recommendation bundles through registered adapter keys; provider-specific
+  live-use restrictions stay in adapter registration. Existing scoring policy
+  identifiers remain unchanged by default.
 - Keep EF Core context and transaction types inside DataAccess; Application now
   depends on repository and unit-of-work contracts without an EF Core package.
 - Release weekly generation storage leases during provider acquisition, then

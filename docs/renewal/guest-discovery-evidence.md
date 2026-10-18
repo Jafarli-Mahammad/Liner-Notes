@@ -426,3 +426,17 @@ removed interface or transaction factory (repository-wide caller audit).
 The full local suite then passed 626 tests across five projects, zero failures
 or skips, plus result/secret/documentation gates. This establishes a dependency
 boundary, not portability of PostgreSQL migrations or a verified database swap.
+
+### Provider substitution boundary (2026-10-18)
+
+Provider bundles now use keyed registrations in the Infrastructure composition
+root. The resolver does not name or instantiate Last.fm/ListenBrainz adapters.
+Application validates configuration shape and generic origin approval; supported
+provider selection and Last.fm's live-generation prohibition are adapter concerns.
+IngestionPolicyVersion defaults to artist-tags-v1, preserving existing score
+policy identifiers. Provider-specific HTTP modes, approval and terms gates remain
+unchanged; no live requests were made. A third test adapter replaces the complete
+source/hydrator/seed bundle without editing resolver or core workflow. Unknown
+provider registrations still fail closed and Last.fm cannot resolve a live client.
+The full local suite passed 628 tests, zero failures/skips across five projects,
+plus result/secret/documentation gates. Guest host/UI activation remains pending.

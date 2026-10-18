@@ -73,7 +73,9 @@ public static class DependencyInjection
         services.AddScoped<BatchTagCachingLastFmClient>(sp =>
         {
             var generation = sp.GetRequiredService<GenerationConfiguration>();
-            generation.Scoring(); // Live is explicitly rejected before resolving a provider.
+            generation.Scoring();
+            if (generation.Origin == EvidenceOrigin.Live)
+                throw new GenerationStoppedException("lastfm_live_generation_not_approved");
             ILastFmApiClient client = generation.Origin == EvidenceOrigin.Recorded
                 ? new RecordedLastFmApiClient(sp.GetRequiredService<LocalRecordedInputs>().Responses ?? sp.GetServices<RecordedLastFmResponse>())
                 : new LastFmApiClient(new HttpClient(), Options.Create(new LastFmOptions { Mode = LastFmClientMode.FixtureOnly }),
@@ -114,6 +116,14 @@ public static class DependencyInjection
             };
         });
         services.AddScoped<ListenBrainzRecommendationProvider>();
+        services.AddKeyedScoped<RecommendationProvider>("lastfm", (sp, _) =>
+            new("lastfm", sp.GetRequiredService<LastFmRecommendationSource>(),
+                sp.GetRequiredService<LastFmCandidateHydrator>(), sp.GetRequiredService<BatchTagCachingLastFmClient>()));
+        services.AddKeyedScoped<RecommendationProvider>("listenbrainz", (sp, _) =>
+        {
+            var provider = sp.GetRequiredService<ListenBrainzRecommendationProvider>();
+            return new("listenbrainz", provider, provider, provider);
+        });
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupSource, LinerNotes.Infrastructure.Catalog.MusicBrainzCatalogLookupSource>();
         services.AddScoped<IRecommendationProviderResolver, RecommendationProviderResolver>();
         services.Configure<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>(configuration.GetSection("DiscoveryRuntime"));

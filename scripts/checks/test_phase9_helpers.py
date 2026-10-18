@@ -60,6 +60,12 @@ class PrivateEnvironment(unittest.TestCase):
             self.assertEqual(0, first.returncode)
             content = path.read_bytes()
             self.assertEqual(0o600, path.stat().st_mode & 0o777)
+            values = dict(line.split("=", 1) for line in content.decode().splitlines())
+            for name, host in (("DB_CONNECTION", "db"), ("DB_LOOPBACK_CONNECTION", "127.0.0.1")):
+                fields = dict(field.split("=", 1) for field in values[name].split(";"))
+                self.assertEqual(host, fields["Host"])
+                self.assertEqual(values["DB_PASSWORD"], fields["Password"])
+                self.assertEqual("liner_notes_manual_qa", fields["Database"])
             for value in content.decode().splitlines():
                 self.assertNotIn(value.split("=", 1)[1], first.stdout)
             second = subprocess.run(command, capture_output=True, text=True)

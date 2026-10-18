@@ -13,7 +13,14 @@ def main():
     path = args.output.absolute()
     if not path.name.startswith(".env."):
         parser.error("output must use an ignored .env.* filename")
-    value = f"DB_PASSWORD={secrets.token_hex(24)}\nJWT_SECRET={secrets.token_hex(48)}\n"
+    password = secrets.token_hex(24)
+    def connection(host):
+        fields = {"Host": host, "Database": "liner_notes_manual_qa",
+                  "Username": "postgres", "Password": password}
+        return ";".join(f"{key}={value}" for key, value in fields.items())
+    value = (f"DB_PASSWORD={password}\nJWT_SECRET={secrets.token_hex(48)}\n"
+             f"DB_CONNECTION={connection('db')}\n"
+             f"DB_LOOPBACK_CONNECTION={connection('127.0.0.1')}\n")
     try:
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "w") as output:

@@ -60,7 +60,7 @@ services:
       Jwt__SecretKey: ${JWT_SECRET:?Local signing key required}
       LastFm__Mode: FixtureOnly
       LastFm__ApiKey: ""
-      ConnectionStrings__DefaultConnection: Host=db;Database=liner_notes_manual_qa;Username=postgres;Password=${DB_PASSWORD:?Local database password required}
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION:?Regenerate the private local env file first}
     command: ["database", "update", "--project", "src/DataAccess/DataAccess.csproj", "--startup-project", "src/Presentation/Presentation.csproj", "--context", "AppDbContext", "--configuration", "Release", "--no-build"]
     depends_on:
       db:
@@ -73,7 +73,7 @@ services:
       target: web
     environment:
       <<: *local-settings
-      ConnectionStrings__DefaultConnection: Host=db;Database=liner_notes_manual_qa;Username=postgres;Password=${DB_PASSWORD:?Local database password required}
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION:?Regenerate the private local env file first}
     ports:
       - "127.0.0.1:${LINER_WEB_PORT:-8080}:8080"
     volumes:
@@ -93,7 +93,7 @@ services:
     network_mode: service:db
     environment:
       <<: *local-settings
-      ConnectionStrings__DefaultConnection: Host=127.0.0.1;Database=liner_notes_manual_qa;Username=postgres;Password=${DB_PASSWORD:?Local database password required}
+      ConnectionStrings__DefaultConnection: ${DB_LOOPBACK_CONNECTION:?Regenerate the private local env file first}
     volumes:
       - local-state:/app/local-state
     depends_on:
@@ -113,7 +113,7 @@ services:
     network_mode: service:db
     environment:
       <<: *local-settings
-      ConnectionStrings__DefaultConnection: Host=127.0.0.1;Database=liner_notes_manual_qa;Username=postgres;Password=${DB_PASSWORD:?Local database password required}
+      ConnectionStrings__DefaultConnection: ${DB_LOOPBACK_CONNECTION:?Regenerate the private local env file first}
     # Reuse the existing explicit operator helper; capabilities are never web-exported.
     volumes:
       - local-state:/app/local-state

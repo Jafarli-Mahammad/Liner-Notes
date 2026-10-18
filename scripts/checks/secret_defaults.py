@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
@@ -28,8 +29,8 @@ assert not development_jwt.get("SecretKey"), (
 )
 
 source = (root / "src/DataAccess/DependencyInjection.cs").read_text()
-assert "Password=postgres" not in source, (
-    "DataAccess must not silently fall back to the generic database password"
+assert not re.search(r"(?i)\b(?:password|pwd)\s*=\s*[^;\s\"\']+", source), (
+    "DataAccess must not contain a literal database password assignment"
 )
 
 ignore = (root / ".gitignore").read_text()

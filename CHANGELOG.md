@@ -90,7 +90,7 @@
   weekly APIs remain available; guest access is not enabled by this change alone.
 
 - Add listener profile, discovery batch and pending-job foundations with an
-  additive legacy-data backfill. Export 2.3 includes the new owned metadata and
+  additive legacy-data backfill. Export 2.5 includes the new owned metadata and
   batch links while excluding operational lease credentials. Guest access and
   on-demand generation are not enabled by this foundation alone.
 
@@ -110,24 +110,13 @@
   labels. Guest tracks are marked as examples, and recommendation details no longer
   show a popularity penalty for the popularity-neutral V1 scorer.
 
-- Restore the approved MediatR 12.5.0 licensing exception in central versions and
-  package locks. CI now generates a disposable database password for each run;
-  Swagger fixtures omit unused database passwords, and the local runbook selects
-  the current UTC ISO week.
+- Restore the approved MediatR 12.5.0 licensing exception in central versions and package locks. CI generates a disposable database password for each run, and the local runbook selects the current UTC ISO week.
 
-- Add non-root web/Worker container targets, explicit migration/private-volume
-  initialization and a local PostgreSQL Compose stack with loopback web only.
-  Private credential generation and opt-in operator/Worker profiles support
-  the existing encrypted capture, scheduling, unsubscribe and deletion flows.
-  CI now supplies PostgreSQL and rejects incomplete or skipped test suites;
-  a disposable container lifecycle job covers the packaged slice. Public release
-  remains gated on written provider approval and production operational decisions.
+- Add non-root web and Worker container targets, migration and private-volume initialization, and a local PostgreSQL Compose stack with loopback-only web access. CI supplies PostgreSQL and checks that the full test suite runs without skips. Public release remains gated on provider approval and production operational decisions.
 
-- Upgrade to stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12 and current
-  stable direct/transitive dependencies, with central versions and locked restore.
-  MediatR 12.5.0 remains an explicit licensing exception. Replace incompatible
-  Swagger generation with NSwag while retaining Development-only documentation
-  routes and bearer security. Explicit existing key names preserve the SQL schema.
+- Pin stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12, and current stable dependencies with locked restore. Retain the approved MediatR exception and use NSwag for Development-only API documentation.
+
+- Remove credential-shaped literals from secret checks, Compose, and CI. Generate private database connection strings with local credentials; existing ignored Compose environment files need regeneration.
 
 - Registration uses the selected UTC delivery weekday/hour. Added an explicit, guarded
   local repair tool for legacy registration slots. Bounded scheduler ticks track

@@ -48,7 +48,15 @@ jobs:
             sleep 1
           done
           test "$(docker inspect --format '{{.State.Health.Status}}' phase9-ci-postgres)" = healthy
-          printf 'LINER_PHASE1_POSTGRES=Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=%s\n' "$POSTGRES_PASSWORD" >> "$GITHUB_ENV"
+          python3 - <<'PY'
+          import os
+          fields = {"Host": "127.0.0.1", "Port": "5432", "Database": "postgres",
+                    "Username": "postgres", "Password": os.environ["POSTGRES_PASSWORD"]}
+          connection = ";".join(f"{key}={value}" for key, value in fields.items())
+          print(f"::add-mask::{connection}")
+          with open(os.environ["GITHUB_ENV"], "a") as output:
+              output.write(f"LINER_PHASE1_POSTGRES={connection}\n")
+          PY
       - name: Install pinned stable SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:

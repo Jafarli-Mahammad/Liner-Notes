@@ -52,9 +52,6 @@ public static class DependencyInjection
             return new AppDbContext(options, httpContext);
         });
 
-        // Register IAppDbContext abstraction
-        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<DataContext>());
-
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+- Keep EF Core context and transaction types inside DataAccess; Application now
+  depends on repository and unit-of-work contracts without an EF Core package.
 - Release weekly generation storage leases during provider acquisition, then
   reacquire and recheck before persistence. Enabled discovery reuses shared
   artist/album preparation while keeping ISO-week score identity and recorded

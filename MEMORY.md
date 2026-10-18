@@ -31,6 +31,7 @@ Keep this file under ~150 lines. When it grows, merge overlapping lines and drop
 Facts that belong in AGENTS.md (structure, conventions) or PROGRESS.md (status) go there, not here.
 Apply only what's relevant to the current task. Don't recite this file back.
 Working preferences
+[stated] Keep providers and persistence replaceable through polymorphic interfaces; provider/vendor types and behavior belong in adapters, not application workflows. Avoid coupling that makes a provider switch require rewriting unrelated product logic. Continue carefully with focused boundary verification. (2026-10-18)
 [stated] Always use the latest stable versions of project packages and tools; verify current releases and upgrade compatibility rather than retaining old versions just because the checkout already uses them. The developer approved Phase 9 with this correction and instructed implementation to proceed. (2026-10-12)
 [stated] Keep MediatR 12.5.0 as an explicit exception to the latest-stable policy because newer releases change to RPL/commercial licensing; the repository remains AGPL-3.0 and no commercial license purchase was approved. (2026-10-12)
 [verified] Phase 9 review found that the central manifest, locks and version snapshot still selected MediatR 14.2.0 despite the recorded exception. Corrected all three to 12.5.0 and verified the nine affected locks plus 478 passing tests; previous dependency reporting was inaccurate. See `docs/renewal/phase-9-evidence.md`. (2026-10-12)

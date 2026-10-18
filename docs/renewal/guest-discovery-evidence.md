@@ -414,3 +414,15 @@ a claim that every weekly history read has been optimized.
 
 Compatible legacy metadata writers, inventory maintenance/reclamation and guest
 activity remain before host activation. C9 UI and C10 resource evidence remain.
+
+### Application persistence boundary (2026-10-18)
+
+A new assembly boundary test first failed because Application referenced EF Core.
+The unused IAppDbContext contract/registration and the unused public transaction
+factory were removed; DataAccess retains EF Core and its private transaction
+implementation. Application's direct EF Core dependency and its unused lock-file
+graph were removed without changing package versions. No handler consumed the
+removed interface or transaction factory (repository-wide caller audit).
+The full local suite then passed 626 tests across five projects, zero failures
+or skips, plus result/secret/documentation gates. This establishes a dependency
+boundary, not portability of PostgreSQL migrations or a verified database swap.

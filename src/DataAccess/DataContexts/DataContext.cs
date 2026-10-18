@@ -18,7 +18,7 @@ namespace LinerNotes.DataAccess.DataContexts;
 /// Primary Entity Framework Core database context integrating ASP.NET Core Identity,
 /// Liner Notes domain aggregates, data protection key storage, and automated audit logging.
 /// </summary>
-public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAppDbContext, IDataProtectionKeyContext
+public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IDataProtectionKeyContext
 {
     private readonly IHttpContextAccessor? _httpContextAccessor;
 

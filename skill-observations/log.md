@@ -235,3 +235,12 @@ DDL, then explicitly rebase after DDL/backfill. Public JSON payloads with exact
 byte checksums need TEXT storage; JSONB normalizes representation. Test decoded
 immutable collections by sequence contents and normalize timestamp fixtures to
 PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
+
+### Observation 024: Interfaces must hide implementation dependencies
+**Status:** OPEN
+**Date:** 2026-10-18
+**Skill:** ponytail; architecture review
+**Type:** open-source
+**Issue:** An interface exposed vendor collection and transaction types despite having no application consumers. A provider migration also prompted a correction about excessive coupling.
+**Suggested improvement:** Audit public contract types and implementation references before extending workflows; remove unused vendor-shaped contracts and test the application assembly boundary.
+**Principle:** Polymorphism supports substitution only when contracts hide implementation details.

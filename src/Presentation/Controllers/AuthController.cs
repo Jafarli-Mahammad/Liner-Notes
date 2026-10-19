@@ -1,3 +1,5 @@
+using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Presentation.Discovery;
 using LinerNotes.Application.Common.Interfaces;
 using Microsoft.AspNetCore.RateLimiting;
 using LinerNotes.Application.Features.Subscribers.Commands.RegisterSubscriber;
@@ -17,20 +19,27 @@ namespace LinerNotes.Presentation.Controllers;
 /// Authentication endpoints for subscriber registration, login, and profile resolution.
 /// </summary>
 [EnableRateLimiting("auth")]
+[ServiceFilter(typeof(LinerNotes.Presentation.Filters.DiscoveryWriteFilter))]
 public sealed class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly JwtOptions _jwtOptions;
+    private readonly IListenerContext? _listener;
+    private readonly IDiscoveryWriteCoordinator? _admission;
 
     public AuthController(
         IAuthService _authService,
         IJwtService jwtService,
         IOptions<JwtOptions> jwtOptions,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IListenerContext? listener = null,
+        IDiscoveryWriteCoordinator? admission = null)
     {
         this._authService = _authService;
+        _listener = listener;
+        _admission = admission;
         _unitOfWork = unitOfWork;
         _jwtService = jwtService;
         _jwtOptions = jwtOptions.Value;
@@ -47,7 +56,14 @@ public sealed class AuthController : ApiControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        return await _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
+        string? guestHash = null;
+        if (request.PreserveGuestProgress && _listener?.Enabled == true && _listener.CredentialHash is { } hash)
+        {
+            await _listener.ValidateMutationAsync(cancellationToken);
+            if (await _listener.GuestAsync(cancellationToken) is null) return Unauthorized();
+            guestHash = hash;
+        }
+        Task<IActionResult> WriteAsync(CancellationToken token) => _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
         {
             ct.ThrowIfCancellationRequested();
             var userId = await _authService.RegisterAsync(request.UserName, request.Email, request.Password);
@@ -57,7 +73,9 @@ public sealed class AuthController : ApiControllerBase
                 TimeZone: request.TimeZone,
                 DeliveryDay: request.DeliveryDay,
                 DeliveryHourUtc: request.DeliveryHourUtc,
-                UserId: userId);
+                UserId: userId,
+                GuestCredentialHash: guestHash,
+                WeeklyEmailOptIn: request.WeeklyEmailOptIn);
 
             var subscriber = await Mediator.Send(registerCommand, cancellationToken);
 
@@ -87,7 +105,13 @@ public sealed class AuthController : ApiControllerBase
                 User: subscriber);
 
             return CreatedAtAction(nameof(Me), response);
-        }, cancellationToken);
+        }, token);
+        var result = guestHash is not null
+            ? await (_admission ?? throw new InvalidOperationException("guest_handoff_unavailable"))
+                .ExecuteAsync(131_072, WriteAsync, cancellationToken)
+            : await WriteAsync(cancellationToken);
+        if (guestHash is not null) _listener!.RevokeCookie();
+        return result;
     }
 
     /// <summary>

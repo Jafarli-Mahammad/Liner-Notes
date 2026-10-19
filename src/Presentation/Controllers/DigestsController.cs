@@ -17,6 +17,7 @@ public sealed record RecordFeedbackRequest(
 /// Endpoints for inspecting weekly digests, recommended tracks, and submitting 1-click feedback.
 /// </summary>
 [Authorize]
+[ServiceFilter(typeof(LinerNotes.Presentation.Filters.DiscoveryWriteFilter))]
 public sealed class DigestsController : ApiControllerBase
 {
     /// <summary>

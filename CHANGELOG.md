@@ -1,29 +1,140 @@
 # Changelog
 
 ## Unreleased — renewal
+- Preserve canonical recording identity when storing onsite picks; keep recordings
+  with useful recording tags even when artist tags are missing.
+- Reject weekly saves after optional taste answers change, and allow catalog
+  favorites with display names up to the existing 256-character catalog limit.
+- Repair PR merge dependency locks and consolidate Qodana analysis while retaining
+  the existing Cloud project token configuration.
+- Add Qodana .NET configuration and GitHub PR analysis with pinned
+  tooling, locked dependency restore, annotations and downloadable reports.
+- Add optional, resumable guest/account taste setup: three skippable questions,
+  searchable genre/mood/sound tags without a selection cap, broad taste,
+  artist/album/recording favorites and explicit review before generation.
+- Preserve recording versions, credits and release hints in private favorites;
+  disclose reduced album-to-artist similarity influence in stored explanations.
+- Add Recent recommendations for everyone, including skipped-input visitors,
+  using a separate recipient-free public catalog projection and truthful demo/empty states.
+- Keep large saved taste profiles separate from rotating acquisition windows and
+  bounded replayable score snapshots. Include answers in export and account transfer.
+  Existing name seeds, custom tags and queued request retries remain compatible.
+- Add a dependency-free synthetic load driver and document measured resource use,
+  search latency, queued recovery and disk budgeting on a constrained runtime.
+- Coordinate weekly digest saves, schedule activity and unsubscribe updates with
+  onsite discovery storage. Reject unsupported concurrent local email capture
+  in the development Worker as well as the website.
+- Reclaim expired public recommendation evidence and catalog search records in
+  bounded maintenance passes. Preserve the active catalog, fresh lookups,
+  resumable imports, canonical identities and private taste/history evidence.
+- Add the onsite guest website: artist/album autocomplete, styles, explicit
+  catalog lookup, durable progress, saved explanations, feedback, history,
+  cooldown, export/clear, preserved registration and explicit account import.
+  Synthetic catalog entries/results are labelled; returning does not regenerate.
+- Pace explicit catalog lookup independently from recommendation generation,
+  retaining the 30-second generation default. Add a synthetic-only local setup
+  and browser verification script.
+- Fix discovery after positive feedback: derived artist and tag inputs can share
+  recommendation provenance without colliding or sharing their distinct weights.
+- Activate website discovery consumers only through DiscoveryRuntime:RunJobs,
+  with periodic known-inventory refresh and bounded guest expiry cleanup.
+  Concurrent local email capture remains blocked pending writer integration.
+- Renew guest activity hourly on visits; storage stops keep saved data readable
+  and cookies retain the actual server expiry. Separate configurable guest-start
+  pacing from password authentication limits.
+- Allow guest/account data reclamation at the managed storage cutoff while
+  rejecting transactions that grow tracked data. Keep disk, revision and artifact
+  guards. Add known-inventory refresh without accepting an unknown baseline.
+- Coordinate authentication, legacy taste and feedback writes when discovery
+  jobs are enabled. Taste/feedback revisions cancel stale generation atomically;
+  independent catalog lookup stays queued. MVC action exceptions roll back writes.
+- Resolve recommendation bundles through registered adapter keys; provider-specific
+  live-use restrictions stay in adapter registration. Existing scoring policy
+  identifiers remain unchanged by default.
+- Keep EF Core context and transaction types inside DataAccess; Application now
+  depends on repository and unit-of-work contracts without an EF Core package.
+- Release weekly generation storage leases during provider acquisition, then
+  reacquire and recheck before persistence. Enabled discovery reuses shared
+  artist/album preparation while keeping ISO-week score identity and recorded
+  replay compatibility.
+- Add private discovery overview/status/results and feedback endpoints. Responses
+  include saved explanations and bounded history; feedback retries preserve
+  scores and accepted changes cancel stale generation. Cooldown/conflict errors
+  use safe responses and retry guidance.
+- Connect explicit artist/album lookup to durable jobs, shared acquisition and
+  expiring local publication. Lookup and generation alternate on the acquisition
+  lane. Search typing remains local; the website runner is not yet registered.
+- Keep the conservative reconciled storage charge when PostgreSQL physical
+  size decreases without a tracked revision change. Growth and revision changes
+  retain their guards, avoiding false capture failures after a commit.
+- Add idempotent discovery submission, transactional cooldown checks and taste
+  changes that cancel stale work. Separate prepared and acquisition lanes keep
+  prepared profiles responsive while source work waits. The runner remains
+  unregistered until endpoint and storage/legacy integration is complete.
+- Add replayable discovery batch preparation and atomic score/history/job
+  completion, with bounded feedback reads and stale evidence/revision checks.
+  The onsite runner and website integration remain pending.
+- Reuse durable public artist/album seed and candidate evidence after memory
+  restart. Prepared-only work cannot fall through to upstream acquisition.
+- Add leased, quota-bounded public evidence storage and compact per-profile
+  recommendation identity history. Export 2.5 includes history and batch coverage.
+  The background consumer and onsite generation flow remain pending.
 
-- Remove credential-shaped literals from secret checks, Compose and CI; generate
-  private database connection strings alongside local credentials. Existing local
-  Compose env files must be regenerated to supply the new connection variables.
+- Add durable discovery job leases, idempotent queue admission and coordinated
+  storage reservations. Database accounting avoids scanning private history for
+  every new write. The onsite runner and website flow remain pending.
 
-- Restore the approved MediatR 12.5.0 licensing exception in central versions and
-  package locks. CI now generates a disposable database password for each run;
-  Swagger fixtures omit unused database passwords, and the local runbook selects
-  the current UTC ISO week.
+- Add canonical artist/album selections and style validation, scoped album taste
+  evidence with configurable credited-artist fallback, and reusable public candidate
+  pools. Provider and prepared caches now have a combined 64 MiB admission budget.
+  Export 2.4 includes selection provenance. The onsite product flow remains disabled
+  until the durable runner and storage coordination stages are complete.
 
-- Add non-root web/Worker container targets, explicit migration/private-volume
-  initialization and a local PostgreSQL Compose stack with loopback web only.
-  Private credential generation and opt-in operator/Worker profiles support
-  the existing encrypted capture, scheduling, unsubscribe and deletion flows.
-  CI now supplies PostgreSQL and rejects incomplete or skipped test suites;
-  a disposable container lifecycle job covers the packaged slice. Public release
-  remains gated on written provider approval and production operational decisions.
+- Add indexed local artist/album search with aliases, Unicode and typo handling,
+  all album credits, source attribution and versioned catalog publication.
+  Bounded imports resume verified chunks while keeping the last good catalog.
+  Explicit lookup has private status routes and source-policy checks; submission
+  remains disabled until its durable background consumer is installed.
 
-- Upgrade to stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12 and current
-  stable direct/transitive dependencies, with central versions and locked restore.
-  MediatR 12.5.0 remains an explicit licensing exception. Replace incompatible
-  Swagger generation with NSwag while retaining Development-only documentation
-  routes and bearer security. Explicit existing key names preserve the SQL schema.
+- Add guest credentials, seven-day inactive expiry, private export/clear and
+  transactional account attachment/import. Cookie mutations require same-origin
+  checks and antiforgery tokens. Guest routes remain disabled pending storage
+  and background-processing prerequisites. Weekly scheduling now requires
+  explicit email opt-in and a verified address; onsite use stays independent.
+
+- Move taste and recommendation ownership to listener profiles while preserving
+  historical IDs, feedback and score evidence. Add non-weekly recommendation
+  snapshots and include on-demand history in account exports. Registered and
+  weekly APIs remain available; guest access is not enabled by this change alone.
+
+- Add listener profile, discovery batch and pending-job foundations with an
+  additive legacy-data backfill. Export 2.5 includes the new owned metadata and
+  batch links while excluding operational lease credentials. Guest access and
+  on-demand generation are not enabled by this foundation alone.
+
+- Add a bounded synthetic catalog resource probe and source-policy record for
+  the approved guest discovery work. Local metadata search feasibility is measured
+  separately from recommendation readiness; the guest product flow is not yet implemented.
+
+- Make ListenBrainz the default provider while retaining Last.fm as an operator
+  option. Discovery, seed tags and candidate tags resolve together. Add bounded
+  public-catalog clients, approved recorded replay and explicitly gated live
+  generation; preserve historical evidence and derive email credits from it.
+  Local Compose remains synthetic. Per-user provider choice and history imports
+  are deferred, and deployment-specific usage/license review remains open.
+
+- Reworked the local web interface into clear discovery, taste profile, account,
+  and data areas with responsive navigation, accessible focus states, and plain-language
+  labels. Guest tracks are marked as examples, and recommendation details no longer
+  show a popularity penalty for the popularity-neutral V1 scorer.
+
+- Restore the approved MediatR 12.5.0 licensing exception in central versions and package locks. CI generates a disposable database password for each run, and the local runbook selects the current UTC ISO week.
+
+- Add non-root web and Worker container targets, migration and private-volume initialization, and a local PostgreSQL Compose stack with loopback-only web access. CI supplies PostgreSQL and checks that the full test suite runs without skips. Public release remains gated on provider approval and production operational decisions.
+
+- Pin stable .NET SDK 10.0.401, EF Core/runtime/tool 10.0.12, and current stable dependencies with locked restore. Retain the approved MediatR exception and use NSwag for Development-only API documentation.
+
+- Remove credential-shaped literals from secret checks, Compose, and CI. Generate private database connection strings with local credentials; existing ignored Compose environment files need regeneration.
 
 - Registration uses the selected UTC delivery weekday/hour. Added an explicit, guarded
   local repair tool for legacy registration slots. Bounded scheduler ticks track

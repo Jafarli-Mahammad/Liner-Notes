@@ -1,4 +1,6 @@
+using LinerNotes.Application.Common.Interfaces.Catalog;
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Repositories;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.Core;
@@ -50,11 +52,9 @@ public static class DependencyInjection
             return new AppDbContext(options, httpContext);
         });
 
-        // Register IAppDbContext abstraction
-        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<DataContext>());
-
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IListenerProfileRepository, ListenerProfileRepository>();
 
         // Register generic repository open type
         services.AddScoped(typeof(IAsyncRepository<>), typeof(AsyncRepository<>));
@@ -62,7 +62,23 @@ public static class DependencyInjection
         // Register repository implementations
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountProfileReader, AccountProfileReader>();
-        services.AddScoped<IWeeklyScheduleStore>(_ => new WeeklyScheduleStore(connectionString));
+        services.AddScoped<IDiscoveryProfileReader, DiscoveryProfileReader>();
+        services.AddScoped<IGuestProfileStore, GuestProfileStore>();
+        services.AddScoped<IDiscoveryTasteStore, DiscoveryTasteStore>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.ITasteOnboardingStore, DiscoveryTasteStore>();
+        services.AddScoped<IDiscoveryJobStore, DiscoveryJobStore>();
+        services.AddScoped<IDiscoveryBatchStore, DiscoveryBatchStore>();
+        services.AddScoped<IDiscoveryReader, DiscoveryReader>();
+        services.AddScoped<IRecentRecommendations, RecentRecommendations>();
+        services.AddScoped<IPublicEvidenceStore, PublicEvidenceStore>();
+        services.AddScoped<IManagedStorageIntegrity, LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageIntegrity>();
+        services.AddScoped<ICatalogReader, CatalogReader>();
+        services.AddScoped<ICatalogImportStore, CatalogImportStore>();
+        services.AddScoped<ICatalogMaintenance, CatalogImportStore>();
+        services.AddScoped<IDiscoveryWriteCoordinator, DiscoveryWriteCoordinator>();
+        services.AddScoped<IWeeklyScheduleStore>(sp => new WeeklyScheduleStore(connectionString,
+            sp.GetRequiredService<DataContext>(), sp.GetRequiredService<IDiscoveryWriteCoordinator>(),
+            sp.GetService<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>()));
         services.AddScoped<IWeeklyDigestRepository, WeeklyDigestRepository>();
         services.AddScoped<ITasteSignalRepository, TasteSignalRepository>();
         services.AddScoped<ITrackRepository, TrackRepository>();

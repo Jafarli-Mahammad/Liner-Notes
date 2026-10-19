@@ -1,4 +1,5 @@
 using LinerNotes.Domain.Digest;
+using LinerNotes.Domain.Discovery;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +12,9 @@ public sealed class WeeklyDigestConfiguration : IEntityTypeConfiguration<WeeklyD
         builder.ToTable("WeeklyDigests");
 
         builder.HasKey(d => d.Id);
+        builder.HasIndex(d => d.BatchId).IsUnique();
+        builder.HasOne(d => d.Batch).WithOne().HasForeignKey<WeeklyDigest>(d => new { d.BatchId, d.ProfileId }).HasPrincipalKey<LinerNotes.Domain.Discovery.DiscoveryBatch>(b => new { b.Id, b.ProfileId })
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.Property(d => d.UserId)
             .IsRequired();

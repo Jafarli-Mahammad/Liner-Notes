@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LinerNotes.Application;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
@@ -49,7 +50,7 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         if(!OperatingSystem.IsWindows())File.SetUnixFileMode(email.SinkRoot,UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.UserExecute);
         config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["ConnectionStrings:DefaultConnection"]=connection.ConnectionString,["Generation:Origin"]="Synthetic",["LastFm:ApiKey"]="fixture-only-do-not-dispatch"}).Build();
         services=Build();
-        await using var scope=services.CreateAsyncScope();var context=scope.ServiceProvider.GetRequiredService<DataContext>();await context.Database.EnsureCreatedAsync();
+        await using var scope=services.CreateAsyncScope();var context=scope.ServiceProvider.GetRequiredService<DataContext>();await scope.ServiceProvider.GetRequiredService<LinerNotes.DataAccess.Persistence.AppDbContext>().Database.MigrateAsync();
         context.ApplicationUsers.Add(new ApplicationUser{Id=userId,UserName="local",Email="local@example.test"});context.Users.Add(new User("local@example.test",id:userId));
         context.TasteSignals.Add(TasteSignal.CreateSeedTag(userId,"rock",1,"synthetic QA"));await context.SaveChangesAsync();
     }
@@ -77,6 +78,12 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
             output.WriteLine("Fixture capture stopped at changed inventory; explicit operator reconciliation.");
             // Retry fixture preparation only before the tested final-row/fault boundary.
             // Never swallow a stop after opt-out/publication/commit hooks have run.
+await using (var diagnostics = services.CreateAsyncScope())
+            {
+                var observed = await diagnostics.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync(ct);
+                var recorded = JsonSerializer.Deserialize<GenerationInventory>(await File.ReadAllTextAsync(storage.InventoryPath!, ct))!;
+                output.WriteLine($"Capture inventory: before={recorded.DatabaseBytes}; observed={observed.DatabaseBytes}; sameAllRevision={recorded.DatabaseRevision == observed.Revision}; beforeBoundary={before}; observedBoundary={faults.Begins}");
+            }
             Assert.Equal(before,faults.Begins);
             Assert.Empty(Directory.GetFiles(email.SinkRoot!,"*.eml.enc"));
             Assert.Equal("reconciled",(await runner.RunAsync(new("reconcile",userId,target??week,EvidenceOrigin.Synthetic),ct)).Status);
@@ -88,7 +95,21 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         await using(var keys=services.CreateAsyncScope())
             _=keys.ServiceProvider.GetRequiredService<IUnsubscribeTokens>().Create(userId);
         Assert.Equal("reconciled",(await Run("reconcile")).Status);
-        Assert.Equal("generated",(await Run("generate")).Status);
+        for (var attempt = 0; ; attempt++)
+        {
+            var generated = await Run("generate");
+            if (generated.Status == "generated") break;
+            Assert.True(attempt < 2 && generated.Reason == "database_inventory_changed", $"Fixture generation stopped: {generated.Reason}");
+            // Setup only: freshly migrated PostgreSQL can still change physical size. Reconcile only
+            // when the managed-row revision is unchanged and no digest/publication exists yet.
+            await using var check = services.CreateAsyncScope();
+            var state = await check.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadStorageAsync();
+            var inventory = JsonSerializer.Deserialize<GenerationInventory>(await File.ReadAllTextAsync(storage.InventoryPath!))!;
+            Assert.Equal(inventory.DatabaseRevision, state.Revision);
+            Assert.False(await check.ServiceProvider.GetRequiredService<DataContext>().WeeklyDigests.AnyAsync());
+            Assert.Empty(Directory.GetFiles(email.SinkRoot!, "*.eml.enc"));
+            Assert.Equal("reconciled", (await Run("reconcile")).Status);
+        }
         await using(var rows=services.CreateAsyncScope())
         {
             await using var transaction=await rows.ServiceProvider.GetRequiredService<ILocalDigestCaptureStore>().BeginAsync(userId,week,default);
@@ -105,9 +126,17 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         Assert.Equal(bytes,await File.ReadAllBytesAsync(file));
         await using var scope=services.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<DataContext>();
         var digest=await db.WeeklyDigests.SingleAsync();Assert.Equal(DigestStatus.LocalCaptured,digest.Status);Assert.Null(digest.SentAt);
+        var picks=await db.WeeklyRecommendations.ToArrayAsync();
+        Assert.NotEmpty(picks);
+        Assert.All(picks,p=>
+        {
+            Assert.Equal("listenbrainz",p.ScoreBreakdown.Snapshot!.ConfigurationPolicy["Provider"]);
+            Assert.Contains(p.ScoreBreakdown.Snapshot.Evidence.CandidateTags,t=>t.Response.Provider=="ListenBrainz" && t.EntityIdentity!=null);
+        });
         var export=await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.2",export.ExportVersion);Assert.Equal(userId,export.Account!.Id);Assert.Equal("complete",export.LocalEmail!.Status);
+        Assert.Equal("2.5",export.ExportVersion);Assert.Equal(userId,export.Account!.Id);Assert.Equal("complete",export.LocalEmail!.Status);
         var copy=Assert.Single(export.LocalEmail.Copies);Assert.Contains("capability-removed",copy.PlainText);
+        Assert.Contains("ListenBrainz",copy.PlainText);Assert.DoesNotContain("Last.fm",copy.PlainText);
         output.WriteLine($"Actual synthetic Worker MIME={bytes.Length} bytes; picks={export.Digests.Single().Recommendations.Count}; copy plaintext={copy.PlainText.Length} chars; HTML={copy.Html.Length} chars");
         await using(var ownership=await scope.ServiceProvider.GetRequiredService<IAccountEmailLease>().AcquireAsync(userId,default))
         {

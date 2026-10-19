@@ -2,6 +2,10 @@
 
 This packages the existing **Development, fixture-only** slice. It does not
 provide production scheduling, external delivery or public-release permission.
+
+The default fixture provider is now ListenBrainz; Last.fm remains available by
+explicit configuration. See the [provider runbook](listenbrainz-provider-runbook.md)
+for origin/usage gates, private token configuration and rollback.
 Supported verification platform: Linux amd64. Other platforms are unverified.
 Docker Compose 5.6.0 was verified; all images and tools are pinned in
 [the version snapshot](phase-9-versions.json). No Redis service is used.
@@ -16,11 +20,7 @@ docker compose --env-file .env.phase9.local --profile local-worker --profile loc
 docker compose --env-file .env.phase9.local up -d web
 ```
 
-The generator creates an ignored private file containing database credentials,
-container and loopback connection strings, and the signing key; it refuses
-overwrite. Older files need `DB_CONNECTION` and `DB_LOOPBACK_CONNECTION` added
-privately using their existing database password and the corresponding `db` and
-`127.0.0.1` hosts. Generate a fresh file only for a fresh database volume. Preserve
+The generator creates an ignored private file and refuses overwrite. Preserve
 that file for a retained stack; changing its database password does not rotate
 credentials in an already initialized PostgreSQL volume. Do not print expanded
 Compose configuration. Use `config --quiet` to validate it.
@@ -84,7 +84,7 @@ docker compose --env-file .env.phase9.local run --rm operator --action unsubscri
 Inspection prints sanitized text. The second action prints a private capability
 for local confirmation; keep it out of chat, logs and commits. GET displays a
 confirmation page; POST opts the account out. Later capture is suppressed.
-Authenticated export remains version 2.2 with sanitized copies and stored scores.
+Authenticated export is now version 2.5, adding discovery metadata to sanitized copies and stored scores.
 Account deletion invalidates access and removes owned configured capture files.
 Database keys and shared catalog entries remain under their documented boundaries.
 

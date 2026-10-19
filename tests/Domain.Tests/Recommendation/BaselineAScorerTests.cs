@@ -10,6 +10,21 @@ public sealed class BaselineAScorerTests
 {
     private readonly BaselineAScorer scorer = new();
     private static readonly IsoWeek Week = new(2026, 41);
+    [Fact]
+    public void BatchRankingMatchesWeeklyPolicyAndReplaysWithBatchIdentity()
+    {
+        var candidates = BenchmarkSeedFixtures.AllCandidates.Select(c => new BaselineACandidate(c.Track, c.TagVector, ScoreEvidence.Empty)).ToArray();
+        var taste = candidates[0].Tags;
+        Guid batch = Guid.NewGuid();
+        var weekly = scorer.Rank(candidates, taste, new HashSet<string>(), new HashSet<string>(), Week, new());
+        var onsite = scorer.RankForBatch(candidates, taste, new HashSet<string>(), new HashSet<string>(), batch, new());
+        Assert.Equal(weekly.Select(p => p.Track.TrackKey), onsite.Select(p => p.Track.TrackKey));
+        Assert.All(onsite, p => {
+            Assert.Equal(batch, p.Breakdown.Snapshot!.DiscoveryBatchId);
+            Assert.Null(p.Breakdown.Snapshot.Week);
+            Assert.Equal(p.Breakdown.FinalScore, scorer.Replay(p.Breakdown.Snapshot).FinalScore);
+        });
+    }
     public static IEnumerable<object[]> Benchmarks => BenchmarkSeedFixtures.AllCandidates.Select(c => new object[] { c });
 
     [Theory, MemberData(nameof(Benchmarks))]

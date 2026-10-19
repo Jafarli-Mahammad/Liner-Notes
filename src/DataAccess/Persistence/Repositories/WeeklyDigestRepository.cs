@@ -65,7 +65,7 @@ public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWee
     {
         return await DataContext.WeeklyRecommendations
             .Include(r => r.Track)
-            .FirstOrDefaultAsync(r => r.Id == recommendationId && r.UserId == userId, cancellationToken);
+            .FirstOrDefaultAsync(r => r.Id == recommendationId && DataContext.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId), cancellationToken);
     }
 
     public void Update(WeeklyDigest digest)
@@ -78,7 +78,7 @@ public sealed class WeeklyDigestRepository : AsyncRepository<WeeklyDigest>, IWee
         if (DataContext.Database.CurrentTransaction is null)
             throw new InvalidOperationException("Feedback replacement requires a transaction.");
         return await DataContext.WeeklyRecommendations
-            .FromSqlInterpolated($"SELECT * FROM \"WeeklyRecommendations\" WHERE \"Id\" = {recommendationId} AND \"UserId\" = {userId} FOR UPDATE")
+            .FromSqlInterpolated($"SELECT * FROM \"WeeklyRecommendations\" WHERE \"Id\" = {recommendationId} AND \"ProfileId\" IN (SELECT \"Id\" FROM \"ListenerProfiles\" WHERE \"UserId\" = {userId}) FOR UPDATE")
             .Include(r => r.Track)
             .SingleOrDefaultAsync(cancellationToken);
     }

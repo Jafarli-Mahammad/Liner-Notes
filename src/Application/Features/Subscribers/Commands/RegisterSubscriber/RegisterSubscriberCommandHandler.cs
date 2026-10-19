@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Repositories;
@@ -15,15 +16,18 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _clock;
+    private readonly IGuestProfileStore? _guestProfiles;
 
     public RegisterSubscriberCommandHandler(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        IGuestProfileStore? guestProfiles = null)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _clock = clock ?? TimeProvider.System;
+        _guestProfiles = guestProfiles;
     }
 
     public async Task<SubscriberDto> Handle(
@@ -41,7 +45,9 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
             timeZone: request.TimeZone,
             deliveryDay: request.DeliveryDay,
             deliveryHourUtc: request.DeliveryHourUtc,
-            id: request.UserId);
+            id: request.UserId,
+            createProfile: request.GuestCredentialHash is null,
+            weeklyEmailOptIn: request.WeeklyEmailOptIn);
 
         // Calculate initial next digest delivery slot
         var initialDelivery = WeeklySchedulePolicy.NextUtc(_clock.GetUtcNow().UtcDateTime, request.DeliveryDay, request.DeliveryHourUtc);
@@ -50,6 +56,9 @@ public sealed class RegisterSubscriberCommandHandler : IRequestHandler<RegisterS
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (request.GuestCredentialHash is { } hash)
+            await (_guestProfiles ?? throw new InvalidOperationException("guest_handoff_unavailable"))
+                .AttachNewAccountAsync(hash, user.Id, _clock.GetUtcNow(), cancellationToken);
         return user.ToDto();
     }
 }

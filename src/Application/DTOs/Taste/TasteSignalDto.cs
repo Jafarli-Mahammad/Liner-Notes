@@ -7,7 +7,7 @@ namespace LinerNotes.Application.DTOs.Taste;
 /// </summary>
 public record TasteSignalDto(
     Guid Id,
-    Guid UserId,
+    Guid? UserId,
     TasteTargetType TargetType,
     string TargetValue,
     string NormalizedTargetValue,
@@ -20,4 +20,8 @@ public record TasteSignalDto(
     Guid? LastModifiedBy = null,
     Guid? DeletedBy = null,
     DateTime? DeletedAt = null,
-    bool IsDeleted = false);
+    bool IsDeleted = false,
+Guid ProfileId = default,
+    Guid? CatalogRecordId = null,
+    Guid? CanonicalEntityId = null,
+    string? SelectionJson = null);

@@ -32,10 +32,10 @@ public sealed class RawCandidateTrack
             hash.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') &&
             reference.RetrievedAtUtc is { Offset: var offset } && offset == TimeSpan.Zero;
         if (Paths.Any(p => p.UpstreamPosition <= 0 || !Received(p.TrackResponse) ||
-            (p.SimilarityResponse is { } reference && !Received(reference))))
+            (p.SimilarityResponse is { } reference && !Received(reference)) || p.SupportingResponses.Any(r => !Received(r))))
             throw new ArgumentException("Emitted candidates require received response hashes, timestamps and positions.", nameof(paths));
         if (Paths.Any(p => p.TrackResponse.Origin != Origin ||
-            (p.SimilarityResponse is { } reference && reference.Origin != Origin)))
+            (p.SimilarityResponse is { } reference && reference.Origin != Origin) || p.SupportingResponses.Any(r => r.Origin != Origin)))
             throw new InvalidOperationException("Live, recorded and synthetic observations cannot be blended.");
     }
 }

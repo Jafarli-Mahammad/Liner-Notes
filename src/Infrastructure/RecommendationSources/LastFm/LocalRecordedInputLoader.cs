@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Domain.Digest;
+using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 namespace LinerNotes.Infrastructure.RecommendationSources.LastFm;
 
@@ -15,18 +16,29 @@ public sealed class LocalRecordedInputApproval
 public sealed record LocalRecordedResponseInput(string Method,string Identity,string Path,string Sha256,DateTimeOffset RetrievedAtUtc,int Limit,string Origin);
 public sealed record LocalRecordedGenerationManifest(int Version,string Use,string Origin,Guid UserId,string Week,
     DateTimeOffset ExpiresAtUtc,string DeveloperReference,string SourceManifestPath,string SourceManifestSha256,
-    IReadOnlyList<LocalRecordedResponseInput> Responses);
-public sealed record ValidatedLocalRecording(IReadOnlyList<RecordedLastFmResponse> Responses,DateTimeOffset ExpiresAtUtc,string ManifestSha256);
+    IReadOnlyList<LocalRecordedResponseInput> Responses)
+{
+    public string Provider { get; init; } = "lastfm";
+}
+public sealed record ValidatedLocalRecording(IReadOnlyList<RecordedLastFmResponse> Responses,DateTimeOffset ExpiresAtUtc,string ManifestSha256)
+{
+    public IReadOnlyList<RecordedListenBrainzResponse> ListenBrainzResponses { get; init; } = [];
+}
 public sealed class LocalRecordedInputs
 {
     public IReadOnlyList<RecordedLastFmResponse>? Responses { get; private set; }
-    public void Set(ValidatedLocalRecording recording) => Responses=recording.Responses;
+    public IReadOnlyList<RecordedListenBrainzResponse>? ListenBrainzResponses { get; private set; }
+    public void Set(ValidatedLocalRecording recording)
+    {
+        Responses=recording.Responses;
+        ListenBrainzResponses=recording.ListenBrainzResponses;
+    }
 }
 
 /// <summary>Exact local-generation approval. Acquisition/evaluation approval alone cannot enable use.</summary>
 public sealed class LocalRecordedInputLoader(LocalRecordedInputApproval approval,TimeProvider clock)
 {
-    public async Task<ValidatedLocalRecording> LoadAsync(Guid userId,IsoWeek week,CancellationToken ct)
+    public async Task<ValidatedLocalRecording> LoadAsync(Guid userId,IsoWeek week,CancellationToken ct,string provider="lastfm")
     {
         try
         {
@@ -38,7 +50,8 @@ public sealed class LocalRecordedInputLoader(LocalRecordedInputApproval approval
             if(digest!=approval.ApprovedManifestSha256) throw new GenerationStoppedException("recording_manifest_changed");
             using var document=JsonDocument.Parse(bytes); RejectSecrets(document.RootElement);
             var manifest=JsonSerializer.Deserialize<LocalRecordedGenerationManifest>(bytes)??throw new GenerationStoppedException("recording_manifest_invalid");
-            if(manifest.Version!=1 || manifest.Use!="local-digest-generation" || manifest.Origin!="Recorded" || manifest.UserId!=userId || manifest.Week!=week.Value ||
+            if(provider is not ("lastfm" or "listenbrainz") || manifest.Provider!=provider ||
+                manifest.Version!=(provider=="lastfm"?1:2) || manifest.Use!="local-digest-generation" || manifest.Origin!="Recorded" || manifest.UserId!=userId || manifest.Week!=week.Value ||
                 manifest.ExpiresAtUtc<=clock.GetUtcNow() || string.IsNullOrWhiteSpace(manifest.DeveloperReference) || manifest.DeveloperReference.Length>200 ||
                 manifest.Responses is not {Count: >0 and <=1000} || !Hash(manifest.SourceManifestSha256)) throw new GenerationStoppedException("recording_use_unapproved_or_expired");
             string Contained(string relative)
@@ -51,23 +64,45 @@ public sealed class LocalRecordedInputLoader(LocalRecordedInputApproval approval
             var sourceBytes=await ReadAsync(Contained(manifest.SourceManifestPath),1_000_000,ct);
             if(Convert.ToHexStringLower(SHA256.HashData(sourceBytes))!=manifest.SourceManifestSha256) throw new GenerationStoppedException("recording_source_changed");
             using var source=JsonDocument.Parse(sourceBytes);var acquisition=source.RootElement;RejectSecrets(acquisition);
-            if(acquisition.GetProperty("status").GetString()!="approved" || acquisition.GetProperty("provider").GetString()!="Last.fm" || acquisition.GetProperty("phase").GetInt32() is not (4 or 5) ||
+            if(acquisition.GetProperty("status").GetString()!="approved" ||
+                acquisition.GetProperty("provider").GetString()!=(provider=="lastfm"?"Last.fm":"ListenBrainz") ||
+                (provider=="lastfm" ? acquisition.GetProperty("phase").GetInt32() is not (4 or 5) :
+                    acquisition.GetProperty("purpose").GetString()!="provider-adapter-validation") ||
                 acquisition.GetProperty("retention").GetProperty("expires_at_utc").GetDateTimeOffset()<=clock.GetUtcNow() || manifest.ExpiresAtUtc>acquisition.GetProperty("retention").GetProperty("expires_at_utc").GetDateTimeOffset())
                 throw new GenerationStoppedException("recording_source_unapproved_or_expired");
             string acquisitionHash=acquisition.GetProperty("approval").GetProperty("approved_manifest_sha256").GetString()??"";
             if(!Hash(acquisitionHash) || CanonicalHash(acquisition)!=acquisitionHash) throw new GenerationStoppedException("recording_source_approval_changed");
             var responses=new List<RecordedLastFmResponse>();long total=0;
+            var listenBrainzResponses=new List<RecordedListenBrainzResponse>();
             foreach(var response in manifest.Responses)
             {
                 ct.ThrowIfCancellationRequested();
-                if(response.Origin!="Recorded" || response.Method is not ("artist.getsimilar" or "artist.gettoptags" or "artist.gettoptracks" or "tag.gettoptracks") || !Hash(response.Sha256) || response.Limit<=0 || response.RetrievedAtUtc>clock.GetUtcNow())
+                if(response.Origin!="Recorded" || !Hash(response.Sha256) || response.Limit<=0 || response.RetrievedAtUtc>clock.GetUtcNow())
                     throw new GenerationStoppedException("recording_response_invalid");
-                var body=await ReadAsync(Contained(response.Path),100_000,ct);total=checked(total+body.Length);
+                var body=await ReadAsync(Contained(response.Path),provider=="lastfm"?100_000:ListenBrainzResponse.MaximumBytes,ct);total=checked(total+body.Length);
                 if(total>20_000_000) throw new GenerationStoppedException("recording_input_limit");
                 using var json=JsonDocument.Parse(body);RejectSecrets(json.RootElement);
-                responses.Add(new(response.Method,response.Identity,body,response.Sha256,response.RetrievedAtUtc,response.Limit));
+                if(provider=="lastfm")
+                {
+                    if(response.Method is not ("artist.getsimilar" or "artist.gettoptags" or "artist.gettoptracks" or "tag.gettoptracks"))
+                        throw new GenerationStoppedException("recording_response_invalid");
+                    responses.Add(new(response.Method,response.Identity,body,response.Sha256,response.RetrievedAtUtc,response.Limit));
+                }
+                else
+                {
+                    var kind=response.Method switch
+                    {
+                        "artist.search"=>ListenBrainzRequestKind.ArtistSearch,
+                        "lb-radio.artist"=>ListenBrainzRequestKind.ArtistRadio,
+                        "lb-radio.tags"=>ListenBrainzRequestKind.TagRadio,
+                        "metadata.artist"=>ListenBrainzRequestKind.ArtistMetadata,
+                        "metadata.recording"=>ListenBrainzRequestKind.RecordingMetadata,
+                        _=>throw new GenerationStoppedException("recording_response_invalid")
+                    };
+                    listenBrainzResponses.Add(new(new(kind,response.Identity,response.Limit),body,response.Sha256,response.RetrievedAtUtc));
+                }
             }
-            return new(responses.AsReadOnly(),manifest.ExpiresAtUtc,digest);
+            return new(responses.AsReadOnly(),manifest.ExpiresAtUtc,digest) { ListenBrainzResponses=listenBrainzResponses.AsReadOnly() };
         }
         catch(GenerationStoppedException){throw;}
         catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException)
@@ -91,7 +126,7 @@ public sealed class LocalRecordedInputLoader(LocalRecordedInputApproval approval
         if(element.ValueKind==JsonValueKind.Object) foreach(var property in element.EnumerateObject())
         {
             string key=property.Name.ToLowerInvariant().Replace("_","");
-            if(key.Contains("apikey")||key.Contains("password")||key.Contains("accesstoken")||key.Contains("refreshtoken")||key.Contains("secret")|| key is "authorization" or "credential" or "credentials") throw new GenerationStoppedException("recording_credentials_forbidden");
+            if(key.Contains("apikey")||key.Contains("password")||key.Contains("accesstoken")||key.Contains("refreshtoken")||key.Contains("secret")|| key is "token" or "authorization" or "credential" or "credentials") throw new GenerationStoppedException("recording_credentials_forbidden");
             if(key is "heldout" or "evaluationonly" && property.Value.ValueKind==JsonValueKind.True) throw new GenerationStoppedException("recording_evaluation_only");
             RejectSecrets(property.Value);
         }
@@ -99,7 +134,7 @@ public sealed class LocalRecordedInputLoader(LocalRecordedInputApproval approval
         if(element.ValueKind==JsonValueKind.String)
         {
             string value=element.GetString()??"";
-            if(value.Contains("api_key=",StringComparison.OrdinalIgnoreCase)||value.Contains("Bearer ",StringComparison.OrdinalIgnoreCase)||value.Replace("-", "").Replace("_", "").Equals("heldout",StringComparison.OrdinalIgnoreCase)||value.Replace("-", "").Replace("_", "").Equals("evaluationonly",StringComparison.OrdinalIgnoreCase))
+            if(value.Contains("api_key=",StringComparison.OrdinalIgnoreCase)||value.Contains("Bearer ",StringComparison.OrdinalIgnoreCase)||value.StartsWith("Token ",StringComparison.OrdinalIgnoreCase)||value.Replace("-", "").Replace("_", "").Equals("heldout",StringComparison.OrdinalIgnoreCase)||value.Replace("-", "").Replace("_", "").Equals("evaluationonly",StringComparison.OrdinalIgnoreCase))
                 throw new GenerationStoppedException("recording_credentials_or_evaluation_forbidden");
         }
     }

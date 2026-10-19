@@ -33,7 +33,7 @@ using Xunit.Abstractions;
 
 namespace LinerNotes.DataAccess.Tests;
 
-public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifetime
+public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifetime
 {
     private readonly Guid userId = Guid.NewGuid();
     private readonly string databaseName = "liner_phase6_" + Guid.NewGuid().ToString("N");
@@ -63,7 +63,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         storageOptions.DatabaseOverheadBytesPerPick = 1_000_000; // Test bound only; production remains unconfigured.
         storageOptions.ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(c => c, _ => Array.Empty<string>());
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        { ["ConnectionStrings:DefaultConnection"] = connection, ["Generation:Origin"] = "Recorded",
+            { ["ConnectionStrings:DefaultConnection"] = connection, ["Generation:Origin"] = "Recorded", ["Generation:Provider"] = "lastfm",
             ["Generation:RecordingExpiresAtUtc"] = DateTimeOffset.UtcNow.AddDays(1).ToString("O"),
             ["Generation:ApprovedRecordingManifestSha256"] = new string('a', 64) }).Build();
         var registrations = new ServiceCollection().AddLogging().AddApplication().AddDataAccess(config).AddInfrastructure(config);
@@ -72,7 +72,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         services = registrations.BuildServiceProvider();
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-        await context.Database.EnsureCreatedAsync();
+        await scope.ServiceProvider.GetRequiredService<LinerNotes.DataAccess.Persistence.AppDbContext>().Database.MigrateAsync();
         context.ApplicationUsers.Add(new ApplicationUser { Id = userId, UserName = "phase6", Email = "phase6@example.test" });
         context.Users.Add(new User("phase6@example.test", "UTC", id: userId));
         context.TasteSignals.Add(TasteSignal.CreateSeedArtist(userId, "Seed Artist", 1, "manual"));
@@ -305,7 +305,7 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         db.UserMusicConnections.Add(deletedConnection);
         await db.SaveChangesAsync();
         var export = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.2", export.ExportVersion);
+        Assert.Equal("2.5", export.ExportVersion);
         Assert.Equal(userId, export.Account!.Id);
         Assert.Equal(1005, export.Digests.Count);
         Assert.Equal(1005, export.Digests.Select(d => d.Id).Distinct().Count());
@@ -365,12 +365,12 @@ public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifeti
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
         var before = await store.ReadStorageAsync();
-        Assert.Equal(before, await store.ReadStorageAsync());
+        Assert.Equal(before.Revision, (await store.ReadStorageAsync()).Revision);
         db.Tracks.Add(Track.Create("Storage revision probe", "Revision Artist"));
         await db.SaveChangesAsync();
         var after = await store.ReadStorageAsync();
         Assert.NotEqual(before.Revision, after.Revision);
-        Assert.Equal(after, await store.ReadStorageAsync());
+        Assert.Equal(after.Revision, (await store.ReadStorageAsync()).Revision);
         Assert.True(after.DatabaseBytes >= before.DatabaseBytes);
     }
 

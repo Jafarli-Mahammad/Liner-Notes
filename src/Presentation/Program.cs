@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Hosting logs run before middleware: omit query-bearing request start/finish messages.
-if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled"))
+if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled") || builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
     builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 // Standard Kestrel configuration
@@ -29,6 +29,15 @@ builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
 builder.Services.AddPresentation(builder.Configuration);
+if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+{
+    if (!builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
+        throw new InvalidOperationException("Discovery jobs require GuestDiscovery:Enabled.");
+    if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled"))
+        throw new InvalidOperationException("Concurrent guest discovery and local email capture require pending storage writer integration.");
+    builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
+    builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
+}
 
 // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
 builder.Services.AddControllers(options =>

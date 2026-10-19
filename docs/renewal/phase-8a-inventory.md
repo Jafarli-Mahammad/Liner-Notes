@@ -1,5 +1,13 @@
 # Phase 8a reviewed storage inventory
 
+Provider update (2026-10-16): existing `WeeklyRecommendations.ScoreBreakdown`
+JSON now also carries supporting name-resolution/metadata responses, tag entity
+identities, and the actual normalization version. These fields follow the same
+snapshot export and owned-row deletion paths; no new database column or
+upstream account data is added. The default provider and ingestion/live policy
+are included in the stored configuration policy. Runtime tokens remain excluded
+from snapshots and exports.
+
 Review boundary: approved design in [phase-8a-review.md](phase-8a-review.md).
 Export 2.2 and the reviewed value/deletion boundaries are locally verified;
 see [the per-approval evidence and remaining limits](phase-8a-evidence.md).

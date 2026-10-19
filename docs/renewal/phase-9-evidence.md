@@ -161,7 +161,7 @@ are recorded explicitly. No other central package version was changed.
 |---|---|
 | GitGuardian 38143099, CI | The former fixed value initialized only a disposable test database. Replaced with a generated password per run, masked in Actions logs, supplied through environment configuration; database port binds to loopback and cleanup always runs |
 | GitGuardian 38143098, Swagger tests | Unused fixture password literals removed from both startup configuration locations. Both Development document and Production hiding tests remain functional without database credentials |
-| GitGuardian 38143097, Compose | No embedded password value: all connection strings require private `DB_PASSWORD` interpolation. Credential interpolation was subsequently moved into generated private connection variables to avoid recurring scanner triggers |
+| GitGuardian 38143097, Compose | No embedded password value: all connection strings require private `DB_PASSWORD` interpolation. False positive; Compose configuration retained |
 | Runbook week | Commands now compute the UTC ISO week when executed rather than retaining a dated example |
 
 No flagged value was confirmed to be a real service credential, so no real
@@ -182,14 +182,3 @@ Last.fm written public-page approval is missing. Recommendation quality is not
 verified; production email, scheduling, hosting/capacity and key/backup operations
 remain separate work. Existing deployments and plaintext copies were not inspected
 or converted. See the [release checklist](phase-9-release-checklist.md).
-
-
-### Follow-up secret scan remediation (2026-10-13)
-
-Removed the password-shaped assertion literal in `secret_defaults.py`; the guard
-now rejects any literal password assignment in DataAccess configuration. Compose
-reads full connection strings from the ignored private environment file. CI
-builds its connection string from fields at runtime and masks the result.
-Gitleaks 8.30.1 found zero findings in the full working tree. This is a separate
-scanner; a successful GitGuardian rescan and remote incident closure remain
-unverified until GitGuardian evaluates the replacement PR history.

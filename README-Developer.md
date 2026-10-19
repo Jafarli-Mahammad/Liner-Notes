@@ -247,19 +247,50 @@ private generated credentials and publishes only loopback web. For host builds,
 install the pinned stable SDK from `global.json` and run `dotnet tool restore`.
 This local packaging does not provide production deployment or external delivery.
 
-For a local browser session with fixture-only provider inputs:
+The Presentation project has Development launch profiles for the application,
+manual QA page, and Swagger. Visual Studio 2022 17.11 or later can use the shared
+solution launch profile to select Presentation as the startup project when
+Multi-Project Launch Profiles is enabled; then choose `Liner Notes` and press Run
+to open `http://localhost:5080/`. Otherwise, set Presentation as the startup
+project once. In Rider, right-click
+`src/Presentation/Properties/launchSettings.json`, choose **Generate
+Configurations**, then select the Presentation project's `Liner Notes` profile.
+This imports the profiles even when a Dockerfile run configuration already
+exists. In VS Code, use C# Dev Kit and select that same project profile.
+`Manual QA` and `Swagger` open `/manual-test` and `/swagger` respectively.
+
+Before the first IDE launch, install the pinned SDK and provision the isolated
+loopback PostgreSQL service once:
 
 ```bash
-ASPNETCORE_ENVIRONMENT=Development Generation__Origin=Synthetic \
-  dotnet run --project src/Presentation/Presentation.csproj --no-launch-profile \
-  -- --urls http://localhost:5080
+python3 scripts/phase9_init_local.py --output .env.ide.local
+docker compose --project-name linernotes-ide --env-file .env.ide.local \
+  -f compose.yaml -f compose.ide.yaml up -d db
 ```
 
-Open `http://localhost:5080`; Development Swagger is at
-`http://localhost:5080/swagger`. The UI and stored-data endpoints do not generate a
-weekly digest on demand. No Last.fm key is needed for offline work. .NET does not
-load `.env` automatically; use the documented environment or user-secrets setup.
-This guide does not establish production deployment readiness.
+The generated credentials stay in the ignored `.env.ide.local` file. Configure
+`ConnectionStrings:DefaultConnection` in local User Secrets with
+`Host=127.0.0.1;Port=55441;Database=liner_notes_manual_qa;Username=postgres;Password=<DB_PASSWORD from .env.ide.local>`.
+Replace only the password placeholder locally; do not paste it into chat or
+commit it. See [local configuration](docs/renewal/local-configuration.md) for
+the User Secrets command. Then restore the EF tool and apply the existing
+migrations to that isolated database:
+
+```bash
+dotnet tool restore
+dotnet ef database update --project src/DataAccess/DataAccess.csproj \
+  --startup-project src/Presentation/Presentation.csproj --context AppDbContext
+```
+
+The IDE database uses the separate `linernotes-ide` Compose project and named
+volume, and is published only on `127.0.0.1:55441`. Stop it while preserving data
+with `docker compose --project-name linernotes-ide --env-file .env.ide.local -f compose.yaml -f compose.ide.yaml down`.
+
+The profiles use Development mode and synthetic generation inputs; no Last.fm key
+is needed for offline work. The UI and stored-data endpoints do not generate a
+weekly digest on demand. `.NET` does not load `.env` automatically. The profiles
+open a browser when launched through an IDE; `dotnet run` itself does not open a
+browser. This guide does not establish production deployment readiness.
 
 ### Verification commands
 

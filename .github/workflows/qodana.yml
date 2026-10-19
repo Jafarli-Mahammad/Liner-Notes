@@ -1,0 +1,57 @@
+name: Qodana
+
+on:
+  pull_request:
+  push:
+    branches: [main, Prism]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qodana-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    # Fork PRs do not receive QODANA_TOKEN; never use pull_request_target to
+    # execute their bootstrap/build commands with repository secrets.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Check Qodana configuration
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN || secrets.QODANA_TOKEN_1205615720 }}
+        run: |
+          if [ -z "$QODANA_TOKEN" ]; then
+            echo '::error::Add the Qodana Cloud project token as the QODANA_TOKEN repository secret.'
+            exit 1
+          fi
+
+      - name: Checkout analyzed commit and full PR history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned stable SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Qodana scan
+        uses: JetBrains/qodana-action@3e8d76ff0e0241618abd808682f426afe84bab3f # v2026.2.2
+        with:
+          args: --within-docker false
+          upload-result: true
+          pr-mode: true
+          post-pr-comment: true
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN || secrets.QODANA_TOKEN_1205615720 }}

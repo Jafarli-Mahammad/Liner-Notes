@@ -37,74 +37,81 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
 
     public async Task<GenerationInputs> ReadInputsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        bool exists = await db.Users.AnyAsync(u => u.Id == userId, cancellationToken).ConfigureAwait(false);
-        var signals = await db.TasteSignals.Where(s => s.UserId == userId).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+        var profile = await db.ListenerProfiles.Where(p => p.UserId == userId && db.Users.Any(u => u.Id == userId))
+            .Select(p => new { p.Id, p.Revision, p.OnboardingJson }).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        Guid? profileId = profile?.Id;
+        bool exists = profile is not null;
+        var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var feedback = await db.WeeklyRecommendations.Include(r => r.Track)
-            .Where(r => r.UserId == userId && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+            .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId) && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var revision = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
             Exists = exists,
+            ProfileId = profileId,
+            ProfileRevision = profile?.Revision,
+            Onboarding = profile?.OnboardingJson,
             Signals = signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
-            Feedback = feedback.Select(r => new { r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt, r.LastModifiedAt,
-                r.Track.TrackKey, r.Track.NormalizedArtistName, r.Track.NormalizedTitle, r.ScoreBreakdown.MatchedTags })
+            Feedback = feedback.Select(r => new
+            {
+                r.Id,
+                r.Feedback,
+                r.Rating,
+                r.FeedbackGivenAt,
+                r.LastModifiedAt,
+                r.Track.TrackKey,
+                r.Track.NormalizedArtistName,
+                r.Track.NormalizedTitle,
+                r.ScoreBreakdown.MatchedTags
+            })
         })));
-        return new(exists, signals, feedback, revision);
+        return new(exists, signals, feedback, revision, profileId);
     }
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)
     {
         var connection = db.Database.GetDbConnection();
         bool opened = connection.State != ConnectionState.Open;
-        if (opened) await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        if (opened) await db.Database.OpenConnectionAsync(cancellationToken);
         try
         {
-            await using var consistencyTransaction = db.Database.CurrentTransaction is null
-                ? await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false)
-                : null;
-            var currentTransaction = db.Database.CurrentTransaction?.GetDbTransaction();
-            await using var sizeCommand = connection.CreateCommand();
-            sizeCommand.Transaction = currentTransaction;
-            sizeCommand.CommandText = "SELECT pg_database_size(current_database())";
-            long databaseBytes = Convert.ToInt64(await sizeCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
-                System.Globalization.CultureInfo.InvariantCulture);
+            await using var command = connection.CreateCommand();
+            command.Transaction = db.Database.CurrentTransaction?.GetDbTransaction();
+            command.CommandText = """
+                SELECT pg_database_size(current_database()),l."Revision",l."LogicalBytes",l."CoreRevision",l."CoreLogicalBytes",
+                  (SELECT md5(string_agg(n.nspname||'.'||c.relname||':'||c.oid::text||':'||c.relfilenode::text||':'||
+                     COALESCE((SELECT string_agg(a.attname||':'||a.atttypid::text||':'||a.attnotnull::text,',' ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),'')||':'||
+                     COALESCE((SELECT string_agg(t.tgname||':'||t.tgenabled::text,',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal),''),',' ORDER BY n.nspname,c.relname))
+                   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','i','S','v') AND n.nspname IN ('public','identity'))
+                FROM "ManagedStorageLedger" l WHERE l."Id"=1 AND current_setting('session_replication_role')='origin'
+                  AND NOT EXISTS (SELECT 1 FROM pg_tables t WHERE t.schemaname IN ('public','identity')
+                    AND t.tablename NOT IN ('__EFMigrationsHistory','ManagedStorageLedger')
+                    AND (NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
+                      AND g.tgname='liner_storage_delta' AND g.tgenabled='O') OR
+                      NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
+                      AND g.tgname='liner_storage_truncate' AND g.tgenabled='O')))
+                """;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken)) throw new GenerationStoppedException("managed_storage_ledger_missing_or_schema_uncovered");
+            long size = reader.GetInt64(0), revision = reader.GetInt64(1), logical = reader.GetInt64(2);
+            return new(Math.Max(size, logical), $"managed-v1:{reader.GetInt64(3)}:{reader.GetInt64(4)}:{revision}:{logical}:{reader.GetString(5)}");
+        }
+        finally { if (opened) await db.Database.CloseConnectionAsync(); }
+    }
 
-            using var revision = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            using var rowHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            long payloadBytes = 0;
-            foreach (var (kind, table) in new[]
-                { ("track", "Tracks"), ("signal", "TasteSignals"), ("digest", "WeeklyDigests"), ("pick", "WeeklyRecommendations") })
-            {
-                revision.AppendData(Encoding.UTF8.GetBytes(kind));
-                revision.AppendData([0]);
-                await using var rowsCommand = connection.CreateCommand();
-                rowsCommand.Transaction = currentTransaction;
-                rowsCommand.CommandText = $"SELECT \"Id\"::text, to_jsonb(t)::text FROM \"{table}\" t ORDER BY \"Id\"";
-                await using var reader = await rowsCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    string id = reader.GetString(0);
-                    string payload = reader.GetString(1);
-                    rowHash.AppendData(Encoding.UTF8.GetBytes(id));
-                    rowHash.AppendData([0]);
-                    rowHash.AppendData(Encoding.UTF8.GetBytes(payload));
-                    revision.AppendData(rowHash.GetHashAndReset());
-                    payloadBytes = checked(payloadBytes + Encoding.UTF8.GetByteCount(payload));
-                }
-            }
-            var result = new GenerationStorageState(Math.Max(databaseBytes, payloadBytes),
-                Convert.ToHexStringLower(revision.GetHashAndReset()));
-            if (consistencyTransaction is not null)
-                await consistencyTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            return result;
-        }
-        finally
-        {
-            if (opened) await db.Database.CloseConnectionAsync().ConfigureAwait(false);
-        }
+    public Task<WeeklyDigest> PersistWithinAdmissionAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, CancellationToken cancellationToken = default)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new GenerationStoppedException("weekly_write_requires_admission");
+        return PersistCoreAsync(userId, week, inputRevision, picks, null, cancellationToken);
     }
 
     public Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,
         IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation reservation,
+        CancellationToken cancellationToken = default) => PersistCoreAsync(userId, week, inputRevision, picks, reservation, cancellationToken);
+
+    private Task<WeeklyDigest> PersistCoreAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation? reservation,
         CancellationToken cancellationToken = default) => unitOfWork.ExecuteInTransactionAsync(async ct =>
     {
         bool leased = await db.Database.SqlQueryRaw<bool>("""
@@ -121,9 +128,11 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         if (existing is not null) return existing;
         var current = await ReadInputsAsync(userId, ct).ConfigureAwait(false);
         if (!current.UserExists || current.Revision != inputRevision) throw new GenerationStoppedException("taste_revision_changed");
-        await reservation.ValidateAsync(await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        if (reservation is not null)
+            await reservation.ValidateAsync(await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         var monday = DateTime.SpecifyKind(System.Globalization.ISOWeek.ToDateTime(week.Year, week.WeekNumber, DayOfWeek.Monday), DateTimeKind.Utc);
-        var digest = WeeklyDigest.Create(userId, week, monday, monday.AddDays(7));
+        var profileId = await db.ListenerProfiles.Where(p => p.UserId == userId).Select(p => p.Id).SingleAsync(ct);
+        var digest = new WeeklyDigest(userId, week, monday, monday.AddDays(7), profileId: profileId);
         foreach (var pick in picks)
         {
             var candidate = pick.Track;
@@ -140,7 +149,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             SELECT COALESCE(SUM(pg_column_size("ScoreBreakdown")), 0)::bigint AS "Value"
             FROM "WeeklyRecommendations" WHERE "WeeklyDigestId" = {digest.Id}
             """).SingleAsync(ct).ConfigureAwait(false);
-        await reservation.VerifyStoredAsync(bytes, await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        if (reservation is not null)
+            await reservation.VerifyStoredAsync(bytes, await ReadStorageAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return digest;
     }, cancellationToken);

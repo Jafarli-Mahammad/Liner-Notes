@@ -3,6 +3,8 @@ using LinerNotes.Application.Features.Subscribers.Commands.DeleteUserAccount;
 using LinerNotes.Application.Features.Subscribers.Queries.GetSubscriberProfile;
 using LinerNotes.Application.Services;
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Features.Discovery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,13 +21,18 @@ public sealed class SubscribersController : ApiControllerBase
     private readonly IAccountEmailLease? _lease;
     private readonly IAuthService _authService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDiscoveryWriteCoordinator? _admission;
+    private readonly DiscoveryRuntimeOptions? _discovery;
 
-    public SubscribersController(IAuthService authService, IUnitOfWork unitOfWork, ILocalEmailArchive? archive = null, IAccountEmailLease? lease = null)
+    public SubscribersController(IAuthService authService, IUnitOfWork unitOfWork, ILocalEmailArchive? archive = null, IAccountEmailLease? lease = null,
+        IDiscoveryWriteCoordinator? admission = null, DiscoveryRuntimeOptions? discovery = null)
     {
         _archive = archive;
         _lease = lease;
         _authService = authService;
         _unitOfWork = unitOfWork;
+        _admission = admission;
+        _discovery = discovery;
     }
     /// <summary>
     /// Gets the current subscriber's profile and discovery settings.
@@ -60,7 +67,7 @@ public sealed class SubscribersController : ApiControllerBase
     public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
     {
         await using var ownership = _lease is null ? null : await _lease.AcquireAsync(CurrentUser.UserId, cancellationToken);
-        var result = await _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
+        Task<IActionResult> DeleteAsync(CancellationToken token) => _unitOfWork.ExecuteInTransactionAsync<IActionResult>(async ct =>
         {
         var succeeded = await Mediator.Send(new DeleteUserAccountCommand(CurrentUser.UserId), cancellationToken);
         if (!succeeded)
@@ -78,7 +85,11 @@ public sealed class SubscribersController : ApiControllerBase
             throw new InvalidOperationException("Account credentials could not be deleted.");
 
         return NoContent();
-        }, cancellationToken);
+        }, token);
+        var result = _discovery?.RunJobs == true
+            ? await (_admission ?? throw new InvalidOperationException("discovery_admission_missing"))
+                .ReclaimAsync(DeleteAsync, cancellationToken)
+            : await DeleteAsync(cancellationToken);
         if (result is not NoContentResult || _archive is null) return result;
         // SQL/Identity commit has succeeded. Filesystem operations must not be replayed by EF.
         LocalEmailCleanupResult cleanup;

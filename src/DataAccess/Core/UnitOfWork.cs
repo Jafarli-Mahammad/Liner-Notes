@@ -17,7 +17,7 @@ public class UnitOfWork : IUnitOfWork
         _dataContext = dataContext;
     }
 
-    public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    private async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => await _dataContext.Database.BeginTransactionAsync(cancellationToken);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

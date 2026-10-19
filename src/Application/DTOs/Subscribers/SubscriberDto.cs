@@ -19,4 +19,5 @@ public record SubscriberDto(
     Guid? DeletedBy = null,
     DateTime? DeletedAt = null,
     bool IsDeleted = false,
-    DateTime? EmailUnsubscribedAtUtc = null);
+    DateTime? EmailUnsubscribedAtUtc = null,
+    bool WeeklyEmailOptIn = false);

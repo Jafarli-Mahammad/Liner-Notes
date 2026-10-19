@@ -18,22 +18,52 @@ public sealed record StoredResponse(string Provider, string Method, string Reque
     string Origin, string? ResponseSha256, DateTimeOffset? RetrievedAtUtc) : ExtensibleScoreRecord;
 public sealed record StoredObservation(string? Value, string? RawValue, string? MissingReason) : ExtensibleScoreRecord;
 public sealed record StoredTag(string Name, StoredObservation Count, string? Url,
-    StoredResponse Response, string? ExclusionReason, int UpstreamPosition) : ExtensibleScoreRecord;
+    StoredResponse Response, string? ExclusionReason, int UpstreamPosition) : ExtensibleScoreRecord
+{
+    public string? EntityIdentity { get; init; }
+}
 public sealed record StoredGap(string Seed, string Method, string Reason, StoredResponse? Response) : ExtensibleScoreRecord;
 public sealed record StoredDiscoveryPath(string Seed, StoredObservation Match,
     StoredResponse? SimilarityResponse, StoredResponse TrackResponse, int UpstreamPosition,
     string? TrackUrl, string? ArtistUrl, StoredObservation TrackListeners, string? RawRank,
-    string? DiscoveredArtist, int? SimilarityPosition) : ExtensibleScoreRecord;
+    string? DiscoveredArtist, int? SimilarityPosition) : ExtensibleScoreRecord
+{
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+}
 public sealed record StoredTasteSignal(Guid Id, string TargetType, string TargetValue, double Weight,
-    string Source, string Context) : ExtensibleScoreRecord;
+    string Source, string Context) : ExtensibleScoreRecord
+{
+    public Guid? CatalogRecordId { get; init; }
+    public Guid? CanonicalEntityId { get; init; }
+    public string? SelectionJson { get; init; }
+}
 public sealed record StoredSeed(string ArtistName, IReadOnlyDictionary<string, double> Weights,
     IReadOnlyList<StoredTag> Tags, StoredResponse Response, string? MissingReason,
-    IReadOnlyList<StoredGap> Gaps) : ExtensibleScoreRecord;
+    IReadOnlyList<StoredGap> Gaps) : ExtensibleScoreRecord
+{
+    public Guid? SignalId { get; init; }
+    public string? EntityIdentity { get; init; }
+    public string? TagScope { get; init; }
+    public double Influence { get; init; } = 1;
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+}
+public sealed record StoredAlbumFallback(Guid AlbumId, string AlbumName, Guid ArtistId, string ArtistName, double Influence);
 public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     IReadOnlyList<StoredSeed> Seeds, IReadOnlyList<StoredTag> CandidateTags,
     StoredResponse? CandidateTagResponse, IReadOnlyList<StoredDiscoveryPath> DiscoveryPaths,
     IReadOnlyList<StoredGap> Gaps, string TagScope, string PopularityMissingReason) : ExtensibleScoreRecord
 {
+    public string MaterializationVersion { get; init; } = "positive-signals-v1";
+    public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
+    public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+    public double SimilarityInfluence { get; init; } = 1;
+    public IReadOnlyList<StoredAlbumFallback> AlbumFallbacks { get; init; } = [];
+    public string? SelectionPolicy { get; init; }
+    public string? SelectionAnswers { get; init; }
+    public IReadOnlyList<string> SelectionReasons { get; init; } = [];
+    public string? FullInputSha256 { get; init; }
+    public int FullInputCount { get; init; }
+    public IReadOnlyList<string> AcquisitionWindow { get; init; } = [];
     public static ScoreEvidence Empty { get; } = new([], [], [], null, [], [], "artist", "not_supplied");
 }
 
@@ -51,9 +81,11 @@ public sealed record ScoreSnapshot : ExtensibleScoreRecord
     public required string TrackKey { get; init; }
     public required string ArtistName { get; init; }
     public required string Title { get; init; }
-    public required string Week { get; init; }
+    public string? Week { get; init; }
+    public Guid? DiscoveryBatchId { get; init; }
     public required IReadOnlyDictionary<string, double> TasteWeights { get; init; }
     public required IReadOnlyDictionary<string, double> CandidateWeights { get; init; }
+    public double? UnmatchedTasteSquared { get; init; }
     public double TasteMagnitude { get; init; }
     public double CandidateMagnitude { get; init; }
     public bool Familiarity { get; init; }

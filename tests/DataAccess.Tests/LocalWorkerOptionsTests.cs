@@ -17,6 +17,15 @@ public sealed class LocalWorkerOptionsTests
         Assert.ThrowsAny<Exception>(()=>LocalWorkerOptions.Parse(config));
     }
     [Fact]
+    public void ExplicitLiveCaptureRequiresEnabledListenBrainz()
+    {
+        var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>
+        { ["action"]="capture",["origin"]="Live",["week"]="2026-W41",["user"]=Guid.NewGuid().ToString(),
+          ["Generation:LiveEnabled"]="true",["Generation:Provider"]="listenbrainz" }).Build();
+        Assert.Equal(LinerNotes.Application.Common.Models.Recommendation.EvidenceOrigin.Live,LocalWorkerOptions.Parse(config).Origin);
+    }
+
+    [Fact]
     public void ExplicitCapture_IsAccepted()
     {
         var id=Guid.NewGuid();var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"action","capture"},{"origin","Synthetic"},{"week","2026-W41"},{"user",id.ToString()}}).Build();

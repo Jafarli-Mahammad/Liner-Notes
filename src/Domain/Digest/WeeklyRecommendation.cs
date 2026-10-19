@@ -11,8 +11,10 @@ namespace LinerNotes.Domain.Digest;
 /// </summary>
 public sealed class WeeklyRecommendation : AuditableEntity
 {
-    public Guid WeeklyDigestId { get; private set; }
-    public Guid UserId { get; private set; }
+    public Guid? WeeklyDigestId { get; private set; }
+    public Guid? UserId { get; private set; }
+    public Guid ProfileId { get; private set; }
+    public Guid BatchId { get; private set; }
     public Track Track { get; private set; }
     public int Rank { get; private set; }
     public ScoreBreakdown ScoreBreakdown { get; private set; }
@@ -46,12 +48,24 @@ public sealed class WeeklyRecommendation : AuditableEntity
         if (id.HasValue) Id = id.Value;
         WeeklyDigestId = weeklyDigestId;
         UserId = userId;
+        ProfileId = userId;
+        BatchId = weeklyDigestId;
         Track = track ?? throw new ArgumentNullException(nameof(track));
         Rank = rank;
         ScoreBreakdown = scoreBreakdown ?? throw new ArgumentNullException(nameof(scoreBreakdown));
         CreatedAt = DateTime.UtcNow;
     }
 
+    public static WeeklyRecommendation ForDiscovery(Guid profileId, Guid batchId, Guid? userId, Track track, int rank, ScoreBreakdown breakdown)
+    {
+        if (profileId == Guid.Empty || batchId == Guid.Empty || userId == Guid.Empty) throw new ArgumentException("Invalid owner.");
+        return new WeeklyRecommendation(batchId, profileId, track, rank, breakdown) { UserId = userId, WeeklyDigestId = null };
+    }
+    public void BindRegisteredProfile(Guid userId, Guid profileId)
+    {
+        if (UserId != userId || profileId == Guid.Empty) throw new ArgumentException("Invalid profile binding.");
+        ProfileId = profileId;
+    }
     public void RecordFeedback(UserFeedback feedback, string? comment = null, int? rating = null)
     {
         if (!Enum.IsDefined(feedback))

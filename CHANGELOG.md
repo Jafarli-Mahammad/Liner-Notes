@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased — renewal
+- Preserve canonical recording identity when storing onsite picks; keep recordings
+  with useful recording tags even when artist tags are missing.
+- Reject weekly saves after optional taste answers change, and allow catalog
+  favorites with display names up to the existing 256-character catalog limit.
+- Repair PR merge dependency locks and consolidate Qodana analysis while retaining
+  the existing Cloud project token configuration.
 - Add Qodana .NET configuration and GitHub PR analysis with pinned
   tooling, locked dependency restore, annotations and downloadable reports.
 - Add optional, resumable guest/account taste setup: three skippable questions,

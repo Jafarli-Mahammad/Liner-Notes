@@ -37,9 +37,10 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
 
     public async Task<GenerationInputs> ReadInputsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var profileId = await db.ListenerProfiles.Where(p => p.UserId == userId && db.Users.Any(u => u.Id == userId))
-            .Select(p => (Guid?)p.Id).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        bool exists = profileId.HasValue;
+        var profile = await db.ListenerProfiles.Where(p => p.UserId == userId && db.Users.Any(u => u.Id == userId))
+            .Select(p => new { p.Id, p.Revision, p.OnboardingJson }).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        Guid? profileId = profile?.Id;
+        bool exists = profile is not null;
         var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var feedback = await db.WeeklyRecommendations.Include(r => r.Track)
             .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId) && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
@@ -47,6 +48,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         {
             Exists = exists,
             ProfileId = profileId,
+            ProfileRevision = profile?.Revision,
+            Onboarding = profile?.OnboardingJson,
             Signals = signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
             Feedback = feedback.Select(r => new
             {

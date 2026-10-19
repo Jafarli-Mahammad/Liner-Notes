@@ -8,6 +8,9 @@ linter: jetbrains/qodana-dotnet:2026.2
 profile:
   name: qodana.recommended
 
+include:
+  - name: CheckDependencyLicenses
+
 dotnet:
   solution: Liner Notes.sln
   configuration: Release

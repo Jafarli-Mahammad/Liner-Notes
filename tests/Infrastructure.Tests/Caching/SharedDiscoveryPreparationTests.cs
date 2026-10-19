@@ -10,6 +10,24 @@ using Xunit;
 namespace LinerNotes.Infrastructure.Tests.Caching;
 public sealed class SharedDiscoveryPreparationTests
 {
+    [Theory]
+    [InlineData(201, false)]
+    [InlineData(256, false)]
+    [InlineData(201, true)]
+    [InlineData(256, true)]
+    public async Task CanonicalPoolsAcceptCatalogDisplayNamesUpTo256Characters(int length, bool recording)
+    {
+        var clock = new Clock();
+        var calls = new ConcurrentBag<ListenBrainzRequestKind>();
+        using var services = Services(calls, clock, live: false, cacheable: true);
+        using var caches = new DiscoveryMemoryCaches(new());
+        using var preparation = new SharedDiscoveryPreparation(services.GetRequiredService<IServiceScopeFactory>(), caches,
+            new() { Origin = EvidenceOrigin.Synthetic }, clock);
+        var request = new DiscoveryPoolRequest(Guid.NewGuid(), new string('x', length), false, recording);
+        Assert.NotEmpty((await preparation.GetAsync(request, default)).Candidates);
+        Assert.Throws<ArgumentException>(() => preparation.KeyFor(request with { Seed = new string('x', 257) }));
+    }
+
     [Fact]
     public async Task IdenticalPublicWorkIsCoalescedAndCanonicalArtistBypassesNameSearch()
     {

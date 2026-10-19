@@ -17,7 +17,7 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
     {
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
-        if (string.IsNullOrWhiteSpace(request.Seed) || request.Seed.Length > 200 || request.Seed.Any(char.IsControl) ||
+        if (string.IsNullOrWhiteSpace(request.Seed) || request.Seed.Length > 256 || request.Seed.Any(char.IsControl) ||
             request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue) || (request.IsRecording && (request.ArtistId is null || request.IsTag))) throw new ArgumentException("invalid_pool_seed");
         return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {

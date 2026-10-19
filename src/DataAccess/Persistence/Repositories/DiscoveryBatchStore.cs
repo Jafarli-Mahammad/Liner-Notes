@@ -97,7 +97,9 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
             if (pick.Breakdown.Snapshot?.DiscoveryBatchId != batchId) throw new InvalidOperationException("batch_score_identity_mismatch");
             var candidate = pick.Track;
             var track = await db.Tracks.AsTracking().Where(t => t.NormalizedArtistName == candidate.NormalizedArtistName &&
-                t.NormalizedTitle == candidate.NormalizedTitle).OrderBy(t => t.Id).FirstOrDefaultAsync(ct);
+                t.NormalizedTitle == candidate.NormalizedTitle &&
+                (candidate.Mbid == null ? t.Mbid == null : t.Mbid != null && t.Mbid.ToLower() == candidate.Mbid.ToLower()))
+                .OrderBy(t => t.Id).FirstOrDefaultAsync(ct);
             if (track is null) { track = candidate; db.Tracks.Add(track); }
             db.WeeklyRecommendations.Add(WeeklyRecommendation.ForDiscovery(job.ProfileId, batchId, profile.UserId,
                 track, ++rank, pick.Breakdown));

@@ -10,6 +10,9 @@ the existing CI workflow owns tests and container lifecycle checks.
 To activate `.github/workflows/qodana.yml`, create a Qodana Cloud project using
 the .NET linter and store its project token in the GitHub repository
 Actions secret `QODANA_TOKEN`. Tokens must never be added to `qodana.yaml`.
+The workflow also accepts the existing integration secret
+`QODANA_TOKEN_1205615720` so the configured Cloud project can continue to run.
+It replaces the older `qodana_code_quality.yml` workflow to avoid duplicate scans.
 
 The workflow runs on pushes to `main` and `Prism`, same-repository pull requests,
 and manual dispatch. It checks out the actual analyzed commit with full history,

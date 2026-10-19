@@ -79,3 +79,4 @@ Environment and constraints
 
 [stated] The developer approved implementation of `docs/superpowers/specs/2026-10-19-optional-taste-onboarding-design.md` starting from local commit 63a3789; this supersedes its documentation-only status. (2026-10-19)
 [verified] Recording onboarding needed both the Domain `TasteSignal.SetCatalogSelection` allowlist and the migration-only `CK_TasteSignals_CatalogSelection` constraint extended; adding a catalog enum member alone did not permit saving a recording favorite. Browser and PostgreSQL verification cover the complete path. (2026-10-19)
+[verified] PR CI builds the merge with its target branch: a clean `Prism` + `main` reproduction failed NU1004 because main's DataAccess lock contained an undeclared Pkcs central pin and duplicate package keys, while Prism-head restore passed. Regenerate and verify locks on the merged tree; see `docs/renewal/2026-10-19-pr-review-fixes.md`. (2026-10-19)

@@ -278,3 +278,16 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Extending an enum and import/search paths still left a Domain selection allowlist and a migration-only database CHECK constraint rejecting the new kind. Existing tests passed until the browser exercised saving an actual selected entity.
 **Suggested improvement:** Search all entity-kind guards, hand-written migration constraints, persistence readers, exports and immutable snapshots. Add an integration test that selects, saves and reads the new kind through the complete application path, including an upgrade from the old schema.
 **Principle:** Enum extension is an end-to-end data contract change; model-generated migrations do not discover custom SQL constraints.
+
+
+### Observation 028: Reproduce the PR merge before changing CI
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Session context:** Diagnosing a GitHub restore/Compose failure that passed on the source branch.
+**Skill:** ponytail; task-observer
+**Type:** open-source
+**Phase/Area:** CI failure triage
+**Issue:** Source-head restore and container checks passed, while the PR merge inherited a malformed dependency lock from its target branch. NU1510 warnings in the excerpt distracted from the actual NU1004 failure.
+**Suggested improvement:** Confirm which revision each job checks out, reproduce that merge in a disposable tree, and check lock-file JSON for duplicate keys before weakening locked restore or removing dependencies.
+**Principle:** A passing branch-head check does not validate the code that a merge-based PR workflow builds.

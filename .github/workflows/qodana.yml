@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Check Qodana configuration
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN || secrets.QODANA_TOKEN_1205615720 }}
         run: |
           if [ -z "$QODANA_TOKEN" ]; then
             echo '::error::Add the Qodana Cloud project token as the QODANA_TOKEN repository secret.'
@@ -54,4 +54,4 @@ jobs:
           pr-mode: true
           post-pr-comment: true
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN || secrets.QODANA_TOKEN_1205615720 }}

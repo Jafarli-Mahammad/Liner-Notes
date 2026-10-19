@@ -12,6 +12,21 @@ namespace LinerNotes.Infrastructure.Tests.Caching;
 
 public sealed class PersistentDiscoveryPreparationTests
 {
+    [Theory]
+    [InlineData(201, false)]
+    [InlineData(256, false)]
+    [InlineData(201, true)]
+    [InlineData(256, true)]
+    public async Task CanonicalSeedsAcceptCatalogDisplayNamesUpTo256Characters(int length, bool recording)
+    {
+        using var fixture = new Fixture();
+        using var caches = new DiscoveryMemoryCaches(new());
+        var seeds = fixture.Seeds(caches);
+        var request = new DiscoverySeedRequest(Guid.NewGuid(), new string('x', length), !recording, recording);
+        await seeds.GetAsync(request, true, default);
+        await Assert.ThrowsAsync<ArgumentException>(() => seeds.GetAsync(request with { Name = new string('x', 257) }, true, default));
+    }
+
     [Fact]
     public async Task PreparedLaneMissDoesNotAcquireOrWrite()
     {

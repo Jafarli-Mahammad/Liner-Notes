@@ -9,6 +9,23 @@ namespace LinerNotes.Infrastructure.Tests.RecommendationSources;
 public sealed class RecordingDiscoveryTests
 {
     [Fact]
+    public async Task RecordingTagsSupportCandidatesWithoutArtistTags()
+    {
+        var client = new RecordingClient { EmptyArtistTags = true };
+        var provider = new ListenBrainzRecommendationProvider(client);
+        var raw = await provider.GetCandidatesByRecordingsAsync([Guid.NewGuid()], 10, default);
+        var hydrated = await provider.HydrateCandidatesBatchAsync(raw.Items, default);
+        Assert.Equal(raw.Count, hydrated.Count);
+        Assert.NotEmpty(hydrated.Items);
+        Assert.All(hydrated.Items, item =>
+        {
+            Assert.Equal("recording", item.TagScope);
+            Assert.False(item.TagVector.IsEmpty);
+            Assert.Equal(1, item.TagVector["electronic"]);
+        });
+    }
+
+    [Fact]
     public async Task RecordingSimilarityUsesDirectRecordingEndpointAndKeepsItsIdentity()
     {
         var client = new RecordingClient(); var provider = new ListenBrainzRecommendationProvider(client);
@@ -58,11 +75,15 @@ public sealed class RecordingDiscoveryTests
 
     private sealed class RecordingClient : IListenBrainzApiClient
     {
+        public bool EmptyArtistTags { get; init; }
         public List<ListenBrainzRequest> Requests { get; } = [];
         private readonly FixtureListenBrainzApiClient fixture = new();
         public Task<ListenBrainzResponse> SendAsync(ListenBrainzRequest request, CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
+            if (EmptyArtistTags && request.Kind == ListenBrainzRequestKind.ArtistMetadata)
+                return Task.FromResult(ListenBrainzResponse.Parse(request, System.Text.Encoding.UTF8.GetBytes("[]"),
+                    EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow));
             return fixture.SendAsync(request, cancellationToken);
         }
     }

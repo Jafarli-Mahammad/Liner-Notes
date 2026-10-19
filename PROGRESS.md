@@ -58,7 +58,7 @@ ListenBrainz is the configured default; Last.fm remains available behind the pro
 4. **Provider release gates:** obtain written Last.fm public-page approval and verify applicable territorial, consent, recording, attribution, and hosting requirements. The request remains a draft; confirm the repository URL before sending it. See [Phase 3 references](docs/renewal/phase-3-evidence.md#authoritative-documentation) and the [release checklist](docs/renewal/phase-9-release-checklist.md).
 5. **Production operations:** choose hosting and delivery arrangements, validate storage limits against the chosen host, and complete the [Phase 9 release checklist](docs/renewal/phase-9-release-checklist.md). Production deployment and external email delivery have not been performed.
 6. **Phase 7 deployment checks:** inspect or convert any existing captured-email files and confirm persistent key-store access and backup protection before relying on encrypted capture. See [Phase 7 evidence](docs/renewal/phase-7-evidence.md).
-7. **External CI:** run GitHub Actions and remote scanning; neither has been verified from this checkout.
+7. **External CI:** GitHub Actions and Qodana have run and reported failures. The PR merge's malformed dependency lock and older Qodana workflow have local fixes; a successful GitHub rerun and GitGuardian incident classification remain pending. See [PR review evidence](docs/renewal/2026-10-19-pr-review-fixes.md).
 
 ## Phase implementation status
 

@@ -1,6 +1,7 @@
 """Boundary checks for the synthetic, bounded catalog resource probe."""
 import io
 import json
+import secrets
 from pathlib import Path
 import tempfile
 import unittest
@@ -145,7 +146,7 @@ class CatalogProbeTests(unittest.TestCase):
 
     def test_probe_requires_explicit_loopback_and_dedicated_database(self):
         base = dict(PGHOST='127.0.0.1', PGPORT='5432', PGDATABASE='liner_catalog_probe_test',
-                    PGUSER='postgres', PGPASSWORD='not-printed')
+                    PGUSER='postgres', PGPASSWORD=secrets.token_urlsafe(24))
         self.assertEqual('127.0.0.1', probe.database_environment(base)['PGHOST'])
         for changes in [dict(PGHOST='example.com'), dict(PGHOST='0.0.0.0'),
                         dict(PGDATABASE='postgres'), dict(PGHOSTADDR='203.0.113.1'),

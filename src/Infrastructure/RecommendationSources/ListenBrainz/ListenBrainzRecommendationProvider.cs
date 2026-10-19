@@ -139,9 +139,9 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
             bool direct = directTags is { Vector.IsEmpty: false };
 
             gaps.AddRange(tags.Gaps);
-            if (tags.Vector.IsEmpty)
+            if (!direct && tags.Vector.IsEmpty)
             {
-                gaps.Add(new(raw.CandidateKey, "metadata.artist", "no_valid_artist_tag_votes", tagInputs[0].Item2.Reference));
+                gaps.Add(new(raw.CandidateKey, "metadata.artist", "no_valid_artist_tag_votes", entry.Response));
                 continue;
             }
             hydrated.Add(new(Track.Create(raw.Title, raw.ArtistName, mbid: raw.Mbid), direct ? directTags!.Vector : tags.Vector, raw, direct ? directTags!.Tags : tags.Tags,

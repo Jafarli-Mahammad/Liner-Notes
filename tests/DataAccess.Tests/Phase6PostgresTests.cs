@@ -33,7 +33,7 @@ using Xunit.Abstractions;
 
 namespace LinerNotes.DataAccess.Tests;
 
-public sealed class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifetime
+public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsyncLifetime
 {
     private readonly Guid userId = Guid.NewGuid();
     private readonly string databaseName = "liner_phase6_" + Guid.NewGuid().ToString("N");

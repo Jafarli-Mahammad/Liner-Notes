@@ -17,7 +17,7 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
     {
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200 || request.Name.Any(char.IsControl) ||
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 256 || request.Name.Any(char.IsControl) ||
             request.EntityId == Guid.Empty || (request.IsAlbum && request.EntityId is null))
             throw new ArgumentException("invalid_seed_request");
         string key = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new

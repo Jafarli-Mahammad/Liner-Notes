@@ -17,7 +17,7 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -96,7 +96,8 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK_Users");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -106,6 +107,112 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("Users", "identity");
+                });
+
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageLedger", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("CoreLogicalBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CoreRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("LogicalBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RowCount")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ManagedStorageLedger", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.PublicEvidenceCacheEntry", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .UseCollation("C");
+
+                    b.Property<DateTimeOffset?>("AcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContentSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Origin")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long>("StoredBytes")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasComputedColumnSql("COALESCE(octet_length(\"PayloadJson\"),0)", true);
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("ExpiresAtUtc", "Key");
+
+                    b.ToTable("PublicEvidenceCache", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PublicEvidenceCache_Origin", "\"Origin\" IS NULL OR \"Origin\" IN ('Live','Synthetic')");
+
+                            t.HasCheckConstraint("CK_PublicEvidenceCache_Payload", "\"PayloadJson\" IS NULL OR (octet_length(\"PayloadJson\") <= 2097152 AND jsonb_typeof(\"PayloadJson\"::jsonb)='object')");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Alias")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .UseCollation("C");
+
+                    b.Property<DateTimeOffset>("FirstRecommendedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProfileId", "Alias");
+
+                    b.ToTable("RecommendedIdentities", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Album", b =>
@@ -126,6 +233,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<Guid?>("ReleaseGroupMbid")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -137,7 +247,32 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasIndex("Mbid");
 
+                    b.HasIndex("ReleaseGroupMbid")
+                        .IsUnique()
+                        .HasFilter("\"ReleaseGroupMbid\" IS NOT NULL");
+
                     b.ToTable("Albums", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.AlbumCredit", b =>
+                {
+                    b.Property<Guid>("AlbumId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ArtistId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AlbumId", "Position");
+
+                    b.HasIndex("ArtistId");
+
+                    b.HasIndex("AlbumId", "ArtistId")
+                        .IsUnique();
+
+                    b.ToTable("AlbumCredits", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Artist", b =>
@@ -167,6 +302,213 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasIndex("NormalizedName");
 
                     b.ToTable("Artists", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogHead", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicationId");
+
+                    b.ToTable("CatalogHead", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogPublication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ArtifactBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ExpectedRecords")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ImportedRecords")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsLookup")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetadataLicense")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NormalizationVersion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SourceUri")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SourceVersion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("TagLicense")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("State", "AcquiredAtUtc");
+
+                    b.HasIndex("State", "ExpiresAtUtc", "Id");
+
+                    b.ToTable("CatalogPublications", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AlbumId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AliasesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ArtistDisplayName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ArtistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CanonicalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreditsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
+                    b.Property<string>("Disambiguation")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("FirstReleaseDate")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReleasesJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
+                    b.Property<string>("RowSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("ArtistId");
+
+                    b.HasIndex("PublicationId", "Kind", "CanonicalId")
+                        .IsUnique();
+
+                    b.ToTable("CatalogRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL) OR (\"Kind\"='Track' AND \"ArtistId\" IS NULL AND \"AlbumId\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_CatalogRecords_JsonBound", "octet_length(\"AliasesJson\"::text)<=16384 AND octet_length(\"TagsJson\"::text)<=16384 AND octet_length(\"CreditsJson\"::text)<=16384");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogSearchTerm", b =>
+                {
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NormalizedTerm")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .UseCollation("C");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("RecordId", "NormalizedTerm");
+
+                    b.HasIndex("RecordId", "Kind");
+
+                    b.HasIndex("NormalizedTerm", "Kind", "RecordId");
+
+                    b.ToTable("CatalogSearchTerms", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Track", b =>
@@ -273,7 +615,13 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.HasKey("Id");
+                    b.Property<bool>("WeeklyEmailOptIn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id")
+                        .HasName("PK_Users");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -347,6 +695,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -370,6 +721,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProfileId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("SentAt")
@@ -396,6 +750,12 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BatchId")
+                        .IsUnique();
+
+                    b.HasIndex("BatchId", "ProfileId")
+                        .IsUnique();
+
                     b.HasIndex("UserId", "Week");
 
                     b.HasIndex("UserId", "WeekStartDate")
@@ -408,6 +768,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -443,6 +806,9 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid?>("LastModifiedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Rank")
                         .HasColumnType("integer");
 
@@ -456,10 +822,10 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("WeeklyDigestId")
+                    b.Property<Guid?>("WeeklyDigestId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -468,15 +834,275 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("BatchId", "ProfileId");
+
+                    b.HasIndex("BatchId", "Rank")
+                        .IsUnique();
+
+                    b.HasIndex("ProfileId", "CreatedAt");
+
                     b.HasIndex("WeeklyDigestId", "Rank");
 
                     b.ToTable("WeeklyRecommendations", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.DiscoveryBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CatalogVersion")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CoverageJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EvidenceVersion")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<long>("InputRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("ProfileId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("DiscoveryBatches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DiscoveryBatches_Coverage", "\"CoverageJson\" IS NULL OR octet_length(\"CoverageJson\"::text)<=32768");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.DiscoveryJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("InputRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProgressCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("RequestKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid?>("ResultBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_DiscoveryJobs_OneUnfinishedGeneration")
+                        .HasFilter("\"Kind\" = 'Generation' AND \"State\" IN ('Pending','Running','Retryable')");
+
+                    b.HasIndex("ProfileId", "RequestKey")
+                        .IsUnique();
+
+                    b.HasIndex("ResultBatchId", "ProfileId");
+
+                    b.HasIndex("State", "NextAttemptAtUtc", "Id");
+
+                    b.ToTable("DiscoveryJobs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DiscoveryJobs_PayloadBound", "octet_length(\"PayloadJson\"::text) <= 16384");
+
+                            t.HasCheckConstraint("CK_DiscoveryJobs_ResultBound", "\"ResultJson\" IS NULL OR octet_length(\"ResultJson\"::text) <= 32768");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.GuestSession", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CredentialHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("ProfileId");
+
+                    b.HasIndex("CredentialHash")
+                        .IsUnique();
+
+                    b.ToTable("GuestSessions", (string)null);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.ListenerProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastActiveAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OnboardingJson")
+                        .HasMaxLength(4096)
+                        .HasColumnType("text");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasFilter("\"ExpiresAtUtc\" IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("ListenerProfiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ListenerProfiles_Lifetime", "(\"UserId\" IS NULL AND \"ExpiresAtUtc\" IS NOT NULL) OR (\"UserId\" IS NOT NULL AND \"ExpiresAtUtc\" IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.RecentRecommendation", b =>
+                {
+                    b.Property<long>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Sequence"));
+
+                    b.Property<string>("ArtistName")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("MetadataExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("RecordingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Sequence");
+
+                    b.HasIndex("RecordingId")
+                        .IsUnique();
+
+                    b.ToTable("RecentRecommendations", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Taste.TasteSignal", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CanonicalEntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CatalogRecordId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Context")
@@ -510,6 +1136,12 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SelectionJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -525,13 +1157,15 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<double>("Weight")
                         .HasColumnType("double precision");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProfileId", "TargetType", "NormalizedTargetValue");
 
                     b.HasIndex("UserId", "TargetType", "NormalizedTargetValue");
 
@@ -687,12 +1321,73 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.ToTable("UserTokens", "identity");
                 });
 
+            modelBuilder.Entity("LinerNotes.DataAccess.Persistence.Accounting.RecommendedIdentity", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LinerNotes.Domain.Catalog.Album", b =>
                 {
                     b.HasOne("LinerNotes.Domain.Catalog.Artist", null)
                         .WithMany()
                         .HasForeignKey("ArtistId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.AlbumCredit", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.Album", null)
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LinerNotes.Domain.Catalog.Artist", null)
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogHead", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogPublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogRecord", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.Album", null)
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LinerNotes.Domain.Catalog.Artist", null)
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogPublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Catalog.CatalogSearchTerm", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Catalog.CatalogRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RecordId", "Kind")
+                        .HasPrincipalKey("Id", "Kind")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Digest.User", b =>
@@ -720,6 +1415,14 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", "Batch")
+                        .WithOne()
+                        .HasForeignKey("LinerNotes.Domain.Digest.WeeklyDigest", "BatchId", "ProfileId")
+                        .HasPrincipalKey("LinerNotes.Domain.Discovery.DiscoveryBatch", "Id", "ProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Batch");
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Digest.WeeklyRecommendation", b =>
@@ -733,25 +1436,76 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("LinerNotes.Domain.Digest.WeeklyDigest", null)
                         .WithMany("Recommendations")
                         .HasForeignKey("WeeklyDigestId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", null)
+                        .WithMany()
+                        .HasForeignKey("BatchId", "ProfileId")
+                        .HasPrincipalKey("Id", "ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.DiscoveryBatch", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.DiscoveryJob", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LinerNotes.Domain.Discovery.DiscoveryBatch", null)
+                        .WithMany()
+                        .HasForeignKey("ResultBatchId", "ProfileId")
+                        .HasPrincipalKey("Id", "ProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.GuestSession", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithOne()
+                        .HasForeignKey("LinerNotes.Domain.Discovery.GuestSession", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.ListenerProfile", b =>
+                {
+                    b.HasOne("LinerNotes.Domain.Digest.User", null)
+                        .WithOne("Profile")
+                        .HasForeignKey("LinerNotes.Domain.Discovery.ListenerProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
             modelBuilder.Entity("LinerNotes.Domain.Taste.TasteSignal", b =>
                 {
+                    b.HasOne("LinerNotes.Domain.Discovery.ListenerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LinerNotes.Domain.Digest.User", null)
                         .WithMany("TasteSignals")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -808,6 +1562,8 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
             modelBuilder.Entity("LinerNotes.Domain.Digest.User", b =>
                 {
                     b.Navigation("Connections");
+
+                    b.Navigation("Profile");
 
                     b.Navigation("TasteSignals");
                 });

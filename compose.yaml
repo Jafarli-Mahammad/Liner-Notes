@@ -8,6 +8,11 @@ x-local-settings: &local-settings
   LastFm__Mode: FixtureOnly
   LastFm__ApiKey: ""
   Generation__Origin: Synthetic
+  Generation__Provider: listenbrainz
+  Generation__LiveEnabled: "false"
+  ListenBrainz__Mode: FixtureOnly
+  ListenBrainz__LiveUseApproved: "false"
+  ListenBrainz__RateLimitDirectory: /app/local-state/upstream-pacing
   LocalEmail__Enabled: "true"
   LocalEmail__ApplicationOrigin: http://127.0.0.1:${LINER_WEB_PORT:-8080}
   LocalEmail__SinkRoot: /app/local-state/copies

@@ -11,15 +11,26 @@ public sealed record EffectiveTasteInputs(IReadOnlyList<TasteSignal> PositiveSig
 {
     public static EffectiveTasteInputs From(Guid userId, IReadOnlyList<TasteSignal> signals,
         IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
+        => Build(userId, signals.Where(s => s.UserId == userId).ToArray(),
+            recommendations.Where(r => r.UserId == userId).ToArray(), config);
+
+    public static EffectiveTasteInputs FromProfile(Guid profileId, IReadOnlyList<TasteSignal> signals,
+        IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
+        => Build(profileId, signals.Where(s => s.ProfileId == profileId).ToArray(),
+            recommendations.Where(r => r.ProfileId == profileId).ToArray(), config);
+
+    private static EffectiveTasteInputs Build(Guid userId, IReadOnlyList<TasteSignal> signals,
+        IReadOnlyList<WeeklyRecommendation> recommendations, PositiveFeedbackWeights config)
     {
         if (!double.IsFinite(config.FeedbackTagWeight) || config.FeedbackTagWeight < 0 ||
             !double.IsFinite(config.MinimumPositiveFeedbackWeight) || config.MinimumPositiveFeedbackWeight is < 0 or > 1)
             throw new ArgumentException("Invalid positive feedback configuration.");
         var positives = signals.Where(s => s.Source is not (TasteSignalSource.RecommendationLike or
             TasteSignalSource.RecommendationDislike or TasteSignalSource.RecommendationAlreadyKnown or TasteSignalSource.RecommendationRating))
-            .Where(s => s.Weight > 0 && s.TargetType is TasteTargetType.Artist or TasteTargetType.Tag).ToList();
+            .Where(s => s.Weight > 0 && s.TargetType is TasteTargetType.Artist or TasteTargetType.Tag or TasteTargetType.Album or TasteTargetType.Track).ToList();
         if (signals.Any(s => !double.IsFinite(s.Weight))) throw new ArgumentException("Nonfinite taste signal.");
-        var excluded = new HashSet<string>(StringComparer.Ordinal);
+        var excluded = positives.Where(s => s.TargetType == TasteTargetType.Track && s.CanonicalEntityId.HasValue)
+            .Select(s => "mbid:" + s.CanonicalEntityId!.Value.ToString("D")).ToHashSet(StringComparer.Ordinal);
         var feedback = recommendations.OrderByDescending(r => r.FeedbackGivenAt)
             .ThenByDescending(r => r.Id.ToString("D"), StringComparer.Ordinal).ToArray();
 

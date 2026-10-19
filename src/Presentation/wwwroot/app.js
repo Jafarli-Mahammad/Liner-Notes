@@ -21,6 +21,7 @@ function acceptSession(data) {
   state.token = data.accessToken;
   state.refreshToken = data.refreshToken;
   state.user = data.user;
+  window.discoveryApp?.sessionChanged(true);
 }
 
 async function refreshSession(epoch) {
@@ -47,8 +48,8 @@ async function apiFetch(url, options = {}) {
   if (!url.startsWith(`${API_BASE}/`)) throw new Error('Invalid API address.');
   const epoch = state.sessionEpoch;
   const token = state.token;
-  const send = () => fetch(url, { ...options, credentials: 'omit', cache: 'no-store',
-    headers: { ...options.headers, Authorization: `Bearer ${state.token}` } });
+  const send = () => fetch(url, { ...options, credentials: options.credentials ?? 'omit', cache: 'no-store',
+    headers: { ...options.headers, ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) } });
   let response = await send();
   if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
   if (response.status === 401 && state.refreshToken) {
@@ -57,7 +58,7 @@ async function apiFetch(url, options = {}) {
     response = await send();
     if (epoch !== state.sessionEpoch) throw new Error('Session changed.');
   }
-  if (response.status === 401) logout();
+  if (response.status === 401 && state.token) logout();
   return response;
 }
 
@@ -77,36 +78,18 @@ const sampleGuestPicks = [
     title: "Ageispolis",
     artist: "Aphex Twin",
     album: "Selected Ambient Works 85-92",
-    score: 0.842,
-    tagScore: 0.912,
-    popularityPenalty: 0.120,
-    noveltyBoost: 0.050,
-    topTags: ["idm", "ambient techno", "electronic"],
-    feedback: null
   },
   {
     id: "00000000-0000-0000-0000-000000000002",
     title: "A Forest",
     artist: "The Cure",
     album: "Seventeen Seconds",
-    score: 0.785,
-    tagScore: 0.890,
-    popularityPenalty: 0.155,
-    noveltyBoost: 0.050,
-    topTags: ["post-punk", "gothic rock", "new wave"],
-    feedback: null
   },
   {
     id: "00000000-0000-0000-0000-000000000003",
     title: "Yolculuk",
     artist: "Altın Gün",
     album: "Gece",
-    score: 0.814,
-    tagScore: 0.875,
-    popularityPenalty: 0.081,
-    noveltyBoost: 0.020,
-    topTags: ["anatolian rock", "psychedelic rock"],
-    feedback: null
   }
 ];
 
@@ -131,29 +114,25 @@ function buildDeepLinks(artist, title) {
 }
 
 function renderScoreBreakdown(item) {
+  const score = Number(item.score) || 0;
+  const tagScore = Number(item.tagScore) || 0;
+  const novelty = Number(item.noveltyBoost) || 0;
+  const feedbackPenalty = Number(item.feedbackPenalty) || 0;
+  const tags = Array.isArray(item.topTags) ? item.topTags : [];
+
   return `
-    <div class="breakdown-box">
-      <strong>Stored Score Breakdown (Residue: Prism Engine)</strong>
-      <div class="breakdown-grid">
-        <div class="breakdown-item">
-          <span class="label">Tag Overlap ($S_{tag}$)</span>
-          <span class="val">${item.tagScore ? item.tagScore.toFixed(3) : '0.000'}</span>
+    <details class="reason-details">
+      <summary>Why this was picked <span class="score-pill">Overall score ${score.toFixed(3)}</span></summary>
+      <div class="breakdown-box">
+        <strong>Score details saved with this pick</strong>
+        <div class="breakdown-grid">
+          <div class="breakdown-item"><span class="label">Taste match</span><span class="val">${tagScore.toFixed(3)}</span></div>
+          <div class="breakdown-item"><span class="label">Novelty adjustment</span><span class="val">${novelty >= 0 ? '+' : ''}${novelty.toFixed(3)}</span></div>
+          <div class="breakdown-item"><span class="label">Feedback adjustment</span><span class="val">${feedbackPenalty > 0 ? '-' : ''}${feedbackPenalty.toFixed(3)}</span></div>
         </div>
-        <div class="breakdown-item">
-          <span class="label">Pop. Penalty ($P_{pop}$)</span>
-          <span class="val">-${item.popularityPenalty ? item.popularityPenalty.toFixed(3) : '0.000'}</span>
-        </div>
-        <div class="breakdown-item">
-          <span class="label">Novelty Boost ($A_{nov}$)</span>
-          <span class="val">+${item.noveltyBoost ? item.noveltyBoost.toFixed(3) : '0.000'}</span>
-        </div>
-        <div class="breakdown-item">
-          <span class="label">Composite Score</span>
-          <span class="val" style="color: var(--accent-primary);">${item.score ? item.score.toFixed(3) : '0.000'}</span>
-        </div>
+        ${tags.length ? `<p class="matched-tags"><strong>Matched styles:</strong> ${tags.map(escapeHtml).join(', ')}</p>` : ''}
       </div>
-      ${item.topTags ? `<div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Matched tags: ${item.topTags.map(escapeHtml).join(', ')}</div>` : ''}
-    </div>
+    </details>
   `;
 }
 
@@ -162,102 +141,96 @@ function renderTrackCard(track, isGuest = false) {
   const safeTitle = escapeHtml(track.title);
   const safeArtist = escapeHtml(track.artist);
   const safeAlbum = escapeHtml(track.album || '');
+  const feedbackControls = isGuest ? '' : `
+    <div class="feedback-actions" aria-label="Rate this recommendation">
+      <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Liked" data-guest="false">I like this</button>
+      <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Disliked" data-guest="false">Not for me</button>
+      <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="AlreadyKnown" data-guest="false">Already know it</button>
+    </div>
+    <div class="rating-bar" aria-label="Rate this pick from 1 to 10">
+      <span class="rating-label">Rate this pick</span>
+      ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => `
+        <button class="btn-rating-num ${track.rating === rating ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="${rating >= 7 ? 'Liked' : rating <= 3 ? 'Disliked' : 'None'}" data-rating="${rating}" data-guest="false" aria-label="Rate ${rating} out of 10">${rating}</button>
+      `).join('')}
+    </div>
+  `;
 
   return `
-    <div class="card" id="card-${safeId}">
-      <div class="card-header">
-        <div>
-          <div class="card-title">${safeTitle}</div>
+    <article class="card track-card" id="card-${safeId}">
+      <div class="track-card-head">
+        <div class="track-heading">
+          <h3 class="card-title">${safeTitle}</h3>
           <div class="track-artist">${safeArtist}</div>
-          <div class="track-meta">${safeAlbum}</div>
+          ${safeAlbum ? `<div class="track-meta">${safeAlbum}</div>` : ''}
         </div>
+        ${isGuest ? '<div class="track-labels"><span class="preview-pill">Example only</span></div>' : ''}
       </div>
       ${buildDeepLinks(track.artist, track.title)}
-      ${renderScoreBreakdown(track)}
-      <div class="feedback-actions">
-        <button class="btn-feedback liked ${track.feedback === 'Liked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Liked" data-guest="${isGuest}">
-          👍 Like
-        </button>
-        <button class="btn-feedback disliked ${track.feedback === 'Disliked' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="Disliked" data-guest="${isGuest}">
-          👎 Dislike
-        </button>
-        <button class="btn-feedback known ${track.feedback === 'AlreadyKnown' ? 'active' : ''}" data-action="feedback" data-id="${safeId}" data-feedback="AlreadyKnown" data-guest="${isGuest}">
-          🎧 Already Know This
-        </button>
-      </div>
-      <div class="rating-bar" style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
-        <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 0.35rem;">Rate 1–10:</span>
-        ${[1,2,3,4,5,6,7,8,9,10].map(r => `
-          <button type="button" class="btn-rating-num ${track.rating === r ? 'active' : ''}" 
-                  style="padding: 2px 7px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background: ${track.rating === r ? 'var(--accent-primary)' : 'var(--bg-secondary)'}; color: ${track.rating === r ? '#fff' : 'var(--text-color)'}; cursor: pointer;"
-                  data-action="feedback" data-id="${safeId}" data-feedback="${r >= 7 ? 'Liked' : (r <= 3 ? 'Disliked' : 'None')}" data-rating="${r}" data-guest="${isGuest}">${r}</button>
-        `).join('')}
-      </div>
-    </div>
+      ${isGuest ? '<p class="action-note">Feedback can be saved to your account on generated recommendations.</p>' : renderScoreBreakdown(track)}
+      ${feedbackControls}
+    </article>
   `;
 }
 
 async function loadDiscovery() {
+  if (window.discoveryApp && await window.discoveryApp.renderDiscovery()) return;
   const container = document.getElementById('discovery-container');
   const epoch = state.sessionEpoch;
+
   if (!state.token) {
     container.innerHTML = `
-      <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-        <strong>Guest Preview Mode</strong>: These three synthetic examples demonstrate the interface; they are not scored recommendations.
-        <a href="#" data-action="tab" data-tab="auth" style="color: var(--accent-primary); text-decoration: underline;">Create an account</a> to save seed preferences. Weekly email delivery is still in development.
+      <div class="notice notice-preview">
+        <strong>Preview examples only</strong>
+        <p>These sample tracks are fixed demo content, not recommendations generated from your taste. Create an account and add 3–5 artists or styles to save a profile.</p>
+        <p><a href="#tab-auth" data-action="tab" data-tab="auth">Create an account</a> or <a href="#tab-seeding" data-action="tab" data-tab="seeding">set up your taste profile</a>.</p>
       </div>
-      ${sampleGuestPicks.map(p => renderTrackCard(p, true)).join('')}
+      <div class="content-stack">${sampleGuestPicks.map(pick => renderTrackCard(pick, true)).join('')}</div>
     `;
     return;
   }
 
-  container.innerHTML = '<p>Loading your weekly digest...</p>';
+  container.innerHTML = '<p role="status">Loading your weekly picks…</p>';
   try {
-    const res = await apiFetch(`${API_BASE}/digests/latest`, {
-      headers: { 'Authorization': `Bearer ${state.token}` }
+    const response = await apiFetch(`${API_BASE}/digests/latest`, {
+      headers: { Authorization: `Bearer ${state.token}` }
     });
     if (epoch !== state.sessionEpoch) return;
 
-    if (res.status === 404) {
+    if (response.status === 404) {
       container.innerHTML = `
-        <div class="card">
-          <h3>No Digest Generated Yet</h3>
-          <p style="color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
-            No digest is available yet. You can save seed preferences while digest generation is in development.
-          </p>
-          <button class="btn-primary" data-action="tab" data-tab="seeding">Go to Taste Seeding</button>
+        <div class="notice">
+          <strong>No weekly picks yet</strong>
+          <p>Add a few artists or styles to your taste profile. A digest has not been generated for this account yet.</p>
+          <p><button class="button button-primary" type="button" data-action="tab" data-tab="seeding">Set up your taste profile</button></p>
         </div>
       `;
       return;
     }
+    if (!response.ok) throw new Error('Could not load your weekly picks.');
 
-    if (!res.ok) throw new Error('Failed to load digest');
-    const digest = await res.json();
+    const digest = await response.json();
     if (epoch !== state.sessionEpoch) return;
-
-    const items = digest.recommendations.map(r => ({
-      id: r.id,
-      title: r.track?.title || 'Unknown Track',
-      artist: r.track?.artistName || 'Unknown Artist',
-      album: r.track?.albumTitle || '',
-      score: r.scoreBreakdown?.finalScore || 0,
-      tagScore: r.scoreBreakdown?.tagSimilarityScore || 0,
-      popularityPenalty: r.scoreBreakdown?.popularityPenalty || 0,
-      noveltyBoost: r.scoreBreakdown?.noveltyBoost || 0,
-      topTags: (r.scoreBreakdown?.matchedTags || []).map(t => t.tagName),
-      feedback: r.feedback,
-      rating: r.rating
+    const items = digest.recommendations.map(recommendation => ({
+      id: recommendation.id,
+      title: recommendation.track?.title || 'Unknown track',
+      artist: recommendation.track?.artistName || 'Unknown artist',
+      album: recommendation.track?.albumTitle || '',
+      score: recommendation.scoreBreakdown?.finalScore || 0,
+      tagScore: recommendation.scoreBreakdown?.tagSimilarityScore || 0,
+      noveltyBoost: recommendation.scoreBreakdown?.noveltyBoost || 0,
+      feedbackPenalty: recommendation.scoreBreakdown?.feedbackPenalty || 0,
+      topTags: (recommendation.scoreBreakdown?.matchedTags || []).map(tag => tag.tagName),
+      feedback: recommendation.feedback,
+      rating: recommendation.rating
     }));
 
     container.innerHTML = `
-      <div style="margin-bottom: 1rem; color: var(--text-muted);">
-        Showing Weekly Digest for <strong>${escapeHtml(digest.week)}</strong> (${items.length} picks)
-      </div>
-      ${items.map(p => renderTrackCard(p, false)).join('')}
+      <p class="data-meta">Week of ${escapeHtml(digest.week)} · ${items.length} ${items.length === 1 ? 'pick' : 'picks'}</p>
+      <div class="content-stack">${items.map(pick => renderTrackCard(pick)).join('')}</div>
     `;
-  } catch (err) {
+  } catch (error) {
     if (epoch !== state.sessionEpoch) return;
-    container.innerHTML = `<p style="color: var(--accent-danger);">Error loading digest: ${escapeHtml(err.message)}</p>`;
+    container.innerHTML = `<div class="notice notice-error">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -313,8 +286,6 @@ function setRatingSelection(card, rating) {
   card.querySelectorAll('.btn-rating-num').forEach(button => {
     const selected = rating !== null && Number(button.textContent.trim()) === rating;
     button.classList.toggle('active', selected);
-    button.style.background = selected ? 'var(--accent-primary)' : 'var(--bg-secondary)';
-    button.style.color = selected ? '#fff' : 'var(--text-color)';
   });
 }
 
@@ -333,8 +304,8 @@ function toggleTag(tag) {
   if (state.selectedTags.has(tag)) {
     state.selectedTags.delete(tag);
   } else {
-    if (state.selectedTags.size >= 5) {
-      alert('You can select up to 5 seed tags.');
+    if (getSeedCount() >= 5) {
+      alert('Choose no more than 5 artists and styles altogether.');
       return;
     }
     state.selectedTags.add(tag);
@@ -342,121 +313,121 @@ function toggleTag(tag) {
   updateTagUI();
 }
 
+function getSeedCount() {
+  const artists = document.getElementById('seed-artists').value
+    .split(',')
+    .map(artist => artist.trim())
+    .filter(Boolean);
+  return state.selectedTags.size + artists.length;
+}
+
 function updateTagUI() {
-  document.querySelectorAll('.tag-btn').forEach(btn => {
-    const tag = btn.dataset.tag;
-    if (state.selectedTags.has(tag)) {
-      btn.classList.add('selected');
-    } else {
-      btn.classList.remove('selected');
-    }
+  document.querySelectorAll('.tag-btn').forEach(button => {
+    const selected = state.selectedTags.has(button.dataset.tag);
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
   });
-  document.getElementById('seed-count').innerText = `${state.selectedTags.size} / 3–5 seeds selected`;
+
+  const count = getSeedCount();
+  const countLabel = document.getElementById('seed-count');
+  countLabel.textContent = `${count} of 3–5 selected`;
+  countLabel.dataset.overLimit = String(count > 5);
+}
+
+function setSeedStatus(message, kind = '') {
+  const status = document.getElementById('seed-status');
+  status.textContent = message;
+  status.classList.toggle('is-error', kind === 'error');
+  status.classList.toggle('is-success', kind === 'success');
 }
 
 async function submitSeeds() {
   if (!state.token) {
-    alert('Please sign in or register to persist your taste seeds.');
+    setSeedStatus('Sign in or create an account to save your taste profile.', 'error');
     switchTab('auth');
     return;
   }
 
-  const artistsInput = document.getElementById('seed-artists').value;
-  const artists = artistsInput
+  const artists = document.getElementById('seed-artists').value
     .split(',')
-    .map(a => a.trim())
-    .filter(a => a.length > 0)
-    .map(a => ({ artistName: a, initialWeight: 1.0 }));
-
-  const tags = Array.from(state.selectedTags).map(t => ({
-    tagName: t,
-    initialWeight: 1.0
-  }));
-
+    .map(artist => artist.trim())
+    .filter(Boolean)
+    .map(artistName => ({ artistName, initialWeight: 1.0 }));
+  const tags = Array.from(state.selectedTags).map(tagName => ({ tagName, initialWeight: 1.0 }));
   const total = tags.length + artists.length;
+
   if (total < 3 || total > 5) {
-    alert(`Please provide between 3 and 5 total seeds (tags + artists). Currently selected: ${total}`);
+    setSeedStatus(`Choose 3–5 artists and styles altogether. You have ${total}.`, 'error');
     return;
   }
 
+  setSeedStatus('Saving your taste profile…');
   try {
-    const res = await apiFetch(`${API_BASE}/taste/seed`, {
+    const response = await apiFetch(`${API_BASE}/taste/seed`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.token}`
+        Authorization: `Bearer ${state.token}`
       },
       body: JSON.stringify({ tags, artists })
     });
 
-    if (res.ok) {
-      alert('Taste seeds saved successfully! Your profile is configured.');
-      switchTab('discovery');
-    } else {
-      const err = await res.json();
-      alert('Error saving seeds: ' + (err.detail || 'Validation failed.'));
+    if (response.ok) {
+      setSeedStatus('Your taste profile was saved.', 'success');
+      return;
     }
-  } catch (err) {
-    alert('Submission failed: ' + err.message);
+
+    const problem = await response.json();
+    setSeedStatus(problem.detail || 'Your taste profile could not be saved.', 'error');
+  } catch (error) {
+    setSeedStatus(`Your taste profile could not be saved: ${error.message}`, 'error');
   }
 }
 
-/**
- * Renders the authenticated account export, or a sign-in prompt when signed out.
- * Displays request errors in the export container and ignores responses after a session change.
- */
 async function loadYourData() {
+  if (window.discoveryApp && await window.discoveryApp.renderData()) return;
   const container = document.getElementById('export-container');
   const epoch = state.sessionEpoch;
   if (!state.token) {
     container.innerHTML = `
-      <p style="color: var(--text-muted);">
-        Sign in to inspect and export your stored account and taste records.
-      </p>
+      <div class="notice">
+        <strong>Sign in to see your saved information</strong>
+        <p>Your taste profile, recommendation history, and export are available after you sign in.</p>
+        <p><a href="#tab-auth" data-action="tab" data-tab="auth">Go to your account</a></p>
+      </div>
     `;
     return;
   }
 
-  container.innerHTML = '<p>Retrieving your stored records...</p>';
+  container.innerHTML = '<p role="status">Loading your saved information…</p>';
   try {
-    const res = await apiFetch(`${API_BASE}/export/my-data`, {
-      headers: { 'Authorization': `Bearer ${state.token}` }
+    const response = await apiFetch(`${API_BASE}/export/my-data`, {
+      headers: { Authorization: `Bearer ${state.token}` }
     });
-
-    if (!res.ok) throw new Error('Failed to retrieve export');
-    const data = await res.json();
+    if (!response.ok) throw new Error('Could not load your saved information.');
+    const data = await response.json();
     if (epoch !== state.sessionEpoch) return;
 
     container.innerHTML = `
-      <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <strong>Export Version:</strong> ${escapeHtml(data.exportVersion)} | 
-          <strong>Generated:</strong> ${escapeHtml(new Date(data.exportedAtUtc).toLocaleString())}
+      <div class="surface">
+        <div class="data-toolbar">
+          <div><strong>Data export</strong><div class="data-meta">Version ${escapeHtml(data.exportVersion)} · Created ${escapeHtml(new Date(data.exportedAtUtc).toLocaleString())}</div></div>
+          <button class="button button-primary" data-action="downloadExport">Download JSON</button>
         </div>
-        <button class="btn-primary" data-action="downloadExport">Download JSON Export</button>
-      </div>
-      <p style="color: var(--text-muted); font-size: 0.85rem;">
-        This export includes your account profile, taste records, recommendation history, and sanitized local email copies.
-        Credentials and authentication internals are excluded.
-      </p>
-      <pre id="json-dump-pre" class="json-dump"></pre>
-      <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-        <h4>Danger Zone</h4>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
-          Delete your account and its stored taste data. Local email copy cleanup is reported separately.
-          Shared music catalog records and backups remain; copies outside this service are not erased.
-        </p>
-        <button class="btn-danger" data-action="deleteAccount">Delete My Account</button>
+        <p class="data-description">The export includes your account profile, taste records, recommendation history, and sanitized local email copies. Credentials and authentication internals are excluded.</p>
+        <pre id="json-dump-pre" class="json-dump"></pre>
+        <section class="danger-zone" aria-labelledby="danger-heading">
+          <h3 id="danger-heading">Delete your account</h3>
+          <p>This removes your account and stored taste data. Some local email copies may require separate cleanup. Shared music catalog records and backups are not erased.</p>
+          <button class="btn-danger" data-action="deleteAccount">Delete account</button>
+        </section>
       </div>
     `;
-
-    const pre = document.getElementById('json-dump-pre');
-    if (pre) {
-      pre.textContent = JSON.stringify(data, null, 2);
-    }
-  } catch (err) {
+    const preview = document.getElementById('json-dump-pre');
+    if (preview) preview.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
     if (epoch !== state.sessionEpoch) return;
-    container.innerHTML = `<p style="color: var(--accent-danger);">Error: ${escapeHtml(err.message)}</p>`;
+    container.innerHTML = `<div class="notice notice-error">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -515,10 +486,13 @@ async function handleRegister(e) {
   const password = document.getElementById('reg-password').value;
 
   try {
+    const guest = await window.discoveryApp?.registrationOptions() ?? {};
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userName, email, password })
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(guest.csrf ? { 'X-CSRF-TOKEN': guest.csrf } : {}) },
+      body: JSON.stringify({ userName, email, password, preserveGuestProgress: guest.preserve ?? false,
+        weeklyEmailOptIn: document.getElementById('reg-weekly-email').checked })
     });
     if (attemptId !== state.authAttemptId) return;
 
@@ -575,6 +549,7 @@ function logout() {
   state.refreshToken = null;
   refreshInFlight = null;
   state.user = null;
+  window.discoveryApp?.sessionChanged();
   localStorage.removeItem('linernotes_token');
   document.getElementById('export-container').replaceChildren();
   document.getElementById('discovery-container').replaceChildren();
@@ -583,32 +558,32 @@ function logout() {
 }
 
 function updateAuthUI() {
-  const badge = document.getElementById('auth-status');
+  const status = document.getElementById('auth-status');
   if (state.token) {
-    badge.innerHTML = `
-      <span>Subscriber Active</span> | 
-      <a href="#" data-action="logout" style="color: var(--accent-primary); text-decoration: underline;">Logout</a>
-    `;
+    status.innerHTML = `<div class="account-state"><span class="account-state-dot" aria-hidden="true"></span><span>Signed in</span><button class="text-button" data-action="logout">Sign out</button></div>`;
   } else {
-    badge.innerHTML = `
-      <a href="#" data-action="tab" data-tab="auth" style="color: var(--accent-primary); text-decoration: underline;">Sign In / Register</a>
-    `;
+    status.innerHTML = `<a href="#tab-auth" data-action="tab" data-tab="auth">Sign in or create an account</a>`;
   }
 }
 
 function switchTab(tabName) {
+  window.discoveryApp?.leave();
+  document.querySelector('.page-heading').hidden = tabName !== 'discovery';
   state.activeTab = tabName;
-  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-
-  const tab = document.getElementById(`tab-${tabName}`);
-  if (tab) tab.classList.add('active');
-
-  const navBtn = document.getElementById(`nav-${tabName}`);
-  if (navBtn) navBtn.classList.add('active');
-
+  document.querySelectorAll('.tab-pane').forEach(panel => {
+    const active = panel.id === `tab-${tabName}`;
+    panel.classList.toggle('active', active);
+    panel.hidden = !active;
+  });
+  document.querySelectorAll('[data-nav-tab]').forEach(tab => {
+    const active = tab.dataset.tab === tabName;
+    tab.classList.toggle('active', active);
+    if (active) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  });
   if (tabName === 'discovery') loadDiscovery();
   if (tabName === 'your-data') loadYourData();
+  if (tabName === 'seeding') window.discoveryApp?.renderTaste();
 }
 
 document.addEventListener('click', event => {
@@ -630,6 +605,8 @@ document.addEventListener('click', event => {
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('register-form').addEventListener('submit', handleRegister);
   document.getElementById('login-form').addEventListener('submit', handleLogin);
+  document.getElementById('seed-artists').addEventListener('input', updateTagUI);
+  updateTagUI();
   updateAuthUI();
   loadDiscovery();
 });

@@ -102,7 +102,7 @@ class Check:
         captured = self.worker(user, week, "capture")
         assert field(captured, "status") == "local_captured", "encrypted capture failed"
         status, export = self.http("GET", "/api/export/my-data", token=token)
-        assert status == 200 and field(export, "exportVersion") == "2.2", "export contract changed"
+        assert status == 200 and field(export, "exportVersion") == "2.5", "export contract changed"
         digest = field(export, "digests")[0]
         assert field(digest, "status") == "LocalCaptured" and field(digest, "sentAt") is None
         assert 0 < len(field(digest, "recommendations")) <= 5, "fixture picks missing"
@@ -133,7 +133,8 @@ class Check:
 
         due = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         sql = f'''UPDATE public."Users" SET "DeliveryDay"='Monday', "DeliveryHourUtc"=0,
-                  "NextDigestAt"='{due.isoformat()}' WHERE "Id"='{user}';'''
+                  "WeeklyEmailOptIn"=TRUE, "NextDigestAt"='{due.isoformat()}' WHERE "Id"='{user}';
+                  UPDATE identity."Users" SET "EmailConfirmed"=TRUE WHERE "Id"='{user}';'''
         self.compose("exec", "-T", "db", "psql", "-U", "postgres", "-d", "liner_notes_manual_qa", "-v", "ON_ERROR_STOP=1", "-c", sql)
         self.worker(user, week, "reconcile")
         scheduled = self.worker(user, week, "schedule")

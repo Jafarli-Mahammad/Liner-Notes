@@ -16,6 +16,22 @@ namespace LinerNotes.Presentation.Tests.Controllers;
 
 public class SubscribersControllerTests
 {
+    [Fact]
+    public async Task EnabledDiscoveryDeletesAccountThroughReclamation()
+    {
+        var admission = Substitute.For<LinerNotes.Application.Common.Interfaces.Discovery.IDiscoveryWriteCoordinator>();
+        admission.ReclaimAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<Func<CancellationToken, Task<IActionResult>>>()(call.Arg<CancellationToken>()));
+        var controller = new SubscribersController(_authService, _unitOfWork, admission: admission,
+            discovery: new() { RunJobs = true }) { ControllerContext = _controller.ControllerContext };
+        _mediator.Send(Arg.Any<DeleteUserAccountCommand>(), Arg.Any<CancellationToken>()).Returns(true);
+        _authService.DeleteUserAsync(_testUserId).Returns(true);
+
+        Assert.IsType<NoContentResult>(await controller.DeleteAccount(default));
+
+        await admission.Received(1).ReclaimAsync(Arg.Any<Func<CancellationToken, Task<IActionResult>>>(), Arg.Any<CancellationToken>());
+        await _authService.Received(1).DeleteUserAsync(_testUserId);
+    }
     private readonly ISender _mediator;
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;

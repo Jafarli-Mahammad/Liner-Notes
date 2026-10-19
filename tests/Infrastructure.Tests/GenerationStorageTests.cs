@@ -10,6 +10,30 @@ namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class GenerationStorageTests : IDisposable
 {
+    [Fact]
+    public async Task PhysicalShrinkWithStableRevisionKeepsConservativeBudgetButGrowthAndRevisionChangesStop()
+    {
+        var storage = new LocalGenerationStorage(options, clock);
+        var baseline = new GenerationStorageState(10_000, "stable");
+        var smaller = new GenerationStorageState(9_000, "stable");
+        await storage.ReconcileAsync(baseline);
+        await using (var lease = await storage.AcquireAsync(smaller))
+        {
+            var reservation = await lease.ReserveAsync(100, 0, smaller);
+            await reservation.ValidateAsync(smaller with { DatabaseBytes = 8_000 });
+            await Assert.ThrowsAsync<GenerationStoppedException>(() => reservation.ValidateAsync(baseline with { DatabaseBytes = 10_001 }));
+            await Assert.ThrowsAsync<GenerationStoppedException>(() => reservation.ValidateAsync(smaller with { Revision = "changed" }));
+        }
+        string[] paths = Enumerable.Range(0, 4).Select(i => Path.Combine(root, "copy-" + i)).ToArray();
+        await using (var email = await storage.AcquireEmailAsync(smaller, 100, paths, false, default))
+        {
+            await email.ValidateAsync(smaller with { DatabaseBytes = 8_000 }, default);
+            await Assert.ThrowsAsync<GenerationStoppedException>(() => email.ValidateAsync(baseline with { DatabaseBytes = 10_001 }, default));
+            await Assert.ThrowsAsync<GenerationStoppedException>(() => email.ValidateAsync(smaller with { Revision = "changed" }, default));
+        }
+        var recorded = JsonSerializer.Deserialize<GenerationInventory>(await File.ReadAllTextAsync(options.InventoryPath!));
+        Assert.Equal(10_000, recorded!.DatabaseBytes);
+    }
     private readonly string root = Path.Combine(Path.GetTempPath(), "liner-phase6-storage-" + Guid.NewGuid().ToString("N"));
     private readonly Clock clock = new();
     private readonly GenerationStorageOptions options;

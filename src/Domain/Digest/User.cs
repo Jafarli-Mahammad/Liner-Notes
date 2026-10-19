@@ -1,3 +1,4 @@
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Common;
 using LinerNotes.Domain.Enums;
 using LinerNotes.Domain.Taste;
@@ -12,12 +13,14 @@ public sealed class User : AuditableEntity
     private readonly List<UserMusicConnection> _connections = new();
     private readonly List<TasteSignal> _tasteSignals = new();
 
+    public ListenerProfile? Profile { get; private set; }
     public string Email { get; private set; }
     public string TimeZone { get; private set; }
     public DigestDeliveryDay DeliveryDay { get; private set; }
     public int DeliveryHourUtc { get; private set; }
     public DateTime? NextDigestAt { get; private set; }
     public DateTime? EmailUnsubscribedAtUtc { get; private set; }
+    public bool WeeklyEmailOptIn { get; private set; }
 
     public void UnsubscribeEmail(DateTime nowUtc)
     {
@@ -42,7 +45,9 @@ public sealed class User : AuditableEntity
         string timeZone = "UTC",
         DigestDeliveryDay deliveryDay = DigestDeliveryDay.Sunday,
         int deliveryHourUtc = 8,
-        Guid? id = null)
+        Guid? id = null,
+        bool createProfile = true,
+        bool weeklyEmailOptIn = false)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email cannot be empty.", nameof(email));
@@ -54,7 +59,9 @@ public sealed class User : AuditableEntity
         TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone.Trim();
         DeliveryDay = deliveryDay;
         DeliveryHourUtc = deliveryHourUtc;
+        WeeklyEmailOptIn = weeklyEmailOptIn;
         CreatedAt = DateTime.UtcNow;
+        if (createProfile) Profile = ListenerProfile.Registered(Id, new DateTimeOffset(CreatedAt));
     }
 
     public static User Create(string email, string timeZone = "UTC") => new(email, timeZone);

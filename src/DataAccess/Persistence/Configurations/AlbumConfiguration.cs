@@ -24,6 +24,7 @@ public sealed class AlbumConfiguration : IEntityTypeConfiguration<Album>
             .HasMaxLength(64);
 
         builder.Property(a => a.ArtistId);
+        builder.HasIndex(a => a.ReleaseGroupMbid).IsUnique().HasFilter("\"ReleaseGroupMbid\" IS NOT NULL");
 
         builder.HasIndex(a => a.Mbid);
 

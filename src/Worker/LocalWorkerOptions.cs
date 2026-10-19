@@ -10,9 +10,13 @@ public sealed record LocalWorkerOptions(string Action, Guid UserId, IsoWeek Week
     {
         string? action=config["action"], user=config["user"], week=config["week"], origin=config["origin"];
         if(action is not ("reconcile" or "generate" or "capture") || !Guid.TryParse(user,out var id) || id==Guid.Empty ||
-            week is null || !Enum.TryParse<EvidenceOrigin>(origin,false,out var evidence) || evidence is not (EvidenceOrigin.Synthetic or EvidenceOrigin.Recorded))
+            week is null || !Enum.TryParse<EvidenceOrigin>(origin,false,out var evidence) || evidence is not (EvidenceOrigin.Synthetic or EvidenceOrigin.Recorded or EvidenceOrigin.Live))
             throw new ArgumentException("explicit_action_user_week_origin_required");
         var isoWeek=IsoWeek.Parse(week);
+        if(evidence==EvidenceOrigin.Live &&
+            (!bool.TryParse(config["Generation:LiveEnabled"],out bool enabled) || !enabled ||
+                (config["Generation:Provider"]??"listenbrainz")!="listenbrainz"))
+            throw new ArgumentException("live_generation_not_enabled");
         if(week!=isoWeek.Value || isoWeek.WeekNumber>System.Globalization.ISOWeek.GetWeeksInYear(isoWeek.Year)) throw new ArgumentException("invalid_iso_week");
         return new(action,id,isoWeek,evidence);
     }

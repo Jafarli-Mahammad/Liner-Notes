@@ -1,0 +1,6 @@
+# Host IDE runs connect to this isolated PostgreSQL service through loopback.
+services:
+  db:
+    ports:
+      - "127.0.0.1:${LINER_DB_PORT:-55441}:5432"
+    restart: unless-stopped

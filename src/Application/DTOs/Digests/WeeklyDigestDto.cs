@@ -21,4 +21,6 @@ public record WeeklyDigestDto(
     Guid? LastModifiedBy = null,
     Guid? DeletedBy = null,
     DateTime? DeletedAt = null,
-    bool IsDeleted = false);
+    bool IsDeleted = false,
+    Guid? BatchId = null,
+    Guid ProfileId = default);

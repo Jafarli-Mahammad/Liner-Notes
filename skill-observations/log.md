@@ -2,6 +2,103 @@
 
 Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
+## 2026-10-16
+
+### Observation 020: Preserve writer coverage and validation scope when replacing scans
+
+**Status:** OPEN
+**Date:** 2026-10-17
+**Session context:** Replaced repeated history hashing with PostgreSQL accounting.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Database integrity and compatibility
+**Issue:** A broader mutation counter caused a legacy guard to reject scheduler bookkeeping that its original revision intentionally excluded. Schema-only test creation also omits custom accounting triggers.
+**Suggested improvement:** Inventory all writers, including raw SQL, cascade deletion and TRUNCATE. Preserve existing guard scope explicitly while maintaining a complete counter for new admission. Run generated migrations in integration tests and keep an independent reconciliation check against actual rows.
+**Principle:** Faster accounting must preserve both mutation coverage and the meaning of the validation boundary.
+
+### Observation 019: Separate cache admission units from clocks and working sets
+
+**Status:** OPEN
+**Date:** 2026-10-17
+**Session context:** Bounded upstream and prepared-evidence caching.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Cache accounting and reproducible verification
+**Issue:** Count-based cache charges ignored payload size. Absolute expirations from a fake clock were interpreted by a cache using the real clock, preventing reuse in deterministic tests. Scoped response dictionaries were separate retained working sets.
+**Suggested improvement:** Audit every writer when changing cache units; distinguish byte estimates, transient working sets and measured RSS. Use a consistent clock or translate policy deadlines to relative lifetimes while independently validating source expiry.
+**Principle:** A cache budget and freshness policy are effective only when all writers and clocks use compatible semantics.
+
+### Observation 018: Bind resumed imports to consumed data, not only a cursor
+
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** Data import integrity candidate
+**Type:** open-source
+**Issue:** A hash before a multi-pass import does not bind later reads or already committed chunks if the source changes or a read is interrupted. A saved cursor alone could skip mismatching staged rows on restart.
+**Suggested improvement:** Verify the bytes actually consumed before publication, fingerprint normalized staged rows, and compare committed fingerprints against the approved artifact during resume. Keep publication atomic and the prior searchable version available after failure.
+**Principle:** Resumability requires integrity evidence for both the input stream and the durable prefix.
+
+### Observation 017: Keep fixture stabilization before the tested persistence boundary
+
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** performance-reviewer / PostgreSQL integration testing candidate
+**Type:** open-source
+**Issue:** Freshly migrated disposable PostgreSQL databases can change physical size after an explicit inventory read. A fail-closed generation guard correctly stopped setup with database_inventory_changed, making unrelated capture fault tests intermittent.
+**Suggested improvement:** First report the safe stop code. Permit bounded explicit setup reconciliation only after proving the managed-row revision is unchanged, no digest exists and no email artifact has been published. Never reconcile automatically after the fault/publication boundary or weaken the production guard.
+**Principle:** Test setup can stabilize a real external measurement without erasing the invariant the test is intended to prove.
+
+### Observation 016: Check what benchmark memory counters actually include
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** performance-reviewer / brainstorming
+**Type:** open-source
+**Phase/Area:** Resource measurement
+**Issue:** A subprocess benchmark's getrusage maximum included a large value inherited across exec, while its executable-specific high-water memory was much smaller. Container peak also included earlier tests and reclaimable cache, and SQL timing excluded API/network work.
+**Suggested improvement:** Record metric scope and execution history. Compare process-specific current/high-water counters with inherited resource accounting, and distinguish container working set, whole-run peak, pressure events and OOM. Label SQL-only latency and synthetic corpus evidence separately from application capacity.
+**Principle:** Match the accounting boundary and workload behind each measurement to the claim it supports.
+
+### Observation 015: Check safety prerequisites at every implementation boundary
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** brainstorming / writing-plans
+**Type:** open-source
+**Phase/Area:** Implementation planning
+**Issue:** A staged plan can introduce job submission before its consumer or add managed writes before the later accounting stage. The final architecture can look safe while intermediate commits accept work that cannot complete or bypass protection.
+**Suggested improvement:** Check each commit's enabled behavior against its prerequisites. Introduce shared contracts/schema before consumers, keep incomplete submission routes disabled, and use existing conservative safeguards until improved coordination is verified. Require privacy coverage when each storage class appears.
+**Principle:** Every intermediate runnable state must preserve ownership, resource admission, and progress guarantees.
+
+### Observation 014: Inspect ownership and batch identity before adding guest discovery
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Architectural planning
+**Issue:** Adding guest access and repeated discovery to a scheduled recommendation product changes more than its signup interface. Existing taste records may require an authenticated subscriber, while batch uniqueness may allow only one result per calendar period. A fast local search also leaves candidate acquisition and generation locking on the critical path.
+**Suggested improvement:** Before proposing reuse, trace profile ownership, batch uniqueness, feedback ownership, privacy operations, candidate readiness, and lock scope. Specify guest-to-account transfer and repeated-batch identity explicitly. Measure prepared and uncached generation separately from autocomplete.
+**Principle:** Validate the complete path from visitor identity to persisted results before treating a new discovery flow as a UI change.
+
+## 2026-10-15
+
+### Observation 013: Validate redundant metadata identities against live envelopes
+**Status:** OPEN
+**Date:** 2026-10-16
+**Skill:** test-cases / brainstorming
+**Type:** open-source
+**Phase/Area:** Provider contract verification
+**Issue:** An official example repeated an artist ID inside every tag, while a live artist-scoped response omitted that redundant field. Fixture tests alone accepted an unnecessarily strict parser that discarded usable tags.
+**Suggested improvement:** Validate the enclosing entity identity first, test both redundant-ID and envelope-scoped shapes, reject conflicting supplied IDs, and use a bounded catalog smoke without recording account data before judging adapter coverage.
+**Principle:** Infer context only from a verified enclosing entity; do not confuse absent redundant fields with absent evidence.
+
+### Observation 012: Trace supporting evidence services in provider migrations
+**Status:** OPEN
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Architectural planning
+**Issue:** A discovery abstraction can appear swappable while seed tags, hydration, attribution and allowed generation origins still depend on the original integration.
+**Suggested improvement:** Trace the complete generation path; distinguish adapter support, offline replay, live generation, default rollout and future user preference.
+**Principle:** Verify every dependency needed for a usable provider, not just discovery.
+
 ## 2026-10-12
 
 ### Observation 001: Preflight transitive workflow skills before starting
@@ -118,17 +215,79 @@ Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 **Suggested improvement:** Compare central versions, all affected lock entries and version evidence with approval decisions after restore. Verify flagged credentials against current use before changing configuration or rotating anything; distinguish literals from required private interpolation.
 **Principle:** Approval records and scan labels need verification against the executable configuration.
 
+### Observation 011: Keep progress status concise and evidence-linked
 
-### Observation 011: Scan replacement history before pushing secret remediation
 **Status:** OPEN
 **Date:** 2026-10-13
-**Session context:** Repeated credential alerts in the same pull request.
-**Skill:** New skill candidate: secret remediation
+**Session context:** Pruned the project progress tracker after several backend phases had accumulated implementation evidence.
+**Skill:** New skill candidate: project status documentation
 **Type:** open-source
-**Issue:** A forbidden-password assertion can itself trigger credential detection;
-connection strings with required private interpolation can also trigger alerts.
-Adding a correction leaves earlier flagged additions in pull-request history.
-**Suggested improvement:** Reject credential assignments structurally, generate
-private connection strings at runtime, and scan both the tracked tree and the
-replacement commit range before an explicitly authorized history replacement.
-**Principle:** A clean working tree does not establish clean pull-request history.
+**Phase/Area:** Status maintenance
+**Issue:** The progress file repeated completed implementation details across several sections, contained stale historical claims and malformed fragments, and made open gates hard to identify.
+**Suggested improvement:** Keep the tracker focused on current implementation status, concrete remaining decisions and execution gates. Retain detailed verification and historical rationale in linked evidence documents; check claims against the current checkout before pruning.
+**Principle:** A progress tracker should answer what is done and what remains; evidence documents should carry the detailed record.
+
+### 021 — Schema changes and exact public payload checksums
+
+Adding a column changes PostgreSQL to_jsonb(row) storage-accounting estimates
+without firing row triggers. Verify the old accounting baseline before schema
+DDL, then explicitly rebase after DDL/backfill. Public JSON payloads with exact
+byte checksums need TEXT storage; JSONB normalizes representation. Test decoded
+immutable collections by sequence contents and normalize timestamp fixtures to
+PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
+
+### Observation 024: Interfaces must hide implementation dependencies
+**Status:** OPEN
+**Date:** 2026-10-18
+**Skill:** ponytail; architecture review
+**Type:** open-source
+**Issue:** An interface exposed vendor collection and transaction types despite having no application consumers. A provider migration also prompted a correction about excessive coupling.
+**Suggested improvement:** Audit public contract types and implementation references before extending workflows; remove unused vendor-shaped contracts and test the application assembly boundary.
+**Principle:** Polymorphism supports substitution only when contracts hide implementation details.
+
+### Observation 025: Verify original content before repairing compressed output
+**Status:** OPEN
+**Date:** 2026-10-19
+**Skill:** task-observer; coding workflows
+**Type:** open-source
+**Issue:** Tool-output compression removed words and generic type syntax, making valid source and documentation appear truncated. That presentation can prompt unnecessary or incorrect repairs.
+**Suggested improvement:** Retrieve original output or inspect small exact slices before editing. Distinguish a tool presentation failure from file corruption. Recreate disposable test environments from pinned inputs when they expire, and verify dynamically assigned ports again after restarts.
+**Principle:** Work from verified source and recoverable test inputs; summaries are navigation aids, not mutation authority.
+
+### Observation 026: Trace selection limits through generation and evidence storage
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Session context:** Planning optional onboarding with unlimited selected taste tags.
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Existing-system requirements and feasibility
+**Issue:** Removing a visible selection limit would still leave server validation, materialization count limits, acquisition windows and explanation snapshot budgets restricting the feature. Raising one limit would not satisfy the requirement.
+**Suggested improvement:** When a requirement changes cardinality, trace collection limits from UI through persistence, computation, external requests and stored evidence. Specify which selections are retained and how bounded processing represents them before estimating implementation.
+**Principle:** Product cardinality and per-operation resource budgets need separate contracts; changing one must not silently redefine the other.
+**Reference file:** docs/superpowers/specs/2026-10-19-optional-taste-onboarding-design.md
+
+
+### Observation 027: Trace new entity kinds through validation and custom SQL
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Skill:** efcore-patterns; modern-csharp-coding-standards
+**Type:** open-source
+**Phase/Area:** Schema and lifecycle verification
+**Issue:** Extending an enum and import/search paths still left a Domain selection allowlist and a migration-only database CHECK constraint rejecting the new kind. Existing tests passed until the browser exercised saving an actual selected entity.
+**Suggested improvement:** Search all entity-kind guards, hand-written migration constraints, persistence readers, exports and immutable snapshots. Add an integration test that selects, saves and reads the new kind through the complete application path, including an upgrade from the old schema.
+**Principle:** Enum extension is an end-to-end data contract change; model-generated migrations do not discover custom SQL constraints.
+
+
+### Observation 028: Reproduce the PR merge before changing CI
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Session context:** Diagnosing a GitHub restore/Compose failure that passed on the source branch.
+**Skill:** ponytail; task-observer
+**Type:** open-source
+**Phase/Area:** CI failure triage
+**Issue:** Source-head restore and container checks passed, while the PR merge inherited a malformed dependency lock from its target branch. NU1510 warnings in the excerpt distracted from the actual NU1004 failure.
+**Suggested improvement:** Confirm which revision each job checks out, reproduce that merge in a disposable tree, and check lock-file JSON for duplicate keys before weakening locked restore or removing dependencies.
+**Principle:** A passing branch-head check does not validate the code that a merge-based PR workflow builds.

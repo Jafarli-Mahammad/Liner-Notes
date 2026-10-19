@@ -4,6 +4,7 @@ using LinerNotes.DataAccess.IdentityEntities;
 using LinerNotes.Domain.Catalog;
 using LinerNotes.Domain.Common;
 using LinerNotes.Domain.Digest;
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Taste;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +18,7 @@ namespace LinerNotes.DataAccess.DataContexts;
 /// Primary Entity Framework Core database context integrating ASP.NET Core Identity,
 /// Liner Notes domain aggregates, data protection key storage, and automated audit logging.
 /// </summary>
-public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAppDbContext, IDataProtectionKeyContext
+public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IDataProtectionKeyContext
 {
     private readonly IHttpContextAccessor? _httpContextAccessor;
 
@@ -30,6 +31,15 @@ public class DataContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>
     public DbSet<Track> Tracks => Set<Track>();
     public DbSet<Artist> Artists => Set<Artist>();
     public DbSet<Album> Albums => Set<Album>();
+    public DbSet<ListenerProfile> ListenerProfiles => Set<ListenerProfile>();
+    public DbSet<DiscoveryBatch> DiscoveryBatches => Set<DiscoveryBatch>();
+    public DbSet<DiscoveryJob> DiscoveryJobs => Set<DiscoveryJob>();
+    public DbSet<GuestSession> GuestSessions => Set<GuestSession>();
+    public DbSet<CatalogPublication> CatalogPublications => Set<CatalogPublication>();
+    public DbSet<CatalogHead> CatalogHeads => Set<CatalogHead>();
+    public DbSet<CatalogRecord> CatalogRecords => Set<CatalogRecord>();
+    public DbSet<CatalogSearchTerm> CatalogSearchTerms => Set<CatalogSearchTerm>();
+    public DbSet<AlbumCredit> AlbumCredits => Set<AlbumCredit>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     public DataContext(

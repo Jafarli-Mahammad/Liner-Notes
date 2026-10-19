@@ -101,7 +101,8 @@
       "source": "https://api.nuget.org/v3-flatcontainer/system.identitymodel.tokens.jwt/index.json"
     },
     "System.Security.Cryptography.Xml": {
-      "version": "10.0.12",
+      "version": "10.0.13",
+      "checked_on": "2026-10-19",
       "source": "https://api.nuget.org/v3-flatcontainer/system.security.cryptography.xml/index.json"
     },
     "dotnet-ef": {

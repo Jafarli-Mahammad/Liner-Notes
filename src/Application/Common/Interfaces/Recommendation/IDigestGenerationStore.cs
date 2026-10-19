@@ -6,7 +6,7 @@ using LinerNotes.Domain.Taste;
 namespace LinerNotes.Application.Common.Interfaces.Recommendation;
 
 public sealed record GenerationInputs(bool UserExists, IReadOnlyList<TasteSignal> Signals,
-    IReadOnlyList<WeeklyRecommendation> Feedback, string Revision);
+    IReadOnlyList<WeeklyRecommendation> Feedback, string Revision, Guid? ProfileId = null);
 public sealed record GenerationStorageState(long DatabaseBytes, string Revision);
 
 public interface IDigestGenerationStore
@@ -15,6 +15,9 @@ public interface IDigestGenerationStore
     Task<WeeklyDigest?> GetExistingAsync(Guid userId, IsoWeek week, CancellationToken cancellationToken = default);
     Task<GenerationInputs> ReadInputsAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default);
+    // Caller owns coordinated write admission and publishes its committed inventory.
+    Task<WeeklyDigest> PersistWithinAdmissionAsync(Guid userId, IsoWeek week, string inputRevision,
+        IReadOnlyList<BaselineAPick> picks, CancellationToken cancellationToken = default);
     Task<WeeklyDigest> PersistAsync(Guid userId, IsoWeek week, string inputRevision,
         IReadOnlyList<BaselineAPick> picks, IGenerationStorageReservation reservation,
         CancellationToken cancellationToken = default);
@@ -26,7 +29,11 @@ public interface ISeedTagSource
 }
 
 public sealed record SeedTagSnapshot(string ArtistName, LinerNotes.Domain.Catalog.WeightedTagVector Vector,
-    IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps);
+    IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps)
+{
+    public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
+    public DateTimeOffset? SharedUntilUtc { get; init; }
+}
 
 public interface IGenerationStorage
 {

@@ -52,6 +52,8 @@ public sealed class ComprehensiveRepositoryTests
         using var context = CreateContext(dbName);
 
         var userId = Guid.NewGuid();
+        context.Users.Add(new User($"fixture-{userId:N}@example.test", id: userId));
+        await context.SaveChangesAsync();
         var digest = WeeklyDigest.Create(userId, IsoWeek.From(2026, 40), DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
         var track = Track.Create("Losing My Religion", "R.E.M.");
         var breakdown = new ScoreBreakdown();
@@ -82,6 +84,9 @@ public sealed class ComprehensiveRepositoryTests
 
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();
+        context.Users.AddRange(new User($"fixture-{user1:N}@example.test", id: user1),
+            new User($"fixture-{user2:N}@example.test", id: user2));
+        await context.SaveChangesAsync();
 
         var s1 = TasteSignal.CreateSeedTag(user1, "synthpop", 1.0, "seed");
         var s2 = TasteSignal.CreateSeedArtist(user1, "Depeche Mode", 1.0, "seed");

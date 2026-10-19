@@ -34,6 +34,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired();
 
         builder.Property(u => u.NextDigestAt);
+        builder.Property(u => u.WeeklyEmailOptIn).HasDefaultValue(false).IsRequired();
         builder.Property(u => u.EmailUnsubscribedAtUtc).HasColumnType("timestamp with time zone");
 
         // Index on NextDigestAt for fast worker batch polling (NextDigestAt <= UtcNow)

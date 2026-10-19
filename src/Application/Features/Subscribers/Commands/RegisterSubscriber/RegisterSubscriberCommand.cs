@@ -12,4 +12,6 @@ public record RegisterSubscriberCommand(
     string TimeZone = "UTC",
     DigestDeliveryDay DeliveryDay = DigestDeliveryDay.Sunday,
     int DeliveryHourUtc = 8,
-    Guid? UserId = null) : IRequest<SubscriberDto>;
+    Guid? UserId = null,
+    string? GuestCredentialHash = null,
+    bool WeeklyEmailOptIn = false) : IRequest<SubscriberDto>;

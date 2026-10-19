@@ -34,4 +34,5 @@ public record UserDataExportDto(
     IReadOnlyList<TasteSignalDto> TasteSignals,
     IReadOnlyList<WeeklyDigestDto> Digests,
     LocalEmailArchiveDto? LocalEmail = null,
-    AccountExportDto? Account = null);
+    AccountExportDto? Account = null,
+    DiscoveryExportDto? Discovery = null);

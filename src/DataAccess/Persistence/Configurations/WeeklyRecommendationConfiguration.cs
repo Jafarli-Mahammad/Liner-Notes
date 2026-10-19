@@ -14,11 +14,13 @@ public sealed class WeeklyRecommendationConfiguration : IEntityTypeConfiguration
 
         builder.HasKey(r => r.Id);
 
-        builder.Property(r => r.WeeklyDigestId)
-            .IsRequired();
-
-        builder.Property(r => r.UserId)
-            .IsRequired();
+        builder.Property(r => r.WeeklyDigestId);
+        builder.Property(r => r.UserId);
+        builder.Property(r => r.ProfileId).IsRequired();
+        builder.Property(r => r.BatchId).IsRequired();
+        builder.HasOne<LinerNotes.Domain.Discovery.DiscoveryBatch>().WithMany().HasForeignKey(r => new { r.BatchId, r.ProfileId }).HasPrincipalKey(b => new { b.Id, b.ProfileId }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(r => new { r.BatchId, r.Rank }).IsUnique();
+        builder.HasIndex(r => new { r.ProfileId, r.CreatedAt });
 
         builder.Property(r => r.Rank)
             .IsRequired();

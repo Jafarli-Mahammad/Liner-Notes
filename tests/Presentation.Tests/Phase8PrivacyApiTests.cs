@@ -215,7 +215,7 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         var text = await response.Content.ReadAsStringAsync();
         using var json = JsonDocument.Parse(text);
         var root = json.RootElement;
-        Assert.Equal("2.2", root.GetProperty("exportVersion").GetString());
+        Assert.Equal("2.5", root.GetProperty("exportVersion").GetString());
         Assert.Equal(_owner, root.GetProperty("account").GetProperty("id").GetGuid());
         foreach (var secret in new[] { "credential-hash-sentinel", "credential-stamp-", "concurrency-sentinel-", "provider-token-sentinel-", "claim-sentinel-", "login-sentinel-", "refresh-fixture-", "identity-other@", "Stored feedback other" })
             Assert.DoesNotContain(secret, text);

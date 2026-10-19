@@ -80,6 +80,9 @@ public sealed class RepositoryTests
 
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();
+        context.Users.AddRange(new User($"fixture-{user1:N}@example.test", id: user1),
+            new User($"fixture-{user2:N}@example.test", id: user2));
+        await context.SaveChangesAsync();
 
         var signal1 = TasteSignal.CreateSeedTag(user1, "ambient", 0.9, "Seed 1");
         var signal2 = TasteSignal.CreateSeedArtist(user1, "Brian Eno", 1.0, "Seed 2");

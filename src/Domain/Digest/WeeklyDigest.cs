@@ -14,6 +14,9 @@ public sealed class WeeklyDigest : AuditableEntity
     private readonly List<WeeklyRecommendation> _recommendations = new();
 
     public Guid UserId { get; private set; }
+    public Guid ProfileId { get; private set; }
+    public Guid? BatchId { get; private set; }
+    public LinerNotes.Domain.Discovery.DiscoveryBatch? Batch { get; private set; }
     public IsoWeek Week { get; private set; }
     public string WeekIdentifier => Week.Value;
     public DateTime WeekStartDate { get; private set; }
@@ -35,7 +38,8 @@ public sealed class WeeklyDigest : AuditableEntity
         IsoWeek week,
         DateTime weekStartDate,
         DateTime weekEndDate,
-        Guid? id = null)
+        Guid? id = null,
+        Guid? profileId = null)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty.", nameof(userId));
@@ -43,6 +47,10 @@ public sealed class WeeklyDigest : AuditableEntity
 
         if (id.HasValue) Id = id.Value;
         UserId = userId;
+        ProfileId = profileId ?? userId;
+        BatchId = Id;
+        Batch = new LinerNotes.Domain.Discovery.DiscoveryBatch(profileId ?? userId, "weekly:" + week.Value,
+        LinerNotes.Domain.Discovery.DiscoveryBatchKind.Weekly, 0, DateTimeOffset.UtcNow, Id);
         Week = week;
         WeekStartDate = weekStartDate;
         WeekEndDate = weekEndDate;
@@ -72,6 +80,7 @@ public sealed class WeeklyDigest : AuditableEntity
             rank: rank,
             scoreBreakdown: scoreBreakdown);
 
+        recommendation.BindRegisteredProfile(UserId, Batch?.ProfileId ?? UserId);
         _recommendations.Add(recommendation);
         LastModifiedAt = DateTime.UtcNow;
 

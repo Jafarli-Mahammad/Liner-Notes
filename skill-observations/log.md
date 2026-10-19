@@ -253,3 +253,16 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Tool-output compression removed words and generic type syntax, making valid source and documentation appear truncated. That presentation can prompt unnecessary or incorrect repairs.
 **Suggested improvement:** Retrieve original output or inspect small exact slices before editing. Distinguish a tool presentation failure from file corruption. Recreate disposable test environments from pinned inputs when they expire, and verify dynamically assigned ports again after restarts.
 **Principle:** Work from verified source and recoverable test inputs; summaries are navigation aids, not mutation authority.
+
+### Observation 026: Trace selection limits through generation and evidence storage
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Session context:** Planning optional onboarding with unlimited selected taste tags.
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Existing-system requirements and feasibility
+**Issue:** Removing a visible selection limit would still leave server validation, materialization count limits, acquisition windows and explanation snapshot budgets restricting the feature. Raising one limit would not satisfy the requirement.
+**Suggested improvement:** When a requirement changes cardinality, trace collection limits from UI through persistence, computation, external requests and stored evidence. Specify which selections are retained and how bounded processing represents them before estimating implementation.
+**Principle:** Product cardinality and per-operation resource budgets need separate contracts; changing one must not silently redefine the other.
+**Reference file:** docs/superpowers/specs/2026-10-19-optional-taste-onboarding-design.md

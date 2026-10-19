@@ -94,7 +94,7 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     AND tablename NOT IN ('ManagedStorageLedger','__EFMigrationsHistory') ORDER BY schemaname,tablename
                   LOOP
                     EXECUTE format('LOCK TABLE %I.%I IN SHARE ROW EXCLUSIVE MODE',relation.schemaname,relation.tablename);
-                    
+
                     EXECUTE format('SELECT COALESCE(sum(octet_length(to_jsonb(t)::text)+512),0),count(*) FROM %I.%I t',relation.schemaname,relation.tablename) INTO measured_bytes,measured_rows;
                     bytes:=bytes+measured_bytes; rows:=rows+measured_rows;
                     IF relation.schemaname='public' AND relation.tablename IN ('Tracks','TasteSignals','WeeklyDigests','WeeklyRecommendations','ListenerProfiles','DiscoveryBatches','DiscoveryJobs','GuestSessions') THEN core_bytes:=core_bytes+measured_bytes; END IF;
@@ -175,7 +175,7 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     AND tablename NOT IN ('ManagedStorageLedger','__EFMigrationsHistory') ORDER BY schemaname,tablename
                   LOOP
                     EXECUTE format('LOCK TABLE %I.%I IN SHARE ROW EXCLUSIVE MODE',relation.schemaname,relation.tablename);
-                    
+
                     EXECUTE format('SELECT COALESCE(sum(octet_length(to_jsonb(t)::text)+512),0),count(*) FROM %I.%I t',relation.schemaname,relation.tablename) INTO measured_bytes,measured_rows;
                     bytes:=bytes+measured_bytes; rows:=rows+measured_rows;
                     IF relation.schemaname='public' AND relation.tablename IN ('Tracks','TasteSignals','WeeklyDigests','WeeklyRecommendations','ListenerProfiles','DiscoveryBatches','DiscoveryJobs','GuestSessions') THEN core_bytes:=core_bytes+measured_bytes; END IF;

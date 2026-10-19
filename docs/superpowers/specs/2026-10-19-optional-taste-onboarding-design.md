@@ -27,6 +27,7 @@ Confirmed requirements from that discussion:
 - Let the visitor choose which kind of favorites to enter. Offer Artists / bands, Albums, and Tracks; bands and solo performers share the artist entity type. No one must supply every type.
 - Tags have no product selection limit. The proposed searchable catalog of genres/subgenres, moods and descriptive sounds is accepted.
 - Returning users resume unfinished setup or their results, and can edit taste later without being forced through onboarding again.
+- Album favorites use reduced-influence artist similarity as an explicit, persisted and disclosed fallback. Artist and track favorites use direct provider evidence without that fallback.
 - This update authorizes documentation changes only. Do not begin implementation.
 
 The previous five-favorite cap remains an unresolved proposal, not a newly approved limit. Detailed scoring effects, feed lifetime and recording-evidence support still need specification.
@@ -113,9 +114,23 @@ Keep a common catalog-selection interaction, with clear type labels and artist c
 
 For tracks, use a canonical recording identity and distinguish versions, credited artists and available releases. Do not conflate a recording with a release-specific track position. Preserve the selected recording snapshot across catalog refresh/cleanup and account transfer.
 
-Extend search DTOs, catalog import/publication validation, explicit lookup adapters, canonical snapshots, taste storage, preparation and materialization together. Support recording-scoped tags when available. If preparation falls back to credited-artist evidence, persist that scope and reduced configured influence and disclose the fallback; never present it as verified recording-level similarity. Deduplicate equivalent artist/album/recording evidence to avoid accidental repeated weight.
+Extend search DTOs, catalog import/publication validation, explicit lookup adapters, canonical snapshots, taste storage, preparation and materialization together. Artist and track favorites use their own direct provider evidence; do not substitute credited-artist similarity for a track favorite. If direct evidence is unavailable, record the coverage gap rather than silently changing its scope. Deduplicate equivalent artist/album/recording evidence to avoid accidental repeated weight.
 
 Provider-specific IDs, endpoints and response behavior stay in adapters. The plan must verify official API support and usage requirements before implementing new track lookup/preparation. ListenBrainz remains the default and Last.fm remains swappable. Existing evidence and offline fixtures establish mechanics, not live coverage or recommendation quality.
+
+### Album similarity: explicit artist fallback
+
+Developer instruction recorded on 2026-10-19: ListenBrainz has no release-level similarity endpoint. This provider capability statement was supplied by the developer; it was not independently verified during this documentation-only update. Verify official provider documentation before implementation, as required by the project rules.
+
+When preparing similarity evidence for an album favorite, resolve its credited artist and perform the similarity lookup using that artist. Do not represent this as album-to-album or album-to-track similarity. Album-scoped descriptive tags, if available, remain separate evidence and do not establish direct album similarity.
+
+Persist the original album identity, the artist identity actually queried, the provider and evidence reference, an explicit artist-level fallback indicator/reason, and the effective configured influence. The fallback influence must be configurable, lower than the corresponding direct-evidence influence, and recorded in the recommendation's stored breakdown. Do not hard-code a new multiplier. The exact value and the treatment of albums with multiple credited artists remain implementation-plan details.
+
+The “why this pick” explanation must disclose this fallback from the stored evidence, for example: “Based on artists similar to [artist], the artist behind your favorite album [album]. Album-level similarity was unavailable, so this signal had reduced influence.” Never describe it as verified album-level similarity. Historical explanations must retain the influence and scope used when the recommendation was generated.
+
+Artist and track favorites use direct provider evidence for their respective entity types; no artist-level fallback is needed or authorized for either. A missing direct result is a coverage gap, not permission to relabel artist evidence as track evidence. This requirement stays behind provider abstractions and must be verified for each implemented adapter.
+
+Verification must cover album-to-artist lookup routing, persisted source/target identities and fallback scope, reduced configured influence, explanation disclosure, separation from album descriptive tags, and the absence of fallback for artist/track inputs. Existing benchmark seeds must sanity-check any scoring influence change.
 
 ## Recent recommendations for everyone
 
@@ -160,7 +175,7 @@ These are work packages for review, not authorization to begin implementation. T
 | 1 | Freeze question semantics, preference precedence, initial vocabulary sources and recording evidence contracts | Official-source checks for new provider/data use; focused examples for sparse, conflicting and skipped inputs |
 | 2 | Add versioned onboarding state and profile lifecycle integration | Additive migration/backfill, guest/account authorization, revision conflicts, export/deletion/import, storage accounting |
 | 3 | Add searchable vocabulary and unlimited saved tag selections | Alias search, pagination, large selections, round-trip export, no keystroke upstream calls, fair acquisition windows |
-| 4 | Add end-to-end track favorites | Recording/version disambiguation, immutable snapshots, fallback provenance, provider abstraction and duplicate evidence |
+| 4 | Add end-to-end track favorites | Recording/version disambiguation, immutable snapshots, direct track/artist evidence, album artist-fallback provenance and influence, explanation disclosure, provider abstraction and duplicate evidence |
 | 5 | Add approved preference policy and the shared recent-recommendations projection/page | Determinism, soup semantics, neutral popularity, unknown vocal evidence, benchmark seeds, successful-publication boundary, deduplication and absence of recipient links in storage/API/logs |
 | 6 | Build optional onboarding with all three questions together and visitor-selected favorite types | Guest/login/register, independent question skipping, Skip/Back/Edit, draft recovery, keyboard/mobile behavior, returning profiles, first-result feedback, skipped-input routing and Explore access for everyone |
 | 7 | Complete regression evidence and developer handoff | Offline/provider isolation, PostgreSQL lifecycle checks, browser journeys, bounded-resource checks and documentation |
@@ -179,6 +194,7 @@ The later implementation must verify at least these user-visible outcomes:
 - Returning users retain their data and are not forced through setup again.
 - More than five and more than 200 tags can be saved without a hidden profile-count limit; chunking, scoring and snapshots remain bounded and auditable.
 - Search finds aliases and distinguishes recording versions. No upstream request occurs on typing or page viewing.
+- Album favorites query artist similarity with a persisted fallback marker and reduced configured influence; “why this pick” discloses that scope. Artist and track favorites retain direct provider evidence and never silently use that fallback.
 - Soup explicitly means “I like everything,” can coexist with specific favorites, and does not become a fake genre signal or genre restriction.
 - All three questions appear together with independent optional answers. Visitors choose favorite types; bands and solo artists use the same artist entity.
 - Shared recent-recommendation records, responses, caches and publication logs contain no recipient/source-recommendation links or personal explanations. Publication occurs only for completed recommendations and paging makes no upstream calls.

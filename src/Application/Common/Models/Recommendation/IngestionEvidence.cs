@@ -55,7 +55,7 @@ public sealed class HydratedCandidateTrack
     public RawCandidateTrack RawCandidate { get; }
     public ImmutableArray<TagObservation> Tags { get; }
     public ResponseReference TagResponse { get; }
-    public string TagScope => "artist";
+    public string TagScope { get; init; } = "artist";
     public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
     public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
     public string? TagMissingReason { get; }

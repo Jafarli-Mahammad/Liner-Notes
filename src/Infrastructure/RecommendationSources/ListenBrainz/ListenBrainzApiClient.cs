@@ -20,7 +20,8 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
         options.Validate(); request.Validate();
         if (options.Mode != ListenBrainzClientMode.LiveOnly || !options.LiveUseApproved)
             return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live, "listenbrainz_live_use_unapproved");
-        string root = request.Provider == "MusicBrainz" ? "https://musicbrainz.org/" : "https://api.listenbrainz.org/";
+        string root = request.Kind == ListenBrainzRequestKind.SimilarRecordings ? "https://labs.api.listenbrainz.org/" :
+            request.Provider == "MusicBrainz" ? "https://musicbrainz.org/" : "https://api.listenbrainz.org/";
         string cacheKey = "metabrainz-public-v1:" + root + request.Key;
         if (responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
         try
@@ -31,7 +32,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             using var message = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(root), request.RelativeUri()));
             message.Headers.UserAgent.ParseAdd(options.UserAgent);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            if (request.Provider == "ListenBrainz" && !string.IsNullOrEmpty(options.Token))
+            if (request.Provider == "ListenBrainz" && request.Kind != ListenBrainzRequestKind.SimilarRecordings && !string.IsNullOrEmpty(options.Token))
                 message.Headers.Authorization = new AuthenticationHeaderValue("Token", options.Token);
             using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             TimeSpan backoff = response.Headers.RetryAfter?.Delta ??

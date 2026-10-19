@@ -85,6 +85,10 @@ public sealed class GuestProfileStore(DataContext db) : IGuestProfileStore
             UPDATE "DiscoveryJobs" SET "ProfileId"={target.Id},"RequestKey"='import:' || replace("Id"::text,'-','') WHERE "ProfileId"={source.Id};
             UPDATE "WeeklyRecommendations" SET "ProfileId"={target.Id},"UserId"={userId} WHERE "ProfileId"={source.Id};
             """, ct);
+        var accountAnswers = LinerNotes.Application.Features.Discovery.OnboardingState.Read(target.OnboardingJson);
+        var guestAnswers = LinerNotes.Application.Features.Discovery.OnboardingState.Read(source.OnboardingJson);
+        if (guestAnswers is not null)
+            target.SetOnboarding(System.Text.Json.JsonSerializer.Serialize(accountAnswers?.FillUnanswered(guestAnswers) ?? guestAnswers));
         target.ChangeInputs(target.Revision);
         await db.SaveChangesAsync(ct);
         await db.ListenerProfiles.Where(p => p.Id == source.Id && p.UserId == null).ExecuteDeleteAsync(ct);

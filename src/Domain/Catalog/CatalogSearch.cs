@@ -4,7 +4,7 @@ using System.Text;
 
 namespace LinerNotes.Domain.Catalog;
 
-public enum CatalogKind { Artist, Album }
+public enum CatalogKind { Artist, Album, Track }
 public enum CatalogOrigin { Synthetic, Public }
 public enum CatalogPublicationState { Staging, Published, Failed }
 

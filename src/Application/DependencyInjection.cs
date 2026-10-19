@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddSingleton<BaselineAScorer>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.GuestLifecycle>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.SelectDiscoveryTaste>();
+        services.AddScoped<LinerNotes.Application.Features.Discovery.SaveTasteOnboarding>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch>();
         services.AddScoped<LinerNotes.Application.Features.Discovery.RunDiscoveryJob>();

@@ -10,6 +10,12 @@ public sealed class ListenerProfile : BaseEntity
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset LastActiveAtUtc { get; private set; }
     public DateTimeOffset? ExpiresAtUtc { get; private set; }
+    public string? OnboardingJson { get; private set; }
+    public void SetOnboarding(string json)
+    {
+        if (System.Text.Encoding.UTF8.GetByteCount(json) > 4096) throw new ArgumentException("onboarding_too_large");
+        OnboardingJson = json;
+    }
     public bool IsGuest => UserId is null;
 
     private ListenerProfile() { }
@@ -18,16 +24,26 @@ public sealed class ListenerProfile : BaseEntity
     {
         if (inactivity <= TimeSpan.Zero) throw new ArgumentException("Positive inactivity lifetime required.");
         now = DiscoveryRules.Utc(now);
-        return new() { Id = DiscoveryRules.Identity(id ?? Guid.NewGuid()), CreatedAtUtc = now,
-            LastActiveAtUtc = now, ExpiresAtUtc = now.Add(inactivity) };
+        return new()
+        {
+            Id = DiscoveryRules.Identity(id ?? Guid.NewGuid()),
+            CreatedAtUtc = now,
+            LastActiveAtUtc = now,
+            ExpiresAtUtc = now.Add(inactivity)
+        };
     }
 
     public static ListenerProfile Registered(Guid userId, DateTimeOffset now, Guid? id = null)
     {
         userId = DiscoveryRules.Identity(userId);
         now = DiscoveryRules.Utc(now);
-        return new() { Id = DiscoveryRules.Identity(id ?? userId), UserId = userId,
-            CreatedAtUtc = now, LastActiveAtUtc = now };
+        return new()
+        {
+            Id = DiscoveryRules.Identity(id ?? userId),
+            UserId = userId,
+            CreatedAtUtc = now,
+            LastActiveAtUtc = now
+        };
     }
 
     public bool IsExpired(DateTimeOffset now) => ExpiresAtUtc is { } expiry && expiry <= DiscoveryRules.Utc(now);

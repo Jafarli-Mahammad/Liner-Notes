@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add optional, resumable guest/account taste setup: three skippable questions,
+  searchable genre/mood/sound tags without a selection cap, broad taste,
+  artist/album/recording favorites and explicit review before generation.
+- Preserve recording versions, credits and release hints in private favorites;
+  disclose reduced album-to-artist similarity influence in stored explanations.
+- Add Recent recommendations for everyone, including skipped-input visitors,
+  using a separate recipient-free public catalog projection and truthful demo/empty states.
+- Keep large saved taste profiles separate from rotating acquisition windows and
+  bounded replayable score snapshots. Include answers in export and account transfer.
+  Existing name seeds, custom tags and queued request retries remain compatible.
 - Add a dependency-free synthetic load driver and document measured resource use,
   search latency, queued recovery and disk budgeting on a constrained runtime.
 - Coordinate weekly digest saves, schedule activity and unsubscribe updates with

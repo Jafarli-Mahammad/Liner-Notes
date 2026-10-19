@@ -76,3 +76,6 @@ Gotchas and corrections
 [verified] EF migrations in this checkout must target `--context AppDbContext`; file-based helpers must use `dotnet run --file <path> --no-cache` to avoid selecting the legacy root project or stale assemblies. Verified by generated migration inspection and the Phase 7 cleanup helper on 2026-10-11.
 Environment and constraints
 [stated] Near-zero budget: cheap VPS or free tiers, SQLite or small Postgres. Verify current pricing before recommending. (2026-09-28)
+
+[stated] The developer approved implementation of `docs/superpowers/specs/2026-10-19-optional-taste-onboarding-design.md` starting from local commit 63a3789; this supersedes its documentation-only status. (2026-10-19)
+[verified] Recording onboarding needed both the Domain `TasteSignal.SetCatalogSelection` allowlist and the migration-only `CK_TasteSignals_CatalogSelection` constraint extended; adding a catalog enum member alone did not permit saving a recording favorite. Browser and PostgreSQL verification cover the complete path. (2026-10-19)

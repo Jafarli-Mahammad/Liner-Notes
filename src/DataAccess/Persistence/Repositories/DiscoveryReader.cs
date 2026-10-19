@@ -16,10 +16,11 @@ public sealed class DiscoveryReader(DataContext db) : IDiscoveryReader
             (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)).Select(p => (long?)p.Revision).SingleOrDefaultAsync(ct);
         if (revision is null) return null;
         var signals = await db.TasteSignals.AsNoTracking().Where(s => s.ProfileId == profileId && s.Source == TasteSignalSource.InitialSeedManual)
-            .OrderBy(s => s.Id).Take(200).ToArrayAsync(ct);
-        var favorites = signals.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album).Select(s => {
+            .OrderBy(s => s.Id).ToArrayAsync(ct);
+        var favorites = signals.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track).Select(s =>
+        {
             var selected = s.SelectionJson is null ? null : JsonSerializer.Deserialize<CatalogSelectionSnapshot>(s.SelectionJson);
-            return new DiscoveryFavorite(s.CatalogRecordId, s.TargetValue, selected?.Item.ArtistName, s.TargetType.ToString());
+            return new DiscoveryFavorite(s.CatalogRecordId, s.TargetValue, selected?.Item.ArtistName, s.TargetType.ToString(), selected?.Item.Disambiguation, selected?.Item.Releases, s.Id);
         }).ToArray();
         var batches = await db.DiscoveryBatches.AsNoTracking().Where(b => b.ProfileId == profileId && b.CompletedAtUtc != null)
             .OrderByDescending(b => b.CreatedAtUtc).ThenByDescending(b => b.Id).Take(10)
@@ -27,7 +28,8 @@ public sealed class DiscoveryReader(DataContext db) : IDiscoveryReader
         var job = await db.DiscoveryJobs.AsNoTracking().Where(j => j.ProfileId == profileId && j.Kind == DiscoveryJobKind.Generation)
             .OrderByDescending(j => j.CreatedAtUtc).ThenByDescending(j => j.Id).FirstOrDefaultAsync(ct);
         return new(revision.Value, favorites, signals.Where(s => s.TargetType == TasteTargetType.Tag).Select(s => s.NormalizedTargetValue).ToArray(),
-            batches, job is null ? null : DiscoveryJobStatus.From(job), job?.CreatedAtUtc.Add(cooldown));
+            batches, job is null ? null : DiscoveryJobStatus.From(job), job?.CreatedAtUtc.Add(cooldown),
+            OnboardingState.Read(await db.ListenerProfiles.Where(p => p.Id == profileId).Select(p => p.OnboardingJson).SingleAsync(ct)));
     }
 
     public async Task<DiscoveryBatchView?> ReadBatchAsync(Guid profileId, Guid batchId, DateTimeOffset now, CancellationToken ct)

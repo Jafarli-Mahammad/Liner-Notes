@@ -24,6 +24,19 @@ public sealed class FixtureListenBrainzApiClient : IListenBrainzApiClient
                 artistNames[id] = request.Identity;
                 data = new { count = 1, artists = new[] { new { id, name = request.Identity } } };
                 break;
+            case ListenBrainzRequestKind.RecordingSearch:
+                data = new
+                {
+                    recordings = new[] { new Dictionary<string, object> {
+                    ["id"] = Id("selected-recording:" + request.Identity), ["title"] = request.Identity,
+                    ["disambiguation"] = "Synthetic recording fixture",
+                    ["artist-credit"] = new[] { new Dictionary<string, object> { ["artist"] = new { id = Id("recording-credit:" + request.Identity), name = "Synthetic recording artist" } } }
+                } }
+                };
+                break;
+            case ListenBrainzRequestKind.SimilarRecordings:
+                data = Enumerable.Range(1, Math.Min(request.Limit, 5)).Select(i => new { recording_mbid = Recording(i), score = 10, reference_mbid = request.Identity }).ToArray();
+                break;
             case ListenBrainzRequestKind.AlbumSearch:
                 data = new Dictionary<string, object>
                 {
@@ -44,18 +57,37 @@ public sealed class FixtureListenBrainzApiClient : IListenBrainzApiClient
                 break;
             case ListenBrainzRequestKind.RecordingMetadata:
                 data = Enumerable.Range(1, 5).Where(i => request.Identity.Split(',').Contains(Recording(i))).ToDictionary(Recording,
-                    i => new { recording = new { name = "Synthetic Discovery " + i }, artist = new { name = "Synthetic Ensemble " + i,
-                        artists = new[] { new { artist_mbid = Artist(i), name = "Synthetic Ensemble " + i } } } });
+                    i => new
+                    {
+                        recording = new { name = "Synthetic Discovery " + i },
+                        tag = new { recording = new[] { new { tag = "electronic", count = 10 }, new { tag = i % 2 == 0 ? "instrumental" : "vocals", count = 5 } } },
+                        artist = new
+                        {
+                            name = "Synthetic Ensemble " + i,
+                            artists = new[] { new { artist_mbid = Artist(i), name = "Synthetic Ensemble " + i } }
+                        }
+                    });
                 break;
             case ListenBrainzRequestKind.AlbumMetadata:
-                data = new Dictionary<string, object> { [request.Identity] = new {
-                    tag = new { release_group = new[] { new { tag = "electronic", count = 10 }, new { tag = "ambient", count = 5 } } }
-                }};
+                data = new Dictionary<string, object>
+                {
+                    [request.Identity] = new
+                    {
+                        tag = new { release_group = new[] { new { tag = "electronic", count = 10 }, new { tag = "ambient", count = 5 } } }
+                    }
+                };
                 break;
             case ListenBrainzRequestKind.ArtistMetadata:
-                data = request.Identity.Split(',').Select(artist => new { artist_mbid = artist, name = artistNames.GetValueOrDefault(artist, "Synthetic Ensemble"),
-                    tag = new { artist = new[] { "rock", "electronic", "synthpop", "alternative" }
-                        .Select((tag, index) => new { artist_mbid = artist, tag, count = 10 - index }).ToArray() } }).ToArray();
+                data = request.Identity.Split(',').Select(artist => new
+                {
+                    artist_mbid = artist,
+                    name = artistNames.GetValueOrDefault(artist, "Synthetic Ensemble"),
+                    tag = new
+                    {
+                        artist = new[] { "rock", "electronic", "synthpop", "alternative" }
+                        .Select((tag, index) => new { artist_mbid = artist, tag, count = 10 - index }).ToArray()
+                    }
+                }).ToArray();
                 break;
             default: throw new ArgumentException("listenbrainz_request_invalid");
         }

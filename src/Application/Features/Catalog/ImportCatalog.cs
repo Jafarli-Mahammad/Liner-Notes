@@ -26,7 +26,7 @@ public sealed class ImportCatalog(ICatalogImportStore store, ICatalogArtifactRea
         bool albumsStarted = false;
         await foreach (var row in reader.ReadAsync(artifact, manifest, ct))
         {
-            if (row.Kind == CatalogKind.Album) albumsStarted = true;
+            if (row.Kind is CatalogKind.Album or CatalogKind.Track) albumsStarted = true;
             if (row.Kind == CatalogKind.Artist && albumsStarted) throw new ArgumentException("catalog_artists_must_precede_albums");
             if (++count > manifest.ExpectedRecords) throw new ArgumentException("catalog_artifact_count_mismatch");
         }

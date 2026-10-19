@@ -69,7 +69,10 @@ public sealed record ScoreBreakdown : ExtensibleScoreRecord
                 .ThenBy(t => t.TagName, StringComparer.Ordinal).Take(3).Select(t => t.TagName));
             return $"Taste overlap: {TagSimilarityRaw:P0}" + (tags.Length == 0 ? "" : $" (shared tags: {tags})") +
                 (snapshot.Familiarity ? "; familiar seed artist" : "; artist outside your familiar seeds") +
-                $". Final score: {FinalScore:F3}.";
+                $". Final score: {FinalScore:F3}." +
+                string.Concat(snapshot.Evidence.AlbumFallbacks.Select(f =>
+                    $" Based on artists similar to {f.ArtistName}, the artist behind your favorite album {f.AlbumName}. Album-level similarity was unavailable, so this signal had reduced configured influence ({f.Influence:P0}).")) +
+                string.Concat(snapshot.Evidence.SelectionReasons.Select(reason => " " + reason));
         }
         var sb = new StringBuilder();
 

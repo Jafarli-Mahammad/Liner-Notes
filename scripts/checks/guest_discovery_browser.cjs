@@ -29,15 +29,24 @@ async function main() {
   const overview = async () => (await authenticatedJson('/api/discovery')).page;
   const chooseStyle = async style => {
     await page.locator('#nav-seeding').click();
-    await page.locator('.discovery-styles').getByRole('button', { name: style, exact: true }).click();
-    await page.getByRole('button', { name: 'Find my music', exact: true }).click();
+    await page.locator('[data-discovery-action="step"][data-step="tags"]').first().click();
+    await page.locator('#taste-tag-search').fill(style);
+    await page.locator('#taste-tag-hits [data-style="' + style + '"]').click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.locator('#discovery-kind').waitFor();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByRole('button', { name: 'Start discovery', exact: true }).click();
     await page.getByText('Picked for your taste', { exact: true }).waitFor({ timeout: 60_000 });
   };
   try {
     const metadata = await (await context.request.get(new URL('/api/discovery', base).href)).json();
     assert.equal(metadata.evidenceOrigin, 'Synthetic', 'This check must never generate against a live provider.');
     await page.goto(base.href);
-    await page.getByRole('button', { name: 'Try as a guest', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue without an account', exact: true }).click();
+    await page.getByRole('button', { name: 'Skip all questions', exact: true }).click();
+    await page.getByRole('heading', { name: 'What sounds like you?', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.locator('#discovery-kind').waitFor();
     let releaseOld;
     const oldReleased = new Promise(resolve => { releaseOld = resolve; });
     let oldFinished;
@@ -79,9 +88,15 @@ async function main() {
     assert.equal(requests.filter(r => r.method === 'POST' && r.path === '/api/catalog/lookup').length, 2);
     check('missing artists and albums use explicit lookup with independent short pacing');
 
-    await page.locator('.discovery-styles').getByRole('button', { name: 'jazz', exact: true }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await page.getByRole('heading', { name: 'What sounds like you?', exact: true }).waitFor();
+    await page.locator('#taste-tag-search').fill('jazz');
+    await page.locator('#taste-tag-hits [data-style=\"jazz\"]').click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.locator('#discovery-kind').waitFor();
     const started = Date.now();
-    await page.getByRole('button', { name: 'Find my music', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByRole('button', { name: 'Start discovery', exact: true }).click();
     await page.getByText('Picked for your taste', { exact: true }).waitFor({ timeout: 60_000 });
     const firstBatchMilliseconds = Date.now() - started;
     assert.equal(await page.locator('.discovery-pick').count(), 5);
@@ -138,7 +153,7 @@ async function main() {
     await page.locator('#reg-email').fill(`${username}@example.test`);
     await page.locator('#reg-password').fill(password);
     await page.locator('#register-form').getByRole('button', { name: 'Create account', exact: true }).click();
-    await page.locator('#discovery-selection-count').waitFor();
+    await page.getByRole('heading', { name: 'Your taste, at a glance', exact: true }).waitFor();
     assert.equal((await authenticatedJson('/api/discovery/session')).profile.id, guestProfile);
     assert.equal((await overview()).batches.length, 1);
     check('registration preserves the same profile and history with weekly email opt-in off');
@@ -150,7 +165,7 @@ async function main() {
     await page.setViewportSize({ width: 1280, height: 900 });
 
     await page.evaluate(() => logout());
-    await page.getByRole('button', { name: 'Try as a guest', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Continue without an account', exact: true }).waitFor();
     await chooseStyle('ambient');
     const separateGuest = (await authenticatedJson('/api/discovery/session')).profile.id;
     assert.notEqual(separateGuest, guestProfile);
@@ -179,12 +194,12 @@ async function main() {
     await page.locator('#nav-your-data').click();
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: 'Delete account', exact: true }).click();
-    await page.getByRole('button', { name: 'Try as a guest', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Continue without an account', exact: true }).waitFor();
     await chooseStyle('electronic');
     await page.locator('#nav-your-data').click();
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: 'Clear guest data', exact: true }).click();
-    await page.getByRole('button', { name: 'Try as a guest', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Continue without an account', exact: true }).waitFor();
     assert.equal((await overview()), null);
     assert.ok(!(await context.cookies()).some(cookie => cookie.name === 'liner.guest'));
     check('account deletion and guest clear remove their private data');

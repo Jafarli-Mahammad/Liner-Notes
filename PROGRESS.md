@@ -27,6 +27,25 @@ Remaining confirmation and deployment gates:
 
 See the [evidence](docs/renewal/guest-discovery-evidence.md), [storage notes](docs/renewal/guest-discovery-storage.md), [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md), and [synthetic runbook](docs/renewal/guest-discovery-local-run.md).
 
+## Optional taste onboarding
+
+Implementation of the approved 2026-10-19 design passed local verification: 669
+.NET tests with zero failures/skips, 21 browser checks and the EF model/migration
+consistency check. The 271-tag synthetic generation/export journey passed within
+the existing snapshot budget.
+Guests and accounts share resumable optional questions, searchable tags without a
+selection count cap, broad taste, artist/album/recording favorites and explicit
+review. Skipping taste opens a separate recipient-free Recent recommendations
+feed. Saved selections are separate from bounded generation windows and replay
+snapshots. Export, attachment, explicit import, ownership and deletion include the
+new state. Existing name seeds, custom tags and queued request retries remain compatible.
+
+See [implementation evidence](docs/renewal/optional-taste-onboarding-evidence.md)
+and the [execution plan](docs/superpowers/plans/2026-10-19-optional-taste-onboarding.md).
+Developer confirmation, live recording/vocal coverage and recommendation quality
+remain open. Last.fm stays available; unsupported direct recording capability is
+reported as a coverage gap. Deployment and real catalog acquisition remain separate gates.
+
 ## Provider status
 
 ListenBrainz is the configured default; Last.fm remains available behind the provider abstraction. Live use is explicitly gated. Per-user provider choice and listening-history imports are deferred. Developer confirmation, deployment-specific usage and license review, and recommendation-quality evaluation remain open. See the [provider evidence](docs/renewal/listenbrainz-provider-evidence.md) and [operations guide](docs/renewal/listenbrainz-provider-runbook.md).

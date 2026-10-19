@@ -17,10 +17,11 @@ public sealed class CatalogRecord : BaseEntity
     public string AliasesJson { get; private set; } = "[]";
     public string TagsJson { get; private set; } = "[]";
     public string CreditsJson { get; private set; } = "[]";
+    public string ReleasesJson { get; private set; } = "[]";
     public string RowSha256 { get; private set; } = "";
     private CatalogRecord() { }
     public CatalogRecord(Guid publicationId, Guid canonicalId, CatalogKind kind, Guid entityId, string name,
-        string? artistName, string? disambiguation, string? firstReleaseDate, string aliasesJson, string tagsJson, string rowSha256, string creditsJson = "[]")
+        string? artistName, string? disambiguation, string? firstReleaseDate, string aliasesJson, string tagsJson, string rowSha256, string creditsJson = "[]", string releasesJson = "[]")
     {
         if (publicationId == Guid.Empty || canonicalId == Guid.Empty || entityId == Guid.Empty || !Enum.IsDefined(kind) ||
             string.IsNullOrWhiteSpace(name) || name.Length > 256 || artistName?.Length > 1000 || disambiguation?.Length > 500 ||
@@ -28,6 +29,8 @@ public sealed class CatalogRecord : BaseEntity
             throw new ArgumentException("catalog_record_invalid");
         if (rowSha256.Length != 64 || rowSha256.Any(c => c is not (>= 'a' and <= 'f') and not (>= '0' and <= '9')))
             throw new ArgumentException("catalog_row_hash_invalid");
+        if (System.Text.Encoding.UTF8.GetByteCount(releasesJson) > 16384) throw new ArgumentException("catalog_release_hints_too_large");
+        ReleasesJson = releasesJson;
         RowSha256 = rowSha256;
         Id = CatalogText.RecordId(publicationId, kind, canonicalId); PublicationId = publicationId; CanonicalId = canonicalId; Kind = kind;
         ArtistId = kind == CatalogKind.Artist ? entityId : null; AlbumId = kind == CatalogKind.Album ? entityId : null;

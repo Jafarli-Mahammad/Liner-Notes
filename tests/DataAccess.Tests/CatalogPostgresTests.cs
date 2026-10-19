@@ -20,7 +20,7 @@ using Xunit;
 
 namespace LinerNotes.DataAccess.Tests;
 
-public sealed class CatalogPostgresTests : IAsyncLifetime
+public sealed partial class CatalogPostgresTests : IAsyncLifetime
 {
     private readonly string _name = "liner_catalog_c5_" + Guid.NewGuid().ToString("N");
     private string _admin = "";

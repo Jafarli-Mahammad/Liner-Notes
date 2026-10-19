@@ -266,3 +266,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Suggested improvement:** When a requirement changes cardinality, trace collection limits from UI through persistence, computation, external requests and stored evidence. Specify which selections are retained and how bounded processing represents them before estimating implementation.
 **Principle:** Product cardinality and per-operation resource budgets need separate contracts; changing one must not silently redefine the other.
 **Reference file:** docs/superpowers/specs/2026-10-19-optional-taste-onboarding-design.md
+
+
+### Observation 027: Trace new entity kinds through validation and custom SQL
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Skill:** efcore-patterns; modern-csharp-coding-standards
+**Type:** open-source
+**Phase/Area:** Schema and lifecycle verification
+**Issue:** Extending an enum and import/search paths still left a Domain selection allowlist and a migration-only database CHECK constraint rejecting the new kind. Existing tests passed until the browser exercised saving an actual selected entity.
+**Suggested improvement:** Search all entity-kind guards, hand-written migration constraints, persistence readers, exports and immutable snapshots. Add an integration test that selects, saves and reads the new kind through the complete application path, including an upgrade from the old schema.
+**Principle:** Enum extension is an end-to-end data contract change; model-generated migrations do not discover custom SQL constraints.

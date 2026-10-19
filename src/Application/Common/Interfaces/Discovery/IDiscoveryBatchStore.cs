@@ -6,7 +6,7 @@ using LinerNotes.Domain.Taste;
 namespace LinerNotes.Application.Common.Interfaces.Discovery;
 
 public sealed record DiscoveryInputs(ListenerProfile Profile, IReadOnlyList<TasteSignal> Signals,
-    IReadOnlyList<WeeklyRecommendation> Feedback);
+    IReadOnlyList<WeeklyRecommendation> Feedback, long GenerationOrdinal = 0);
 public interface IDiscoveryBatchStore
 {
     Task<long> SaveFeedbackAsync(Guid profileId, Guid recommendationId, long expectedRevision,

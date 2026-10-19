@@ -7,7 +7,7 @@ using LinerNotes.Domain.Digest;
 namespace LinerNotes.Domain.Scoring;
 
 public sealed record BaselineAConfiguration(string Version = "phase6-config-v1", double TagWeight = 1,
-    double NoveltyWeight = 0.2, IReadOnlyDictionary<string, string>? Policy = null)
+    double NoveltyWeight = 0.2, IReadOnlyDictionary<string, string>? Policy = null, string FormulaVersion = "baseline-a-v1")
 {
     public string Sha256
     {
@@ -17,7 +17,7 @@ public sealed record BaselineAConfiguration(string Version = "phase6-config-v1",
             var values = new SortedDictionary<string, string>(StringComparer.Ordinal)
             {
                 ["version"] = Version,
-                ["formula"] = "baseline-a-v1",
+                ["formula"] = FormulaVersion,
                 ["tag"] = TagWeight.ToString("R", CultureInfo.InvariantCulture),
                 ["novelty"] = NoveltyWeight.ToString("R", CultureInfo.InvariantCulture)
             };
@@ -29,7 +29,7 @@ public sealed record BaselineAConfiguration(string Version = "phase6-config-v1",
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Version) || !double.IsFinite(TagWeight) || TagWeight < 0 ||
+        if (FormulaVersion is not ("baseline-a-v1" or "baseline-a-v2") || string.IsNullOrWhiteSpace(Version) || !double.IsFinite(TagWeight) || TagWeight < 0 ||
             !double.IsFinite(NoveltyWeight) || NoveltyWeight < 0)
             throw new ArgumentException("Scoring configuration must have a version and finite nonnegative weights.");
     }
@@ -53,17 +53,19 @@ public sealed class BaselineAScorer
     }
 
     private ScoreBreakdown ScoreCore(BaselineACandidate candidate, WeightedTagVector taste,
-        bool familiarArtist, string? week, Guid? batchId, BaselineAConfiguration configuration)
+        bool familiarArtist, string? week, Guid? batchId, BaselineAConfiguration configuration, double unmatchedTasteSquared = 0)
     {
+        if (candidate.Evidence.SimilarityInfluence != 1) configuration = configuration with { FormulaVersion = "baseline-a-v2" };
         configuration.Validate();
         var tasteWeights = Ordered(taste);
         var candidateWeights = Ordered(candidate.Tags);
-        double tasteMagnitude = Magnitude(tasteWeights), candidateMagnitude = Magnitude(candidateWeights);
+        if (!double.IsFinite(unmatchedTasteSquared) || unmatchedTasteSquared < 0 || !double.IsFinite(candidate.Evidence.SimilarityInfluence) || candidate.Evidence.SimilarityInfluence is < 0 or > 1) throw new ArgumentException("invalid_stored_influence");
+        double tasteMagnitude = Math.Sqrt(tasteWeights.Values.Sum(v => v * v) + unmatchedTasteSquared), candidateMagnitude = Magnitude(candidateWeights);
         var contributions = candidateWeights.Where(p => tasteWeights.ContainsKey(p.Key)).Select(p =>
             new NormalizedTagContribution(p.Key, p.Value, tasteWeights[p.Key],
-                p.Value / candidateMagnitude * (tasteWeights[p.Key] / tasteMagnitude) * configuration.TagWeight)).ToArray();
+                p.Value / candidateMagnitude * (tasteWeights[p.Key] / tasteMagnitude) * configuration.TagWeight * candidate.Evidence.SimilarityInfluence)).ToArray();
         double tagScore = contributions.Sum(p => p.NormalizedWeightedContribution);
-        double raw = configuration.TagWeight == 0 ? Cosine(tasteWeights, candidateWeights, tasteMagnitude, candidateMagnitude) : tagScore / configuration.TagWeight;
+        double raw = Cosine(tasteWeights, candidateWeights, tasteMagnitude, candidateMagnitude);
         double novelty = familiarArtist ? 0 : 1;
         double bonus = novelty * configuration.NoveltyWeight;
         if (!double.IsFinite(tagScore + bonus)) throw new ArgumentException("Nonfinite score arithmetic.");
@@ -76,6 +78,8 @@ public sealed class BaselineAScorer
         {
             Snapshot = new ScoreSnapshot
             {
+                FormulaVersion = configuration.FormulaVersion,
+                RankingPolicyVersion = candidate.Evidence.SelectionPolicy ?? "score-ordinal-one-artist-v1",
                 MaterializationVersion = candidate.Evidence.MaterializationVersion,
                 ConfigurationVersion = configuration.Version,
                 ConfigurationSha256 = configuration.Sha256,
@@ -88,7 +92,8 @@ public sealed class BaselineAScorer
                 Week = week,
                 DiscoveryBatchId = batchId,
                 PayloadVersion = batchId.HasValue ? "discovery-score-v2" : "phase6-score-v1",
-                TasteWeights = tasteWeights,
+                TasteWeights = tasteWeights.Count <= 80 ? tasteWeights : new SortedDictionary<string, double>(tasteWeights.Where(p => candidateWeights.ContainsKey(p.Key)).ToDictionary(p => p.Key, p => p.Value), StringComparer.Ordinal),
+                UnmatchedTasteSquared = tasteWeights.Count <= 80 ? (unmatchedTasteSquared == 0 ? null : unmatchedTasteSquared) : tasteWeights.Where(p => !candidateWeights.ContainsKey(p.Key)).Sum(p => p.Value * p.Value) + unmatchedTasteSquared,
                 CandidateWeights = candidateWeights,
                 TasteMagnitude = tasteMagnitude,
                 CandidateMagnitude = candidateMagnitude,
@@ -128,13 +133,13 @@ public sealed class BaselineAScorer
 
     public ScoreBreakdown Replay(ScoreSnapshot snapshot)
     {
-        if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion != "baseline-a-v1" ||
-            snapshot.MaterializationVersion is not ("positive-signals-v1" or "canonical-entity-max-v1") ||
+        if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion is not ("baseline-a-v1" or "baseline-a-v2") ||
+            snapshot.MaterializationVersion is not ("positive-signals-v1" or "canonical-entity-max-v1" or "canonical-entity-max-v2") ||
             snapshot.TagNormalizationVersion is not ("max-observed-descriptive-count-v1" or "max-observed-artist-tag-votes-v1") ||
-            snapshot.RankingPolicyVersion != "score-ordinal-one-artist-v1")
+            snapshot.RankingPolicyVersion is not ("score-ordinal-one-artist-v1" or "optional-taste-selection-v1"))
             throw new NotSupportedException("Unsupported stored scoring version.");
         var configuration = new BaselineAConfiguration(snapshot.ConfigurationVersion, snapshot.Weights.Tag,
-            snapshot.Weights.Novelty, snapshot.ConfigurationPolicy);
+            snapshot.Weights.Novelty, snapshot.ConfigurationPolicy, snapshot.FormulaVersion);
         if (configuration.Sha256 != snapshot.ConfigurationSha256) throw new ArgumentException("Stored configuration hash mismatch.");
         string? mbid = snapshot.TrackKey.StartsWith("mbid:", StringComparison.Ordinal) ? snapshot.TrackKey[5..] : null;
         var track = Track.Create(snapshot.Title, snapshot.ArtistName, mbid: mbid);
@@ -145,7 +150,7 @@ public sealed class BaselineAScorer
         return ScoreCore(new(track, WeightedTagVector.FromDictionary(snapshot.CandidateWeights), snapshot.Evidence),
             WeightedTagVector.FromDictionary(snapshot.TasteWeights), snapshot.Familiarity,
             snapshot.PayloadVersion == "phase6-score-v1" ? IsoWeek.Parse(snapshot.Week!).Value : null,
-            snapshot.PayloadVersion == "discovery-score-v2" ? snapshot.DiscoveryBatchId : null, configuration);
+            snapshot.PayloadVersion == "discovery-score-v2" ? snapshot.DiscoveryBatchId : null, configuration, snapshot.UnmatchedTasteSquared ?? 0);
     }
 
     private static SortedDictionary<string, double> Ordered(WeightedTagVector vector)

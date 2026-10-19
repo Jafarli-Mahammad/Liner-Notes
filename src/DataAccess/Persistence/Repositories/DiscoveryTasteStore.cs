@@ -4,13 +4,24 @@ using LinerNotes.Domain.Enums;
 using LinerNotes.Domain.Taste;
 using Microsoft.EntityFrameworkCore;
 namespace LinerNotes.DataAccess.Persistence.Repositories;
-public sealed class DiscoveryTasteStore(DataContext db) : IDiscoveryTasteStore
+
+public sealed class DiscoveryTasteStore(DataContext db) : IDiscoveryTasteStore, LinerNotes.Application.Features.Discovery.ITasteOnboardingStore
 {
+    public async Task<long> SaveAsync(Guid profileId, long revision, LinerNotes.Domain.Discovery.TasteOnboarding answers,
+        IReadOnlyList<TasteSignal> selections, DateTimeOffset now, CancellationToken ct)
+    {
+        answers.Validate();
+        long next = await ReplaceManualAsync(profileId, revision, selections, now, ct);
+        var profile = db.ListenerProfiles.Local.Single(p => p.Id == profileId);
+        profile.SetOnboarding(System.Text.Json.JsonSerializer.Serialize(answers));
+        await db.SaveChangesAsync(ct);
+        return next;
+    }
     public async Task<long> ReplaceManualAsync(Guid profileId, long expectedRevision, IReadOnlyList<TasteSignal> signals,
         DateTimeOffset now, CancellationToken ct)
     {
         if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("taste_write_requires_coordinated_transaction");
-        if (signals.Count is < 1 or > 10 || signals.Any(s => s.ProfileId != profileId || s.Source != TasteSignalSource.InitialSeedManual))
+        if (signals.Any(s => s.ProfileId != profileId || s.Source != TasteSignalSource.InitialSeedManual))
             throw new ArgumentException("invalid_discovery_selections");
         var profile = await db.ListenerProfiles.FromSqlInterpolated($"""
             SELECT * FROM "ListenerProfiles" WHERE "Id"={profileId} FOR UPDATE

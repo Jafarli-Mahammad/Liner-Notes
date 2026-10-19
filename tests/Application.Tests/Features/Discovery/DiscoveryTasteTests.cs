@@ -10,8 +10,50 @@ using LinerNotes.Domain.Taste;
 using NSubstitute;
 using Xunit;
 namespace LinerNotes.Application.Tests.Features.Discovery;
+
 public sealed class DiscoveryTasteTests
 {
+    [Fact]
+    public async Task PreviouslyQueuedV1RequestKeysReplayAfterOnboardingUpgrade()
+    {
+        var profile = LinerNotes.Domain.Discovery.ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+        var selection = new DiscoveryTasteSelection([], ["jazz"]);
+        string hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = "discovery-intent-v1",
+            Revision = 0L,
+            Records = Array.Empty<Guid>(),
+            Tags = new[] { "jazz" }
+        })));
+        var prior = new LinerNotes.Domain.Discovery.DiscoveryJob(profile.Id, "v1-retry", hash,
+            LinerNotes.Domain.Discovery.DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow);
+        var batches = Substitute.For<IDiscoveryBatchStore>();
+        batches.ReadInputsAsync(profile.Id, Arg.Any<DateTimeOffset>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new DiscoveryInputs(profile, [], []));
+        var jobs = Substitute.For<IDiscoveryJobStore>();
+        jobs.FindByKeyAsync(profile.Id, "v1-retry", Arg.Any<CancellationToken>()).Returns(prior);
+        var taste = Substitute.For<IDiscoveryTasteStore>();
+        var admission = Substitute.For<IDiscoveryWriteCoordinator>();
+        var handler = new SubmitDiscoveryHandler(batches, jobs, taste,
+            new(Substitute.For<ICatalogReader>(), taste, admission, TimeProvider.System), admission, new() { RunJobs = true }, TimeProvider.System);
+        Assert.Same(prior, await handler.Handle(new(profile.Id, 0, "v1-retry", selection), default));
+        await taste.DidNotReceiveWithAnyArgs().ReplaceManualAsync(default, default, default!, default, default);
+    }
+
+    [Fact]
+    public async Task ExistingNameSeedsAndUncataloguedTagsRemainEditableOnlyByTheirOwner()
+    {
+        var profile = Guid.NewGuid();
+        var artist = TasteSignal.ForProfile(profile, null, TasteTargetType.Artist, "Existing name seed", 1, TasteSignalSource.InitialSeedManual, "Prior setup");
+        var tag = TasteSignal.ForProfile(profile, null, TasteTargetType.Tag, "existing custom tag", 1, TasteSignalSource.InitialSeedManual, "Prior setup");
+        var select = new SelectDiscoveryTaste(Substitute.For<ICatalogReader>(), Substitute.For<IDiscoveryTasteStore>(), Substitute.For<IDiscoveryWriteCoordinator>(), TimeProvider.System);
+        var selection = new DiscoveryTasteSelection([], [tag.TargetValue], [artist.Id]);
+        var result = await select.ResolveAsync(profile, selection, default, [artist, tag]);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, signal => signal.Id == artist.Id);
+        await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(Guid.NewGuid(), selection, default, [artist, tag]));
+        await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(profile, new([], ["new arbitrary tag"]), default, [artist, tag]));
+    }
+
     [Fact]
     public async Task RetainedFavoriteCanBeReselectedAfterCatalogEvictionOnlyForItsOwner()
     {
@@ -36,15 +78,17 @@ public sealed class DiscoveryTasteTests
     }
 
     [Fact]
-    public async Task TagOnlySelectionIsAllowedButOversizedOrUnknownStylesAreRejected()
+    public async Task TagAndEmptySelectionsAreAllowedButUnknownTagsAreRejected()
     {
         var catalog = Substitute.For<ICatalogReader>();
         var select = new SelectDiscoveryTaste(catalog, Substitute.For<IDiscoveryTasteStore>(), Substitute.For<IDiscoveryWriteCoordinator>(), TimeProvider.System);
         var result = await select.ResolveAsync(Guid.NewGuid(), new([], ["jazz"]), default);
         Assert.Equal(TasteTargetType.Tag, Assert.Single(result).TargetType);
         await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(Guid.NewGuid(), new([], ["unknown"]), default));
-        await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(Guid.NewGuid(), new([], []), default));
-        await Assert.ThrowsAsync<ArgumentException>(() => select.ResolveAsync(Guid.NewGuid(), new(Enumerable.Range(0, 6).Select(_ => Guid.NewGuid()).ToArray(), []), default));
+        Assert.Empty(await select.ResolveAsync(Guid.NewGuid(), new([], []), default));
+        var allTags = TasteVocabulary.Entries.Select(t => t.Id).ToArray();
+        Assert.True(allTags.Length > 200);
+        Assert.Equal(allTags.Length, (await select.ResolveAsync(Guid.NewGuid(), new([], allTags), default)).Count);
         await catalog.DidNotReceiveWithAnyArgs().GetAsync(default, default, default);
     }
     [Fact]

@@ -51,12 +51,12 @@ dotnet run --project src/Presentation --no-launch-profile -- --urls http://127.0
 
 Use `--file`: the legacy project at the repository root takes precedence over a
 bare source-file argument. Preparation creates only a new database, applies its
-migrations, verifies accounting, reconciles its new inventory and imports 100
-synthetic artists and 20 synthetic albums. It refuses a preexisting inventory or
+migrations, verifies accounting, reconciles its new inventory and imports 105
+synthetic artists, 20 synthetic albums and five synthetic recordings. It refuses a preexisting inventory or
 an arbitrary database name. It does not reset or migrate a retained database.
 
-Open [the local guest demo](http://127.0.0.1:5092). Choose **Try as a guest**, select
-artists/albums/styles, and request music. Search typing uses the local catalog.
+Open [the local guest demo](http://127.0.0.1:5092). Choose **Continue without an account**, optionally answer questions, select
+tags and artists/albums/tracks, review, and request music. Search typing uses the local catalog.
 **Search more online** explicitly schedules the fixture lookup adapter in this
 synthetic run. Demo results and catalog matches are labelled accordingly.
 
@@ -125,3 +125,15 @@ Real acquisition needs its approved source manifest and the existing provider
 bulk source is enabled by the synthetic script. Weekly generation sharing this
 inventory must enable discovery admission. Both hosts reject concurrent optional
 local email capture; the onsite workflow works with that feature disabled.
+
+
+The optional onboarding regression additionally checks all-input skipping, soup,
+recording favorites, the public feed, registration and more than 200 saved tags:
+
+```bash
+node scripts/checks/optional_taste_browser.cjs --approve-synthetic
+```
+
+Its default URL is `http://127.0.0.1:5093`; set `LINER_GUEST_DEMO_URL` to match
+this runbook's port when sharing the same demo. It uses the same installed
+Playwright module setting. Output is private and disposable under `/tmp`.

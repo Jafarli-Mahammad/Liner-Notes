@@ -18,10 +18,15 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         if (string.IsNullOrWhiteSpace(request.Seed) || request.Seed.Length > 200 || request.Seed.Any(char.IsControl) ||
-            request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue)) throw new ArgumentException("invalid_pool_seed");
-        return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
-            Version = "public-pool-v1", Configuration = configuration, request.ArtistId,
-            Seed = request.ArtistId.HasValue ? null : request.Seed.Trim().ToLowerInvariant(), request.IsTag
+            request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue) || (request.IsRecording && (request.ArtistId is null || request.IsTag))) throw new ArgumentException("invalid_pool_seed");
+        return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = "public-pool-v1",
+            Configuration = configuration,
+            request.ArtistId,
+            Seed = request.ArtistId.HasValue ? null : request.Seed.Trim().ToLowerInvariant(),
+            request.IsTag,
+            request.IsRecording
         })));
     }
     public PreparedDiscoveryPool? TryGet(DiscoveryPoolRequest request)
@@ -33,7 +38,8 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
     {
         if (pool.ExpiresAtUtc is not { } expiry || expiry <= clock.GetUtcNow()) return;
         string key = "pool:" + pool.Key;
-        caches.Prepared.Set(key, pool, new MemoryCacheEntryOptions {
+        caches.Prepared.Set(key, pool, new MemoryCacheEntryOptions
+        {
             Size = DiscoveryMemoryCaches.EstimateBytes(pool.SerializedBytes, key),
             AbsoluteExpirationRelativeToNow = expiry - clock.GetUtcNow()
         });
@@ -53,7 +59,13 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             await using var scope = scopes.CreateAsyncScope();
             var provider = scope.ServiceProvider.GetRequiredService<IRecommendationProviderResolver>().Resolve();
             IngestionResult<RawCandidateTrack> raw;
-            if (request.IsTag) raw = await provider.Source.GetCandidatesByTagsAsync([request.Seed], configuration.DiscoveryLimit, deadline.Token);
+            if (request.IsRecording && request.ArtistId is { } recording)
+            {
+                raw = provider.Source is IRecordingRecommendationSource source
+                    ? await source.GetCandidatesByRecordingsAsync([recording], configuration.DiscoveryLimit, deadline.Token)
+                    : new([], [new(recording.ToString("D"), "recording.similar", "direct_recording_similarity_not_supported")]);
+            }
+            else if (request.IsTag) raw = await provider.Source.GetCandidatesByTagsAsync([request.Seed], configuration.DiscoveryLimit, deadline.Token);
             else if (request.ArtistId is { } id)
             {
                 if (provider.Source is not ICanonicalRecommendationSource canonical)
@@ -68,11 +80,26 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             if (hydrated.Count > configuration.MaximumCandidates || hydrated.Any(c => c.Origin != configuration.Origin ||
                 c.TagResponse.Origin != configuration.Origin || c.SupportingResponses.Any(r => r.Origin != configuration.Origin)))
                 throw new GenerationStoppedException("prepared_evidence_origin_or_size_mismatch");
-            byte[] serialized = JsonSerializer.SerializeToUtf8Bytes(new { Candidates = hydrated.Select(c => new {
-                c.Track.TrackKey, c.Track.Title, c.Track.ArtistName, c.Track.Mbid, Weights = c.TagVector.Weights,
-                c.RawCandidate.Paths, c.Tags, c.TagResponse, c.TagScope, c.TagNormalizationVersion,
-                c.SupportingResponses, c.TagMissingReason, c.Gaps
-            }).ToArray(), Gaps = raw.Gaps.Concat(hydrated.Gaps).ToArray() });
+            byte[] serialized = JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                Candidates = hydrated.Select(c => new
+                {
+                    c.Track.TrackKey,
+                    c.Track.Title,
+                    c.Track.ArtistName,
+                    c.Track.Mbid,
+                    Weights = c.TagVector.Weights,
+                    c.RawCandidate.Paths,
+                    c.Tags,
+                    c.TagResponse,
+                    c.TagScope,
+                    c.TagNormalizationVersion,
+                    c.SupportingResponses,
+                    c.TagMissingReason,
+                    c.Gaps
+                }).ToArray(),
+                Gaps = raw.Gaps.Concat(hydrated.Gaps).ToArray()
+            });
             if (serialized.Length > 2 * 1024 * 1024) throw new GenerationStoppedException("prepared_evidence_byte_limit");
             var now = clock.GetUtcNow();
             DateTimeOffset? expires = configuration.Origin == EvidenceOrigin.Synthetic ? now.AddMinutes(10) :
@@ -80,8 +107,11 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             var pool = new PreparedDiscoveryPool(hash, provider.Id, configuration.Origin, now, expires, CatalogText.Version,
                 hydrated.Items, raw.Gaps.Concat(hydrated.Gaps).Distinct().ToArray(), serialized.Length,
                 Convert.ToHexStringLower(SHA256.HashData(serialized)));
-            if (expires > now) caches.Prepared.Set(key, pool, new MemoryCacheEntryOptions {
-                Size = DiscoveryMemoryCaches.EstimateBytes(serialized.Length, key), AbsoluteExpirationRelativeToNow = expires - now });
+            if (expires > now) caches.Prepared.Set(key, pool, new MemoryCacheEntryOptions
+            {
+                Size = DiscoveryMemoryCaches.EstimateBytes(serialized.Length, key),
+                AbsoluteExpirationRelativeToNow = expires - now
+            });
             return pool;
         }
         finally { gate.Release(); }

@@ -455,6 +455,12 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<Guid>("PublicationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReleasesJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<string>("RowSha256")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -475,7 +481,7 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.ToTable("CatalogRecords", null, t =>
                         {
-                            t.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL)");
+                            t.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL) OR (\"Kind\"='Track' AND \"ArtistId\" IS NULL AND \"AlbumId\" IS NULL)");
 
                             t.HasCheckConstraint("CK_CatalogRecords_JsonBound", "octet_length(\"AliasesJson\"::text)<=16384 AND octet_length(\"TagsJson\"::text)<=16384 AND octet_length(\"CreditsJson\"::text)<=16384");
                         });
@@ -1019,6 +1025,10 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                     b.Property<DateTimeOffset>("LastActiveAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("OnboardingJson")
+                        .HasMaxLength(4096)
+                        .HasColumnType("text");
+
                     b.Property<long>("Revision")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -1039,6 +1049,48 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_ListenerProfiles_Lifetime", "(\"UserId\" IS NULL AND \"ExpiresAtUtc\" IS NOT NULL) OR (\"UserId\" IS NOT NULL AND \"ExpiresAtUtc\" IS NULL)");
                         });
+                });
+
+            modelBuilder.Entity("LinerNotes.Domain.Discovery.RecentRecommendation", b =>
+                {
+                    b.Property<long>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Sequence"));
+
+                    b.Property<string>("ArtistName")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("MetadataExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("RecordingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Sequence");
+
+                    b.HasIndex("RecordingId")
+                        .IsUnique();
+
+                    b.ToTable("RecentRecommendations", (string)null);
                 });
 
             modelBuilder.Entity("LinerNotes.Domain.Taste.TasteSignal", b =>

@@ -134,3 +134,32 @@ account import merges aliases using their earliest recommendation timestamp.
 `DiscoveryBatches.CoverageJson` is exported as structured JSON. Export version
 2.5 includes every new owned field; cache quota eviction never removes private
 recommendation history. The consumer is not enabled by this checkpoint.
+
+
+## Optional taste onboarding and the public recent feed (2026-10-19)
+
+`ListenerProfiles.OnboardingJson` is private. It contains stable question codes,
+explicit skipped/unvisited/no-preference states, questionnaire version, broad taste
+and the resumable step. The existing profile revision fences updates. Account and
+guest exports include this field; deletion and guest expiry remove the owning row.
+Registration attaches it with the profile. Explicit import previews answer conflicts,
+keeps answered account values, fills unanswered values and merges broad taste.
+
+`CatalogRecords.ReleasesJson` is public recording metadata (release identity, title
+and date), separate from recording identity. Selected favorite snapshots preserve
+credits, disambiguation and release hints across catalog expiry. Private exports
+include these snapshots with all selected tags and legacy name seeds.
+
+`RecentRecommendations` is a separate public projection with exactly Sequence,
+RecordingId, Title, ArtistName, Origin, Attribution and MetadataExpiresAtUtc. It has
+no private foreign keys, source-row keys, event timestamps, counts, explanations,
+feedback or recipient IDs. It is excluded from personal export/deletion because
+it has no ownership association. Publication reads eligible shared catalog metadata,
+never copies a private score/title snapshot, and commits with successful picks.
+Reads validate current public eligibility and never query private batches or call
+providers. Repeated music keeps its feed position. The projection is bounded to
+1,000 entries; expired metadata is hidden on reads and reclaimed on publication.
+
+Ordinary transaction/application logging is not an anonymity guarantee. Public
+music overlap can still permit inference; no stronger resistance is claimed.
+No new publication log or outbox records a recipient association.

@@ -59,9 +59,12 @@ public sealed class CatalogArtifactReader : ICatalogArtifactReader
         if (row.Id == Guid.Empty || !Enum.IsDefined(row.Kind) || string.IsNullOrWhiteSpace(row.Name) || row.Name.Length > 256 ||
             row.Aliases is null || row.ArtistIds is null || row.Tags is null || row.Tags.Length > 20 || row.Disambiguation?.Length > 500 ||
             (row.Kind == CatalogKind.Artist && row.ArtistIds.Length != 0) ||
-            (row.Kind == CatalogKind.Album && (row.ArtistIds.Length is < 1 or > 32 || row.ArtistIds.Any(id => id == Guid.Empty))) ||
+            (row.Kind is CatalogKind.Album or CatalogKind.Track && (row.ArtistIds.Length is < 1 or > 32 || row.ArtistIds.Any(id => id == Guid.Empty))) ||
             row.ArtistIds.Distinct().Count() != row.ArtistIds.Length)
             throw new ArgumentException("catalog_row_invalid");
+        if (row.Releases is { } releases && (row.Kind != CatalogKind.Track || releases.Length > 10 ||
+            releases.Any(r => r.CanonicalId == Guid.Empty || string.IsNullOrWhiteSpace(r.Title) || r.Title.Length > 256 || r.Title.Any(char.IsControl) || r.Date is not null && !ValidDate(r.Date))))
+            throw new ArgumentException("catalog_recording_release_invalid");
         _ = CatalogText.Terms(row.Name, row.Aliases);
         if (row.Disambiguation is not null && row.Disambiguation.Any(char.IsControl)) throw new ArgumentException("catalog_disambiguation_invalid");
         if (row.FirstReleaseDate is { } date && !ValidDate(date)) throw new ArgumentException("catalog_date_invalid");
@@ -69,11 +72,14 @@ public sealed class CatalogArtifactReader : ICatalogArtifactReader
         {
             if (tag is null || string.IsNullOrWhiteSpace(tag.Name) || tag.Name.Length > 100 || tag.Name.Any(char.IsControl) || !double.IsFinite(tag.Weight) || tag.Weight is <= 0 or > 1)
                 throw new ArgumentException("catalog_tag_invalid");
-            string scope = row.Kind == CatalogKind.Artist ? "artist" : "release-group";
+            string scope = row.Kind switch { CatalogKind.Artist => "artist", CatalogKind.Album => "release-group", _ => "recording" };
             if (publication.Origin == CatalogOrigin.Public && (publication.TagLicense is null || tag.Scope != scope))
                 throw new ArgumentException("catalog_tag_provenance_required");
-            return tag with { Name = tag.Name.Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant(),
-                Scope = publication.Origin == CatalogOrigin.Synthetic ? "synthetic-" + scope : scope };
+            return tag with
+            {
+                Name = tag.Name.Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant(),
+                Scope = publication.Origin == CatalogOrigin.Synthetic ? "synthetic-" + scope : scope
+            };
         }).ToArray();
         if (tags.Select(t => t.Name).Distinct(StringComparer.Ordinal).Count() != tags.Length) throw new ArgumentException("catalog_duplicate_tag");
         return row with { Name = row.Name.Trim(), Tags = tags };

@@ -1,7 +1,7 @@
 # Optional taste onboarding for guests and accounts
 
 Date: 2026-10-19
-Status: Updated with developer decisions on 2026-10-19. Remaining policy and technical details are proposals. Documentation only; implementation is not authorized.
+Status: Approved for implementation by the developer on 2026-10-19. Earlier documentation-only gates below are historical and superseded. See the execution plan and implementation evidence.
 
 ## Purpose and confirmed intent
 

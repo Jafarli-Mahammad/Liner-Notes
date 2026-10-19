@@ -20,9 +20,13 @@ public sealed class GuestController(IListenerContext listener, GuestLifecycle li
         var profile = await listener.ResolveAsync(true, ct);
         var guest = await listener.GuestAsync(ct);
         var tokens = antiforgery.GetAndStoreTokens(HttpContext);
-        return Ok(new { csrfToken = tokens.RequestToken, profile = profile is null ? null :
+        return Ok(new
+        {
+            csrfToken = tokens.RequestToken,
+            profile = profile is null ? null :
             new { profile.Id, profile.UserId, profile.Revision, profile.IsGuest, profile.ExpiresAtUtc },
-            guestImportAvailable = profile?.UserId is not null && guest is not null });
+            guestImportAvailable = profile?.UserId is not null && guest is not null
+        });
     }
 
     [HttpPost]
@@ -63,6 +67,19 @@ public sealed class GuestController(IListenerContext listener, GuestLifecycle li
         await lifecycle.ClearAsync(hash, ct);
         listener.RevokeCookie();
         return NoContent();
+    }
+
+    [HttpGet("import-preview")]
+    public async Task<IActionResult> ImportPreview(CancellationToken ct)
+    {
+        if (!listener.Enabled) return NotFound();
+        var account = await listener.ResolveAsync(false, ct);
+        var guest = await listener.GuestAsync(ct);
+        if (account?.UserId is null || guest is null) return Unauthorized();
+        Response.Headers.CacheControl = "no-store";
+        var saved = LinerNotes.Application.Features.Discovery.OnboardingState.Read(account.OnboardingJson);
+        var incoming = LinerNotes.Application.Features.Discovery.OnboardingState.Read(guest.OnboardingJson);
+        return Ok(new { account = saved, guest = incoming, conflicts = saved is not null && incoming is not null && saved.ConflictsWith(incoming), policy = "keep-account-answers-fill-unanswered" });
     }
 
     [HttpPost("import")]

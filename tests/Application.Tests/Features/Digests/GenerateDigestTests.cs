@@ -51,7 +51,7 @@ public sealed class GenerateDigestTests
         Assert.Equal("generated", (await handler.Handle(new(userId, week), default)).Status);
         var snapshot = Assert.Single(observed!).Breakdown.Snapshot!;
         Assert.Equal(week.Value, snapshot.Week); Assert.Null(snapshot.DiscoveryBatchId);
-        Assert.Equal("canonical-entity-max-v1", snapshot.MaterializationVersion);
+        Assert.Equal(LinerNotes.Domain.Taste.DiscoveryTasteMaterializer.Version, snapshot.MaterializationVersion);
         Assert.Equal(Assert.Single(observed!).Breakdown.FinalScore, new BaselineAScorer().Replay(snapshot).FinalScore);
         await source.DidNotReceiveWithAnyArgs().GetCandidatesByArtistsAsync(default!, default, default);
         await source.DidNotReceiveWithAnyArgs().GetCandidatesByTagsAsync(default!, default, default);

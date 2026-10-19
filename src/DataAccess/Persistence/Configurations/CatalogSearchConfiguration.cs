@@ -34,7 +34,7 @@ public sealed class CatalogRecordConfiguration : IEntityTypeConfiguration<Catalo
     {
         b.ToTable("CatalogRecords", table =>
         {
-            table.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL)");
+            table.HasCheckConstraint("CK_CatalogRecords_Identity", "(\"Kind\"='Artist' AND \"ArtistId\" IS NOT NULL AND \"AlbumId\" IS NULL) OR (\"Kind\"='Album' AND \"AlbumId\" IS NOT NULL AND \"ArtistId\" IS NULL) OR (\"Kind\"='Track' AND \"ArtistId\" IS NULL AND \"AlbumId\" IS NULL)");
             table.HasCheckConstraint("CK_CatalogRecords_JsonBound", "octet_length(\"AliasesJson\"::text)<=16384 AND octet_length(\"TagsJson\"::text)<=16384 AND octet_length(\"CreditsJson\"::text)<=16384");
         });
         b.HasKey(r => r.Id); b.HasAlternateKey(r => new { r.Id, r.Kind });
@@ -42,6 +42,7 @@ public sealed class CatalogRecordConfiguration : IEntityTypeConfiguration<Catalo
         b.Property(r => r.DisplayName).HasMaxLength(256); b.Property(r => r.ArtistDisplayName).HasMaxLength(1000);
         b.Property(r => r.Disambiguation).HasMaxLength(500); b.Property(r => r.FirstReleaseDate).HasMaxLength(10);
         b.Property(r => r.RowSha256).HasMaxLength(64).IsRequired();
+        b.Property(r => r.ReleasesJson).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
         b.Property(r => r.CreditsJson).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
         b.Property(r => r.AliasesJson).HasColumnType("jsonb"); b.Property(r => r.TagsJson).HasColumnType("jsonb");
         b.HasIndex(r => new { r.PublicationId, r.Kind, r.CanonicalId }).IsUnique();

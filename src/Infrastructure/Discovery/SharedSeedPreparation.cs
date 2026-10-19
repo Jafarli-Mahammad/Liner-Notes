@@ -20,21 +20,32 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200 || request.Name.Any(char.IsControl) ||
             request.EntityId == Guid.Empty || (request.IsAlbum && request.EntityId is null))
             throw new ArgumentException("invalid_seed_request");
-        string key = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
-            Version = PublicEvidenceCodec.SeedVersion, Configuration = configuration, request.EntityId, request.IsAlbum,
+        string key = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Version = PublicEvidenceCodec.SeedVersion,
+            Configuration = configuration,
+            request.EntityId,
+            request.IsAlbum,
+            request.IsRecording,
             Name = request.EntityId.HasValue ? null : request.Name.Trim().ToLowerInvariant()
         })));
         string memoryKey = "seed:" + key;
         if (caches.Prepared.TryGetValue<PublicEvidenceDocument>(memoryKey, out var hit) && hit!.ExpiresAtUtc > clock.GetUtcNow())
             return Decode(hit);
         var document = await evidence.GetAsync(key, PublicEvidenceKind.Seed, PublicEvidenceCodec.SeedVersion,
-            allowAcquisition, async token => {
+            allowAcquisition, async token =>
+            {
                 await using var scope = scopes.CreateAsyncScope();
                 var provider = scope.ServiceProvider.GetRequiredService<IRecommendationProviderResolver>().Resolve();
                 SeedTagSnapshot seed;
                 if (request.EntityId is { } id)
                 {
-                    if (provider.SeedTags is ICanonicalSeedTagSource canonical)
+                    if (request.IsRecording)
+                        seed = provider.SeedTags is IRecordingSeedTagSource recording
+                            ? await recording.GetRecordingAsync(id, request.Name, token)
+                            : new(request.Name, LinerNotes.Domain.Catalog.WeightedTagVector.Empty, [],
+                                new(provider.Id, "seed.recording.tags", id.ToString("D"), configuration.Origin, null, null), "direct_recording_tags_not_supported", []);
+                    else if (provider.SeedTags is ICanonicalSeedTagSource canonical)
                         seed = request.IsAlbum ? await canonical.GetAlbumAsync(id, request.Name, token)
                             : await canonical.GetArtistAsync(id, request.Name, token);
                     else seed = new(request.Name, WeightedTagVector.Empty, [],
@@ -49,14 +60,16 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
             }, ct);
         var remaining = document.ExpiresAtUtc - clock.GetUtcNow();
         if (remaining > TimeSpan.Zero)
-            caches.Prepared.Set(memoryKey, document, new MemoryCacheEntryOptions {
+            caches.Prepared.Set(memoryKey, document, new MemoryCacheEntryOptions
+            {
                 Size = DiscoveryMemoryCaches.EstimateBytes(System.Text.Encoding.UTF8.GetByteCount(document.PayloadJson), memoryKey),
                 AbsoluteExpirationRelativeToNow = remaining
             });
         return Decode(document);
     }
     private static SeedTagSnapshot Decode(PublicEvidenceDocument document)
-        => PublicEvidenceCodec.DecodeSeed(document) with {
+        => PublicEvidenceCodec.DecodeSeed(document) with
+        {
             SharedUntilUtc = document.ExpiresAtUtc > document.AcquiredAtUtc ? document.ExpiresAtUtc : null
         };
 

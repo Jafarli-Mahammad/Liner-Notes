@@ -14,7 +14,7 @@ public sealed class MusicBrainzCatalogLookupSource(IListenBrainzApiClient client
     {
         if (!Enum.IsDefined(kind) || string.IsNullOrWhiteSpace(query) || query.Length > 128 || query.Any(char.IsControl))
             throw new ArgumentException("catalog_lookup_query_invalid");
-        var response = await client.SendAsync(new(kind == CatalogKind.Artist ? ListenBrainzRequestKind.ArtistSearch : ListenBrainzRequestKind.AlbumSearch, query.Trim(), 10), ct);
+        var response = await client.SendAsync(new(kind switch { CatalogKind.Artist => ListenBrainzRequestKind.ArtistSearch, CatalogKind.Album => ListenBrainzRequestKind.AlbumSearch, _ => ListenBrainzRequestKind.RecordingSearch }, query.Trim(), 10), ct);
         if (!response.Gaps.IsEmpty)
             throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException("catalog_source_unavailable",
                 response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "request_timeout" or "upstream_unavailable"));
@@ -25,7 +25,7 @@ public sealed class MusicBrainzCatalogLookupSource(IListenBrainzApiClient client
         bool synthetic = response.Reference.Origin == EvidenceOrigin.Synthetic;
         var records = new List<CatalogArtifactRow>();
         var matched = new List<Guid>();
-        string key = kind == CatalogKind.Artist ? "artists" : "release-groups";
+        string key = kind switch { CatalogKind.Artist => "artists", CatalogKind.Album => "release-groups", _ => "recordings" };
         if (!root.TryGetProperty(key, out var items) || items.ValueKind != JsonValueKind.Array) throw new GenerationStoppedException("catalog_lookup_schema_invalid");
         foreach (var item in items.EnumerateArray().Take(10))
         {
@@ -41,14 +41,15 @@ public sealed class MusicBrainzCatalogLookupSource(IListenBrainzApiClient client
                     if (!part.TryGetProperty("artist", out var artist)) throw new GenerationStoppedException("catalog_lookup_artist_credit_missing");
                     records.Add(Artist(artist)); ids.Add(Identity(artist));
                 }
-                records.Add(new(id, CatalogKind.Album, Text(item, "title", 256)!, [], ids.Distinct().ToArray(), [],
-                    Text(item, "disambiguation", 500, false), Text(item, "first-release-date", 10, false)));
+                records.Add(new(id, kind, Text(item, "title", 256)!, [], ids.Distinct().ToArray(), [],
+                    Text(item, "disambiguation", 500, false), Text(item, "first-release-date", 10, false), kind == CatalogKind.Track && item.TryGetProperty("releases", out var releases) && releases.ValueKind == JsonValueKind.Array
+                        ? releases.EnumerateArray().Take(10).Select(r => new CatalogReleaseDto(Identity(r), Text(r, "title", 256)!, Text(r, "date", 10, false))).ToArray() : null));
             }
             matched.Add(id);
         }
         return new(records.DistinctBy(r => (r.Kind, r.Id)).OrderBy(r => r.Kind).ToArray(), matched.Distinct().ToArray(),
             synthetic ? CatalogOrigin.Synthetic : CatalogOrigin.Public, synthetic ? "generated-fixture" : "MusicBrainz",
-            "https://musicbrainz.org/ws/2/" + (kind == CatalogKind.Artist ? "artist" : "release-group"), acquired,
+            "https://musicbrainz.org/ws/2/" + (kind switch { CatalogKind.Artist => "artist", CatalogKind.Album => "release-group", _ => "recording" }), acquired,
             synthetic ? clock.GetUtcNow().AddHours(1) : response.SharedCacheUntilUtc, hash);
     }
 

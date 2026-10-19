@@ -12,13 +12,13 @@ public static class PublicEvidenceCodec
     private sealed record Candidate(string Title, string ArtistName, string? Album, string? Mbid, int? Duration,
         string? Spotify, string? Youtube, IReadOnlyDictionary<string, double> Weights, IReadOnlyList<DiscoveryPath> Paths,
         IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason,
-        IReadOnlyList<CoverageGap> Gaps, string Normalization, IReadOnlyList<ResponseReference> Supporting);
+        IReadOnlyList<CoverageGap> Gaps, string Normalization, IReadOnlyList<ResponseReference> Supporting, string TagScope = "artist");
     private sealed record Pool(string Key, string Provider, EvidenceOrigin Origin, DateTimeOffset PreparedAtUtc,
         DateTimeOffset? ExpiresAtUtc, string NormalizationVersion, Candidate[] Candidates, CoverageGap[] Gaps,
         long SerializedBytes, string ContentSha256);
     private sealed record Seed(string ArtistName, IReadOnlyDictionary<string, double> Weights, TagObservation[] Tags,
         ResponseReference Response, string? MissingReason, CoverageGap[] Gaps, ResponseReference[] Supporting);
-    public const string PoolVersion = "prepared-pool-v1", SeedVersion = "prepared-seed-v1";
+    public const string PoolVersion = "prepared-pool-v2", SeedVersion = "prepared-seed-v1";
     public static PublicEvidenceDocument Encode(PreparedDiscoveryPool pool)
     {
         if (pool.Origin == EvidenceOrigin.Recorded || pool.Candidates.Any(c => c.Origin != pool.Origin ||
@@ -29,7 +29,7 @@ public static class PublicEvidenceCodec
         var value = new Pool(pool.Key, pool.Provider, pool.Origin, pool.PreparedAtUtc, pool.ExpiresAtUtc, pool.NormalizationVersion,
             pool.Candidates.Select(c => new Candidate(c.Track.Title, c.Track.ArtistName, c.Track.AlbumTitle, c.Track.Mbid,
                 c.Track.DurationSeconds, c.Track.ExternalSpotifyUrl, c.Track.ExternalYoutubeUrl, c.TagVector.Weights, c.RawCandidate.Paths,
-                c.Tags, c.TagResponse, c.TagMissingReason, c.Gaps, c.TagNormalizationVersion, c.SupportingResponses)).ToArray(),
+                c.Tags, c.TagResponse, c.TagMissingReason, c.Gaps, c.TagNormalizationVersion, c.SupportingResponses, c.TagScope)).ToArray(),
             pool.Gaps.ToArray(), pool.SerializedBytes, pool.ContentSha256);
         return Document(pool.Key, PublicEvidenceKind.Pool, pool.Provider, pool.Origin, PoolVersion, value,
             pool.PreparedAtUtc, pool.ExpiresAtUtc ?? pool.PreparedAtUtc);
@@ -42,7 +42,7 @@ public static class PublicEvidenceCodec
         var candidates = pool.Candidates.Select(c => new HydratedCandidateTrack(
             new Track(c.Title, c.ArtistName, c.Album, c.Mbid, c.Duration, c.Spotify, c.Youtube), WeightedTagVector.FromDictionary(c.Weights),
             new RawCandidateTrack(c.Title, c.ArtistName, c.Mbid, c.Paths), c.Tags, c.Response, c.MissingReason, c.Gaps)
-            { TagNormalizationVersion = c.Normalization, SupportingResponses = c.Supporting }).ToArray();
+        { TagScope = c.TagScope, TagNormalizationVersion = c.Normalization, SupportingResponses = c.Supporting }).ToArray();
         if (candidates.Any(c => c.Origin != document.Origin || c.Tags.Any(t => t.Response.Origin != document.Origin) ||
             c.SupportingResponses.Any(r => r.Origin != document.Origin))) throw new GenerationStoppedException("public_evidence_invalid");
         var expires = pool.ExpiresAtUtc is { } original && original < document.ExpiresAtUtc ? original : document.ExpiresAtUtc;
@@ -64,7 +64,7 @@ public static class PublicEvidenceCodec
         if (value.Response.Origin != document.Origin || value.Tags.Any(t => t.Response.Origin != document.Origin) ||
             value.Supporting.Any(r => r.Origin != document.Origin)) throw new GenerationStoppedException("public_evidence_invalid");
         return new(value.ArtistName, WeightedTagVector.FromDictionary(value.Weights), value.Tags, value.Response, value.MissingReason, value.Gaps)
-            { SupportingResponses = value.Supporting };
+        { SupportingResponses = value.Supporting };
     }
     public static PublicEvidenceDocument Document<T>(string key, PublicEvidenceKind kind, string provider, EvidenceOrigin origin,
         string version, T value, DateTimeOffset acquired, DateTimeOffset expires)

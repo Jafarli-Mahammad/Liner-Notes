@@ -986,3 +986,17 @@ input:focus {
     animation-duration: .01ms !important;
   }
 }
+
+/* Optional taste setup shares the existing surfaces, type and button tokens. */
+.onboarding-question { margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: 8px; }
+.onboarding-question legend { padding: 0 .4rem; font-weight: 600; }
+.onboarding-options { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; }
+.onboarding-options label, .onboarding-soup { display: flex; align-items: center; gap: .5rem; min-height: 44px; cursor: pointer; }
+.onboarding-options input, .onboarding-soup input { width: 1.1rem; height: 1.1rem; flex-shrink: 0; }
+.onboarding-controls { margin-top: 1.5rem; }
+#taste-tag-hits, #taste-selected-tags { margin: 1rem 0; max-height: 24rem; overflow-y: auto; padding: .3rem; }
+#taste-tag-hits small { font-weight: normal; opacity: .8; }
+#onboarding-step h2:focus, #recent-music h2:focus { outline-offset: .3rem; }
+@media (max-width: 600px) { .onboarding-options { flex-direction: column; } .onboarding-controls .button { width: 100%; } }
+
+#taste-selected-search { display: block; width: 100%; min-height: 44px; margin-top: .4rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }

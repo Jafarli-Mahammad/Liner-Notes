@@ -13,6 +13,7 @@ public sealed class ListenerProfileConfiguration : IEntityTypeConfiguration<List
             "(\"UserId\" IS NULL AND \"ExpiresAtUtc\" IS NOT NULL) OR (\"UserId\" IS NOT NULL AND \"ExpiresAtUtc\" IS NULL)"));
         builder.HasKey(p => p.Id);
         builder.Ignore(p => p.IsGuest);
+        builder.Property(p => p.OnboardingJson).HasColumnType("text").HasMaxLength(4096);
         builder.Property(p => p.Revision).IsConcurrencyToken();
         builder.HasIndex(p => p.UserId).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
         builder.HasIndex(p => p.ExpiresAtUtc).HasFilter("\"ExpiresAtUtc\" IS NOT NULL");

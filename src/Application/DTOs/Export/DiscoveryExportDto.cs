@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace LinerNotes.Application.DTOs.Export;
 
 public sealed record ListenerProfileExportDto(Guid Id, Guid? UserId, long Revision,
-    DateTimeOffset CreatedAtUtc, DateTimeOffset LastActiveAtUtc, DateTimeOffset? ExpiresAtUtc);
+    DateTimeOffset CreatedAtUtc, DateTimeOffset LastActiveAtUtc, DateTimeOffset? ExpiresAtUtc, string? OnboardingJson = null);
 
 public sealed record DiscoveryBatchExportDto(Guid Id, Guid ProfileId, string RequestId, string Kind,
     long InputRevision, DateTimeOffset CreatedAtUtc, DateTimeOffset? CompletedAtUtc,

@@ -14,7 +14,7 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
         var profile = await context.ListenerProfiles.AsNoTracking()
             .Where(p => p.UserId == userId && context.Users.Any(u => u.Id == userId))
             .Select(p => new ListenerProfileExportDto(p.Id, p.UserId, p.Revision,
-                p.CreatedAtUtc, p.LastActiveAtUtc, p.ExpiresAtUtc))
+                p.CreatedAtUtc, p.LastActiveAtUtc, p.ExpiresAtUtc, p.OnboardingJson))
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (profile is null) return new(null, [], []);
 
@@ -25,7 +25,7 @@ public sealed class DiscoveryProfileReader(DataContext context) : IDiscoveryProf
     {
         var profile = await context.ListenerProfiles.AsNoTracking().Where(p => p.Id == profileId)
             .Select(p => new ListenerProfileExportDto(p.Id, p.UserId, p.Revision,
-                p.CreatedAtUtc, p.LastActiveAtUtc, p.ExpiresAtUtc)).SingleOrDefaultAsync(cancellationToken);
+                p.CreatedAtUtc, p.LastActiveAtUtc, p.ExpiresAtUtc, p.OnboardingJson)).SingleOrDefaultAsync(cancellationToken);
         return profile is null ? new(null, [], []) : await ReadAsync(profile, cancellationToken);
     }
 

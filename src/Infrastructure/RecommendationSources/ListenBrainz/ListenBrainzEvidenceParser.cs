@@ -54,8 +54,9 @@ public static class ListenBrainzEvidenceParser
                 values.AddRange(group.Value.EnumerateArray());
             }
         }
-        else if (response.Reference.Method == "lb-radio.tags" && data.ValueKind == JsonValueKind.Array) values.AddRange(data.EnumerateArray());
+        else if (response.Reference.Method is "lb-radio.tags" or "similar-recordings" && data.ValueKind == JsonValueKind.Array) values.AddRange(data.EnumerateArray());
         else { invalidShape = true; return []; }
+        values.RemoveAll(v => v.ValueKind == JsonValueKind.Object && v.TryGetProperty("comment", out _));
         if (values.Any(v => !Mbid(Text(v, "recording_mbid")))) invalidShape = true;
         return values.Select(v => Text(v, "recording_mbid")).Where(Mbid).Select(id => id!.ToLowerInvariant())
             .Distinct(StringComparer.Ordinal).Take(limit).ToArray();

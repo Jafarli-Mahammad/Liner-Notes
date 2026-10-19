@@ -77,11 +77,11 @@ public sealed class CatalogImportStore(DataContext db) : ICatalogImportStore, IC
         {
             var credits = row.ArtistIds.Select((id, position) => new CatalogArtistCreditDto(id,
                 labels.GetValueOrDefault(id, artistMap[id].Name), position)).ToArray();
-            string? artistName = row.Kind == CatalogKind.Album ? string.Join(", ", credits.Select(c => c.Name)) : null;
+            string? artistName = row.Kind is CatalogKind.Album or CatalogKind.Track ? string.Join(", ", credits.Select(c => c.Name)) : null;
             if (artistName?.Length > 1000) artistName = credits[0].Name + $" +{row.ArtistIds.Length - 1} more artists";
             var record = new CatalogRecord(publicationId, row.Id, row.Kind,
-                row.Kind == CatalogKind.Artist ? artistMap[row.Id].Id : albumMap[row.Id].Id,
-                row.Name, artistName, row.Disambiguation, row.FirstReleaseDate, JsonSerializer.Serialize(row.Aliases), JsonSerializer.Serialize(row.Tags), CatalogRowFingerprint.Sha256(row), JsonSerializer.Serialize(credits));
+                row.Kind switch { CatalogKind.Artist => artistMap[row.Id].Id, CatalogKind.Album => albumMap[row.Id].Id, _ => row.Id },
+                row.Name, artistName, row.Disambiguation, row.FirstReleaseDate, JsonSerializer.Serialize(row.Aliases), JsonSerializer.Serialize(row.Tags), CatalogRowFingerprint.Sha256(row), JsonSerializer.Serialize(credits), JsonSerializer.Serialize(row.Releases ?? []));
             db.CatalogRecords.Add(record);
             foreach (var term in CatalogText.Terms(row.Name, row.Aliases)) db.CatalogSearchTerms.Add(new CatalogSearchTerm(record.Id, row.Kind, term));
         }

@@ -15,7 +15,7 @@ public sealed class TasteSignal : AuditableEntity
 
     public void SetCatalogSelection(Guid recordId, Guid canonicalId, string evidenceJson)
     {
-        if (Source != TasteSignalSource.InitialSeedManual || TargetType is not (TasteTargetType.Artist or TasteTargetType.Album) ||
+        if (Source != TasteSignalSource.InitialSeedManual || TargetType is not (TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track) ||
             recordId == Guid.Empty || canonicalId == Guid.Empty || string.IsNullOrWhiteSpace(evidenceJson) ||
             System.Text.Encoding.UTF8.GetByteCount(evidenceJson) > 24_576)
             throw new ArgumentException("invalid_catalog_selection");

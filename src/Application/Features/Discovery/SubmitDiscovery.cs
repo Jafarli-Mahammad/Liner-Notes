@@ -18,13 +18,24 @@ public sealed class SubmitDiscoveryHandler(IDiscoveryBatchStore batches, IDiscov
     {
         options.Validate();
         if (!options.RunJobs) throw new GenerationStoppedException("discovery_worker_not_ready");
-        if (request.Selection is { } selection && (selection.CatalogRecordIds is null || selection.Tags is null ||
-            selection.CatalogRecordIds.Count > 5 || selection.Tags.Count > 5)) throw new ArgumentException("invalid_discovery_selection");
-        string hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
-            Version = "discovery-intent-v1", request.Revision,
-            Records = request.Selection?.CatalogRecordIds.Order().ToArray(),
-            Tags = request.Selection?.Tags.Select(t => (t ?? "").Trim().ToLowerInvariant()).Order(StringComparer.Ordinal).ToArray()
-        })));
+        if (request.Selection is { } selection && (selection.CatalogRecordIds is null || selection.Tags is null)) throw new ArgumentException("invalid_discovery_selection");
+        object intent = request.Selection?.LegacySignalIds is { Count: > 0 } legacy
+            ? new
+            {
+                Version = "discovery-intent-v2",
+                request.Revision,
+                Records = request.Selection.CatalogRecordIds.Order().ToArray(),
+                Tags = request.Selection.Tags.Select(t => (t ?? "").Trim().ToLowerInvariant()).Order(StringComparer.Ordinal).ToArray(),
+                Legacy = legacy.Order().ToArray()
+            }
+            : new
+            {
+                Version = "discovery-intent-v1",
+                request.Revision,
+                Records = request.Selection?.CatalogRecordIds.Order().ToArray(),
+                Tags = request.Selection?.Tags.Select(t => (t ?? "").Trim().ToLowerInvariant()).Order(StringComparer.Ordinal).ToArray()
+            };
+        string hash = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(intent)));
         // Validate before persistence, including key syntax and nonnegative revision.
         _ = new DiscoveryJob(request.ProfileId, request.RequestKey, hash, DiscoveryJobKind.Generation, request.Revision, "{}", clock.GetUtcNow());
         var inputs = await batches.ReadInputsAsync(request.ProfileId, clock.GetUtcNow(), options.FeedbackWindow, ct)
@@ -32,8 +43,9 @@ public sealed class SubmitDiscoveryHandler(IDiscoveryBatchStore batches, IDiscov
         var prior = await jobs.FindByKeyAsync(request.ProfileId, request.RequestKey, ct);
         if (prior is not null) return Replay(prior);
         var signals = request.Selection is null ? null : await selections.ResolveAsync(request.ProfileId, request.Selection, ct, inputs.Signals);
-        if (signals is null && inputs.Signals.Count == 0) throw new ArgumentException("discovery_taste_required");
-        return await admission.ExecuteAsync(1_048_576, async token => {
+        if ((signals ?? inputs.Signals).Count == 0 && OnboardingState.Read(inputs.Profile.OnboardingJson)?.AllStyles != true) throw new ArgumentException("discovery_taste_required");
+        return await admission.ExecuteAsync(1_048_576, async token =>
+        {
             var existing = await jobs.FindByKeyAsync(request.ProfileId, request.RequestKey, token);
             if (existing is not null) return Replay(existing);
             long revision = signals is null ? request.Revision : await taste.ReplaceManualAsync(request.ProfileId,

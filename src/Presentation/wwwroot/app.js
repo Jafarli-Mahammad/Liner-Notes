@@ -21,7 +21,7 @@ function acceptSession(data) {
   state.token = data.accessToken;
   state.refreshToken = data.refreshToken;
   state.user = data.user;
-  window.discoveryApp?.sessionChanged();
+  window.discoveryApp?.sessionChanged(true);
 }
 
 async function refreshSession(epoch) {

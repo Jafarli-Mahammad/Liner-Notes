@@ -15,7 +15,7 @@ using Npgsql;
 using Xunit;
 namespace LinerNotes.DataAccess.Tests;
 
-public sealed class DiscoveryCoordinationPostgresTests : IAsyncLifetime
+public sealed partial class DiscoveryCoordinationPostgresTests : IAsyncLifetime
 {
     [LocalPostgresMigrationFact]
     public async Task WeeklyScheduleDigestAndUnsubscribeLeaveDiscoveryInventoryUsable()

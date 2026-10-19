@@ -57,9 +57,16 @@ string[] tags = ["jazz", "electronic", "indie", "ambient", "post-punk"];
 var rows = Enumerable.Range(0, 100).Select(i => new CatalogArtifactRow(Id("artist:" + i), CatalogKind.Artist,
     i < names.Length ? names[i] : $"Synthetic Artist {i:000}", [$"Demo artist {i:000}"], [],
     [new(tags[i % tags.Length], 1)], "Synthetic demo artist")).ToList();
+Guid ProviderFixtureId(string text) => new(SHA256.HashData(Encoding.UTF8.GetBytes("listenbrainz-synthetic:" + text)).AsSpan(0, 16));
+rows.AddRange(Enumerable.Range(1, 5).Select(i => new CatalogArtifactRow(ProviderFixtureId("artist-" + i), CatalogKind.Artist,
+    "Synthetic Ensemble " + i, [], [], [new("electronic", 1)], "Synthetic provider credit")));
 rows.AddRange(Enumerable.Range(0, 20).Select(i => new CatalogArtifactRow(Id("album:" + i), CatalogKind.Album,
     i == 0 ? "Synthetic Horizons" : $"Synthetic Album {i:000}", [], [rows[i].Id, rows[(i + 1) % 100].Id],
     [new(tags[i % tags.Length], 1)], "Synthetic demo album", "2000")));
+rows.AddRange(Enumerable.Range(1, 5).Select(i => new CatalogArtifactRow(ProviderFixtureId("recording-" + i), CatalogKind.Track,
+    "Synthetic Discovery " + i, [], [ProviderFixtureId("artist-" + i)], [new("electronic", 1, "synthetic-recording")],
+    "Synthetic studio recording", "2000")));
+
 var json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 var bytes = Encoding.UTF8.GetBytes(string.Join('\n', rows.Select(row => JsonSerializer.Serialize(row, json))) + "\n");

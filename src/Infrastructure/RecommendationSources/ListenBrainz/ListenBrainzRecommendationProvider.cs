@@ -5,7 +5,7 @@ using LinerNotes.Domain.Catalog;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiClient client)
-    : IRecommendationSource, ICandidateHydrator, ISeedTagSource, ICanonicalRecommendationSource, ICanonicalSeedTagSource, IPublicEvidenceFreshness
+    : IRecommendationSource, ICandidateHydrator, ISeedTagSource, ICanonicalRecommendationSource, ICanonicalSeedTagSource, IRecordingRecommendationSource, IRecordingSeedTagSource, IPublicEvidenceFreshness
 {
     public string SourceName => "ListenBrainz";
     private readonly Dictionary<string, ListenBrainzResponse> responses = new(StringComparer.Ordinal);
@@ -34,7 +34,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
     public Task<IngestionResult<RawCandidateTrack>> GetCandidatesByTagsAsync(IReadOnlyList<string> tags,
         int limitPerTag = 10, CancellationToken cancellationToken = default) => DiscoverAsync(tags, limitPerTag, true, cancellationToken);
 
-    private async Task<IngestionResult<RawCandidateTrack>> DiscoverAsync(IReadOnlyList<string> seeds, int limit, bool byTag, CancellationToken ct, bool canonical = false)
+    private async Task<IngestionResult<RawCandidateTrack>> DiscoverAsync(IReadOnlyList<string> seeds, int limit, bool byTag, CancellationToken ct, bool canonical = false, bool byRecording = false)
     {
         ct.ThrowIfCancellationRequested();
         if (limit is < 1 or > 10 || seeds.Count > 20) throw new ArgumentException("listenbrainz_discovery_limit");
@@ -48,7 +48,8 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
             string identity = seed.Trim().ToLowerInvariant();
             ListenBrainzResponse? search = null;
             ListenBrainzRequest request;
-            if (byTag) request = new(ListenBrainzRequestKind.TagRadio, identity, limit);
+            if (byRecording) request = new(ListenBrainzRequestKind.SimilarRecordings, identity, limit);
+            else if (byTag) request = new(ListenBrainzRequestKind.TagRadio, identity, limit);
             else if (canonical) request = new(ListenBrainzRequestKind.ArtistRadio, identity, limit);
             else
             {
@@ -77,7 +78,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
                 var path = new DiscoveryPath(identity, ObservedValue<double>.Missing("not_supplied_by_endpoint"),
                     radio.Reference, detail.Reference, position, "https://musicbrainz.org/recording/" + id, null,
                     ObservedValue<long>.Missing("unique_listeners_not_supplied"))
-                    { SupportingResponses = search is null ? [] : [search.Reference] };
+                { SupportingResponses = search is null ? [] : [search.Reference] };
                 candidates.Add(new(track.Title, track.ArtistName, id, [path]));
             }
         }
@@ -97,7 +98,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
         if (response.Reference.Origin != search.Reference.Origin) throw new GenerationStoppedException("origin_mismatch");
         var tags = ListenBrainzEvidenceParser.ArtistTags([(artist.Mbid, response)]);
         return new(name, tags.Vector, tags.Tags, response.Reference, tags.MissingReason, search.Gaps.Concat(tags.Gaps).ToArray())
-            { SupportingResponses = [search.Reference] };
+        { SupportingResponses = [search.Reference] };
     }
 
     public async Task<HydratedCandidateTrack?> HydrateCandidateAsync(RawCandidateTrack rawCandidate, CancellationToken cancellationToken = default)
@@ -133,15 +134,20 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
                 tagInputs.Add((artist, response));
             }
             var tags = ListenBrainzEvidenceParser.ArtistTags(tagInputs);
+            var recordingResponse = responses.Values.FirstOrDefault(r => r.Reference == entry.Response);
+            var directTags = recordingResponse is null ? null : RecordingTags(recordingResponse, Guid.Parse(raw.Mbid!), raw.Title);
+            bool direct = directTags is { Vector.IsEmpty: false };
+
             gaps.AddRange(tags.Gaps);
             if (tags.Vector.IsEmpty)
             {
                 gaps.Add(new(raw.CandidateKey, "metadata.artist", "no_valid_artist_tag_votes", tagInputs[0].Item2.Reference));
                 continue;
             }
-            hydrated.Add(new(Track.Create(raw.Title, raw.ArtistName, mbid: raw.Mbid), tags.Vector, raw, tags.Tags,
-                tagInputs[0].Item2.Reference, tags.MissingReason, tags.Gaps)
+            hydrated.Add(new(Track.Create(raw.Title, raw.ArtistName, mbid: raw.Mbid), direct ? directTags!.Vector : tags.Vector, raw, direct ? directTags!.Tags : tags.Tags,
+                direct ? entry.Response : tagInputs[0].Item2.Reference, direct ? directTags!.MissingReason : tags.MissingReason, tags.Gaps)
             {
+                TagScope = direct ? "recording" : "artist",
                 TagNormalizationVersion = ListenBrainzEvidenceParser.NormalizationVersion,
                 SupportingResponses = tagInputs.Select(t => t.Item2.Reference).Append(entry.Response).Distinct().ToArray()
             });

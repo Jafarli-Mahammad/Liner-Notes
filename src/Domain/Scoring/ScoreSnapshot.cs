@@ -47,6 +47,7 @@ public sealed record StoredSeed(string ArtistName, IReadOnlyDictionary<string, d
     public double Influence { get; init; } = 1;
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
 }
+public sealed record StoredAlbumFallback(Guid AlbumId, string AlbumName, Guid ArtistId, string ArtistName, double Influence);
 public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     IReadOnlyList<StoredSeed> Seeds, IReadOnlyList<StoredTag> CandidateTags,
     StoredResponse? CandidateTagResponse, IReadOnlyList<StoredDiscoveryPath> DiscoveryPaths,
@@ -55,6 +56,14 @@ public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     public string MaterializationVersion { get; init; } = "positive-signals-v1";
     public string TagNormalizationVersion { get; init; } = "max-observed-descriptive-count-v1";
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
+    public double SimilarityInfluence { get; init; } = 1;
+    public IReadOnlyList<StoredAlbumFallback> AlbumFallbacks { get; init; } = [];
+    public string? SelectionPolicy { get; init; }
+    public string? SelectionAnswers { get; init; }
+    public IReadOnlyList<string> SelectionReasons { get; init; } = [];
+    public string? FullInputSha256 { get; init; }
+    public int FullInputCount { get; init; }
+    public IReadOnlyList<string> AcquisitionWindow { get; init; } = [];
     public static ScoreEvidence Empty { get; } = new([], [], [], null, [], [], "artist", "not_supplied");
 }
 
@@ -76,6 +85,7 @@ public sealed record ScoreSnapshot : ExtensibleScoreRecord
     public Guid? DiscoveryBatchId { get; init; }
     public required IReadOnlyDictionary<string, double> TasteWeights { get; init; }
     public required IReadOnlyDictionary<string, double> CandidateWeights { get; init; }
+    public double? UnmatchedTasteSquared { get; init; }
     public double TasteMagnitude { get; init; }
     public double CandidateMagnitude { get; init; }
     public bool Familiarity { get; init; }

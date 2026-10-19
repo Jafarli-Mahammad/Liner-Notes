@@ -7,11 +7,11 @@ public sealed record CatalogItemDto(Guid Id, Guid CanonicalId, CatalogKind Kind,
     string Attribution, Guid Version, CatalogOrigin Origin,
     IReadOnlyList<CatalogArtistCreditDto>? Artists = null, string MetadataLicense = "", string? TagLicense = null,
     IReadOnlyList<CatalogTagInput>? TagEvidence = null, DateTimeOffset? AcquiredAtUtc = null,
-    DateTimeOffset? ExpiresAtUtc = null, string? ContentSha256 = null, string NormalizationVersion = CatalogText.Version);
+    DateTimeOffset? ExpiresAtUtc = null, string? ContentSha256 = null, string NormalizationVersion = CatalogText.Version, IReadOnlyList<CatalogReleaseDto>? Releases = null);
 public sealed record CatalogSearchResult(IReadOnlyList<CatalogItemDto> Items, bool HasMore, string NormalizationVersion);
 public sealed record CatalogTagInput(string Name, double Weight, string? Scope = null);
 public sealed record CatalogArtifactRow(Guid Id, CatalogKind Kind, string Name, string[] Aliases, Guid[] ArtistIds,
-    CatalogTagInput[] Tags, string? Disambiguation = null, string? FirstReleaseDate = null);
+    CatalogTagInput[] Tags, string? Disambiguation = null, string? FirstReleaseDate = null, CatalogReleaseDto[]? Releases = null);
 
 public interface ICatalogReader
 {
@@ -45,6 +45,8 @@ public interface ICatalogArtifactReader
 
 public sealed record CatalogLookupResult(IReadOnlyList<CatalogArtifactRow> Records, IReadOnlyList<Guid> MatchedCanonicalIds,
     CatalogOrigin Origin, string Source, string SourceUri, DateTimeOffset AcquiredAtUtc, DateTimeOffset? CacheUntilUtc, string ResponseSha256);
+
+public sealed record CatalogReleaseDto(Guid CanonicalId, string Title, string? Date);
 
 public sealed record CatalogArtistCreditDto(Guid CanonicalId, string Name, int Position);
 

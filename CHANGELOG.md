@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add Qodana .NET configuration and GitHub PR analysis with pinned
+  tooling, locked dependency restore, annotations and downloadable reports.
 - Add optional, resumable guest/account taste setup: three skippable questions,
   searchable genre/mood/sound tags without a selection cap, broad taste,
   artist/album/recording favorites and explicit review before generation.

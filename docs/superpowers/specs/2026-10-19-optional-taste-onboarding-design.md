@@ -1,7 +1,7 @@
 # Optional taste onboarding for guests and accounts
 
 Date: 2026-10-19
-Status: Draft for developer review. Product proposals below are not approved implementation decisions.
+Status: Updated with developer decisions on 2026-10-19. Remaining policy and technical details are proposals. Documentation only; implementation is not authorized.
 
 ## Purpose and confirmed intent
 
@@ -17,7 +17,19 @@ Confirmed requirements from that discussion:
 - Support the same taste setup for guests and newly registered accounts.
 - Keep the ideas open to revision. This document does not authorize product implementation.
 
-Proposed defaults requiring review: support all three favorite types; make tags and favorites individually skippable; allow skipping every input; show a clearly labelled general discovery selection when there is no usable taste evidence. The previous discussion proposed these defaults, but did not settle their detailed behavior.
+## Developer decisions added on 2026-10-19
+
+- A recent-recommendations page must exist for everyone, including guests, whether or not they complete onboarding.
+- Visitors who skip every taste input land on that page. Visitors who provide taste inputs see their personalized music first and can open the recent-recommendations page to explore.
+- This page contains music previously recommended to other users, with the association to the recipient completely stripped from its feed records and responses. It records only that the music was recommended, not to whom.
+- Present the three questions together on one screen, rather than on separate screens. Each answer remains optional; users may skip individual questions or the entire screen.
+- “My taste is a soup” means literally “I like everything.” Do not reinterpret it as merely liking several selected styles.
+- Let the visitor choose which kind of favorites to enter. Offer Artists / bands, Albums, and Tracks; bands and solo performers share the artist entity type. No one must supply every type.
+- Tags have no product selection limit. The proposed searchable catalog of genres/subgenres, moods and descriptive sounds is accepted.
+- Returning users resume unfinished setup or their results, and can edit taste later without being forced through onboarding again.
+- This update authorizes documentation changes only. Do not begin implementation.
+
+The previous five-favorite cap remains an unresolved proposal, not a newly approved limit. Detailed scoring effects, feed lifetime and recording-evidence support still need specification.
 
 ## Repository findings
 
@@ -55,11 +67,11 @@ The working tree was clean when this investigation began. No live catalog acquis
 ## Proposed visitor journey
 
 1. **Welcome:** Log in; Create an account; Continue without an account. The guest option receives readable placement and equivalent access to onsite discovery. Account benefits and guest expiry are explained briefly.
-2. **Questions:** Three short screens, each with Skip and Back. Also offer Skip all questions. No preselected answer is recorded as consent or preference.
-3. **Tags:** Search and browse a rich vocabulary; select any number; inspect/remove selected tags; optionally choose broad taste; Skip continues.
-4. **Favorites:** Search Artists, Albums or Songs. Encourage three examples across different parts of their taste. Three is guidance, not a minimum. Keep the existing five combined favorite limit provisionally; the developer requested unlimited tags, not unlimited favorites. Skip continues.
+2. **Questions:** Display all three questions together on one screen. Each question is independently optional; offer Skip all questions and Back. No preselected answer is recorded as consent or preference.
+3. **Tags:** Search and browse the accepted rich vocabulary; select any number; inspect/remove selected tags; optionally choose “My taste is a soup — I like everything”; Skip continues.
+4. **Favorites:** Let the visitor choose Artists / bands, Albums, or Tracks, with a clear type selector and the option to mix types. Bands and solo artists share the artist search. Encourage three examples; three is guidance, not a minimum, and no particular type is required. The existing five-favorite limit is a proposal still to review. Skip continues.
 5. **Review:** Show answers and selections together, with Edit actions. Explain whether there is enough evidence for personalization. Start discovery only on an explicit action.
-6. **Results:** Show a small batch and stored explanations, followed by Like, Not for me and Already know it. Offer account creation after guests have seen value. Weekly email remains an optional account feature requiring its existing consent and verification conditions.
+6. **Results:** With usable taste inputs, show the visitor’s own music and stored explanations first, followed by Like, Not for me and Already know it. With every input skipped, open Recent recommendations instead. Keep a visible Recent recommendations / Explore entry available to everyone, including people with personalized results. Offer account creation after guests have seen value. Weekly email retains its existing consent and verification conditions.
 
 Known returning profiles resume their saved results or unfinished setup. Existing accounts do not repeat onboarding automatically. Editing setup is always available. Temporary drafts entered before login/registration survive the transition, but importing into an existing account remains an explicit action.
 
@@ -67,7 +79,7 @@ Keyboard navigation, focus after step changes, accessible labels, visible errors
 
 ## Proposed questions and required effects
 
-These questions are proposals, not permission to collect unused data. Each needs an explicit, deterministic behavior contract before it ships.
+The developer accepted these three questions together on one screen. Exact recommendation effects still need an explicit, deterministic behavior contract before they ship; do not collect answers that have no useful effect.
 
 | Question | Suggested answers | Intended effect |
 | --- | --- | --- |
@@ -79,7 +91,7 @@ Skipped, explicitly answered No preference, and not yet visited are different st
 
 The vocal question is the main feasibility dependency: this investigation has not verified adequate provider/catalog coverage for vocal information. Before implementation, inspect supported local evidence and verify any external API needed. If coverage cannot support a useful effect, replace or defer that question and explain the change rather than shipping a decorative question. Likewise, goal and exploration choices require a reviewed policy definition; arbitrary numeric multipliers are not approved by this draft.
 
-Discovery goal, exploration, and broad taste express different intentions. Define precedence in the approved policy: explicit exclusions first; selected favorites/tags supply positive evidence; broad taste permits variety across those interests; exploration controls distance from that evidence; goal determines the requested kind of discovery. Broad taste never erases specific selections.
+Discovery goal, exploration, and the soup choice express different intentions. Soup explicitly means all musical styles are welcome. Preserve any selected tags and favorites as positive examples, but do not treat them as boundaries on which styles a soup listener may receive. Goal and exploration answers still convey the requested discovery experience. Soup does not imply liking every individual track. Precise precedence when other answers conflict with soup remains to specify; never silently change the meaning of a saved answer.
 
 ## Tags and broad taste
 
@@ -89,7 +101,7 @@ Search and category browsing use local data. Typeahead makes no upstream request
 
 Vocabulary breadth is a data deliverable: document its initial scope, source, licensing and maintenance. Do not promise an exhaustive taxonomy or treat unsupported tags as having provider coverage. Verify source terms before adding externally acquired vocabulary; do not repurpose held-out evaluation material.
 
-“My taste is a soup” is an optional broad-taste flag with explanatory text: “I enjoy lots of different styles. Keep my discovery broad.” It can coexist with selected tags and favorites. It is not a real genre, not a provider seed, and does not select every tag or record that the visitor likes every kind of music.
+“My taste is a soup” is an explicit “I like everything” choice, with plain explanatory text to match. It can coexist with selected tags and favorites, which remain positive examples rather than genre restrictions. Store this as a distinct all-styles preference, not thousands of automatically selected tags or a fake provider genre. It expresses openness to every kind of music, not a claim that every song will be liked.
 
 Unlimited means no arbitrary selected-tag count in the product. Store selections separately from candidate acquisition windows. Do not merely raise five to 200: current signal, snapshot and request limits would then remain hidden product limits. Use paged/chunked selection operations where necessary and aggregate taste without requiring every selected tag in every recommendation snapshot. Preserve the existing bounded provider requests, queue, candidate count and storage admission controls. Return actionable transport/storage errors while retaining accepted selections.
 
@@ -105,13 +117,25 @@ Extend search DTOs, catalog import/publication validation, explicit lookup adapt
 
 Provider-specific IDs, endpoints and response behavior stay in adapters. The plan must verify official API support and usage requirements before implementing new track lookup/preparation. ListenBrainz remains the default and Last.fm remains swappable. Existing evidence and offline fixtures establish mechanics, not live coverage or recommendation quality.
 
-## If every input is skipped
+## Recent recommendations for everyone
 
-Recommended behavior: allow completion and offer a clearly labelled general discovery selection, with an invitation to add one favorite or react to results. Do not create pretend taste tags or claim the selection is personalized.
+This replaces the earlier proposed general-discovery generator as the empty-input destination. The page shows music that has actually been recommended to other users, ordered as recent additions to a separate shared feed. It is available to guests and accounts regardless of onboarding completion. Completing setup puts the person's own recommendations first; Explore opens the same shared page.
 
-Generate the general selection from prepared, eligible public evidence with a documented deterministic rotation policy, no popularity preference, normal history suppression, ownership and job controls. This is a new mode and needs an explicit reason record rather than fabricated tag-overlap explanations. It must not depend on new upstream requests merely because the visitor skipped setup.
+### Privacy and data boundary
 
-If the deployment has no eligible prepared evidence, show an honest empty state with options to add a favorite or return later. Synthetic operation must retain its demo label. General selection does not establish provider licensing, acquisition approval or recommendation quality.
+Recipient identity is private. Feed entries and responses must not retain a link to the recipient or originating recommendation: no user/profile/session identifiers, recommendation/batch/job identifiers, source-row foreign keys, recipient counts, source request identifiers, personal explanations, taste tags, ratings, comments, listening history or recipient-specific URLs. Logs, caches and operational metadata for feed publication must not reintroduce those associations.
+
+The feed stores only the public music identity needed to display/play the item and the fact that it was recommended. Resolve titles, artist credits, artwork and links through eligible shared catalog metadata. Do not copy private evidence snapshots. Use an independent feed sequence/order for recency rather than exposing the original recipient's exact recommendation timestamp. The sequence must not encode a source batch or recipient; its implementation remains to specify. The feed API must not expose who received a track or how many people received it.
+
+The existing private recommendation records still serve their owners' history, explanations, feedback, export and deletion. They are not the feed's storage or read model. Stripping recipient associations from the shared page does not authorize removing ownership from private records. Public music identity can overlap with private results, so the design must not claim stronger resistance to inference than has been established.
+
+### Publication and behavior
+
+Publish only after a recommendation batch has successfully completed and its picks have been committed. Use a dedicated sanitized projection containing eligible public music identity, with no originating recipient or recommendation key. The feed read path must use this projection rather than querying across other people's private batches. Publication must be retry-safe and must not leak partial, failed, revoked or ineligible evidence. Deduplicate repeated music; repeated recommendations must not become a recipient counter or popularity ranking.
+
+Use a bounded, paged local read path. Browsing never triggers upstream acquisition. Feed lifetime, recency ordering, publication retries and shared-record cleanup need concrete implementation rules while preserving the no-recipient-link requirement. If someone reacts to a shared track, that new feedback belongs privately to the current visitor, without adding a recipient association to the shared feed record.
+
+If no eligible tracks have been recommended yet, show an honest empty state and invite the visitor to add taste inputs or return later. Do not invent recommendations, fall back silently to random music, or expose synthetic items as real recommendations. Synthetic operation keeps its demo label. This page does not establish live-catalog quality, acquisition permission or production readiness.
 
 ## Architecture, persistence and lifecycle
 
@@ -137,8 +161,8 @@ These are work packages for review, not authorization to begin implementation. T
 | 2 | Add versioned onboarding state and profile lifecycle integration | Additive migration/backfill, guest/account authorization, revision conflicts, export/deletion/import, storage accounting |
 | 3 | Add searchable vocabulary and unlimited saved tag selections | Alias search, pagination, large selections, round-trip export, no keystroke upstream calls, fair acquisition windows |
 | 4 | Add end-to-end track favorites | Recording/version disambiguation, immutable snapshots, fallback provenance, provider abstraction and duplicate evidence |
-| 5 | Add approved preference policy and empty-input discovery mode | Determinism, policy snapshot compatibility, neutral popularity, unknown vocal evidence, existing benchmark seed sanity checks |
-| 6 | Build optional onboarding flow over completed APIs | Guest/login/register, Skip/Back/Edit, draft recovery, keyboard/mobile behavior, returning profiles and first-result feedback |
+| 5 | Add approved preference policy and the shared recent-recommendations projection/page | Determinism, soup semantics, neutral popularity, unknown vocal evidence, benchmark seeds, successful-publication boundary, deduplication and absence of recipient links in storage/API/logs |
+| 6 | Build optional onboarding with all three questions together and visitor-selected favorite types | Guest/login/register, independent question skipping, Skip/Back/Edit, draft recovery, keyboard/mobile behavior, returning profiles, first-result feedback, skipped-input routing and Explore access for everyone |
 | 7 | Complete regression evidence and developer handoff | Offline/provider isolation, PostgreSQL lifecycle checks, browser journeys, bounded-resource checks and documentation |
 
 Suggested commit boundaries follow those stages, splitting schema/accounting from consumers when needed. Preliminary effort: roughly 5–8 engineering days for the full scope, excluding external source approval or real-catalog acquisition. Track evidence support and replacing current count/snapshot limits are the main uncertainties; refine the estimate after Stage 1. Entry navigation alone is much smaller but does not complete the requested feature set.
@@ -151,11 +175,13 @@ The later implementation must verify at least these user-visible outcomes:
 
 - Guests and new accounts can reach the same setup; account creation is optional.
 - Every question, tag step and favorite step can be skipped, revisited and edited.
-- Skipping all inputs leads to labelled general discovery or a truthful empty state.
+- Skipping all inputs opens Recent recommendations or its truthful empty state. The same page remains reachable by guests and accounts who completed onboarding; their own music is shown first.
 - Returning users retain their data and are not forced through setup again.
 - More than five and more than 200 tags can be saved without a hidden profile-count limit; chunking, scoring and snapshots remain bounded and auditable.
 - Search finds aliases and distinguishes recording versions. No upstream request occurs on typing or page viewing.
-- Broad taste can coexist with specific interests and never becomes a fake genre signal.
+- Soup explicitly means “I like everything,” can coexist with specific favorites, and does not become a fake genre signal or genre restriction.
+- All three questions appear together with independent optional answers. Visitors choose favorite types; bands and solo artists use the same artist entity.
+- Shared recent-recommendation records, responses, caches and publication logs contain no recipient/source-recommendation links or personal explanations. Publication occurs only for completed recommendations and paging makes no upstream calls.
 - Every displayed question has a working, tested effect or is removed before release.
 - First results support existing positive, negative and already-known feedback.
 - Registering preserves guest setup; existing-account import is explicit and respects answer conflicts.
@@ -165,6 +191,8 @@ Implementation verification uses meaningful Domain/Application tests, the reposi
 
 For this planning-only change, verify document consistency, referenced paths and whitespace; product tests are not applicable. Create a focused local documentation commit after those checks. Do not push.
 
-## Review needed
+## Remaining design work
 
-Review the proposed journey, three questions and their evidence requirements, unlimited-tag behavior, track support, and the general-discovery default when all inputs are skipped. In particular, decide whether to keep the vocal question subject to an evidence feasibility check or replace it during Stage 1. Approving this written design permits the detailed implementation plan; product implementation requires the subsequent plan review and execution choice.
+The developer decisions above are recorded, not awaiting repeat approval. Specify exact question effects and conflicting-answer precedence, verify recording/vocal evidence support, decide the favorite-count policy, and finalize the anonymous feed's bounded recency, retention and retry mechanics. Reassess the earlier effort estimate after including this shared feed; it is not simply a generic empty-input selection mode.
+
+This is a documentation-only update at the developer's request. No application implementation, provider acquisition or deployment is authorized. The detailed implementation plan and execution choice remain later steps.

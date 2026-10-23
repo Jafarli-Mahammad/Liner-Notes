@@ -7,7 +7,8 @@ const { chromium } = require(process.env.LINER_PLAYWRIGHT_MODULE || 'playwright'
   assert.ok(process.argv.includes('--approve-synthetic'));
   const base = process.env.LINER_GUEST_DEMO_URL || 'http://127.0.0.1:5093';
   assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname));
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true,
+    ...(process.env.LINER_CHROMIUM_PATH ? { executablePath: process.env.LINER_CHROMIUM_PATH } : {}) });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
   const page = await context.newPage(); const errors = [], checks = [], providerWrites = [];

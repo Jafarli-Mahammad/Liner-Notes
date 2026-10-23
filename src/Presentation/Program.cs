@@ -130,7 +130,11 @@ app.Use(async (context, next) =>
 });
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+var staticFileOptions = new StaticFileOptions
+{
+    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
+};
+app.UseStaticFiles(staticFileOptions);
 
 app.UseRouting();
 app.UseCors("ConfiguredOrigins");
@@ -145,7 +149,7 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health");
 
 // Guest-first discovery SPA fallback
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFileOptions);
 
 app.Run();
 

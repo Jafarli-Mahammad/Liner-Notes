@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Fix the legacy taste form sending incorrect tag and weight fields to the API.
+  Show backend validation messages when saving taste, registering or signing in.
+- Keep account controls, including sign out, accessible in the mobile navigation.
+- Revalidate frontend assets so browsers load current API integration code after
+  an update instead of continuing to use cached, unversioned scripts.
 - Preserve canonical recording identity when storing onsite picks; keep recordings
   with useful recording tags even when artist tags are missing.
 - Reject weekly saves after optional taste answers change, and allow catalog

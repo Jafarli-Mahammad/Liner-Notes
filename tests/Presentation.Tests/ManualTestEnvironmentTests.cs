@@ -10,6 +10,21 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class ManualTestEnvironmentTests
 {
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/app.js")]
+    [InlineData("/discovery.js")]
+    [InlineData("/styles.css")]
+    [InlineData("/discoveries")]
+    public async Task FrontendAssets_RequireRevalidation(string path)
+    {
+        await using var app = new ManualTestApp("Development");
+        using var client = app.CreateClient();
+        var response = await client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoCache);
+    }
+
     [Fact]
     public async Task Development_ServesManualTestPageAndStatus()
     {

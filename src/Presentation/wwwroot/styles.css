@@ -902,8 +902,27 @@ input:focus {
   .brand {
     margin: 0 0 12px 2px;
   }
-  .sidebar-label, .sidebar-bottom {
+  .sidebar-label {
     display: none;
+  }
+
+  .sidebar-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .account-status {
+    min-height: 44px;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .sidebar-bottom .text-button {
+    min-height: 44px;
   }
   .primary-nav {
     display: flex;

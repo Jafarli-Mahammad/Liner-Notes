@@ -8,6 +8,29 @@ Phase 9 includes pinned build inputs, non-root web and Worker images, local Comp
 
 ## Guest discovery
 
+### Actual local live website — 2026-10-23
+
+The normal `Liner Notes` IDE profile now selects live ListenBrainz/MusicBrainz
+configuration. `bash scripts/run_live.sh` starts the real site at
+`http://localhost:5080/`, using the persistent `liner_notes_live` database and
+private `.linernotes/live/` state. It selects the installed pinned SDK and never
+substitutes fixture generation when live configuration fails.
+
+Playwright MCP verified actual artist, album and recording lookup, real
+recommendation generation, stored live evidence, feedback persistence and real
+recipient-free Recent recommendations. Live metadata acquisition now imports
+eligible public core recording metadata into the catalog before scoring. The
+provider client honors upstream `s-maxage` for shared freshness while retaining
+no-store/no-cache/private restrictions.
+
+The final regression run passed 695 .NET checks with no failures or skips.
+These targeted live journeys establish local integration, not recommendation
+quality or public deployment readiness. The developer explicitly selected running
+on this machine with real provider data. See [operation](docs/renewal/local-live-run.md)
+and [live verification](docs/renewal/2026-10-23-local-live-verification.md).
+
+### Earlier synthetic implementation evidence
+
 The guest-first discovery design and sequential implementation were approved. The first onsite flow now supports artist, album, and style-tag selection; immediate synthetic recommendations with persisted explanations; explicit catalog lookup; feedback; export; registration with guest data preservation; explicit import into an existing account; and guest data deletion.
 
 The implementation passed 648 .NET checks with zero failures/skips and 12 synthetic browser checks. Seven catalog integration checks also passed after strengthening private-evidence retention assertions. The browser covered search, artist/album selection, explicit lookup, generation, return visits, feedback, export, registration/import, cooldown, sparse results and deletion.

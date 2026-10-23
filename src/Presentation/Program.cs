@@ -12,6 +12,22 @@ using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
+{
+    var settingsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,
+        "..", "..", ".linernotes", "live", "settings.json"));
+    if (!File.Exists(settingsPath))
+        throw new InvalidOperationException("Local live settings are missing. Run bash scripts/run_live.sh once from the repository root.");
+    builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
+    if (builder.Configuration["Generation:Origin"] != "Live" ||
+        !builder.Configuration.GetValue<bool>("Generation:LiveEnabled") ||
+        builder.Configuration["ListenBrainz:Mode"] != "LiveOnly" ||
+        !builder.Configuration.GetValue<bool>("ListenBrainz:LiveUseApproved") ||
+        !builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled") ||
+        !builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+        throw new InvalidOperationException("The local live profile requires live provider configuration.");
+}
+
 // Hosting logs run before middleware: omit query-bearing request start/finish messages.
 if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled") || builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
     builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);

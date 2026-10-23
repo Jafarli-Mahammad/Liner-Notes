@@ -8,7 +8,7 @@
       "applicationUrl": "http://localhost:5080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Generation__Origin": "Synthetic"
+        "LocalLive__Enabled": "true"
       }
     },
     "Manual QA": {

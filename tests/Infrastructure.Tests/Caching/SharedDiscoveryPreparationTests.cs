@@ -1,11 +1,15 @@
 using System.Collections.Concurrent;
 using System.Text;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
+using LinerNotes.Application.Common.Interfaces.Catalog;
+using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Features.Catalog;
 using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.Caching;
 using LinerNotes.Infrastructure.Discovery;
 using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Xunit;
 namespace LinerNotes.Infrastructure.Tests.Caching;
 public sealed class SharedDiscoveryPreparationTests
@@ -100,7 +104,15 @@ public sealed class SharedDiscoveryPreparationTests
         Assert.Equal(1, (await provider.GetAlbumAsync(id, "Album", default)).Vector["electronic"]);
     }
     private static ServiceProvider Services(ConcurrentBag<ListenBrainzRequestKind> calls, Clock clock, bool live, bool cacheable) =>
-        new ServiceCollection().AddScoped<IRecommendationProviderResolver>(_ => new Resolver(new ListenBrainzRecommendationProvider(new Client(calls, clock, live, cacheable)))).BuildServiceProvider();
+        new ServiceCollection()
+            .AddSingleton(new ImportCatalog(Substitute.For<ICatalogImportStore>(),
+                new LinerNotes.Infrastructure.Catalog.CatalogArtifactReader(), new CatalogAdmission(), clock))
+            .AddScoped<IRecommendationProviderResolver>(_ => new Resolver(new ListenBrainzRecommendationProvider(new Client(calls, clock, live, cacheable)))).BuildServiceProvider();
+    private sealed class CatalogAdmission : IDiscoveryWriteCoordinator
+    {
+        public Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct) => write(ct);
+        public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> write, CancellationToken ct) => write(ct);
+    }
     private sealed class Resolver(ListenBrainzRecommendationProvider provider) : IRecommendationProviderResolver
     { public RecommendationProvider Resolve() => new("listenbrainz", provider, provider, provider); }
     private sealed class Client(ConcurrentBag<ListenBrainzRequestKind> calls, Clock clock, bool live, bool cacheable) : IListenBrainzApiClient

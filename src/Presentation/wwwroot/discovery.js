@@ -54,6 +54,7 @@ window.discoveryApp = (() => {
     document.getElementById('reg-preserve-label').hidden = !session.profile?.isGuest;
     const overview = await request('/discovery');
     page = overview.page; styles = overview.styles; evidenceOrigin = overview.evidenceOrigin;
+    root('runtime-label').textContent = evidenceOrigin === 'Live' ? 'Live discovery' : evidenceOrigin === 'Synthetic' ? 'Synthetic test data' : 'Recorded evidence';
     if (!dirty) {
       favorites = (page?.favorites ?? []).map(f => ({ id: f.catalogRecordId, signalId: f.signalId, name: f.name, artistName: f.artistName, kind: f.kind, disambiguation: f.disambiguation, releases: f.releases }));
       tags = new Set(page?.tags ?? []);

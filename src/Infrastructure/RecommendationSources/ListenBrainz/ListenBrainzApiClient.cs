@@ -67,8 +67,9 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             if (parsed.Gaps.IsEmpty && response.Headers.CacheControl is not { NoStore: true } and not { NoCache: true } and not { Private: true })
             {
                 TimeSpan ttl = TimeSpan.FromSeconds(options.CacheSeconds);
-                if (response.Headers.CacheControl?.MaxAge is { } supplied && supplied < ttl) ttl = supplied;
-                if (response.Headers.CacheControl?.MaxAge is null && response.Content.Headers.Expires is { } expires)
+                var sharedLifetime = response.Headers.CacheControl?.SharedMaxAge ?? response.Headers.CacheControl?.MaxAge;
+                if (sharedLifetime is { } supplied && supplied < ttl) ttl = supplied;
+                if (sharedLifetime is null && response.Content.Headers.Expires is { } expires)
                 {
                     var lifetime = expires - (response.Headers.Date ?? clock.GetUtcNow());
                     if (lifetime < ttl) ttl = lifetime;

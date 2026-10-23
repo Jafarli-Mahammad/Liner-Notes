@@ -38,6 +38,12 @@ public interface ICatalogLookupPreparation
     Task<CatalogLookupResult> SearchAsync(string query, CatalogKind kind, CancellationToken ct);
 }
 
+/// <summary>Reusable core music metadata acquired independently of private scoring and selections.</summary>
+public interface IPublicRecordingCatalogSource
+{
+    IReadOnlyList<CatalogLookupResult> ReadPublicRecordingMetadata();
+}
+
 public interface ICatalogArtifactReader
 {
     IAsyncEnumerable<CatalogArtifactRow> ReadAsync(Stream stream, CatalogPublication publication, CancellationToken ct);

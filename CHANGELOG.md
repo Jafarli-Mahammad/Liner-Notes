@@ -2,6 +2,13 @@
 
 ## Unreleased — renewal
 
+- Start the normal local website with live ListenBrainz/MusicBrainz providers,
+  a persistent dedicated database and private storage configuration. Add
+  `bash scripts/run_live.sh`, including selection of the installed pinned SDK.
+- Display the actual discovery evidence mode in the frontend.
+- Publish eligible core metadata acquired during live preparation into the public
+  catalog so real picks can appear in recipient-free Recent recommendations.
+
 - Fix the legacy taste form sending incorrect tag and weight fields to the API.
   Show backend validation messages when saving taste, registering or signing in.
 - Keep account controls, including sign out, accessible in the mobile navigation.

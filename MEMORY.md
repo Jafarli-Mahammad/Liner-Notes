@@ -31,6 +31,7 @@ Keep this file under ~150 lines. When it grows, merge overlapping lines and drop
 Facts that belong in AGENTS.md (structure, conventions) or PROGRESS.md (status) go there, not here.
 Apply only what's relevant to the current task. Don't recite this file back.
 Working preferences
+[stated] For the local website launch, use real provider data on this machine; the developer explicitly rejected substituting synthetic discovery or a demo. (2026-10-23)
 [stated] Keep providers and persistence replaceable through polymorphic interfaces; provider/vendor types and behavior belong in adapters, not application workflows. Avoid coupling that makes a provider switch require rewriting unrelated product logic. Continue carefully with focused boundary verification. (2026-10-18)
 [stated] Always use the latest stable versions of project packages and tools; verify current releases and upgrade compatibility rather than retaining old versions just because the checkout already uses them. The developer approved Phase 9 with this correction and instructed implementation to proceed. (2026-10-12)
 [stated] Keep MediatR 12.5.0 as an explicit exception to the latest-stable policy because newer releases change to RPL/commercial licensing; the repository remains AGPL-3.0 and no commercial license purchase was approved. (2026-10-12)

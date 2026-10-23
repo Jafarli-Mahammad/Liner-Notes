@@ -22,6 +22,7 @@ venv/
 # Antigravity & Agent scratch
 .system_generated/
 .codebase-memory/
+.linernotes/
 .codex/
 scratches/
 

@@ -11,6 +11,34 @@ namespace LinerNotes.Infrastructure.Tests;
 public sealed class ListenBrainzTransportTests
 {
     [Theory]
+    [InlineData("public, max-age=0, s-maxage=120", 1)]
+    [InlineData("public, max-age=0", 2)]
+    [InlineData("no-store, max-age=0, s-maxage=120", 2)]
+    [InlineData("private, max-age=0, s-maxage=120", 2)]
+    [InlineData("no-cache, max-age=0, s-maxage=120", 2)]
+    public async Task SharedFreshness_UsesSharedLifetimeAndHonorsRestrictions(string policy, int expectedRequests)
+    {
+        int requests = 0;
+        using var http = new HttpClient(new Handler(_ =>
+        {
+            requests++;
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+            response.Headers.CacheControl = System.Net.Http.Headers.CacheControlHeaderValue.Parse(policy);
+            return response;
+        }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var client = new ListenBrainzApiClient(http, new() { Mode = ListenBrainzClientMode.LiveOnly,
+            LiveUseApproved = true }, new Gate(), cache, TimeProvider.System);
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "rock", 1);
+        var first = await client.SendAsync(request);
+        await client.SendAsync(request);
+        Assert.Equal(expectedRequests, requests);
+        if (expectedRequests == 1)
+            Assert.InRange(first.SharedCacheUntilUtc!.Value, DateTimeOffset.UtcNow.AddSeconds(110), DateTimeOffset.UtcNow.AddSeconds(121));
+        else Assert.Null(first.SharedCacheUntilUtc);
+    }
+
+    [Theory]
     [InlineData(HttpStatusCode.Unauthorized, "permission_denied")]
     [InlineData(HttpStatusCode.Forbidden, "permission_denied")]
     [InlineData(HttpStatusCode.NotFound, "not_found")]

@@ -247,6 +247,21 @@ private generated credentials and publishes only loopback web. For host builds,
 install the pinned stable SDK from `global.json` and run `dotnet tool restore`.
 This local packaging does not provide production deployment or external delivery.
 
+For the actual local website with real provider data, run:
+
+```bash
+bash scripts/run_live.sh
+```
+
+Open **http://localhost:5080/**. The launcher selects a compatible installed SDK,
+initializes the dedicated `liner_notes_live` database on first use, and starts
+the `Liner Notes` profile. It reads the existing database connection, JWT key and
+ListenBrainz token from Presentation User Secrets. Private settings, storage
+inventory and artifact directories persist under the ignored `.linernotes/live/`
+directory. The first setup inserts no synthetic catalog or recommendations.
+See [local live operation](docs/renewal/local-live-run.md) for prerequisites and
+retained-data handling.
+
 The Presentation project has Development launch profiles for the application,
 manual QA page, and Swagger. Visual Studio 2022 17.11 or later can use the shared
 solution launch profile to select Presentation as the startup project when
@@ -286,9 +301,10 @@ The IDE database uses the separate `linernotes-ide` Compose project and named
 volume, and is published only on `127.0.0.1:55441`. Stop it while preserving data
 with `docker compose --project-name linernotes-ide --env-file .env.ide.local -f compose.yaml -f compose.ide.yaml down`.
 
-The profiles use Development mode and synthetic generation inputs; no Last.fm key
-is needed for offline work. The UI and stored-data endpoints do not generate a
-weekly digest on demand. `.NET` does not load `.env` automatically. The profiles
+The `Liner Notes` profile uses live ListenBrainz/MusicBrainz data and supports
+onsite discovery. `Manual QA` and `Swagger` retain their separate offline
+configuration; weekly digest generation remains a separate operator flow.
+`.NET` does not load `.env` automatically. The profiles
 open a browser when launched through an IDE; `dotnet run` itself does not open a
 browser. This guide does not establish production deployment readiness.
 

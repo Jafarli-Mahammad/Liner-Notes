@@ -1,14 +1,15 @@
-# Performance and network audit: plan and initial findings
+# Performance and network audit: execution checkpoint and plan
 
 Date: 2026-10-24 (Asia/Baku)
 Repository baseline: `3ae263c73dc1f16510a8033481b51a14cf349e16`
-Status: **Plan prepared; initial static investigation only. Full audit and profiling have not run.**
+Audit execution baseline: `a930ebb87246a4709492ae06a543f996f85baac0` (approved plan commit; product sources unchanged).
+Status: **Audit in progress. First source pass: 153/486 files, 7,620/63,157 numbered lines. Isolated storage/scoring/merge measurements and browser polling reproduction completed; exhaustive review, SQL/network attribution and retained-memory analysis remain unfinished.**
 
 ## Scope and success criteria
 
-The developer requested a line-by-line performance and network review, using appropriate skills and MCP servers, especially Rider, dotTrace and dotMemory. They subsequently selected **plan first, with initial findings**. This document is the deliverable for that selection. No fixes, dependency updates, configuration changes, live provider calls, load generation, database mutations or profiler attachment are part of this planning pass.
+The developer requested a line-by-line performance and network review, using appropriate skills and MCP servers, especially Rider, dotTrace and dotMemory. They first selected **plan first, with initial findings**, then approved execution and instructed scanning every line. This document now records the first execution checkpoint and retains the approved methodology. Scope remains report only: no product fixes, project dependency updates or production configuration changes. Workload helpers and private evidence are outside Git under `/tmp/liner-performance-audit-20261024/`; no live provider requests or persistent application database mutations were made by these audit workloads.
 
-The later audit must account for every tracked first-party source/configuration line in its inventory, follow reachable call paths, and record every substantiated performance issue here. A search-pattern match is a lead, not a completed review. A file is complete only after all its numbered lines have been read, relevant callers/callees checked, and its disposition recorded. This pass inspected selected portions of the files referenced below; **no file is marked fully reviewed**.
+The audit must account for every tracked first-party source/configuration line in its inventory, follow reachable call paths, and record every substantiated performance issue here. A search-pattern match is a lead, not a completed review. A file is complete only after all its numbered lines have been read, relevant callers/callees checked, and its disposition recorded. The ledger distinguishes a complete **source read** from completed end-to-end reconciliation: **no file is yet marked fully reviewed**. The first source read covers all Domain and Application files plus eight traced persistence/storage/runner/frontend files. The remaining 333 files and 55,537 lines have not received their complete source read.
 
 The goal is to identify attributable CPU time, latency, allocation, retained memory, disk I/O, SQL work and network traffic. No profiler can guarantee attribution of every millisecond or byte: sampling, instrumentation overhead, scheduler behavior, native memory, TLS, network transport and external services limit precision. Record uncertainty, profiler overhead and residual/unattributed work explicitly. Do not invent savings.
 
@@ -22,9 +23,11 @@ Preserve provider abstraction, deterministic scoring and persisted explanations,
 | Profiling alone | Identifies costly executed paths under a defined workload | Misses unexercised paths and can mistake mandatory waits for waste |
 | **Recommended: tracked source review plus separate CPU, memory, SQL and network measurements** | Connects code-level causes to reproducible costs and exposes coverage gaps | Requires a controlled environment, workload definitions and working capture tools |
 
-Skills used: `brainstorming` for scope and alternatives, `performance-reviewer` for evidence-based triage, and `task-observer` for workflow observations. This is an investigation/report task; product implementation remains outside scope.
+Execution skills: `performance-reviewer` for evidence-based triage and `task-observer` for workflow observations. No brainstorming skill was used during audit execution. Product implementation remains outside scope.
 
 ## Verified tool access and capture gaps
+
+This table and B1 describe the original planning preflight. The execution checkpoint below supersedes capture/browser availability and records the new license and browser-launch blockers.
 
 | Capability | Current evidence | Plan |
 | --- | --- | --- |
@@ -47,7 +50,7 @@ Exposed dotTrace MCP tools, by suffix under `mcp__rider__`:
 - `dotTraceGetTimelineEvents`
 - `dotTraceOpenReport`
 
-**B1 — Local CLI capture is not currently verified usable.** Running the installed `dotTrace.sh --help` failed because its referenced sibling `runtime-dotnet.sh` is missing. Invoking the newer `dottrace --help` failed with permission denied; `ls -l` shows both newer wrappers lack execute permission. Reading both legacy launchers confirms they reference the same missing runtime script. No install, permission change or tool repair was attempted. Establish whether Rider UI capture works, or prepare a compatible standalone CLI distribution, before scheduling runtime capture. This is a tooling blocker, not an application performance finding.
+**B1 — Planning-pass local CLI capture was not verified usable (execution update below).** Running the installed `dotTrace.sh --help` failed because its referenced sibling `runtime-dotnet.sh` is missing. Invoking the newer `dottrace --help` failed with permission denied; `ls -l` shows both newer wrappers lack execute permission. Reading both legacy launchers confirms they reference the same missing runtime script. No install, permission change or tool repair was attempted. Establish whether Rider UI capture works, or prepare a compatible standalone CLI distribution, before scheduling runtime capture. This is a tooling blocker, not an application performance finding.
 
 **B2 — Linux profiling has platform limits.** JetBrains documents that line-by-line profiling is unavailable for .NET Core applications on Linux/macOS. The project pins SDK `10.0.401`; validate profiler support for its exact runtime and OS before capture. Use supported sampling/timeline/tracing modes and source inspection. Even where line instrumentation is supported, JetBrains warns its high overhead distorts call times. [CLI platform limitations](https://www.jetbrains.com/help/profiler/Performance_Profiling__Profiling_Using_the_Command_Line.html), [profiling configuration guidance](https://www.jetbrains.com/help/rider/Profiling_Configurations.html).
 
@@ -114,22 +117,122 @@ For each of W3, W5 and W7, capture (A) warmed idle state, (B) immediately after 
 
 - Count SQL commands per journey/job using available profiler events or an isolated DB diagnostic session. Analyze representative SELECTs with `EXPLAIN (ANALYZE, BUFFERS)` on the isolated database; `ANALYZE` executes the query. Check cardinality estimates, returned rows, index use, sequential scans, joins, sorts, locks, transaction duration and round-trip counts. Do not parallelize queries on one EF `DbContext` as a proposed shortcut.
 - Trace outbound calls by provider/method and normalized nonsecret request identity. Record cache hits/misses, duplicates, pool reuse, DNS/connect/TLS timing where observable, response headers, status, retries, cancellation and compressed/decompressed bytes. Confirm actual HTTP handler defaults and deployment behavior before flagging missing connection pooling or compression.
-- Capture browser journeys using an available browser/network tool and DevTools/HAR if needed. The exact browser tool availability must be checked at execution time; no browser measurement was performed here. Check API waterfalls, search debounce/abort, job polling, main-thread work, repeated DOM rebuilding and transferred asset size.
+- Capture browser journeys using browser/network tools and DevTools/HAR. The planning pass ran no browser measurement; the execution checkpoint records the controlled polling reproduction and MCP launch failure. Complete API waterfalls, search debounce/abort, main-thread work, repeated DOM rebuilding and asset transfers remain outstanding.
 - Inspect deployed proxy/static asset headers separately from Kestrel. `Cache-Control: no-cache` permits conditional caching/revalidation; it does not mean every asset body is downloaded again. Private API `no-store` is intentional. Check Brotli/gzip negotiation and ETag/304 behavior before assigning an issue to the application.
 
-## Initial findings register
+## Execution checkpoint — 2026-10-24
 
-All priorities below are **provisional investigation priorities**, not measured production severities. No latency, RSS, retained-byte or bandwidth saving is claimed. `Structural` means the work is visible in source; `conditional` means the suspected cost requires the specified trigger; neither means it is a measured bottleneck. These are findings/leads from selected code, not an exhaustive audit.
+### Coverage and environment
+
+The regenerated inventory matches the approved plan: 486 files, 63,157 lines, no line-count differences. SHA-256 was frozen for every inventoried file; all 486 hashes still matched after the workloads. Existing unrelated work is excluded from edits. Product source and runtime configuration are unchanged.
+
+| Area | Complete numbered source read | Disposition |
+| --- | --- | --- |
+| Domain | 47 files / 2,668 lines | Pure types, vector operations, both scorers, selection, feedback grouping, schedules and bounded evidence read; scoring callers traced into Application. Whole-layer reconciliation remains pending. |
+| Application | 98 files / 3,412 lines | All handlers, interfaces, mappings, DTOs, configuration and lockfile read. Persistence/provider/endpoint and test reconciliation remains pending. |
+| Traced implementation | 8 files / 1,540 lines | `DigestGenerationStore`, `DiscoveryBatchStore`, `DiscoveryWriteCoordinator`, `CatalogReader`, both storage files, `DiscoveryJobService`, all 521 lines of `discovery.js`. |
+| Remaining | 333 files / 55,537 lines | Pending complete source read, including remaining DataAccess, Infrastructure, Presentation, Worker, tests, scripts and root/deployment files. |
+
+The ledger's `Read 1–N` means every numbered line was read, **not** that the file is cleared or all paths exercised. No file is promoted to fully reviewed yet. P01/P04/P08/P10 have isolated measurements; other findings remain structural or conditional.
+
+Host: Linux `7.2.11-200.fc44.x86_64`, Intel Core i5-14500HX, 20 logical CPUs, approximately 31.1 GiB RAM. This shared development host had uncontrolled background activity. SDK `/home/mahammadjafarli/.dotnet/dotnet` `10.0.401`; measured runtime `.NET 10.0.12`. Helpers reference the actual Application/Infrastructure projects, use optimized Release builds and portable symbols, and run without a debugger. An initial parallel MSBuild failed without diagnostics; rebuilding with `-m:1 --disable-build-servers` succeeded with zero warnings/errors. No application issue is inferred from that tooling failure.
+
+### Tool preflight updates
+
+- **B1 partially resolved: dedicated dotTrace capture works.** Official stable `JetBrains.dotTrace.GlobalTools` `2026.2.3.1` was verified and installed into the task-private tool directory. Sampling captured the isolated scorer on this exact runtime. A sandbox host-connection permission error required authorized unsandboxed execution. Product processes were not attached or restarted. Rider's bundled wrapper remains unusable as described above. [Official CLI distribution and capture](https://www.jetbrains.com/help/profiler/Performance_Profiling__Profiling_Using_the_Command_Line.html).
+- **B3: Rider dotTrace analysis is license-blocked.** `dotTraceGetSnapshotInfo` with the explicit repository root and captured path returned: `dotTrace is not licensed. Activate a dotTrace / dotUltimate license to use these tools.` Snapshot pieces exist, but no call tree, hotspot attribution, timeline or own/inclusive method times were obtained. No license activation was attempted.
+- Standalone dotTrace/dotMemory UI distributions exist under JetBrains Toolbox, but UI presence is not capture/analysis evidence. No dotMemory MCP tool or verified usable memory-analysis path was established. No `.dmw`, dominator/root, post-quiescence live-object or leak result exists. A failed lookup of a guessed global-tool package is not proof that the official memory CLI is unavailable. [Official memory capture distribution](https://www.jetbrains.com/help/dotmemory/Working_with_dotMemory_Command-Line_Profiler.html).
+- **B4: Playwright MCP Chrome is missing.** Its launch failed before running the test because `/opt/google/chrome/chrome` was absent. The reproduction used cached Playwright `1.64.1` and Chromium `155.0.8059.12` through the Node API. This is browser evidence, not a successful MCP browser run. A sandbox socket error required authorized unsandboxed Chromium execution. No global browser installation or project package change was made.
+
+### W7-S: Actual storage phases with isolated artifacts
+
+`StorageAudit` calls the actual `LocalGenerationStorage` implementation in the coordinator's five-phase sequence: acquire coordinated lease, reserve, validate, verify stored bytes, publish committed inventory. It supplies a fixed accounting state and makes **no database connection or mutation**. Six category directories and deterministic zero-filled artifact files are private to this task. Reconciliation and one complete warm-up precede five ordinary samples per shape. Artifact construction/deletion are outside measurement.
+
+**`/tmp` is tmpfs here.** These are warm, memory-backed filesystem results. `/proc/self/io` `rchar` deltas measure application read characters, not storage-device/network bytes. Physical `read_bytes` was zero in every sample. Small extra reads cover inventory and process-counter data. Wall time includes validation, hashing, async execution and inventory publication. Process CPU totals cover all helper threads; they must not be added to wall time.
+
+| Artifact bytes | Files | Samples | Median wall ms (range) | Median process CPU ms | Median allocated bytes | Application read characters per operation |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 0 | 5 | 1.479 (1.205–2.686) | 1.663 | 89,112 | 869–3,365 |
+| 100,000,000 | 1 | 5 | 453.742 (344.902–563.416) | 946.629 | 145,616 | 500,000,889–500,000,891 |
+| 100,000,000 | 1,000 | 5 | 677.829 (412.721–905.112) | 1,454.673 | 50,875,488 | 500,006,011–500,007,036 |
+| 900,000,000 | 1 | 5 | 3,847.635 (3,296.892–5,004.048) | 8,435.898 | 143,152 | 4,500,000,895–4,500,000,900 |
+
+Process-wide allocation uses `GC.GetTotalAllocatedBytes(precise: true)` deltas and includes runtime work. The roughly 5× payload read relationship corroborates the source trace. Many-file runs also expose allocation cost. Physical-disk latency, SQL/transaction/advisory-lock wait, concurrent admission and heartbeat timeout were not measured. Near-limit publication itself took 644–1,060 ms; its five-second deadline was not exceeded. This measures P01's storage phases, not the total application write-path cost. Integrity checks remain unchanged.
+
+### W3-S: Pure scorer and candidate merge
+
+`ScorerAudit` uses actual `GenerationConfiguration.Scoring()` and `BaselineAScorer.RankForBatch`: ten candidate tags, taste vectors of 20 or 271 tags, distinct tracks/artists, empty evidence and no exclusions. Each shape receives at least 50 warm-up calls and one second of warm-up, then five measured ranks in each of five independent processes (25 samples). Allocation uses `GC.GetAllocatedBytesForCurrentThread`; scoring is synchronous. Selecting five finite scores is asserted. Selected-breakdown serialization occurs **after** timing/allocation measurement.
+
+| Taste tags | Candidates | Samples | Median wall ms (range) | Allocated bytes per rank | JSON bytes for 5 selected breakdowns |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 10 | 25 | 0.499 (0.409–1.587) | 137,584–146,224 | 21,561 |
+| 20 | 100 | 25 | 0.608 (0.535–1.155) | 1,338,104 | 21,577 |
+| 20 | 400 | 25 | 3.429 (2.371–11.845) | 5,349,704 | 21,593 |
+| 271 | 10 | 25 | 0.884 (0.334–1.327) | 375,824 | 21,076 |
+| 271 | 100 | 25 | 3.861 (3.276–10.732) | 3,750,104 | 21,092 |
+| 271 | 400 | 25 | 38.146 (14.275–47.488) | 14,997,704 | 21,108 |
+
+Wide ranges and small operations limit latency comparisons; warm-up does not establish that tiering or host noise disappeared. Allocation supports P08 but does not attribute every byte to invariant setup. Selected JSON is serialized payload with empty evidence, not persisted column size, full recommendation payload, retained memory or wire traffic. No policy tuning or recommendation-quality evaluation occurred.
+
+Five ordinary control processes each executed 500 warmed C=400/T=271 ranks: median 9,267.943 ms, range 8,417.096–10,985.032 ms. One matching dotTrace sampling run measured 9,617.793 ms inside the workload; capture lifecycle was 13.599 seconds. The profiled result lies inside ordinary variance, so a reliable overhead percentage cannot be inferred. Earlier short-warm-up/mixed-build experiments were excluded. B3 prevented opening the snapshot or attributing CPU to individual methods.
+
+`MergeAudit` invokes actual private `PrepareDiscoveryBatch.Merge` through reflection, using distinct generated text identities and valid offline provenance. Construction/warm-up are outside measurement; reflection overhead is included. Each shape receives at least 20 calls and one second of warm-up, then five samples in each of five independent processes. Output count is asserted unchanged.
+
+| Distinct candidates | Samples | Median wall ms (range) | Allocated bytes per merge |
+| ---: | ---: | ---: | ---: |
+| 10 | 25 | 0.024 (0.015–0.052) | 55,000 |
+| 100 | 25 | 1.788 (0.663–2.669) | 3,139,904–3,140,152 |
+| 400 | 25 | 19.101 (10.102–38.489) | 47,133,544–47,133,792 |
+
+These generated shapes measure isolated costs; they are not demo recommendations or real-provider evidence. Callers establish use in live-capable discovery, but these runs exclude provider pacing, SQL, real evidence graphs, persistence and HTTP serialization. Do not add medians to estimate an end-to-end latency.
+
+### W2-P: Controlled frontend retry reproduction
+
+The exact unchanged `discovery.js` ran in Chromium with a minimal DOM, ordinary `fetch`, and routed session/overview/job responses. Every request under a reserved `.invalid` audit origin was intercepted; unrelated URLs were aborted and service workers blocked. `clock.install`, `pauseAt` and `runFor` controlled Date/timers. This measures timer policy and attempted HTTP requests, not elapsed transport time or live backend throughput. [Playwright clock semantics](https://playwright.dev/docs/clock).
+
+With a running job and `429` plus `Retry-After: 60`, attempted poll timestamps in milliseconds were **0, 5,000, 10,000, 15,000, 20,000, 25,000, 30,000, 35,000, 40,000, 45,000, 50,000, 55,000, 60,000**. A controlled completed response arrived at 60 seconds. This establishes 11 premature retries before the first requested delay elapsed; subsequent rejections also each requested another 60 seconds. No more polls occurred during 65 virtual seconds after completion. In a fresh active-job scenario, leaving immediately after the first rejection prevented further attempts for 65 virtual seconds. No page errors occurred. Missing/malformed/date-form retry headers and complete UI journeys remain untested.
+
+### Evidence, reproduction and outstanding work
+
+Private root: `/tmp/liner-performance-audit-20261024/`, **volatile tmpfs rather than durable archive**. `evidence-manifest.json` records SHA-256/byte lengths for helper sources, build/capture logs, selected samples/aggregates and snapshot pieces. `inventory.json` and `coverage.json` retain frozen source hashes and read ranges. The committed ledger preserves source-read state if private files disappear. No raw snapshot, HAR, DB contents or private settings are committed.
+
+| Evidence | Private paths under that root |
+| --- | --- |
+| Scorer | `ScorerAudit/{ScorerAudit.csproj,Program.cs}`, `scorer-steady-baseline-{1..5}.json`, `scorer-steady-control-{1..5}.json`, `scorer-aggregate.json`, `scorer-steady-sampling.log`, `scorer-steady-sampling.dtp*` |
+| Storage | `StorageAudit/{StorageAudit.csproj,Program.cs}`, `storage-baseline.json`, `storage-aggregate.json`; generated artifacts deleted after measurement |
+| Merge | `MergeAudit/{MergeAudit.csproj,Program.cs}`, `merge-baseline-{1..5}.json`, `merge-aggregate.json` |
+| Browser | `polling-audit.cjs`, `polling-evidence.json`, `polling-error.log`; cached executable paths are recorded inside the helper |
+| Tool setup | `dottrace-help.txt`, `dottrace-start-help.txt`, `dottrace-install.log`, `dottrace-versions.json`, `*-build.log` |
+
+Rebuild helpers with the full pinned SDK path and `build <private-project-path> -c Release -o <private-output-path> -m:1 --disable-build-servers`. Run `dotnet scorer-bin/ScorerAudit.dll` five times for shape samples, and five times with `--profile` for 500-rank controls. Run the storage and merge DLLs similarly without overlapping measured CPU workloads. Browser command: `node /tmp/liner-performance-audit-20261024/polling-audit.cjs`. Input construction rules, assertions and bounds are above and in the private helper sources.
+
+Sampling command after ordinary controls:
+
+```sh
+/tmp/liner-performance-audit-20261024/tools/dottrace start --framework=NetCore --profiling-type=Sampling --save-to=/tmp/liner-performance-audit-20261024/scorer-steady-sampling.dtp --propagate-exit-code --no-check-for-updates -- /home/mahammadjafarli/.dotnet/dotnet /tmp/liner-performance-audit-20261024/scorer-bin/ScorerAudit.dll --profile
+```
+
+Continue the remaining DataAccess implementation/migrations, then Infrastructure, Presentation, Worker, tests, scripts and configuration. Reconcile already-read files against implementations, endpoints and tests before promoting their disposition. Application-level W0–W8 workloads, SQL plans/counts, network/transfer attribution, concurrency/cold-cache sweeps and retained-memory analysis remain outstanding beyond these named subworkloads. No live-provider performance, production readiness, exhaustive clean bill or developer-confirmed completion is established.
+
+Workflow observations: verify capture and licensed analysis separately; distinguish source reading from call-path/runtime reconciliation; freeze helper builds before aggregation; record tmpfs versus physical storage; use intercepted HTTP and a virtual clock to reproduce retry policy. These stay here so the pre-existing unrelated skill-observation log is preserved.
+
+## Findings register
+
+All priorities below are **provisional investigation priorities**, not measured production severities. No hypothetical optimization saving is claimed. `Structural` means work visible in source; `conditional` means cost requires the stated trigger. Measurements apply only to their named isolated workloads and units above. This audit remains unfinished.
 
 | ID | Priority | Evidence status | Concern | Primary validation |
 | --- | --- | --- | --- | --- |
-| P01 | High | Structural; cost unmeasured | Multiple full-artifact hashing passes per coordinated write | W7: count hash passes, disk read bytes and lease duration |
+| P01 | High | Measured storage phases; DB contention pending | Multiple full-artifact hashing passes per coordinated write | W7-S: five full reads; near-limit median 3.85 s on tmpfs |
 | P02 | Medium | Conditional | Duplicate upstream metadata requests after concurrent cache misses | W4: count same-key outbound calls across distinct pools |
 | P03 | Medium | Structural; cost unmeasured | Full-response buffering, extra array copy and JSON clone | W2/W3: allocation stacks and body-size sweep |
-| P04 | Medium | Structural mismatch; runtime unverified | Generation polling ignores the longer server retry delay | W2/W3: controlled 429 with a 60-second Retry-After |
+| P04 | Medium | Reproduced in controlled browser | Generation polling ignores the longer server retry delay | W2-P: 5-second attempts despite Retry-After 60 |
 | P05 | Medium | Structural contention; cost unmeasured | Unrelated cold pools serialize on 32 stripe gates | W4: same-stripe versus different-stripe keys |
 | P06 | Medium | Structural; cost unmeasured | Full discovery export is materialized in memory | W5: large valid history, peak live memory and allocation |
 | P07 | Low | Structural; cost unmeasured | Idle discovery lanes poll the database every second | W0: count SQL at idle per host |
+| P08 | Medium | Measured pure scorer allocation; CPU attribution pending | Invariant setup and snapshots repeated before selecting five picks | W3-S: 15.0 MB allocated at C=400/T=271 |
+| P09 | Medium | Structural; scale-dependent cost unmeasured | Weekly generation reads/hashes full feedback history twice | W3/W6: history sweep and SQL/lock evidence |
+| P10 | Medium | Measured isolated merge; end-to-end cost pending | Quadratic alias grouping rebuilds identities repeatedly | W3-S: 47.1 MB allocated at 400 distinct candidates |
+| P11 | Medium | Structural query fan-out; runtime count pending | Sequential item fetching for catalog selection/completed lookup | W1/W2: 2N eligible-item SELECTs plus surrounding queries |
 
 ### P01 — Repeated complete artifact scans inside serialized write admission
 
@@ -139,7 +242,7 @@ Locations: [LocalGenerationStorage.cs:139](src/Infrastructure/Storage/LocalGener
 
 If managed artifacts contain A bytes across F files, this path performs approximately O(5A) application-level content reads and O(5F) file work per write. OS page cache can reduce physical reads but not all hashing/enumeration cost. Near the configured storage cap, the amount of revalidation can dwarf the mutation. Mandatory integrity validation is intentional: the issue to investigate is repeated total work and lock duration, not whether checks should be removed.
 
-Measure at 0/100 MB/near-limit artifacts with separate many-file cases; record hash-stack calls, file bytes, CPU, transaction time, lease contention and heartbeat latency. Preserve fail-closed tamper and cross-process guarantees in any future design. No fix applied.
+Execution update: W7-S above reproduced the five passes and measured ordinary storage-phase time, process CPU, allocation and application read counts at 0/100 MB/near-limit artifacts, including a many-file case. Physical-disk behavior, method-level profile attribution, transaction time, lease contention and heartbeat latency remain outstanding. Preserve fail-closed tamper and cross-process guarantees. No fix applied.
 
 ### P02 — Cache miss is checked before pacing, without a second lookup
 
@@ -163,7 +266,7 @@ Locations: [discovery.js:45](src/Presentation/wwwroot/discovery.js#L45), [discov
 
 The shared request helper reads and clamps `Retry-After` and, on 429, stores a deadline in `page.nextRequestAtUtc`. The generation polling error branch nevertheless schedules its next request after a fixed 5,000 ms. The stored deadline feeds the generation button's cooldown, not this polling schedule. A server asking the client to wait 60 seconds can therefore receive repeated premature polls, roughly twelve polling attempts per minute ignoring response time, with rejected traffic and repeated error handling.
 
-Validate with a controlled 429 response carrying `Retry-After: 60`; record attempted request timestamps through the entire delay and recovery. Include absent/malformed/date-form headers and cancellation/navigation. Existing two-second success polling is a separate policy choice whose cost should be measured, not automatically called a defect. No fix applied.
+Execution update: W2-P above reproduced five-second attempted requests during controlled `429`/`Retry-After: 60`, then verified completion and active-view cancellation. Absent/malformed/date-form headers and complete journeys remain outstanding. Existing two-second success polling is a separate policy choice whose cost should be measured, not automatically called a defect. No fix applied.
 
 ### P05 — Unrelated cold pool keys share a long-held stripe gate
 
@@ -189,12 +292,50 @@ When enabled, the host runs a prepared lane and an acquisition lane. At idle, th
 
 These indexed existence checks may be cheap and the one-second responsiveness may be intentional. Measure idle commands/sec, query plans, DB network traffic and CPU before treating the polling policy as worth changing. Keep it separate from expensive coordinated write admission: no-ready checks do not themselves invoke that coordinator. No fix applied.
 
+### P08 — Repeated batch-invariant scorer work before selecting five picks
+
+Status: **structural duplication plus measured whole-scorer allocation; method CPU attribution pending**. Locations: [BaselineAScorer.cs:59](src/Domain/Scoring/BaselineAScorer.cs#L59), [BaselineAScorer.cs:85](src/Domain/Scoring/BaselineAScorer.cs#L85), [BaselineAScorer.cs:156](src/Domain/Scoring/BaselineAScorer.cs#L156), [PrepareDiscoveryBatch.cs:76](src/Application/Features/Discovery/PrepareDiscoveryBatch.cs#L76), [GenerateDigestCommandHandler.cs:102](src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs#L102).
+
+Every candidate's `ScoreCore` validates configuration, recreates a sorted taste dictionary through an intermediate dictionary, recalculates taste magnitude, and reads `configuration.Sha256`, which validates, orders/formats policy and hashes it again. It constructs a complete score snapshot before ranking keeps at most five picks. Large tastes still incur full sorting even when persisted taste is trimmed to overlaps. At C candidates and T taste tags, the repeated invariant taste preparation alone has O(C × T log T) work; configuration hashing also repeats C times. Candidate vectors, overlap calculation and output explanations still require candidate-specific work.
+
+Reachability: `RunDiscoveryJob.ExecuteAsync` calls shared preparation; `PrepareDiscoveryBatch` calls `ScoreForBatch` or weekly `Score`, both using `ScoreCore`. The older weekly branch calls `Rank`, which also scores before selection. `GenerationConfiguration` caps candidates at 400 and picks at five. W3-S measured actual `RankForBatch` (same core) at 400 candidates/271 taste tags: 14,997,704 allocated bytes per rank, median 38.146 ms with 14.275–47.488 ms range. Five selected breakdowns serialized to 21,108 bytes with empty evidence. This is allocation churn, not retained memory or a proven leak. Full real-evidence generation may have a different cost distribution.
+
+Future remediation to evaluate: prepare immutable batch-invariant state once, and investigate delaying full snapshot construction until selected scores are known. Preserve exact deterministic scores/order, configuration hashes, selected explanation evidence, unknown JSON fields and snapshot limits; sanity-check existing scorer/benchmark fixtures. The measurement does not establish what fraction would be saved. No fix applied.
+
+### P09 — Weekly generation materializes and fingerprints all historical feedback
+
+Status: **structural scale-dependent work, runtime SQL/lock cost unmeasured**. Locations: [DigestGenerationStore.cs:38](src/DataAccess/Persistence/Repositories/DigestGenerationStore.cs#L38), [DigestGenerationStore.cs:123](src/DataAccess/Persistence/Repositories/DigestGenerationStore.cs#L123), [GenerateDigestCommandHandler.cs:38](src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs#L38).
+
+`ReadInputsAsync` fetches all profile taste signals and all feedback-bearing recommendations with tracks, then serializes revision input to a complete UTF-8 array and hashes it. No feedback window exists in this method. Generation calls it before choosing the shared path; `PersistCoreAsync` calls it again while holding `SHARE ROW EXCLUSIVE` table locks on Users, TasteSignals, WeeklyRecommendations, WeeklyDigests and Tracks. Therefore the shared runtime's bounded preparation does not eliminate these two full-history loads/fingerprints. Cost grows with stored feedback/signals; materialization/JSON conversion and the lock-holding portion need measurement. A non-existing digest that reaches persistence is the trigger; existing-digest fast returns do not take this path.
+
+Important false-positive boundary: active discovery's `DiscoveryBatchStore.ReadInputsAsync` uses `Take(feedbackWindow)`, default 20, validated maximum 40. `EffectiveTasteInputs.Build` has nested alias-group scans, but it must **not** be reported as unbounded history in that active discovery path. The older weekly branch can feed it the unbounded history from `DigestGenerationStore`; with shared jobs enabled, this branch is not used. Weekly full-history reads/fingerprints still occur before and during persistence in the shared branch.
+
+Validate W3/W6 with isolated increasing histories, SQL command/row/payload counts, allocation/peak live memory and lock duration; include idempotent existing-digest controls. Consider a transactional revision/projection approach only after proving consistency with feedback and account mutations. Never truncate exports or silently change feedback policy to optimize this. No fix applied.
+
+### P10 — Candidate deduplication repeatedly reconstructs aliases in a nested scan
+
+Status: **structural quadratic growth plus measured isolated allocation/time**. Locations: [PrepareDiscoveryBatch.cs:126](src/Application/Features/Discovery/PrepareDiscoveryBatch.cs#L126), [GenerateDigestCommandHandler.cs:170](src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs#L170), [BaselineAScorer.cs:181](src/Domain/Scoring/BaselineAScorer.cs#L181).
+
+The shared preparation merge visits every existing group and its members for each new candidate. Each comparison rebuilds the existing track's aliases and a LINQ intersection. With N distinct one-member groups this performs N(N−1)/2 comparisons: 79,800 at the configured maximum of 400. The weekly legacy merge similarly reconstructs tracks and aliases inside its comparison loop. Transitive grouping is required, but these particular allocations are repeated work.
+
+W3-S exercised the actual shared private merge, not a reimplementation: 100 distinct candidates allocated about 3.14 MB; 400 allocated about 47.13 MB. At 400, observed median was 19.101 ms, range 10.102–38.489 ms, across 25 samples. Reflection overhead is included. The test uses distinct generated text aliases with valid offline provenance; real duplicate/MBID distributions can differ. It does not measure the older merge or whole generation, and no CPU call tree or retention result was obtained.
+
+Evaluate precomputed aliases and an identity-to-group index/union approach in future remediation, preserving transitive MBID/text identity merging, provenance aggregation, deterministic preferred-record selection, exclusion behavior and output ordering. Test bridge-alias cases as well as all-distinct/duplicate-heavy shapes before any optimization claim. No fix applied.
+
+### P11 — Catalog item loops fan out into sequential database reads
+
+Status: **structural query fan-out, actual SQL count/latency unmeasured**. Locations: [SelectDiscoveryTaste.cs:40](src/Application/Features/Discovery/SelectDiscoveryTaste.cs#L40), [CatalogLookupJobs.cs:44](src/Application/Features/Catalog/CatalogLookupJobs.cs#L44), [CatalogReader.cs:74](src/DataAccess/Persistence/Repositories/CatalogReader.cs#L74).
+
+Saving onboarding/taste resolves selected catalog IDs one at a time. Reading a completed provider-lookup result similarly calls `catalog.GetAsync` for each of at most ten IDs. The concrete reader issues an eligibility SELECT and then a records/publication SELECT for each eligible ID. Structurally, N eligible items require 2N item SELECTs in sequence, plus the surrounding profile/job work; a ten-result completion therefore has 20 item SELECTs before surrounding work. Expired/missing items can take only the first query. Execution-strategy retries and connection/transaction overhead are not included in this source count.
+
+`SearchAsync` already batches its selected result IDs; typing local search is a separate path and should not inherit this finding. No upstream calls occur in `CatalogReader`. The impact depends on round-trip latency, selected-item count and how often a completed lookup is read. Trace actual SQL in W1/W2 before assigning latency. A future batch reader could reuse existing mapping while preserving per-item eligibility, order, expiry and retained selection fallback; do not parallelize against the shared DbContext. No fix applied.
+
 ## Pending checks that are not confirmed issues
 
 - The host sets API `no-store` and static assets `no-cache` in [Program.cs:133](src/Presentation/Program.cs#L133). No application response-compression middleware was found in the initial search. Actual compression and cache behavior may be handled by a reverse proxy. Measure negotiated encoding, transfer size, ETag/304 and deployment headers first; do not report absent compression or complete repeated downloads as established facts.
 - `ListenBrainzRecommendationProvider.HydrateCandidatesBatchAsync` repeatedly searches `responses.Values.FirstOrDefault` for recording metadata inside its candidate loop (lines 123–138). Candidate count is capped at 400 and artist metadata is already batched in chunks of 100. This is a CPU lead, not yet evidence that indexing it would matter.
 - `DiscoveryReader.ReadAsync` makes several sequential queries and reloads the profile's onboarding field after querying its revision (lines 15–32). Count round trips and inspect consistency needs before proposing consolidation. Do not parallelize against a shared DbContext.
-- First-party assets, score/vector work, catalog matching/indexes, scheduled worker recovery, Last.fm pacing/cache paths, data minimization cleanup, email encryption and the remaining source have not received full review in this pass. Their absence from the issue register is not a clean bill of health.
+- Domain and Application now have a complete numbered source read, including score/vector work. Their full implementation/test reconciliation remains pending. Remaining assets, catalog matching/indexes, scheduled worker infrastructure, Last.fm pacing/cache paths, data minimization cleanup, email encryption and the rest of the inventory still need their full review. Absence from this issue register is not a clean bill of health.
 
 ## Required finding format for the full audit
 
@@ -280,104 +421,104 @@ The generated inventory below covers tracked text source, tests, helper scripts,
 | `scripts/test_phase2_recorder.py` | 376 | Pending |
 | `scripts/test_phase4_pilot.py` | 243 | Pending |
 | `scripts/validate_manual_qa_connection.cs` | 55 | Pending |
-| `src/Application/Application.csproj` | 19 | Pending |
-| `src/Application/Common/Behaviors/ValidationBehavior.cs` | 47 | Pending |
-| `src/Application/Common/Exceptions/NotFoundException.cs` | 16 | Pending |
-| `src/Application/Common/Exceptions/ValidationException.cs` | 36 | Pending |
-| `src/Application/Common/Interfaces/Catalog/ICatalogMaintenance.cs` | 7 | Pending |
-| `src/Application/Common/Interfaces/Catalog/ICatalogStore.cs` | 63 | Pending |
-| `src/Application/Common/Interfaces/Discovery/ICoordinatedGenerationStorage.cs` | 19 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IDiscoveryBatchStore.cs` | 19 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IDiscoveryJobStore.cs` | 21 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IDiscoveryProfileReader.cs` | 8 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IDiscoveryReader.cs` | 7 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IDiscoveryTasteStore.cs` | 8 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IGuestProfileStore.cs` | 25 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IManagedStorageIntegrity.cs` | 3 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IPublicEvidenceStore.cs` | 18 | Pending |
-| `src/Application/Common/Interfaces/Discovery/IRecentRecommendations.cs` | 9 | Pending |
-| `src/Application/Common/Interfaces/IAccountProfileReader.cs` | 9 | Pending |
-| `src/Application/Common/Interfaces/ILocalDigestCaptureStore.cs` | 20 | Pending |
-| `src/Application/Common/Interfaces/ILocalEmail.cs` | 44 | Pending |
-| `src/Application/Common/Interfaces/ILocalEmailCapture.cs` | 37 | Pending |
-| `src/Application/Common/Interfaces/IUnitOfWork.cs` | 10 | Pending |
-| `src/Application/Common/Interfaces/IWeeklyScheduleStore.cs` | 28 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/ICandidateHydrator.cs` | 29 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/IDigestGenerationStore.cs` | 56 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/IDiscoveryPreparation.cs` | 28 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/IRecommendationProviderResolver.cs` | 10 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/IRecommendationSource.cs` | 39 | Pending |
-| `src/Application/Common/Interfaces/Recommendation/IRecordingRecommendationSource.cs` | 13 | Pending |
-| `src/Application/Common/Interfaces/Repositories/IAsyncRepository.cs` | 39 | Pending |
-| `src/Application/Common/Interfaces/Repositories/IListenerProfileRepository.cs` | 7 | Pending |
-| `src/Application/Common/Interfaces/Repositories/ITasteSignalRepository.cs` | 12 | Pending |
-| `src/Application/Common/Interfaces/Repositories/ITrackRepository.cs` | 11 | Pending |
-| `src/Application/Common/Interfaces/Repositories/IUserRepository.cs` | 13 | Pending |
-| `src/Application/Common/Interfaces/Repositories/IWeeklyDigestRepository.cs` | 17 | Pending |
-| `src/Application/Common/Mappings/MappingExtensions.cs` | 95 | Pending |
-| `src/Application/Common/Models/PagedResult.cs` | 16 | Pending |
-| `src/Application/Common/Models/Recommendation/GenerationConfiguration.cs` | 60 | Pending |
-| `src/Application/Common/Models/Recommendation/GenerationEvidenceMapping.cs` | 28 | Pending |
-| `src/Application/Common/Models/Recommendation/IngestionEvidence.cs` | 76 | Pending |
-| `src/Application/Common/Models/Recommendation/RawCandidateTrack.cs` | 41 | Pending |
-| `src/Application/DTOs/Digests/ScoreBreakdownDto.cs` | 28 | Pending |
-| `src/Application/DTOs/Digests/TrackDto.cs` | 16 | Pending |
-| `src/Application/DTOs/Digests/WeeklyDigestDto.cs` | 26 | Pending |
-| `src/Application/DTOs/Digests/WeeklyRecommendationDto.cs` | 28 | Pending |
-| `src/Application/DTOs/Export/AccountExportDto.cs` | 19 | Pending |
-| `src/Application/DTOs/Export/DiscoveryExportDto.cs` | 26 | Pending |
-| `src/Application/DTOs/Export/UserDataExportDto.cs` | 38 | Pending |
-| `src/Application/DTOs/Subscribers/SubscriberDto.cs` | 23 | Pending |
-| `src/Application/DTOs/Taste/SeedItemDto.cs` | 17 | Pending |
-| `src/Application/DTOs/Taste/TasteSignalDto.cs` | 27 | Pending |
-| `src/Application/DependencyInjection.cs` | 39 | Pending |
-| `src/Application/Features/Catalog/CatalogLookupJobs.cs` | 53 | Pending |
-| `src/Application/Features/Catalog/ImportCatalog.cs` | 75 | Pending |
-| `src/Application/Features/Catalog/LookupCatalog.cs` | 31 | Pending |
-| `src/Application/Features/Catalog/RunCatalogLookup.cs` | 70 | Pending |
-| `src/Application/Features/Catalog/SearchCatalog.cs` | 13 | Pending |
-| `src/Application/Features/Digests/Commands/CaptureLocalDigest/CaptureLocalDigestCommand.cs` | 58 | Pending |
-| `src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommand.cs` | 10 | Pending |
-| `src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs` | 190 | Pending |
-| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommand.cs` | 14 | Pending |
-| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandHandler.cs` | 137 | Pending |
-| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandValidator.cs` | 34 | Pending |
-| `src/Application/Features/Digests/Commands/RunScheduledTick/RunScheduledTickCommand.cs` | 81 | Pending |
-| `src/Application/Features/Digests/Queries/GetLatestDigest/GetLatestDigestQuery.cs` | 9 | Pending |
-| `src/Application/Features/Digests/Queries/GetLatestDigest/GetLatestDigestQueryHandler.cs` | 29 | Pending |
-| `src/Application/Features/Discovery/CleanupPublicDiscovery.cs` | 15 | Pending |
-| `src/Application/Features/Discovery/DiscoveryRuntimeOptions.cs` | 21 | Pending |
-| `src/Application/Features/Discovery/DiscoveryViews.cs` | 22 | Pending |
-| `src/Application/Features/Discovery/GuestLifecycle.cs` | 52 | Pending |
-| `src/Application/Features/Discovery/MaintainDiscoveryStorage.cs` | 13 | Pending |
-| `src/Application/Features/Discovery/MaterializeDiscoveryTaste.cs` | 146 | Pending |
-| `src/Application/Features/Discovery/PrepareDiscoveryBatch.cs` | 150 | Pending |
-| `src/Application/Features/Discovery/RecordDiscoveryFeedback.cs` | 20 | Pending |
-| `src/Application/Features/Discovery/RunDiscoveryJob.cs` | 30 | Pending |
-| `src/Application/Features/Discovery/SaveTasteOnboarding.cs` | 33 | Pending |
-| `src/Application/Features/Discovery/SelectDiscoveryTaste.cs` | 79 | Pending |
-| `src/Application/Features/Discovery/SubmitDiscovery.cs` | 65 | Pending |
-| `src/Application/Features/Discovery/TasteVocabulary.cs` | 51 | Pending |
-| `src/Application/Features/Export/Queries/GetUserDataExport/GetUserDataExportQuery.cs` | 9 | Pending |
-| `src/Application/Features/Export/Queries/GetUserDataExport/GetUserDataExportQueryHandler.cs` | 96 | Pending |
-| `src/Application/Features/Subscribers/Commands/DeleteUserAccount/DeleteUserAccountCommand.cs` | 8 | Pending |
-| `src/Application/Features/Subscribers/Commands/DeleteUserAccount/DeleteUserAccountCommandHandler.cs` | 34 | Pending |
-| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommand.cs` | 17 | Pending |
-| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommandHandler.cs` | 64 | Pending |
-| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommandValidator.cs` | 27 | Pending |
-| `src/Application/Features/Subscribers/Commands/UnsubscribeUser/UnsubscribeUserCommand.cs` | 13 | Pending |
-| `src/Application/Features/Subscribers/Queries/GetSubscriberProfile/GetSubscriberProfileQuery.cs` | 9 | Pending |
-| `src/Application/Features/Subscribers/Queries/GetSubscriberProfile/GetSubscriberProfileQueryHandler.cs` | 27 | Pending |
-| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommand.cs` | 12 | Pending |
-| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommandHandler.cs` | 75 | Pending |
-| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommandValidator.cs` | 41 | Pending |
-| `src/Application/Features/Taste/Queries/GetUserTasteSignals/GetUserTasteSignalsQuery.cs` | 9 | Pending |
-| `src/Application/Features/Taste/Queries/GetUserTasteSignals/GetUserTasteSignalsQueryHandler.cs` | 27 | Pending |
-| `src/Application/Services/IAuthService.cs` | 19 | Pending |
-| `src/Application/Services/ICurrentUserService.cs` | 11 | Pending |
-| `src/Application/Services/IJwtService.cs` | 13 | Pending |
-| `src/Application/Services/ValidatorInterceptor.cs` | 3 | Pending |
-| `src/Application/packages.lock.json` | 47 | Pending |
+| `src/Application/Application.csproj` | 19 | Read 1–19; reconciliation pending |
+| `src/Application/Common/Behaviors/ValidationBehavior.cs` | 47 | Read 1–47; reconciliation pending |
+| `src/Application/Common/Exceptions/NotFoundException.cs` | 16 | Read 1–16; reconciliation pending |
+| `src/Application/Common/Exceptions/ValidationException.cs` | 36 | Read 1–36; reconciliation pending |
+| `src/Application/Common/Interfaces/Catalog/ICatalogMaintenance.cs` | 7 | Read 1–7; reconciliation pending |
+| `src/Application/Common/Interfaces/Catalog/ICatalogStore.cs` | 63 | Read 1–63; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/ICoordinatedGenerationStorage.cs` | 19 | Read 1–19; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IDiscoveryBatchStore.cs` | 19 | Read 1–19; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IDiscoveryJobStore.cs` | 21 | Read 1–21; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IDiscoveryProfileReader.cs` | 8 | Read 1–8; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IDiscoveryReader.cs` | 7 | Read 1–7; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IDiscoveryTasteStore.cs` | 8 | Read 1–8; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IGuestProfileStore.cs` | 25 | Read 1–25; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IManagedStorageIntegrity.cs` | 3 | Read 1–3; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IPublicEvidenceStore.cs` | 18 | Read 1–18; reconciliation pending |
+| `src/Application/Common/Interfaces/Discovery/IRecentRecommendations.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Common/Interfaces/IAccountProfileReader.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Common/Interfaces/ILocalDigestCaptureStore.cs` | 20 | Read 1–20; reconciliation pending |
+| `src/Application/Common/Interfaces/ILocalEmail.cs` | 44 | Read 1–44; reconciliation pending |
+| `src/Application/Common/Interfaces/ILocalEmailCapture.cs` | 37 | Read 1–37; reconciliation pending |
+| `src/Application/Common/Interfaces/IUnitOfWork.cs` | 10 | Read 1–10; reconciliation pending |
+| `src/Application/Common/Interfaces/IWeeklyScheduleStore.cs` | 28 | Read 1–28; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/ICandidateHydrator.cs` | 29 | Read 1–29; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/IDigestGenerationStore.cs` | 56 | Read 1–56; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/IDiscoveryPreparation.cs` | 28 | Read 1–28; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/IRecommendationProviderResolver.cs` | 10 | Read 1–10; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/IRecommendationSource.cs` | 39 | Read 1–39; reconciliation pending |
+| `src/Application/Common/Interfaces/Recommendation/IRecordingRecommendationSource.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/IAsyncRepository.cs` | 39 | Read 1–39; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/IListenerProfileRepository.cs` | 7 | Read 1–7; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/ITasteSignalRepository.cs` | 12 | Read 1–12; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/ITrackRepository.cs` | 11 | Read 1–11; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/IUserRepository.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Common/Interfaces/Repositories/IWeeklyDigestRepository.cs` | 17 | Read 1–17; reconciliation pending |
+| `src/Application/Common/Mappings/MappingExtensions.cs` | 95 | Read 1–95; reconciliation pending |
+| `src/Application/Common/Models/PagedResult.cs` | 16 | Read 1–16; reconciliation pending |
+| `src/Application/Common/Models/Recommendation/GenerationConfiguration.cs` | 60 | Read 1–60; reconciliation pending |
+| `src/Application/Common/Models/Recommendation/GenerationEvidenceMapping.cs` | 28 | Read 1–28; reconciliation pending |
+| `src/Application/Common/Models/Recommendation/IngestionEvidence.cs` | 76 | Read 1–76; reconciliation pending |
+| `src/Application/Common/Models/Recommendation/RawCandidateTrack.cs` | 41 | Read 1–41; reconciliation pending |
+| `src/Application/DTOs/Digests/ScoreBreakdownDto.cs` | 28 | Read 1–28; reconciliation pending |
+| `src/Application/DTOs/Digests/TrackDto.cs` | 16 | Read 1–16; reconciliation pending |
+| `src/Application/DTOs/Digests/WeeklyDigestDto.cs` | 26 | Read 1–26; reconciliation pending |
+| `src/Application/DTOs/Digests/WeeklyRecommendationDto.cs` | 28 | Read 1–28; reconciliation pending |
+| `src/Application/DTOs/Export/AccountExportDto.cs` | 19 | Read 1–19; reconciliation pending |
+| `src/Application/DTOs/Export/DiscoveryExportDto.cs` | 26 | Read 1–26; reconciliation pending |
+| `src/Application/DTOs/Export/UserDataExportDto.cs` | 38 | Read 1–38; reconciliation pending |
+| `src/Application/DTOs/Subscribers/SubscriberDto.cs` | 23 | Read 1–23; reconciliation pending |
+| `src/Application/DTOs/Taste/SeedItemDto.cs` | 17 | Read 1–17; reconciliation pending |
+| `src/Application/DTOs/Taste/TasteSignalDto.cs` | 27 | Read 1–27; reconciliation pending |
+| `src/Application/DependencyInjection.cs` | 39 | Read 1–39; reconciliation pending |
+| `src/Application/Features/Catalog/CatalogLookupJobs.cs` | 53 | Read 1–53; reconciliation pending |
+| `src/Application/Features/Catalog/ImportCatalog.cs` | 75 | Read 1–75; reconciliation pending |
+| `src/Application/Features/Catalog/LookupCatalog.cs` | 31 | Read 1–31; reconciliation pending |
+| `src/Application/Features/Catalog/RunCatalogLookup.cs` | 70 | Read 1–70; reconciliation pending |
+| `src/Application/Features/Catalog/SearchCatalog.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Features/Digests/Commands/CaptureLocalDigest/CaptureLocalDigestCommand.cs` | 58 | Read 1–58; reconciliation pending |
+| `src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommand.cs` | 10 | Read 1–10; reconciliation pending |
+| `src/Application/Features/Digests/Commands/GenerateDigest/GenerateDigestCommandHandler.cs` | 190 | Read 1–190; reconciliation pending |
+| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommand.cs` | 14 | Read 1–14; reconciliation pending |
+| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandHandler.cs` | 137 | Read 1–137; reconciliation pending |
+| `src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandValidator.cs` | 34 | Read 1–34; reconciliation pending |
+| `src/Application/Features/Digests/Commands/RunScheduledTick/RunScheduledTickCommand.cs` | 81 | Read 1–81; reconciliation pending |
+| `src/Application/Features/Digests/Queries/GetLatestDigest/GetLatestDigestQuery.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Features/Digests/Queries/GetLatestDigest/GetLatestDigestQueryHandler.cs` | 29 | Read 1–29; reconciliation pending |
+| `src/Application/Features/Discovery/CleanupPublicDiscovery.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Application/Features/Discovery/DiscoveryRuntimeOptions.cs` | 21 | Read 1–21; reconciliation pending |
+| `src/Application/Features/Discovery/DiscoveryViews.cs` | 22 | Read 1–22; reconciliation pending |
+| `src/Application/Features/Discovery/GuestLifecycle.cs` | 52 | Read 1–52; reconciliation pending |
+| `src/Application/Features/Discovery/MaintainDiscoveryStorage.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Features/Discovery/MaterializeDiscoveryTaste.cs` | 146 | Read 1–146; reconciliation pending |
+| `src/Application/Features/Discovery/PrepareDiscoveryBatch.cs` | 150 | Read 1–150; reconciliation pending |
+| `src/Application/Features/Discovery/RecordDiscoveryFeedback.cs` | 20 | Read 1–20; reconciliation pending |
+| `src/Application/Features/Discovery/RunDiscoveryJob.cs` | 30 | Read 1–30; reconciliation pending |
+| `src/Application/Features/Discovery/SaveTasteOnboarding.cs` | 33 | Read 1–33; reconciliation pending |
+| `src/Application/Features/Discovery/SelectDiscoveryTaste.cs` | 79 | Read 1–79; reconciliation pending |
+| `src/Application/Features/Discovery/SubmitDiscovery.cs` | 65 | Read 1–65; reconciliation pending |
+| `src/Application/Features/Discovery/TasteVocabulary.cs` | 51 | Read 1–51; reconciliation pending |
+| `src/Application/Features/Export/Queries/GetUserDataExport/GetUserDataExportQuery.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Features/Export/Queries/GetUserDataExport/GetUserDataExportQueryHandler.cs` | 96 | Read 1–96; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/DeleteUserAccount/DeleteUserAccountCommand.cs` | 8 | Read 1–8; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/DeleteUserAccount/DeleteUserAccountCommandHandler.cs` | 34 | Read 1–34; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommand.cs` | 17 | Read 1–17; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommandHandler.cs` | 64 | Read 1–64; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/RegisterSubscriber/RegisterSubscriberCommandValidator.cs` | 27 | Read 1–27; reconciliation pending |
+| `src/Application/Features/Subscribers/Commands/UnsubscribeUser/UnsubscribeUserCommand.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Features/Subscribers/Queries/GetSubscriberProfile/GetSubscriberProfileQuery.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Features/Subscribers/Queries/GetSubscriberProfile/GetSubscriberProfileQueryHandler.cs` | 27 | Read 1–27; reconciliation pending |
+| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommand.cs` | 12 | Read 1–12; reconciliation pending |
+| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommandHandler.cs` | 75 | Read 1–75; reconciliation pending |
+| `src/Application/Features/Taste/Commands/SeedTasteProfile/SeedTasteProfileCommandValidator.cs` | 41 | Read 1–41; reconciliation pending |
+| `src/Application/Features/Taste/Queries/GetUserTasteSignals/GetUserTasteSignalsQuery.cs` | 9 | Read 1–9; reconciliation pending |
+| `src/Application/Features/Taste/Queries/GetUserTasteSignals/GetUserTasteSignalsQueryHandler.cs` | 27 | Read 1–27; reconciliation pending |
+| `src/Application/Services/IAuthService.cs` | 19 | Read 1–19; reconciliation pending |
+| `src/Application/Services/ICurrentUserService.cs` | 11 | Read 1–11; reconciliation pending |
+| `src/Application/Services/IJwtService.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Application/Services/ValidatorInterceptor.cs` | 3 | Read 1–3; reconciliation pending |
+| `src/Application/packages.lock.json` | 47 | Read 1–47; reconciliation pending |
 | `src/DataAccess/Core/AsyncRepository.cs` | 146 | Pending |
 | `src/DataAccess/Core/UnitOfWork.cs` | 49 | Pending |
 | `src/DataAccess/DapperPagedRepositoryBase.cs` | 90 | Pending |
@@ -437,14 +578,14 @@ The generated inventory below covers tracked text source, tests, helper scripts,
 | `src/DataAccess/Persistence/Migrations/AppDbContextModelSnapshot.cs` | 1,578 | Pending |
 | `src/DataAccess/Persistence/Repositories/AccountProfileReader.cs` | 20 | Pending |
 | `src/DataAccess/Persistence/Repositories/CatalogImportStore.cs` | 131 | Pending |
-| `src/DataAccess/Persistence/Repositories/CatalogReader.cs` | 97 | Pending |
-| `src/DataAccess/Persistence/Repositories/DigestGenerationStore.cs` | 167 | Pending |
-| `src/DataAccess/Persistence/Repositories/DiscoveryBatchStore.cs` | 140 | Pending |
+| `src/DataAccess/Persistence/Repositories/CatalogReader.cs` | 97 | Read 1–97; reconciliation pending |
+| `src/DataAccess/Persistence/Repositories/DigestGenerationStore.cs` | 167 | Read 1–167; reconciliation pending |
+| `src/DataAccess/Persistence/Repositories/DiscoveryBatchStore.cs` | 140 | Read 1–140; reconciliation pending |
 | `src/DataAccess/Persistence/Repositories/DiscoveryJobStore.cs` | 128 | Pending |
 | `src/DataAccess/Persistence/Repositories/DiscoveryProfileReader.cs` | 61 | Pending |
 | `src/DataAccess/Persistence/Repositories/DiscoveryReader.cs` | 50 | Pending |
 | `src/DataAccess/Persistence/Repositories/DiscoveryTasteStore.cs` | 46 | Pending |
-| `src/DataAccess/Persistence/Repositories/DiscoveryWriteCoordinator.cs` | 99 | Pending |
+| `src/DataAccess/Persistence/Repositories/DiscoveryWriteCoordinator.cs` | 99 | Read 1–99; reconciliation pending |
 | `src/DataAccess/Persistence/Repositories/GuestProfileStore.cs` | 119 | Pending |
 | `src/DataAccess/Persistence/Repositories/ListenerProfileRepository.cs` | 25 | Pending |
 | `src/DataAccess/Persistence/Repositories/LocalDigestCaptureStore.cs` | 82 | Pending |
@@ -457,53 +598,53 @@ The generated inventory below covers tracked text source, tests, helper scripts,
 | `src/DataAccess/Persistence/Repositories/WeeklyDigestRepository.cs` | 90 | Pending |
 | `src/DataAccess/Persistence/Repositories/WeeklyScheduleStore.cs` | 174 | Pending |
 | `src/DataAccess/packages.lock.json` | 317 | Pending |
-| `src/Domain/Catalog/Album.cs` | 42 | Pending |
-| `src/Domain/Catalog/Artist.cs` | 42 | Pending |
-| `src/Domain/Catalog/CatalogPublication.cs` | 65 | Pending |
-| `src/Domain/Catalog/CatalogRecord.cs` | 63 | Pending |
-| `src/Domain/Catalog/CatalogSearch.cs` | 62 | Pending |
-| `src/Domain/Catalog/Tag.cs` | 49 | Pending |
-| `src/Domain/Catalog/Track.cs` | 73 | Pending |
-| `src/Domain/Catalog/WeightedTag.cs` | 36 | Pending |
-| `src/Domain/Catalog/WeightedTagVector.cs` | 190 | Pending |
-| `src/Domain/Common/AuditableEntity.cs` | 15 | Pending |
-| `src/Domain/Common/BaseEntity.cs` | 19 | Pending |
-| `src/Domain/Common/IAuditableEntity.cs` | 15 | Pending |
-| `src/Domain/Digest/IsoWeek.cs` | 87 | Pending |
-| `src/Domain/Digest/User.cs` | 110 | Pending |
-| `src/Domain/Digest/UserMusicConnection.cs` | 76 | Pending |
-| `src/Domain/Digest/WeeklyDigest.cs` | 128 | Pending |
-| `src/Domain/Digest/WeeklyRecommendation.cs` | 91 | Pending |
-| `src/Domain/Digest/WeeklySchedulePolicy.cs` | 52 | Pending |
-| `src/Domain/Discovery/DiscoveryBatch.cs` | 47 | Pending |
-| `src/Domain/Discovery/DiscoveryJob.cs` | 127 | Pending |
-| `src/Domain/Discovery/DiscoveryRules.cs` | 17 | Pending |
-| `src/Domain/Discovery/DiscoverySelectionPolicy.cs` | 46 | Pending |
-| `src/Domain/Discovery/GuestSession.cs` | 18 | Pending |
-| `src/Domain/Discovery/ListenerProfile.cs` | 79 | Pending |
-| `src/Domain/Discovery/RecentRecommendation.cs` | 26 | Pending |
-| `src/Domain/Discovery/TasteOnboarding.cs` | 30 | Pending |
-| `src/Domain/Domain.csproj` | 8 | Pending |
-| `src/Domain/Enums/DigestDeliveryDay.cs` | 15 | Pending |
-| `src/Domain/Enums/DigestStatus.cs` | 13 | Pending |
-| `src/Domain/Enums/MusicServiceType.cs` | 11 | Pending |
-| `src/Domain/Enums/TasteSignalSource.cs` | 18 | Pending |
-| `src/Domain/Enums/TasteTargetType.cs` | 12 | Pending |
-| `src/Domain/Enums/UserFeedback.cs` | 15 | Pending |
-| `src/Domain/Scoring/BaselineAScorer.cs` | 185 | Pending |
-| `src/Domain/Scoring/CandidateTrack.cs` | 54 | Pending |
-| `src/Domain/Scoring/MatchedTagContribution.cs` | 15 | Pending |
-| `src/Domain/Scoring/RecommendationScorer.cs` | 122 | Pending |
-| `src/Domain/Scoring/ScoreBreakdown.cs` | 122 | Pending |
-| `src/Domain/Scoring/ScoreSnapshot.cs` | 96 | Pending |
-| `src/Domain/Scoring/ScoredCandidate.cs` | 13 | Pending |
-| `src/Domain/Scoring/ScoringParameters.cs` | 38 | Pending |
-| `src/Domain/Taste/DiscoveryTasteMaterializer.cs` | 42 | Pending |
-| `src/Domain/Taste/EffectiveTasteInputs.cs` | 75 | Pending |
-| `src/Domain/Taste/TasteSignal.cs` | 102 | Pending |
-| `src/Domain/Taste/TasteVectorMaterializer.cs` | 29 | Pending |
-| `src/Domain/Taste/UserTasteProfile.cs` | 72 | Pending |
-| `src/Domain/packages.lock.json` | 6 | Pending |
+| `src/Domain/Catalog/Album.cs` | 42 | Read 1–42; reconciliation pending |
+| `src/Domain/Catalog/Artist.cs` | 42 | Read 1–42; reconciliation pending |
+| `src/Domain/Catalog/CatalogPublication.cs` | 65 | Read 1–65; reconciliation pending |
+| `src/Domain/Catalog/CatalogRecord.cs` | 63 | Read 1–63; reconciliation pending |
+| `src/Domain/Catalog/CatalogSearch.cs` | 62 | Read 1–62; reconciliation pending |
+| `src/Domain/Catalog/Tag.cs` | 49 | Read 1–49; reconciliation pending |
+| `src/Domain/Catalog/Track.cs` | 73 | Read 1–73; reconciliation pending |
+| `src/Domain/Catalog/WeightedTag.cs` | 36 | Read 1–36; reconciliation pending |
+| `src/Domain/Catalog/WeightedTagVector.cs` | 190 | Read 1–190; reconciliation pending |
+| `src/Domain/Common/AuditableEntity.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Domain/Common/BaseEntity.cs` | 19 | Read 1–19; reconciliation pending |
+| `src/Domain/Common/IAuditableEntity.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Domain/Digest/IsoWeek.cs` | 87 | Read 1–87; reconciliation pending |
+| `src/Domain/Digest/User.cs` | 110 | Read 1–110; reconciliation pending |
+| `src/Domain/Digest/UserMusicConnection.cs` | 76 | Read 1–76; reconciliation pending |
+| `src/Domain/Digest/WeeklyDigest.cs` | 128 | Read 1–128; reconciliation pending |
+| `src/Domain/Digest/WeeklyRecommendation.cs` | 91 | Read 1–91; reconciliation pending |
+| `src/Domain/Digest/WeeklySchedulePolicy.cs` | 52 | Read 1–52; reconciliation pending |
+| `src/Domain/Discovery/DiscoveryBatch.cs` | 47 | Read 1–47; reconciliation pending |
+| `src/Domain/Discovery/DiscoveryJob.cs` | 127 | Read 1–127; reconciliation pending |
+| `src/Domain/Discovery/DiscoveryRules.cs` | 17 | Read 1–17; reconciliation pending |
+| `src/Domain/Discovery/DiscoverySelectionPolicy.cs` | 46 | Read 1–46; reconciliation pending |
+| `src/Domain/Discovery/GuestSession.cs` | 18 | Read 1–18; reconciliation pending |
+| `src/Domain/Discovery/ListenerProfile.cs` | 79 | Read 1–79; reconciliation pending |
+| `src/Domain/Discovery/RecentRecommendation.cs` | 26 | Read 1–26; reconciliation pending |
+| `src/Domain/Discovery/TasteOnboarding.cs` | 30 | Read 1–30; reconciliation pending |
+| `src/Domain/Domain.csproj` | 8 | Read 1–8; reconciliation pending |
+| `src/Domain/Enums/DigestDeliveryDay.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Domain/Enums/DigestStatus.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Domain/Enums/MusicServiceType.cs` | 11 | Read 1–11; reconciliation pending |
+| `src/Domain/Enums/TasteSignalSource.cs` | 18 | Read 1–18; reconciliation pending |
+| `src/Domain/Enums/TasteTargetType.cs` | 12 | Read 1–12; reconciliation pending |
+| `src/Domain/Enums/UserFeedback.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Domain/Scoring/BaselineAScorer.cs` | 185 | Read 1–185; reconciliation pending |
+| `src/Domain/Scoring/CandidateTrack.cs` | 54 | Read 1–54; reconciliation pending |
+| `src/Domain/Scoring/MatchedTagContribution.cs` | 15 | Read 1–15; reconciliation pending |
+| `src/Domain/Scoring/RecommendationScorer.cs` | 122 | Read 1–122; reconciliation pending |
+| `src/Domain/Scoring/ScoreBreakdown.cs` | 122 | Read 1–122; reconciliation pending |
+| `src/Domain/Scoring/ScoreSnapshot.cs` | 96 | Read 1–96; reconciliation pending |
+| `src/Domain/Scoring/ScoredCandidate.cs` | 13 | Read 1–13; reconciliation pending |
+| `src/Domain/Scoring/ScoringParameters.cs` | 38 | Read 1–38; reconciliation pending |
+| `src/Domain/Taste/DiscoveryTasteMaterializer.cs` | 42 | Read 1–42; reconciliation pending |
+| `src/Domain/Taste/EffectiveTasteInputs.cs` | 75 | Read 1–75; reconciliation pending |
+| `src/Domain/Taste/TasteSignal.cs` | 102 | Read 1–102; reconciliation pending |
+| `src/Domain/Taste/TasteVectorMaterializer.cs` | 29 | Read 1–29; reconciliation pending |
+| `src/Domain/Taste/UserTasteProfile.cs` | 72 | Read 1–72; reconciliation pending |
+| `src/Domain/packages.lock.json` | 6 | Read 1–6; reconciliation pending |
 | `src/Infrastructure/Caching/DiscoveryMemoryCaches.cs` | 43 | Pending |
 | `src/Infrastructure/Catalog/CatalogArtifactReader.cs` | 95 | Pending |
 | `src/Infrastructure/Catalog/MusicBrainzCatalogLookupSource.cs` | 72 | Pending |
@@ -549,11 +690,11 @@ The generated inventory below covers tracked text source, tests, helper scripts,
 | `src/Infrastructure/RecommendationSources/ListenBrainz/MetaBrainzRequestGate.cs` | 61 | Pending |
 | `src/Infrastructure/RecommendationSources/ListenBrainz/RecordedListenBrainzApiClient.cs` | 44 | Pending |
 | `src/Infrastructure/RecommendationSources/RecommendationProviderResolver.cs` | 15 | Pending |
-| `src/Infrastructure/Storage/CoordinatedGenerationStorage.cs` | 136 | Pending |
-| `src/Infrastructure/Storage/LocalGenerationStorage.cs` | 265 | Pending |
+| `src/Infrastructure/Storage/CoordinatedGenerationStorage.cs` | 136 | Read 1–136; reconciliation pending |
+| `src/Infrastructure/Storage/LocalGenerationStorage.cs` | 265 | Read 1–265; reconciliation pending |
 | `src/Infrastructure/packages.lock.json` | 93 | Pending |
 | `src/Presentation/Background/DiscoveryInventoryService.cs` | 45 | Pending |
-| `src/Presentation/Background/DiscoveryJobService.cs` | 115 | Pending |
+| `src/Presentation/Background/DiscoveryJobService.cs` | 115 | Read 1–115; reconciliation pending |
 | `src/Presentation/Controllers/ApiControllerBase.cs` | 23 | Pending |
 | `src/Presentation/Controllers/AuthController.cs` | 270 | Pending |
 | `src/Presentation/Controllers/DigestsController.cs` | 79 | Pending |
@@ -583,7 +724,7 @@ The generated inventory below covers tracked text source, tests, helper scripts,
 | `src/Presentation/appsettings.json` | 33 | Pending |
 | `src/Presentation/packages.lock.json` | 524 | Pending |
 | `src/Presentation/wwwroot/app.js` | 617 | Pending |
-| `src/Presentation/wwwroot/discovery.js` | 521 | Pending |
+| `src/Presentation/wwwroot/discovery.js` | 521 | Read 1–521; reconciliation pending |
 | `src/Presentation/wwwroot/index.html` | 179 | Pending |
 | `src/Presentation/wwwroot/manual-test/index.html` | 218 | Pending |
 | `src/Presentation/wwwroot/manual-test/manual-test.css` | 229 | Pending |

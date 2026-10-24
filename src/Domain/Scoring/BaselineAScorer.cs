@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.ObjectModel;
 using System.Security.Cryptography;
 using System.Text;
 using LinerNotes.Domain.Catalog;
@@ -52,15 +53,61 @@ public sealed class BaselineAScorer
         return ScoreCore(candidate, taste, familiarArtist, null, batchId, configuration);
     }
 
-    private ScoreBreakdown ScoreCore(BaselineACandidate candidate, WeightedTagVector taste,
-        bool familiarArtist, string? week, Guid? batchId, BaselineAConfiguration configuration, double unmatchedTasteSquared = 0)
+    public IEnumerable<BaselineAPick> Score(IEnumerable<BaselineACandidate> candidates, WeightedTagVector taste,
+        IReadOnlySet<string> familiarArtists, IsoWeek week, BaselineAConfiguration configuration)
+        => ScoreMany(candidates, taste, familiarArtists, week.Value, null, configuration);
+
+    public IEnumerable<BaselineAPick> ScoreForBatch(IEnumerable<BaselineACandidate> candidates, WeightedTagVector taste,
+        IReadOnlySet<string> familiarArtists, Guid batchId, BaselineAConfiguration configuration)
+        => ScoreMany(candidates, taste, familiarArtists, null, batchId, configuration);
+
+    private IEnumerable<BaselineAPick> ScoreMany(IEnumerable<BaselineACandidate> candidates, WeightedTagVector taste,
+        IReadOnlySet<string> familiarArtists, string? week, Guid? batchId, BaselineAConfiguration configuration)
     {
+        BatchInputs? inputs = null;
+        foreach (var candidate in candidates)
+        {
+            if (batchId == Guid.Empty) throw new ArgumentException("Batch identity required.");
+            inputs ??= new(taste, configuration);
+            yield return new(candidate.Track, ScoreCore(candidate, taste, familiarArtists.Contains(candidate.Track.NormalizedArtistName),
+                week, batchId, configuration, inputs: inputs));
+        }
+    }
+
+    private sealed class BatchInputs
+    {
+        public BaselineAConfiguration Configuration { get; }
+        public IReadOnlyDictionary<string, double> TasteWeights { get; }
+        public double TasteMagnitude { get; }
+        private readonly Dictionary<string, string> hashes = new(StringComparer.Ordinal);
+
+        public BatchInputs(WeightedTagVector taste, BaselineAConfiguration configuration)
+        {
+            configuration.Validate();
+            Configuration = configuration with { Policy = configuration.Policy is null ? null :
+                new ReadOnlyDictionary<string, string>(configuration.Policy.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal)) };
+            TasteWeights = new ReadOnlyDictionary<string, double>(Ordered(taste));
+            TasteMagnitude = Math.Sqrt(TasteWeights.Values.Sum(v => v * v));
+        }
+
+        public string Hash(BaselineAConfiguration configuration)
+        {
+            if (!hashes.TryGetValue(configuration.FormulaVersion, out var hash))
+                hashes.Add(configuration.FormulaVersion, hash = configuration.Sha256);
+            return hash;
+        }
+    }
+
+    private ScoreBreakdown ScoreCore(BaselineACandidate candidate, WeightedTagVector taste,
+        bool familiarArtist, string? week, Guid? batchId, BaselineAConfiguration configuration, double unmatchedTasteSquared = 0, BatchInputs? inputs = null)
+    {
+        configuration = inputs?.Configuration ?? configuration;
         if (candidate.Evidence.SimilarityInfluence != 1) configuration = configuration with { FormulaVersion = "baseline-a-v2" };
-        configuration.Validate();
-        var tasteWeights = Ordered(taste);
+        if (inputs is null) configuration.Validate();
+        var tasteWeights = inputs?.TasteWeights ?? Ordered(taste);
         var candidateWeights = Ordered(candidate.Tags);
         if (!double.IsFinite(unmatchedTasteSquared) || unmatchedTasteSquared < 0 || !double.IsFinite(candidate.Evidence.SimilarityInfluence) || candidate.Evidence.SimilarityInfluence is < 0 or > 1) throw new ArgumentException("invalid_stored_influence");
-        double tasteMagnitude = Math.Sqrt(tasteWeights.Values.Sum(v => v * v) + unmatchedTasteSquared), candidateMagnitude = Magnitude(candidateWeights);
+        double tasteMagnitude = inputs?.TasteMagnitude ?? Math.Sqrt(tasteWeights.Values.Sum(v => v * v) + unmatchedTasteSquared), candidateMagnitude = Magnitude(candidateWeights);
         var contributions = candidateWeights.Where(p => tasteWeights.ContainsKey(p.Key)).Select(p =>
             new NormalizedTagContribution(p.Key, p.Value, tasteWeights[p.Key],
                 p.Value / candidateMagnitude * (tasteWeights[p.Key] / tasteMagnitude) * configuration.TagWeight * candidate.Evidence.SimilarityInfluence)).ToArray();
@@ -82,7 +129,7 @@ public sealed class BaselineAScorer
                 RankingPolicyVersion = candidate.Evidence.SelectionPolicy ?? "score-ordinal-one-artist-v1",
                 MaterializationVersion = candidate.Evidence.MaterializationVersion,
                 ConfigurationVersion = configuration.Version,
-                ConfigurationSha256 = configuration.Sha256,
+                ConfigurationSha256 = inputs?.Hash(configuration) ?? configuration.Sha256,
                 ConfigurationPolicy = configuration.Policy ?? new Dictionary<string, string>(),
                 TagNormalizationVersion = candidate.Evidence.TagNormalizationVersion,
                 Weights = new(configuration.TagWeight, configuration.NoveltyWeight),
@@ -112,9 +159,8 @@ public sealed class BaselineAScorer
         BaselineAConfiguration configuration, int count = 5)
     {
         if (count is < 0 or > 5) throw new ArgumentOutOfRangeException(nameof(count));
-        return candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excludedAliases.Contains))
-            .Select(c => new BaselineAPick(c.Track, Score(c, taste,
-                familiarArtists.Contains(c.Track.NormalizedArtistName), week, configuration)))
+        return Score(candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excludedAliases.Contains)), taste,
+                familiarArtists, week, configuration)
             .OrderByDescending(c => c.Breakdown.FinalScore).ThenBy(c => c.Track.TrackKey, StringComparer.Ordinal)
             .DistinctBy(c => c.Track.NormalizedArtistName, StringComparer.Ordinal).Take(count).ToArray();
     }
@@ -124,9 +170,8 @@ public sealed class BaselineAScorer
         BaselineAConfiguration configuration, int count = 5)
     {
         if (count is < 0 or > 5) throw new ArgumentOutOfRangeException(nameof(count));
-        return candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excludedAliases.Contains))
-            .Select(c => new BaselineAPick(c.Track, ScoreForBatch(c, taste,
-                familiarArtists.Contains(c.Track.NormalizedArtistName), batchId, configuration)))
+        return ScoreForBatch(candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excludedAliases.Contains)), taste,
+                familiarArtists, batchId, configuration)
             .OrderByDescending(c => c.Breakdown.FinalScore).ThenBy(c => c.Track.TrackKey, StringComparer.Ordinal)
             .DistinctBy(c => c.Track.NormalizedArtistName, StringComparer.Ordinal).Take(count).ToArray();
     }

@@ -3,6 +3,8 @@
 ## Unreleased — renewal
 - Honor server retry delays while polling discovery jobs. Reuse public metadata
   populated during provider pacing and avoid an extra response-body array copy.
+- Reuse invariant taste/configuration work within scoring batches and index
+  candidate aliases during merging, preserving scores, ranking and explanations.
 
 - Start the normal local website with live ListenBrainz/MusicBrainz providers,
   a persistent dedicated database and private storage configuration. Add

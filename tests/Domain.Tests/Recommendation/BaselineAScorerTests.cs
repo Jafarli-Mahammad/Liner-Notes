@@ -2,6 +2,8 @@ using LinerNotes.Domain.Catalog;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Scoring;
 using LinerNotes.Domain.Tests.Fixtures;
+using System.Collections;
+using System.Text.Json;
 using Xunit;
 
 namespace LinerNotes.Domain.Tests.Recommendation;
@@ -10,6 +12,47 @@ public sealed class BaselineAScorerTests
 {
     private readonly BaselineAScorer scorer = new();
     private static readonly IsoWeek Week = new(2026, 41);
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RankingPreparesConfigurationOncePerBatchAndPreservesSnapshots(bool onsite)
+    {
+        var policy = new CountingPolicy();
+        var configuration = new BaselineAConfiguration(Policy: policy);
+        var taste = WeightedTagVector.FromDictionary(Enumerable.Range(0, 271).ToDictionary(i => $"tag-{i:000}", _ => 1d));
+        var candidates = Enumerable.Range(0, 100).Select(i => new BaselineACandidate(Track.Create($"Song {i}", $"Artist {i}"),
+            WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["tag-000"] = 1 }),
+            ScoreEvidence.Empty with { SimilarityInfluence = i % 2 == 0 ? 1 : 0.5 })).ToArray();
+        var familiar = new HashSet<string> { "artist 0" };
+        var batch = Guid.Parse("11111111-1111-4111-8111-111111111111");
+        var result = onsite ? scorer.RankForBatch(candidates, taste, familiar, new HashSet<string>(), batch, configuration)
+            : scorer.Rank(candidates, taste, familiar, new HashSet<string>(), Week, configuration);
+        Assert.InRange(policy.Enumerations, 1, 2);
+        var stable = new BaselineAConfiguration(Policy: new Dictionary<string, string> { ["scope"] = "fixture" });
+        foreach (var pick in result)
+        {
+            var candidate = candidates.Single(c => c.Track.TrackKey == pick.Track.TrackKey);
+            var expected = onsite ? scorer.ScoreForBatch(candidate, taste, familiar.Contains(candidate.Track.NormalizedArtistName), batch, stable)
+                : scorer.Score(candidate, taste, familiar.Contains(candidate.Track.NormalizedArtistName), Week, stable);
+            Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(pick.Breakdown));
+            Assert.Equal(pick.Breakdown.FinalScore, scorer.Replay(pick.Breakdown.Snapshot!).FinalScore);
+        }
+    }
+
+    private sealed class CountingPolicy : IReadOnlyDictionary<string, string>
+    {
+        private readonly IReadOnlyDictionary<string, string> values = new Dictionary<string, string> { ["scope"] = "fixture" };
+        public int Enumerations { get; private set; }
+        public string this[string key] => values[key];
+        public IEnumerable<string> Keys => values.Keys;
+        public IEnumerable<string> Values => values.Values;
+        public int Count => values.Count;
+        public bool ContainsKey(string key) => values.ContainsKey(key);
+        public bool TryGetValue(string key, out string value) => values.TryGetValue(key, out value!);
+        public IEnumerator<KeyValuePair<string, string>> GetEnumerator() { Enumerations++; return values.GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     [Fact]
     public void BatchRankingMatchesWeeklyPolicyAndReplaysWithBatchIdentity()
     {

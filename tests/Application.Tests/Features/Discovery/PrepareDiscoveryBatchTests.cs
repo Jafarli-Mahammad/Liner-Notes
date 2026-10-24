@@ -75,12 +75,42 @@ public sealed class PrepareDiscoveryBatchTests
         await preparation.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
     }
 
-    private static HydratedCandidateTrack Candidate(string title, string artist, string seed)
+    private static HydratedCandidateTrack Candidate(string title, string artist, string seed, string? mbid = null, string scope = "artist")
     {
         var response = new ResponseReference("listenbrainz", "fixture", seed, EvidenceOrigin.Synthetic,
             new string('a', 64), DateTimeOffset.UnixEpoch);
         var path = new DiscoveryPath(seed, new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
-        return new(new Track(title, artist), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
-            new(title, artist, null, [path]), [], response, null);
+        return new(new Track(title, artist, mbid: mbid), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
+            new(title, artist, mbid, [path]), [], response, null) { TagScope = scope };
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AliasBridgeMergesBothGroupsAndPreservesPreferredEvidenceAndPathOrder(bool reverse)
+    {
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        var mbid = Candidate("A", "Artist A", "mbid", "shared");
+        var text = Candidate("B", "Artist B", "text", scope: "recording");
+        var bridge = Candidate("B", "Artist B", "bridge", "shared");
+        // Stable ordering for equal canonical keys is part of the existing preference policy.
+        HydratedCandidateTrack[] candidates = reverse ? [text, mbid, bridge] : [mbid, text, bridge];
+        preparation.GetAsync(new(null, "jazz", true), false, Arg.Any<CancellationToken>()).Returns(
+            new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, null,
+                CatalogText.Version, candidates, [], 1000, new string('b', 64)));
+        var profile = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+        var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "Selected style.");
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation,
+            Substitute.For<IDiscoveryBatchStore>(), configuration, new());
+        var result = await runner.PrepareAsync(new(profile, [signal], []), Guid.NewGuid(), false, default);
+        var pick = Assert.Single(result.Picks);
+        Assert.Equal(text.Track.TrackKey, pick.Track.TrackKey);
+        Assert.Equal("recording", pick.Breakdown.Snapshot!.Evidence.TagScope);
+        Assert.Equal(new[] { "bridge", "mbid", "text" }, pick.Breakdown.Snapshot.Evidence.DiscoveryPaths.Select(p => p.Seed));
+        Assert.Equal(pick.Breakdown.FinalScore, new BaselineAScorer().Replay(pick.Breakdown.Snapshot).FinalScore);
     }
 }

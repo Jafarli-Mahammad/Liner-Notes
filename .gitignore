@@ -36,3 +36,4 @@ secrets.json
 *.p12
 recordings/
 TestResults/
+diagnostics/results/

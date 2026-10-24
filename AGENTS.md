@@ -53,3 +53,5 @@ was established, and the removal-versus-upgrade tradeoff. Keep dependency remedi
 authorized scope and prefer the smallest justified change.
 
 Read MEMORY.md and PROGRESS.md at session start; follow the write rules in MEMORY.md.
+
+Diagnostics scripts are in `diagnostics/`; see `diagnostics/README.md` for examples and result interpretation. Targeted tests are the default. Use coverage for coverage questions, CPU profiling for attribution, memory tools for allocation or retention investigations, and benchmarks only for comparable performance measurements. Never kill production processes, attach without an explicit user-provided PID, collect sensitive dumps without authorization, or silently alter application behavior for profiling. Keep before/after runs comparable.

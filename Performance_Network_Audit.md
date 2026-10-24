@@ -4,11 +4,31 @@ Date: 2026-10-24 (Asia/Baku)
 Repository baseline: `3ae263c73dc1f16510a8033481b51a14cf349e16`
 Audit execution baseline: `a930ebb87246a4709492ae06a543f996f85baac0` (approved plan commit; product sources unchanged).
 Continuation baseline: `eac7d74b3d6f4b21841a6d4ad4ad3f2be0a6419e`.
-Status: **Static inventory pass complete: 495/495 files, 63,948 lines accounted for using the review methods below. The original 486-file inventory is covered, plus nine previously omitted tooling/browser files. Authorized bounded remediation is in progress below. Runtime audit remains incomplete: application SQL/network attribution, concurrency measurements and retained-memory analysis are outstanding.**
+Status: **Static inventory pass complete at the audit baseline: 495/495 files, 63,948 lines accounted for using the review methods below. Authorized bounded remediation is locally verified below: four findings addressed, three partially addressed; larger decisions and measure-first items remain open. Runtime attribution and developer confirmation remain incomplete.**
 
 ## Authorized remediation — 2026-10-24
 
 The developer subsequently authorized bounded fixes, leaving large design/policy decisions for later review. The static findings, line references and hashes below describe baseline `fa42ae4` and are retained as historical audit evidence; they no longer describe every current source hash.
+
+| Finding | Current disposition |
+| --- | --- |
+| P01 | Deferred: artifact ownership/change-detection design decision |
+| P02 | Partially addressed: post-pacing cache reuse; in-flight coalescing remains open |
+| P03 | Partially addressed: one full-body copy removed; bounded buffering/owning JSON retained |
+| P04 | Addressed and regression-verified: server retry delay honored |
+| P05 | Deferred: measure stripe contention before choosing a concurrency design |
+| P06 | Deferred: complete-export memory/atomicity design decision |
+| P07 | Measure first: queue polling responsiveness versus idle SQL cost |
+| P08 | Partially addressed: invariant preparation reused; complete snapshots still built per candidate |
+| P09 | Deferred: feedback revision/locking design decision |
+| P10 | Addressed and regression-verified: indexed alias lookup in both merges |
+| P11 | Addressed and PostgreSQL-verified: batched, eligibility-filtered item reads |
+| P12 | Deferred: measure quota aggregates before choosing counter/schema changes |
+| P13 | Deferred: archive layout and legacy-copy migration decision |
+| P14 | Measure first: representation/canonicalization and integrity-boundary costs |
+| P15 | Deferred: authentication versus global admission coordination decision |
+| P16 | Deferred: decide whether artist supporting evidence/gaps remain mandatory for direct-tag picks |
+| P17 | Addressed and PostgreSQL-verified: one eligibility query, both checks retained |
 
 First implementation group: P04 now honors numeric and HTTP-date `Retry-After` values, falls back to five seconds for missing/invalid headers, resumes ordinary two-second polling after success, and preserves tab/session cancellation. Long delays are split into timer-safe intervals without early HTTP retries. P02 is **partially addressed**: the ListenBrainz client rechecks shared memory after provider pacing and only consumes request budget when dispatching; overlapping in-flight acquisitions still need a separate coalescing design. P03 is **partially addressed**: parsing uses the existing bounded stream buffer, removing `ToArray`; complete-body buffering and the owning JSON clone remain for integrity/lifetime safety.
 
@@ -27,9 +47,25 @@ Fresh isolated Release comparison on .NET 10.0.12: 400 distinct candidates, ten 
 
 Ranking SHA-256: `f29b93cf21bf901b9d21858ea70170d2f2ffe219f907d33d5b7b7792d952dcc0`; merge SHA-256: `e63f61168c44552ef22895379b10013214ebcd2d947d746d3e797d72e37d6323`. Hashes omit random transient track IDs. These fresh measurements use a different fixture/configuration from the older audit and must not be compared numerically with its table. Shared-host timing is indicative, not an end-to-end latency or retained-memory claim; real evidence graphs and duplicate distributions vary.
 
+Third implementation group: P11 adds a provider-independent batched catalog read, folds publication eligibility into the same SELECT, preserves requested order/duplicates and omits unavailable IDs. Taste selection and completed lookup mapping use it. Retained private favorite fallback and owner checks remain; tag evidence is parsed once per row. P17 combines Identity and subscriber eligibility in one SQL command, retaining both soft-delete conditions and per-request revocation checks. No schema migration, dependency update, provider endpoint or pacing-policy change was made.
+
+PostgreSQL command interceptors reproduced two SELECTs for one eligible item and two eligibility commands for a valid bearer token before the changes. Afterward: ten catalog items plus a duplicate/missing ID require one SELECT; an empty batch requires none; cancelled reads propagate cancellation; expired items are excluded. Authenticated requests require one eligibility command, and hiding either the Identity or Domain user immediately returns 401. Complete export, private ownership, guest flow, legacy adapters, model/migration consistency and process recovery remain covered by the full regression suite.
+
+Final local verification: 702 Release tests passed, zero failures/skips (Domain 150, Application 139, DataAccess 131, Infrastructure 201, Presentation 81). The existing TRX gate verifies all five projects. Both `node scripts/checks/discovery_polling.cjs` and `node scripts/checks/phase1_browser.cjs` passed; `git diff --check` passed. Database tests used fresh task-owned PostgreSQL containers and disposable databases; their containers were removed afterward. Existing live data/settings were not used. Existing package-pruning and unrelated test-analyzer warnings remain; no dependency removal was attempted.
+
+### Larger decisions retained for developer review
+
+- **P01:** Keep strict full-file revalidation, or adopt an explicit exclusive-writer/versioned-artifact contract that permits fewer hashes. Reducing passes without an ownership/change-detection design would weaken fail-closed accounting.
+- **P06/P13:** Keep fully materialized, failure-atomic exports/shared archive compatibility, or design bounded staging/per-owner storage with legacy-copy migration. Streaming can expose partial exports after later failures; staging/layout changes add storage and cleanup obligations.
+- **P09/P12:** Consider transactional revision/quota counters and narrower locks only with a schema/trigger consistency design and measured SQL costs. No counters or migrations were added speculatively.
+- **P05/P15:** Decide concurrency boundaries after measuring contention: bounded stripe/global admission versus separate acquisition/authentication coordination. Password hashing, lockout/session atomicity and managed-write accounting must remain intact.
+- **P16:** Decide whether direct recording-tag picks must still acquire artist supporting responses and report their gaps. Removing that acquisition changes evidence behavior, so it was left intact.
+
+P07 and P14 remain profiling tasks, not requests to approve speculative changes. Full retained-memory evidence, deployment/proxy transfer measurements and representative live-provider profiling remain outstanding. The older dotTrace license/dotMemory limitations still apply; these fixes do not establish attribution of every millisecond/byte or production readiness. Developer confirmation remains pending. Unrelated workflow, security-report and skill-observation changes remain excluded from task commits.
+
 ## Scope and success criteria
 
-The developer requested a line-by-line performance and network review, using appropriate skills and MCP servers, especially Rider, dotTrace and dotMemory. They first selected **plan first, with initial findings**, then approved execution and instructed scanning every line. This document records the completed static pass, preserves the earlier isolated measurements and retains the profiling plan. Scope remains report only: no product fixes, project dependency updates or production configuration changes. Earlier workload helpers and private evidence were under `/tmp/liner-performance-audit-20261024/`; that directory is absent during this continuation, so those raw captures could not be reinspected. No new live provider requests or application database mutations were made during the continuation.
+The developer requested a line-by-line performance and network review, using appropriate skills and MCP servers, especially Rider, dotTrace and dotMemory. They first selected **plan first, with initial findings**, then approved execution and instructed scanning every line. This document records the completed static pass, preserves the earlier isolated measurements and retains the profiling plan. The original audit was report only; subsequent authorized product fixes are documented above. No project dependency updates or production configuration changes were made. Earlier workload helpers and private evidence were under `/tmp/liner-performance-audit-20261024/`; that directory is absent during this continuation, so those raw captures could not be reinspected. No new live provider requests or live application database mutations were made; remediation tests used disposable databases.
 
 The inventory covers first-party application code, migrations, tests, scripts, workflows and build/runtime configuration. A search-pattern match is a lead, not a completed review. All handwritten `src/` files received a complete numbered source read, with reported issues traced through their implementations and callers. Repeated test/tooling lines use exact references to already-read lines while every novel line is inspected in file order. Generated schema files use unchanged-block equality plus review of every changed declaration; lockfiles use JSON parsing and exact baseline comparison plus changed-line review. These are distinct methods, not a claim that all 63,948 lines were independently reread verbatim. The ledger records the method and content hash per file. Static review does not establish runtime coverage or clear a file of all performance defects.
 
@@ -269,6 +305,8 @@ Workflow observation: inventory by tracked paths as well as extension, because h
 ## Findings register
 
 All priorities below are **provisional investigation priorities**, not measured production severities. No hypothetical optimization saving is claimed. `Structural` means work visible in source; `conditional` means cost requires the stated trigger. Measurements apply only to their named isolated workloads and units above. Static review is complete for the ledger; runtime attribution remains unfinished.
+
+The finding narratives below describe the original audit baseline. The remediation table above is the current disposition; historical "no fix applied" statements must be read in that baseline context.
 
 | ID | Priority | Evidence status | Concern | Primary validation |
 | --- | --- | --- | --- | --- |

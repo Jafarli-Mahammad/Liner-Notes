@@ -17,6 +17,8 @@ public interface ICatalogReader
 {
     Task<CatalogSearchResult> SearchAsync(string query, CatalogKind kind, int limit, int offset, DateTimeOffset now, CancellationToken ct);
     Task<CatalogItemDto?> GetAsync(Guid recordId, DateTimeOffset now, CancellationToken ct);
+    // Returns eligible items in request order, preserving duplicates and omitting unavailable IDs.
+    Task<IReadOnlyList<CatalogItemDto>> GetManyAsync(IReadOnlyList<Guid> recordIds, DateTimeOffset now, CancellationToken ct);
 }
 
 public interface ICatalogImportStore

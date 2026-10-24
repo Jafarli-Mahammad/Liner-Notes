@@ -40,12 +40,7 @@ public sealed class CatalogLookupJobs(IDiscoveryJobStore jobs, IDiscoveryWriteCo
             var result = JsonSerializer.Deserialize<CatalogLookupCompletion>(job.ResultJson)
                 ?? throw new GenerationStoppedException("catalog_lookup_result_invalid");
             if (result.RecordIds.Count > 10) throw new GenerationStoppedException("catalog_lookup_result_invalid");
-            items = [];
-            foreach (var id in result.RecordIds)
-            {
-                var item = await catalog.GetAsync(id, clock.GetUtcNow(), ct);
-                if (item is not null) items.Add(item);
-            }
+            items = (await catalog.GetManyAsync(result.RecordIds, clock.GetUtcNow(), ct)).ToList();
             if (items.Count != result.RecordIds.Count) error = "catalog_lookup_results_expired";
         }
         return new(job.Id, job.State.ToString(), job.ProgressCode, error, items);

@@ -8,6 +8,18 @@ Phase 9 includes pinned build inputs, non-root web and Worker images, local Comp
 
 ## Guest discovery
 
+### Performance remediation — 2026-10-24
+
+Bounded fixes from the root [performance audit](Performance_Network_Audit.md) now
+honor polling retry delays, reuse metadata after pacing, remove one body copy,
+prepare invariant scoring inputs once, index candidate aliases, batch catalog
+reads and combine account eligibility checks. All 702 Release tests passed with
+zero failures/skips against disposable PostgreSQL; both offline Node checks passed.
+Isolated allocation comparisons preserve serialized output hashes. Larger storage,
+export, authentication coordination and evidence-policy decisions remain deferred
+in the report. No migrations, dependency changes, live-provider measurements or
+deployment were performed; developer confirmation remains pending.
+
 ### Actual local live website — 2026-10-23
 
 The normal `Liner Notes` IDE profile now selects live ListenBrainz/MusicBrainz

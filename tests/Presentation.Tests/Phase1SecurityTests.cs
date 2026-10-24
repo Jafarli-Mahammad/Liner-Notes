@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Data.Common;
 using LinerNotes.Application;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Services;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -338,13 +340,49 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, forwardedResponse.StatusCode);
     }
 
+    [PostgresFact]
+    public async Task BearerEligibilityUsesOneQueryAndImmediatelyRejectsHiddenAccounts()
+    {
+        var id = await SeedUser("eligibility");
+        var counter = new EligibilityQueryCounter();
+        await using var app = new TestApp(_connection, "Development", _clock, counter);
+        using var client = app.CreateClient();
+        using var scope = _services.CreateScope();
+        var token = scope.ServiceProvider.GetRequiredService<IJwtService>().GenerateAccessToken(id, "eligibility", "eligibility@example.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        counter.Reads = 0;
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(1, counter.Reads);
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        await db.Users.Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.IsDeleted, true));
+        counter.Reads = 0;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(1, counter.Reads);
+        await db.Users.IgnoreQueryFilters().Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.IsDeleted, false));
+        await db.ApplicationUsers.Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.IsDeleted, true));
+        counter.Reads = 0;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal(1, counter.Reads);
+    }
+
+    private sealed class EligibilityQueryCounter : DbCommandInterceptor
+    {
+        public int Reads;
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("EXISTS", StringComparison.Ordinal) && command.CommandText.Contains("\"Users\"", StringComparison.Ordinal)) Reads++;
+            return ValueTask.FromResult(result);
+        }
+    }
+
     private sealed class TestClock : TimeProvider
     {
         public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
         public override DateTimeOffset GetUtcNow() => Now;
     }
 
-    private sealed class TestApp(string connection, string environment, TimeProvider clock) : WebApplicationFactory<Program>
+    private sealed class TestApp(string connection, string environment, TimeProvider clock, DbCommandInterceptor? interceptor = null) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -352,7 +390,11 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
                 builder.UseSetting(setting.Key, setting.Value);
             builder.UseEnvironment(environment);
             builder.ConfigureAppConfiguration((_, config) => config.AddConfiguration(Configuration(connection)));
-            builder.ConfigureServices(services => services.AddSingleton(clock));
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton(clock);
+                if (interceptor is not null) services.AddDbContext<DataContext>(options => options.AddInterceptors(interceptor));
+            });
         }
     }
 }

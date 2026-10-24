@@ -5,6 +5,8 @@
   populated during provider pacing and avoid an extra response-body array copy.
 - Reuse invariant taste/configuration work within scoring batches and index
   candidate aliases during merging, preserving scores, ranking and explanations.
+- Batch catalog selection and lookup-result reads, and check both account
+  eligibility conditions in one query while preserving immediate revocation.
 
 - Start the normal local website with live ListenBrainz/MusicBrainz providers,
   a persistent dedicated database and private storage configuration. Add

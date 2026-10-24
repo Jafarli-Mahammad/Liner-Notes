@@ -90,6 +90,7 @@ public sealed class DiscoveryTasteTests
         Assert.True(allTags.Length > 200);
         Assert.Equal(allTags.Length, (await select.ResolveAsync(Guid.NewGuid(), new([], allTags), default)).Count);
         await catalog.DidNotReceiveWithAnyArgs().GetAsync(default, default, default);
+        await catalog.DidNotReceiveWithAnyArgs().GetManyAsync(default!, default, default);
     }
     [Fact]
     public async Task AlbumTagsHaveTheirOwnScopeAndDoNotCauseArtistFallback()

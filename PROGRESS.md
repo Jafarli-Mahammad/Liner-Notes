@@ -8,6 +8,39 @@ Phase 9 includes pinned build inputs, non-root web and Worker images, local Comp
 
 ## Guest discovery
 
+### Efficiency audit continuation — 2026-10-25
+
+The developer approved architectural directions for P01, P06/P13, P09/P12,
+P05/P15 and P16, **without implementation authorization**. Complete the remaining
+CPU, memory, SQL, contention, network and deployment investigations and review
+the prioritized plan before implementation. See `Performance_Network_Audit.md`.
+
+P01 remains an outstanding architectural optimization: retain SHA-256 and the
+existing five-pass implementation while designing immutable artifacts, independently
+integrity-protected versioned manifests and incremental verification. Define the
+external-change detection window and privileged-administrator threat-model limits;
+preserve fail-closed integrity, cross-process coordination, atomicity, accounting
+and recovery. A replacement needs design approval, benchmarks and verification.
+
+### Efficiency audit evidence — 2026-10-25
+
+The remaining available investigations are recorded in the root audit: usable
+CPU/allocation traces, three managed heap graphs, SQL plans and trigger costs,
+actual login/write contention, 25-owner reads, two successful ten-job bursts,
+HTTP/cache/pacing controls, two paced public metadata samples, browser revalidation
+and mobile throttling, storage growth, and local resource-limit comparisons.
+P18 compression, P19 ledger-trigger cost and P20 scheduled-capture inventory
+publication/recovery are recorded alongside all original partial/open findings.
+The actual scheduled CLI stops safely for 1/10/100 new recipients; successful
+unattended throughput is unverified and must not be inferred from stop timings.
+
+No VPS exists yet. The practical initial estimate is 2 vCPU / 2 GiB / 25 GiB SSD;
+4 GiB provides a more defensible budget for concurrent large exports before the
+approved staged-streaming design. Actual VPS and representative live-discovery
+acceptance remain separate. No optimization implementation, schema/dependency
+change, purchase, deployment or push was performed. Review the prioritized plan
+and design contracts before explicitly authorizing implementation.
+
 ### Performance remediation — 2026-10-24
 
 Bounded fixes from the root [performance audit](Performance_Network_Audit.md) now

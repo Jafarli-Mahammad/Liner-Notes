@@ -4,7 +4,15 @@ Date: 2026-10-24 (Asia/Baku)
 Repository baseline: `3ae263c73dc1f16510a8033481b51a14cf349e16`
 Audit execution baseline: `a930ebb87246a4709492ae06a543f996f85baac0` (approved plan commit; product sources unchanged).
 Continuation baseline: `eac7d74b3d6f4b21841a6d4ad4ad3f2be0a6419e`.
-Status: **Static inventory pass complete: 495/495 files, 63,948 lines accounted for using the review methods below. The original 486-file inventory is covered, plus nine previously omitted tooling/browser files. Runtime audit remains incomplete: application SQL/network attribution, concurrency measurements and retained-memory analysis are outstanding. No fixes applied.**
+Status: **Static inventory pass complete: 495/495 files, 63,948 lines accounted for using the review methods below. The original 486-file inventory is covered, plus nine previously omitted tooling/browser files. Authorized bounded remediation is in progress below. Runtime audit remains incomplete: application SQL/network attribution, concurrency measurements and retained-memory analysis are outstanding.**
+
+## Authorized remediation — 2026-10-24
+
+The developer subsequently authorized bounded fixes, leaving large design/policy decisions for later review. The static findings, line references and hashes below describe baseline `fa42ae4` and are retained as historical audit evidence; they no longer describe every current source hash.
+
+First implementation group: P04 now honors numeric and HTTP-date `Retry-After` values, falls back to five seconds for missing/invalid headers, resumes ordinary two-second polling after success, and preserves tab/session cancellation. Long delays are split into timer-safe intervals without early HTTP retries. P02 is **partially addressed**: the ListenBrainz client rechecks shared memory after provider pacing and only consumes request budget when dispatching; overlapping in-flight acquisitions still need a separate coalescing design. P03 is **partially addressed**: parsing uses the existing bounded stream buffer, removing `ToArray`; complete-body buffering and the owning JSON clone remain for integrity/lifetime safety.
+
+Verification: the new polling test failed on the original premature retry and passed after the change; the new transport concurrency test failed on duplicate dispatch and passed after the change. All 201 Infrastructure tests passed with zero skips; both dependency-free Node browser checks passed. VSTest required permission for its local socket outside the sandbox. No live provider calls were used. Larger decisions and subsequent implementation groups are recorded here as work proceeds; developer confirmation remains pending.
 
 ## Scope and success criteria
 

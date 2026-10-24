@@ -42,9 +42,13 @@ window.discoveryApp = (() => {
     const response = await apiFetch(`${API_BASE}${path}`, { method, credentials: 'same-origin', headers,
       signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     if (!response.ok) {
-      const seconds = Math.min(600, Math.max(1, Number(response.headers.get('Retry-After')) || 1));
-      if (response.status === 429 && page) page.nextRequestAtUtc = new Date(Date.now() + seconds * 1000).toISOString();
-      const error = new Error(errorMessage(response.status)); error.status = response.status; throw error;
+      const header = response.headers.get('Retry-After')?.trim();
+      const retryAt = header && /^\d+$/.test(header) ? Date.now() + Number(header) * 1000
+        : header && /^[A-Za-z]{3},/.test(header) ? Date.parse(header) : NaN;
+      const error = new Error(errorMessage(response.status)); error.status = response.status;
+      error.retryAt = Number.isFinite(retryAt) && Math.abs(retryAt) <= 8640000000000000 ? retryAt : null;
+      if (response.status === 429 && page) page.nextRequestAtUtc = new Date(error.retryAt ?? Date.now() + 1000).toISOString();
+      throw error;
     }
     return response.status === 204 ? null : response.json();
   }
@@ -122,8 +126,12 @@ window.discoveryApp = (() => {
     const target = root('discovery-progress');
     if (target) { target.textContent = copy; target.className = 'notice'; }
   }
-  async function pollGeneration(id, current) {
+  async function pollGeneration(id, current, retryAt = 0) {
     if (current !== version || state.activeTab !== 'discovery') return;
+    if (retryAt > Date.now()) {
+      timer = setTimeout(() => pollGeneration(id, current, retryAt), Math.min(retryAt - Date.now(), 2147483647));
+      return;
+    }
     try {
       const job = await request(`/discovery/jobs/${encodeURIComponent(id)}`);
       if (current !== version) return;
@@ -144,7 +152,8 @@ window.discoveryApp = (() => {
     } catch (error) {
       if (current !== version) return;
       message(error.message, true);
-      timer = setTimeout(() => pollGeneration(id, current), 5000);
+      const retryAt = Math.max(Date.now() + 1000, error.retryAt ?? Date.now() + 5000);
+      timer = setTimeout(() => pollGeneration(id, current, retryAt), Math.min(retryAt - Date.now(), 2147483647));
     }
   }
   function pickCard(pick) {

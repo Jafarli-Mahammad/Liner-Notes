@@ -46,3 +46,4 @@ src/Presentation/ClientApp/test-results-live/
 src/Presentation/ClientApp/playwright-report/
 src/Presentation/wwwroot/home-assets/
 src/Presentation/wwwroot/home-preview/
+/dist/nebula/

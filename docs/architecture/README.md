@@ -2,6 +2,10 @@
 
 [Project overview](../../README.md) · [Developer guide](../../README-Developer.md)
 
+## Interactive graph
+
+[Open the Nebula](https://jafarli-mahammad.github.io/Liner-Notes/?tab=graph&project=LinerNotes). It is rebuilt from `main` on each successful Pages deployment. The browser view is interactive; its data is a generated snapshot, not a live Codebase Memory session.
+
 ## Codebase graph snapshot
 
 ![Codebase Memory graph of the Liner Notes source checkout](codebase-nebula.png)

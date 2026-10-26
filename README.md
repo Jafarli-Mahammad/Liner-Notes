@@ -76,6 +76,9 @@ work are tracked in [PROGRESS.md](PROGRESS.md).
 
 ## For developers
 
+New contributors can start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
+
 Start with the [developer guide](README-Developer.md) for setup, architecture,
 feature entry points and verification commands. The ASP.NET Core host is in
 [`src/Presentation`](src/Presentation); its React app is in
@@ -109,6 +112,8 @@ flowchart TB
 ```
 
 ### Explore the source graph
+
+[Open the interactive Nebula](https://jafarli-mahammad.github.io/Liner-Notes/?tab=graph&project=LinerNotes). It is rebuilt from `main` on each successful Pages deployment; the graph is interactive, but its data is a generated snapshot rather than a live server connection.
 
 ![Nebula graph snapshot of Liner Notes source, tests and tooling](docs/architecture/codebase-nebula.png)
 

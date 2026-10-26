@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="graph-source-commit" content="__SOURCE_COMMIT__">
+  <meta name="pages-base-path" content="/Liner-Notes/">
+  <title>Liner Notes Nebula</title>
+  <script>
+    const pageUrl = new URL(window.location.href);
+    let needsReplace = false;
+    if (!pageUrl.searchParams.has("tab")) {
+      pageUrl.searchParams.set("tab", "graph");
+      needsReplace = true;
+    }
+    if (!pageUrl.searchParams.has("project")) {
+      pageUrl.searchParams.set("project", "LinerNotes");
+      needsReplace = true;
+    }
+    if (needsReplace) window.history.replaceState({}, "", pageUrl.toString());
+  </script>
+  <script src="./adapter.js"></script>
+  <link rel="stylesheet" href="./assets/index-Bk-h0GSQ.css">
+  <style>
+    #graph-snapshot-status {
+      position: fixed;
+      z-index: 10000;
+      right: 12px;
+      bottom: 12px;
+      max-width: min(540px, calc(100vw - 24px));
+      padding: 7px 10px;
+      border: 1px solid #ffffff24;
+      border-radius: 6px;
+      background: #111827eF;
+      color: #dbe4f0;
+      font: 12px/1.4 system-ui, sans-serif;
+      box-shadow: 0 4px 18px #0005;
+    }
+    #graph-snapshot-status a { color: #a5d8ff; text-decoration: none; }
+    #graph-snapshot-status a:hover { text-decoration: underline; }
+  </style>
+  <script type="module" crossorigin src="./assets/index-BiHLJL7z.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <aside id="graph-snapshot-status" aria-live="polite">Loading graph snapshot details…</aside>
+  <script>
+    const status = document.getElementById("graph-snapshot-status");
+    const sourceCommit = document.querySelector('meta[name="graph-source-commit"]').content;
+    const metadataUrl = new URL("./data/metadata.json", document.baseURI);
+    metadataUrl.searchParams.set("v", sourceCommit);
+    fetch(metadataUrl).then(response => {
+      if (!response.ok) throw new Error("Graph metadata is unavailable");
+      return response.json();
+    }).then(metadata => {
+      const generatedAt = new Date(metadata.generated_at);
+      const time = Number.isNaN(generatedAt.valueOf()) ? metadata.generated_at : generatedAt.toLocaleString();
+      const commitUrl = `https://github.com/Jafarli-Mahammad/Liner-Notes/commit/${metadata.source_commit}`;
+      status.replaceChildren();
+      status.append(`Snapshot · ${metadata.node_count.toLocaleString()} nodes · ${metadata.edge_count.toLocaleString()} edges · ${time} · `);
+      const commit = document.createElement("a");
+      commit.href = commitUrl;
+      commit.target = "_blank";
+      commit.rel = "noopener noreferrer";
+      commit.textContent = metadata.source_commit.slice(0, 7);
+      commit.setAttribute("aria-label", `Source commit ${metadata.source_commit}`);
+      status.append(commit);
+    }).catch(() => {
+      status.textContent = "Graph snapshot details are unavailable.";
+    });
+  </script>
+</body>
+</html>

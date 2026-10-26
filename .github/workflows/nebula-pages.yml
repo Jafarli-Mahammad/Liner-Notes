@@ -1,0 +1,89 @@
+name: Nebula Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nebula-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Download and verify Codebase Memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="0.12.1"
+          archive="${RUNNER_TEMP}/codebase-memory-mcp-linux-amd64-portable.tar.gz"
+          install_dir="${RUNNER_TEMP}/codebase-memory-mcp"
+          mkdir -p "${install_dir}"
+          curl --fail --location --silent --show-error \
+            "https://github.com/DeusData/codebase-memory-mcp/releases/download/v${version}/codebase-memory-mcp-linux-amd64-portable.tar.gz" \
+            --output "${archive}"
+          printf '%s  %s\n' \
+            '8c3d0341064301e78ecc84cf7348d4e2c6562a0f57448243ea560aaa34de36c1' \
+            "${archive}" | sha256sum --check --status
+          tar --extract --gzip --file "${archive}" --directory "${install_dir}"
+          binary="$(find "${install_dir}" -type f -name codebase-memory-mcp -print -quit)"
+          test -n "${binary}"
+          chmod +x "${binary}"
+          printf '%s  %s\n' \
+            '77745491f0a9c346d6da23eed4d92b5feaa31a27a883c9faa4fa9f47c8183705' \
+            "${binary}" | sha256sum --check --status
+          actual_version="$("${binary}" --version | tr -d '\r\n')"
+          if ! printf '%s\n' "${actual_version}" | grep --extended-regexp --quiet '(^|[^0-9])v?0\.12\.1([^0-9]|$)'; then
+            printf 'Unexpected Codebase Memory version: %s\n' "${actual_version}" >&2
+            exit 1
+          fi
+          printf 'CBM_BINARY=%s\n' "${binary}" >> "${GITHUB_ENV}"
+
+      - name: Export current graph and viewer data
+        env:
+          CBM_CACHE_DIR: ${{ runner.temp }}/liner-notes-cbm-cache
+        run: >-
+          python3 tools/nebula/export.py
+          --binary "${CBM_BINARY}"
+          --repo "${GITHUB_WORKSPACE}"
+          --output dist/nebula
+          --commit "${GITHUB_SHA}"
+
+      - name: Validate Pages artifact
+        run: >-
+          python3 tools/nebula/validate.py
+          --site dist/nebula
+          --expected-commit "${GITHUB_SHA}"
+          --base-path /Liner-Notes/
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with:
+          path: dist/nebula
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

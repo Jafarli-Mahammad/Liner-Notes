@@ -279,6 +279,8 @@ references are the authority.
 
 ## Explore the Nebula
 
+[Open the interactive Nebula](https://jafarli-mahammad.github.io/Liner-Notes/?tab=graph&project=LinerNotes). Its graph data is refreshed by successful Pages deployments from `main`; the browser view is interactive, but it is a static snapshot rather than a live MCP connection.
+
 ![Nebula graph snapshot of Liner Notes source, tests and tooling](docs/architecture/codebase-nebula.png)
 
 The graph was captured from commit `62a2698` on 2026-10-10. Use it to find

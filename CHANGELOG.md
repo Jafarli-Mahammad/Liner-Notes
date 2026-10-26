@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add an Actions workflow that publishes an interactive Codebase Memory graph to Pages and refreshes its snapshot from `main` on each successful deployment.
 - Add the Superdesign-based React Home, Discover, Your Taste and History pages,
   with the approved logo, locally hosted fonts, responsive layouts and accessible
   loading, empty, error and artwork-placeholder states.

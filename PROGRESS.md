@@ -6,6 +6,35 @@ Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data 
 
 Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).
 
+### Recommendation-quality concern — 2026-10-26
+
+The developer reports that recent recommendations from the ListenBrainz-default
+path feel less personally tied to named seed artists, including Jakuzi and Lin
+Pesto, despite choosing to stay close to their taste. Recent examples: Depeche
+Mode's "Zenstation (Halbermensch edit)" (51% displayed tag overlap; marked "not
+for me"), The Cure's "Closedown" (44%; rated 7/10), and Gary Numan's "Airlane"
+(rated 7/10). This is subjective feedback and a product-quality concern, not
+evidence that the provider switch caused a regression. The responses are mixed:
+two tracks were liked and one was rejected. Displayed tag-overlap percentages are
+not a validated measure of perceived musical closeness. Compare stored
+recommendation evidence and, if authorized, a controlled provider evaluation
+before changing scoring or provider configuration. Recommendation quality
+remains unverified; Phase 5 real-data evaluation remains unauthorized.
+
+## React frontend review — 2026-10-26
+
+The developer approved Home and authorized the remaining frontend. Discover,
+Your Taste, History and supported account controls now use the existing APIs.
+Home's temporary sample-feed mode is removed. The local ASP.NET host serves the
+built React application at `http://localhost:5080/`.
+
+Local verification passed 45 browser checks, a real provider-backed guest/account
+journey and 13 targeted host/artwork tests. Responsive screenshots and comparison
+notes are in [the frontend review](design/superdesign/frontend-review/REVIEW.md).
+The live account-deletion response reported incomplete local email-copy cleanup;
+the UI reports that warning. No backend fix, performance-audit change, CI/Docker
+change, commit, push or deployment was made. Final developer approval remains open.
+
 ## Guest discovery
 ### Album artwork — 2026-10-26
 ListenBrainz recording metadata now resolves release and release-group covers

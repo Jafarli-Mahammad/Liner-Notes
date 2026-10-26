@@ -18,7 +18,7 @@ public sealed class MetaBrainzRequestGate(ListenBrainzOptions options, TimeProvi
     private async Task UpdateAsync(string provider, TimeSpan? defer, CancellationToken ct)
     {
         options.Validate();
-        string fileName = provider switch { "ListenBrainz" => "listenbrainz", "MusicBrainz" => "musicbrainz", _ => throw new ArgumentException("provider_invalid") };
+        string fileName = provider switch { "ListenBrainz" => "listenbrainz", "MusicBrainz" => "musicbrainz", "CoverArtArchive" => "coverartarchive", _ => throw new ArgumentException("provider_invalid") };
         string directory = options.RateLimitDirectory;
         Directory.CreateDirectory(directory);
         for (string? path = directory; path != null; path = Path.GetDirectoryName(path))

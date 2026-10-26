@@ -1019,3 +1019,4 @@ input:focus {
 @media (max-width: 600px) { .onboarding-options { flex-direction: column; } .onboarding-controls .button { width: 100%; } }
 
 #taste-selected-search { display: block; width: 100%; min-height: 44px; margin-top: .4rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
+.discovery-cover { width: 80px; height: 80px; flex: 0 0 80px; object-fit: cover; background: #e7e3db; border-radius: 4px; }

@@ -53,6 +53,7 @@ if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
         throw new InvalidOperationException("Concurrent guest discovery and local email capture require pending storage writer integration.");
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
+    builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
 }
 
 // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization

@@ -7,6 +7,16 @@ Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data 
 Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).
 
 ## Guest discovery
+### Album artwork — 2026-10-26
+ListenBrainz recording metadata now resolves release and release-group covers
+through Cover Art Archive. A separate background lane warms public recommendations;
+discovery cards read a bounded image cache and show placeholders while unavailable.
+Local verification: 54 targeted .NET tests and two offline JavaScript checks passed.
+Real-data Chromium review showed three cached JPEG covers among five recent picks,
+with placeholders for the others, no page errors, no browser upstream requests,
+and no horizontal overflow at 390px. Images are cached in memory and warm again
+after restart. Developer confirmation and deployment remain pending.
+
 
 ### Efficiency audit continuation — 2026-10-25
 

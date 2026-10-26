@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Show cached album covers on discoveries and Recent recommendations, resolving
+  recording MBIDs through ListenBrainz and falling back from release artwork to
+  release-group artwork, then a placeholder. Warm images independently of page
+  requests and recommendation generation, with bounded downloads and caching.
 - Honor server retry delays while polling discovery jobs. Reuse public metadata
   populated during provider pacing and avoid an extra response-body array copy.
 - Reuse invariant taste/configuration work within scoring batches and index

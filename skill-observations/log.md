@@ -315,3 +315,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A remembered duration option for dotnet-counters was absent from the installed version, which would have made the memory monitor fail after launch.
 **Suggested improvement:** Inspect each installed tool's help output before composing commands. Use an external timeout with graceful interruption when the tool does not provide a duration option, and verify one representative invocation before documenting it.
 **Principle:** Diagnostic automation should bind flags and shutdown behavior to the actual installed CLI contract.
+
+### Observation 031: Keep README setup links canonical
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Updating the project, developer and frontend READMEs against the current checkout.
+**Skill:** task-observer; ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Documentation maintenance
+**Issue:** The README repeated long local setup instructions already maintained in runbooks, and the developer map mixed stale implementation notes with current entry points.
+**Suggested improvement:** Give each README one clear audience, link to the canonical setup procedure, and verify source paths plus local links before finishing.
+**Principle:** Keep orientation in READMEs and procedures in one maintained runbook.

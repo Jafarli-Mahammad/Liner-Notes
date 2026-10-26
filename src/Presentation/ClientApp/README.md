@@ -1,75 +1,76 @@
-# Liner Notes frontend
+# Browser app
 
-React + TypeScript + Vite, React Router and native Fetch. The existing ASP.NET
-host serves the static build and same-origin APIs. Home, Discover, Your Taste,
-History, individual history batches and the supported account controls are React
-routes. The approved Superdesign exports are retained under
-`design/superdesign/phase-1/`; they are references, never runtime templates.
+The browser app uses React, TypeScript, Vite and React Router. ASP.NET Core
+serves its built files from `src/Presentation/wwwroot`, alongside the same-origin
+API. The app has Home, Discover, Your Taste, History, batch-detail and account
+routes.
 
-## Local build
+## Build and run
 
-Use Node 22.22 or later and the exact dependency versions in `package-lock.json`.
+Run these commands from `src/Presentation/ClientApp`. Use Node 22.22 or later
+and the versions pinned in `package-lock.json`:
 
 ```sh
 npm ci
 npm run build:local
 ```
 
-`build:local` typechecks, builds route chunks, copies font licenses and publishes
-the generated entry and `home-assets/` into `../wwwroot/`. It preserves existing
-legacy and manual-test files. Run it before serving or publishing Presentation
-from a fresh checkout. Open the existing host at `http://localhost:5080/`.
+`build:local` typechecks and builds the app, copies font licenses, then publishes
+the generated entry files and `home-assets/` to the Presentation host's
+`wwwroot`. Run it after a fresh checkout before starting or publishing the host.
 
-`npm run dev` proxies `/api` to port 5080 for local development. Production build
-automation, CI, Docker and deployment remain outside the frontend authorization.
+For frontend iteration, start the ASP.NET host on port 5080. From this directory,
+run:
 
-## Structure and integration
+```sh
+npm run dev
+```
 
-- `api/`: response contracts, public feed validation, same-origin fetch, CSRF,
-  status-based errors and existing JWT refresh. Tokens stay in memory; reloading
-  requires signing in again. Guest credentials remain the existing server cookie.
-- `app/`: shared navigation, personal session bootstrap, revision-aware writes,
-  submission locking, idempotent generation and identity-scoped batch caching.
-- `features/`: public Home, personal Discover, taste editor, history and account.
-- `components/`: artwork, notices, stored music destinations and feedback.
-- `styles.css`: approved tokens, component styles and responsive/reduced-motion rules.
+Vite serves the app locally and proxies `/api` requests to the host. See the
+[local website runbook](../../../docs/renewal/local-live-run.md) for backend,
+database and provider setup.
 
-Visiting a page does not create a guest, generate recommendations or call an
-upstream provider. Explicit source lookup and generation use server job APIs.
-Catalog typing reads the local catalog. Polling respects server retry deadlines.
-Artwork reads only the existing recording cache; unavailable identities/covers
-show placeholders. Explanations, tags, feedback and ratings come from the backend.
+## How the app uses the API
 
-There is no streaming/player UI, fabricated score, demo runtime feed, provider-key
-entry, unsupported account-settings form or client-side recommendation engine.
-The old interface remains available in preserved legacy files for compatibility.
+`api/` contains response types, request helpers, CSRF handling and session
+refresh. `app/` contains navigation, session state and shared request behavior.
+`features/` holds page-level flows; `components/` holds reusable interface
+elements; `styles.css` contains design tokens, layout and responsive behavior.
 
-## Browser verification
+Opening a page does not create a guest, generate recommendations or contact a
+music provider. The user starts catalog lookup or recommendation generation
+explicitly. Catalog typing searches local data; an explicit lookup can request
+missing catalog entries. The server supplies recommendation evidence,
+explanations, feedback and ratings. Artwork comes from the recording cache; an
+unavailable cover shows a placeholder.
 
-With the built host running, use the installed Playwright browser:
+Access tokens live in memory, so reloading the page requires signing in again.
+Guest credentials use the existing server cookie. The client does not contain a
+recommendation engine, fabricated scores, provider-key settings or audio player.
+
+## Browser checks
+
+With the host running, run the Playwright suite:
 
 ```sh
 npm test
 ```
 
-If its default browser is unavailable, set `LINER_BROWSER_EXECUTABLE` to a compatible
-installed Chromium. `LINER_HOME_URL` overrides the default localhost base URL.
-The normal suite mixes real public read-only checks with explicitly intercepted
-contract fixtures. Fixtures stay in `tests/`; they never populate production UI
-or databases. `LINER_REFERENCE_COVERS` may point to four local reference JPEGs
-named `0.jpg` through `3.jpg` for artwork comparisons; otherwise tests use SVGs.
+Set `LINER_BROWSER_EXECUTABLE` to use an installed compatible Chromium if the
+default browser is unavailable. `LINER_HOME_URL` changes the host URL. The
+normal suite includes public read-only checks and intercepted API fixtures;
+fixtures are test inputs and do not populate the application.
 
-The opt-in live journey performs real writes, provider lookup, guest generation,
-registration, login, exports and deletion using a disposable test account:
+To run the opt-in journey that writes to a development instance:
 
 ```sh
 LINER_LIVE_FRONTEND=1 npm test -- --grep 'actual provider-backed'
 ```
 
-Run it only against an authorized development instance. Credentials are generated
-in memory and tracing is disabled. Live and controlled artifact directories are
-separate. A backend partial-cleanup response is recorded, never treated as a full
-filesystem cleanup. The generated sanitized result contains no tokens/passwords.
+Use an authorized development instance and a disposable account. This journey
+does real catalog lookup, discovery, registration, login, export and deletion.
+Its result records partial cleanup responses as partial; it does not claim
+filesystem cleanup that the backend did not confirm.
 
-See [the current review](../../../design/superdesign/frontend-review/REVIEW.md)
-for screenshots, validation scope, design adaptations and outstanding limitations.
+The [frontend review](../../../design/superdesign/frontend-review/REVIEW.md)
+contains screenshots, review scope and known limitations.

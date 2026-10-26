@@ -29,6 +29,30 @@ The provider call path, digest generation and persisted explanation are
 separate stages. A page reads saved data; it does not fetch recommendations from
 an upstream service.
 
+### Reading a saved digest
+
+This request reads the latest saved digest for the authenticated user. It does
+not run discovery or score candidates.
+
+```mermaid
+sequenceDiagram
+    actor Listener
+    participant Controller as DigestsController
+    participant Mediator as MediatR
+    participant Handler as GetLatestDigestQueryHandler
+    participant Repository as WeeklyDigestRepository
+    participant Database as PostgreSQL
+    Listener->>Controller: GET /api/digests/latest
+    Controller->>Mediator: GetLatestDigestQuery(userId)
+    Mediator->>Handler: Handle(query)
+    Handler->>Repository: GetRecentDigestsForUserAsync(userId, 1)
+    Repository->>Database: Read digest, recommendations and tracks
+    Database-->>Repository: Saved entities
+    Repository-->>Handler: Digest or no result
+    Handler-->>Controller: Mapped response
+    Controller-->>Listener: 200 or 404
+```
+
 ## Repository layout
 
 | Project or folder | What belongs there |
@@ -49,23 +73,29 @@ Check those files and project references before changing dependencies.
 
 ## How the layers connect
 
-The web and Worker projects are composition roots. They reference the adapters
-they need and register Application services. Dependencies inside the core point
-toward Domain.
+Presentation and Worker are composition roots. Their project references bring
+in Application and the adapters; dependency direction inside the core ends at
+Domain. The arrows below are project references, not request-time calls.
 
 ```mermaid
 flowchart TB
-    Web[Presentation] --> App[Application]
-    Worker[Worker] --> App
-    Web --> Data[DataAccess]
+    Web["Presentation<br/>ASP.NET Core and browser app"] --> App["Application<br/>Handlers and interfaces"]
+    Worker["Worker<br/>Batch operations"] --> App
+    Web --> Data["DataAccess<br/>EF Core and PostgreSQL"]
     Worker --> Data
-    Web --> Infra[Infrastructure]
+    Web --> Infra["Infrastructure<br/>Provider clients and cache"]
     Worker --> Infra
     Data --> App
     Infra --> App
-    App --> Domain[Domain]
+    App --> Domain["Domain<br/>Taste and scoring"]
     Data --> Domain
     Infra --> Domain
+    classDef host fill:#153e53,color:#fff,stroke:#67d8da
+    classDef adapter fill:#48274e,color:#fff,stroke:#f4a1ca
+    classDef core fill:#513827,color:#fff,stroke:#ffc58f
+    class Web,Worker host
+    class Data,Infra adapter
+    class App,Domain core
 ```
 
 Keep scoring in Domain, orchestration in Application, persistence in
@@ -107,10 +137,60 @@ generated text or make a provider request. If scoring changes, preserve the
 snapshot needed to explain existing recommendations and check the benchmark
 seed set.
 
+The registered-account digest model centers on users, taste signals and saved
+weekly recommendations:
+
+```mermaid
+erDiagram
+    USER ||--o{ TASTE_SIGNAL : records
+    USER ||--o{ WEEKLY_DIGEST : has
+    WEEKLY_DIGEST ||--o{ WEEKLY_RECOMMENDATION : contains
+    TRACK ||--o{ WEEKLY_RECOMMENDATION : appears_in
+    WEEKLY_RECOMMENDATION {
+        int Rank
+        jsonb ScoreBreakdown
+        string Feedback
+        int Rating "optional, 1 to 10"
+        string FeedbackComment "optional"
+    }
+```
+
+This is a guide to the core relationships, not the full schema. Onsite guest
+discovery also stores `DiscoveryBatch` records and recommendation snapshots.
+
 The export and deletion paths cover user data across the application and
 Identity schema. Review the [privacy evidence](docs/renewal/phase-8a-evidence.md)
 before changing persisted fields, export mappings or deletion behavior. Local
 verification is not a substitute for deployment-specific review.
+
+## From taste to a saved pick
+
+This simplified view shows the scoring and persistence boundary. The web and
+Worker entry points differ, and the provider adapter supplies the candidate and
+tag evidence:
+
+```mermaid
+flowchart LR
+    Entry["Web or Worker generation"] --> Application["Application preparation"]
+    Taste["Taste and feedback"] --> Application
+    Application --> Source["IRecommendationSource"]
+    Source --> Hydrator["ICandidateHydrator"]
+    Hydrator --> Evidence["Tracks, tags and coverage gaps"]
+    Evidence --> Scorer["BaselineAScorer<br/>Domain"]
+    Scorer --> Stored["DiscoveryBatch or weekly digest<br/>with score snapshots"]
+    Stored --> Read["Read explanation from saved data"]
+    Resolver["Provider resolver"] --> Provider["ListenBrainz or Last.fm adapter"]
+    Provider --> Source
+    Provider --> Hydrator
+```
+
+ListenBrainz is the configured default. Provider choice is wired through the
+provider resolver, so application workflows do not depend on either adapter.
+The Last.fm HTTP and replay clients share
+[`LastFmEvidenceParser`](src/Infrastructure/RecommendationSources/LastFm/LastFmEvidenceParser.cs);
+the [replay client](src/Infrastructure/RecommendationSources/LastFm/RecordedLastFmApiClient.cs)
+uses injected bytes and makes no HTTP calls. The diagram describes the software
+path, not recommendation quality or email delivery.
 
 ## Local development
 
@@ -196,3 +276,13 @@ validators and authorization attributes for payloads and access rules.
 The [architecture visuals](docs/architecture/README.md) include a dated code
 graph snapshot. It can help with orientation, but source code, tests and project
 references are the authority.
+
+## Explore the Nebula
+
+![Nebula graph snapshot of Liner Notes source, tests and tooling](docs/architecture/codebase-nebula.png)
+
+The graph was captured from commit `62a2698` on 2026-10-10. Use it to find
+clusters and possible relationships, then confirm those paths in source. It is
+not a runtime trace, and its labels and connections are best-effort static
+analysis. The [snapshot notes](docs/architecture/README.md) describe its
+coverage limits.

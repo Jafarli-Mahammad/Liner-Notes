@@ -40,6 +40,23 @@ Each saved recommendation includes a score breakdown. Its explanation is
 formatted from that stored data, so later page views do not need to contact a
 music provider to explain a pick.
 
+## The discovery loop
+
+This is the product's intended weekly rhythm. It describes the goal, not a
+claim that scheduled email delivery is ready:
+
+```mermaid
+flowchart LR
+    Taste["Your artists, records and feedback"] --> Find["Provider candidates and evidence"]
+    Find --> Rank["Deterministic scoring and feedback re-ranking"]
+    Rank --> Notes["Saved picks with score explanations"]
+    Notes --> Listen["Listen, rate or mark familiar"]
+    Listen --> Taste
+```
+
+For what works today and what remains open, see [current status](#current-status)
+and [PROGRESS.md](PROGRESS.md).
+
 ## Current status
 
 The repository includes a React browser app, account and guest discovery flows,
@@ -65,6 +82,40 @@ feature entry points and verification commands. The ASP.NET Core host is in
 [`src/Presentation/ClientApp`](src/Presentation/ClientApp/README.md). Read [AGENTS.md](AGENTS.md)
 before making changes; it records the project boundaries and contribution
 requirements.
+
+### Project references
+
+These arrows show which projects reference one another, not runtime requests:
+
+```mermaid
+flowchart TB
+    Web["Presentation<br/>ASP.NET Core and browser app"] --> App["Application<br/>Handlers and interfaces"]
+    Worker["Worker<br/>Batch and scheduled operations"] --> App
+    Web --> Data["DataAccess<br/>EF Core and PostgreSQL"]
+    Worker --> Data
+    Web --> Infra["Infrastructure<br/>Music-provider adapters"]
+    Worker --> Infra
+    Data --> App
+    Infra --> App
+    App --> Domain["Domain<br/>Taste and scoring"]
+    Data --> Domain
+    Infra --> Domain
+    classDef host fill:#153e53,color:#fff,stroke:#67d8da
+    classDef adapter fill:#48274e,color:#fff,stroke:#f4a1ca
+    classDef core fill:#513827,color:#fff,stroke:#ffc58f
+    class Web,Worker host
+    class Data,Infra adapter
+    class App,Domain core
+```
+
+### Explore the source graph
+
+![Nebula graph snapshot of Liner Notes source, tests and tooling](docs/architecture/codebase-nebula.png)
+
+This is a static Codebase Memory snapshot of commit `62a2698`, captured on
+2026-10-10. It can help you find related code, but it is not a runtime diagram
+and does not include later changes. The [snapshot notes](docs/architecture/README.md)
+explain its scope and limits.
 
 Useful project documents:
 

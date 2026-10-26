@@ -327,3 +327,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** The README repeated long local setup instructions already maintained in runbooks, and the developer map mixed stale implementation notes with current entry points.
 **Suggested improvement:** Give each README one clear audience, link to the canonical setup procedure, and verify source paths plus local links before finishing.
 **Principle:** Keep orientation in READMEs and procedures in one maintained runbook.
+
+### Observation 032: Preserve useful diagrams during a prose rewrite
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Restoring the product-flow, architecture, data and source-graph visuals after a README rewrite removed them.
+**Skill:** task-observer; ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Documentation cleanup
+**Issue:** A text-focused cleanup removed diagrams that helped readers understand the product loop, source layout and code relationships.
+**Suggested improvement:** Inventory existing visual assets and diagrams before rewriting documentation; keep the useful ones, update their labels and limits, and verify the rendered references.
+**Principle:** Simplify prose without discarding visuals that carry useful project context.

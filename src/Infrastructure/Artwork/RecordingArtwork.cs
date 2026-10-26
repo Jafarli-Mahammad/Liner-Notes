@@ -110,7 +110,7 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException) { }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or OperationCanceledException) { }
         cache.Entries.Set(key, cover, new MemoryCacheEntryOptions
         {
             Size = (cover?.Bytes.Length ?? 0) + 128, AbsoluteExpirationRelativeToNow = lifetime

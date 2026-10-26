@@ -28,10 +28,10 @@ The script runs each test project separately with Coverlet line and branch cover
 ```bash
 diagnostics/profile.sh --pid 12345 --duration 30
 diagnostics/profile.sh --pid 12345 --duration 90 --name checkout-before
-diagnostics/profile.sh --launch --duration 30 -- dotnet run --project src/Presentation/Presentation.csproj
+diagnostics/profile.sh --launch --duration 30 -- dotnet exec src/Presentation/bin/Debug/net10.0/LinerNotes.Presentation.dll
 ```
 
-Attach requires an explicit PID; the script never discovers or attaches to a process automatically. Durations are whole seconds, 13600. Launch mode records from application startup and forwards child IO. Each run retains the original `.nettrace` plus a `.speedscope.json` profile. Open the latter at [speedscope.app](https://www.speedscope.app). For a CLI hotspot report, run the printed `dotnet-trace report topN -n 20 <trace>` command.
+Attach requires an explicit PID; the script never discovers or attaches to a process automatically. Durations are whole seconds, 13600. Launch mode records from application startup and forwards child IO. Each run retains the original `.nettrace` plus a `.speedscope.json` profile. Open the latter at [speedscope.app](https://www.speedscope.app). For a CLI hotspot report, run the printed `dotnet-trace report <trace> topN -n 20` command.
 
 Sampling shows where CPU samples landed. It does not establish request latency or prove a regression by itself.
 

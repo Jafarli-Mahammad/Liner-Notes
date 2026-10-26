@@ -25,6 +25,8 @@ if (!File.Exists("src/Presentation/Presentation.csproj"))
 
 var root = Path.GetFullPath(".linernotes/live");
 var settingsPath = Path.Combine(root, "settings.json");
+var temporarySettingsPath = Path.Combine(root, "settings.initializing.json");
+var initializationMarker = Path.Combine(root, ".initializing");
 var privateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 void PrivateDirectory(string path)
 {
@@ -38,6 +40,7 @@ PrivateDirectory(root);
 
 var source = new ConfigurationBuilder().AddUserSecrets("linernotes-secrets-app-v1").Build();
 var existing = File.Exists(settingsPath);
+var recoveringInitialization = File.Exists(initializationMarker);
 var settings = existing
     ? JsonSerializer.Deserialize<Dictionary<string, string>>(await File.ReadAllTextAsync(settingsPath))!
     : new Dictionary<string, string>
@@ -84,13 +87,25 @@ await using (var connection = new NpgsqlConnection(admin.ConnectionString))
     await using var check = new NpgsqlCommand("SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = @name)", connection);
     check.Parameters.AddWithValue("name", target.Database);
     created = !(bool)(await check.ExecuteScalarAsync())!;
+    if (!created && (!existing || (!File.Exists(settings["GenerationStorage:InventoryPath"]) && !recoveringInitialization)))
+        throw new InvalidOperationException("An existing live database requires its matching private settings and inventory. Restore those files before continuing.");
     if (created)
     {
+        if (!recoveringInitialization)
+        {
+            await using var marker = new FileStream(initializationMarker, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        }
+        if (!existing)
+        {
+            var settingsOptions = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write, Share = FileShare.None };
+            if (!OperatingSystem.IsWindows()) settingsOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            await using var file = new FileStream(temporarySettingsPath, settingsOptions);
+            await JsonSerializer.SerializeAsync(file, settings, new JsonSerializerOptions { WriteIndented = true });
+            File.Move(temporarySettingsPath, settingsPath, overwrite: true);
+        }
         await using var create = new NpgsqlCommand("CREATE DATABASE liner_notes_live", connection);
         await create.ExecuteNonQueryAsync();
     }
-    else if (!existing || !File.Exists(settings["GenerationStorage:InventoryPath"]))
-        throw new InvalidOperationException("An existing live database requires its matching private settings and inventory. Restore those files before continuing.");
 }
 
 var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings.Select(pair => new KeyValuePair<string, string?>(pair.Key, pair.Value))).Build();
@@ -99,7 +114,7 @@ await using var services = new ServiceCollection().AddLogging().AddApplication()
 await using (var scope = services.CreateAsyncScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (created) await database.Database.MigrateAsync();
+    if (created || recoveringInitialization) await database.Database.MigrateAsync();
     else if ((await database.Database.GetPendingMigrationsAsync()).Any())
         throw new InvalidOperationException("The retained live database needs an explicit migration with writers stopped and a backup.");
     if (await database.Set<CatalogPublication>().AnyAsync(item => item.Origin != CatalogOrigin.Public))
@@ -107,7 +122,7 @@ await using (var scope = services.CreateAsyncScope())
 }
 await using (var scope = services.CreateAsyncScope())
 {
-    if (created)
+    if (created || recoveringInitialization)
     {
         var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
         await using var lease = await store.AcquireBatchAsync();
@@ -116,11 +131,5 @@ await using (var scope = services.CreateAsyncScope())
     }
     else await scope.ServiceProvider.GetRequiredService<MaintainDiscoveryStorage>().ExecuteAsync(default);
 }
-if (!existing)
-{
-    var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
-    if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-    await using var file = new FileStream(settingsPath, options);
-    await JsonSerializer.SerializeAsync(file, settings, new JsonSerializerOptions { WriteIndented = true });
-}
+File.Delete(initializationMarker);
 Console.WriteLine("Persistent live runtime initialized. No synthetic data was inserted. Run bash scripts/run_live.sh and open http://localhost:5080/.");

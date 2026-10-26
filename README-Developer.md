@@ -297,6 +297,14 @@ dotnet ef database update --project src/DataAccess/DataAccess.csproj \
   --startup-project src/Presentation/Presentation.csproj --context AppDbContext
 ```
 
+The `Liner Notes` IDE profile uses a separate `liner_notes_live` database and
+private runtime settings. After configuring User Secrets and starting the local
+PostgreSQL service, initialize that profile once:
+
+```bash
+dotnet run --file scripts/setup_local_live.cs --no-cache -- --initialize
+```
+
 The IDE database uses the separate `linernotes-ide` Compose project and named
 volume, and is published only on `127.0.0.1:55441`. Stop it while preserving data
 with `docker compose --project-name linernotes-ide --env-file .env.ide.local -f compose.yaml -f compose.ide.yaml down`.

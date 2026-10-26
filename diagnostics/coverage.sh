@@ -50,8 +50,8 @@ done
 shopt -s nullglob
 reports=("$run_dir"/*/coverage.cobertura.xml)
 (("${#reports[@]}" > 0)) || die "Coverlet produced no Cobertura reports."
-report_args=()
-for f in "${reports[@]}"; do report_args+=("-reports:$f"); done
+report_list="$(IFS=';'; printf '%s' "${reports[*]}")"
+report_args=("-reports:$report_list")
 reportgenerator "${report_args[@]}" "-targetdir:$run_dir/report" "-reporttypes:Html;Cobertura;TextSummary"
 printf '\nCoverage summary\n'
 if [[ -f "$run_dir/report/Summary.txt" ]]; then

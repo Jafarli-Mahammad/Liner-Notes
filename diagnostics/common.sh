@@ -14,10 +14,10 @@ valid_pid() {
 safe_name() { [[ "${1:-}" =~ ^[A-Za-z0-9._-]+$ ]] || die "Invalid name: use letters, numbers, dot, underscore, hyphen."; }
 resolve_path() { if [[ "$1" = /* ]]; then printf '%s\n' "$1"; else printf '%s/%s\n' "$REPO_ROOT" "$1"; fi; }
 reportgenerator() {
-  if [[ -f "$REPO_ROOT/.config/dotnet-tools.json" ]] && dotnet tool list --local 2>/dev/null | rg -q 'dotnet-reportgenerator-globaltool'; then
-    dotnet tool run reportgenerator "$@"
+  if [[ -f "$REPO_ROOT/.config/dotnet-tools.json" ]] && (cd "$REPO_ROOT" && dotnet tool list --local 2>/dev/null | rg -q 'dotnet-reportgenerator-globaltool'); then
+    (cd "$REPO_ROOT" && dotnet tool run reportgenerator "$@")
   elif command -v reportgenerator >/dev/null 2>&1; then
-    reportgenerator "$@"
+    command reportgenerator "$@"
   else
     die "ReportGenerator unavailable. Run dotnet tool restore or install its global tool."
   fi

@@ -49,5 +49,17 @@ public sealed partial class ListenBrainzRecommendationProvider : IPublicRecordin
         return results;
     }
 
-    private static bool Text(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 256 && !value.Any(char.IsControl);
+    private static bool Text(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 256 || value.Any(char.IsControl)) return false;
+        try
+        {
+            _ = CatalogText.Normalize(value);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
 }

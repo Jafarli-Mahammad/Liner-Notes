@@ -37,7 +37,14 @@ check dotnet-trace dotnet-trace
 check dotnet-counters dotnet-counters
 check dotnet-dump dotnet-dump
 check dotnet-gcdump dotnet-gcdump
-check reportgenerator dotnet-reportgenerator-globaltool
+if [[ -f "$REPO_ROOT/.config/dotnet-tools.json" ]] && (cd "$REPO_ROOT" && dotnet tool list --local 2>/dev/null | rg -q 'dotnet-reportgenerator-globaltool'); then
+  printf 'OK reportgenerator (repository local tool)\n'
+elif command -v reportgenerator >/dev/null 2>&1; then
+  printf 'OK reportgenerator (%s)\n' "$(command -v reportgenerator)"
+else
+  printf 'MISSING reportgenerator (dotnet-reportgenerator-globaltool)\n'
+  failures=$((failures + 1))
+fi
 if [[ "$(uname -s)" == Linux ]]; then printf 'INFO    Linux attach may need same-user access; dumps may be restricted by ptrace policy.\n'; fi
 if command -v shellcheck >/dev/null 2>&1; then
   printf 'OK      shellcheck              %s\n' "$(shellcheck --version | sed -n '2p')"

@@ -39,16 +39,17 @@ else
   valid_pid "$pid"
 fi
 dir="$RESULTS_DIR/profile-$name"
-[[ ! -e "$dir" ]] || die "Output already exists: $dir"\nmkdir -p -- "$dir"
+[[ ! -e "$dir" ]] || die "Output already exists: $dir"
+mkdir -p -- "$dir"
 trace="$dir/$name.nettrace"
 duration_arg="$(printf '%02d:%02d:%02d:%02d' "$((duration / 86400))" "$((duration / 3600 % 24))" "$((duration / 60 % 60))" "$((duration % 60))")"
 args=(collect --duration "$duration_arg" --profile cpu-sampling --format NetTrace --output "$trace")
 if [[ "$launch" == true ]]; then
-  dotnet-trace "${args[@]}" -- "${command_args[@]}"
+  dotnet-trace "${args[@]}" --show-child-io -- "${command_args[@]}"
 else
   dotnet-trace "${args[@]}" --process-id "$pid"
 fi
 [[ -s "$trace" ]] || die "No trace was written; target may have exited or collection failed."
 dotnet-trace convert --format Speedscope --output "$dir/$name.speedscope.json" "$trace"
 printf '\nOriginal trace: %s\nSpeedscope: %s\n' "$trace" "$dir/$name.speedscope.json"
-printf 'Hotspot summary: dotnet-trace report topN -n 20 %q\n' "$trace"
+printf 'Hotspot summary: dotnet-trace report %q topN -n 20\n' "$trace"

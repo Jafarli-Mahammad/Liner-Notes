@@ -1,0 +1,25 @@
+name: Feature request
+description: Describe a user problem and the outcome that would help.
+title: "Feature: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation and who it affects.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a useful outcome look like?
+      description: Focus on the result, not a prescribed implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Constraints or related work
+      description: Link related issues or explain relevant constraints. Do not include credentials or personal listening data.
+    validations:
+      required: false

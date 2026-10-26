@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a problem that can be reproduced.
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: Do not include passwords, API keys, personal listening history, or unredacted account data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Keep the report focused on one problem.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest set of steps that shows the problem.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, app revision, and provider if relevant. Do not include account identifiers or private listening data.
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant logs or checks
+      description: Include only redacted output you are comfortable sharing.
+    validations:
+      required: false

@@ -76,6 +76,8 @@ work are tracked in [PROGRESS.md](PROGRESS.md).
 
 ## For developers
 
+New contributors can start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
 
 Start with the [developer guide](README-Developer.md) for setup, architecture,
 feature entry points and verification commands. The ASP.NET Core host is in

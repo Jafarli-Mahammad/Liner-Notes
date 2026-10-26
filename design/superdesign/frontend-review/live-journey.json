@@ -1,0 +1,19 @@
+{
+  "pickCount": 5,
+  "localCleanupWarning": true,
+  "checks": [
+    "Real catalog artist selected",
+    "Guest creation and taste persistence through real API",
+    "Real provider-backed recommendations and stored explanations",
+    "Real feedback save",
+    "Persisted batch history and feedback",
+    "Real guest export",
+    "Real registration preserving guest batch and taste",
+    "Real account export",
+    "Real login restores owned discoveries",
+    "Disposable account deleted through existing endpoint"
+  ],
+  "pageExceptions": [],
+  "accountCleanupNeeded": false,
+  "lastRoute": "/account"
+}

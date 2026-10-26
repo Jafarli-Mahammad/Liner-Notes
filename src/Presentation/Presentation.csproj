@@ -4,6 +4,8 @@
     <RootNamespace>LinerNotes.Presentation</RootNamespace>
     <AssemblyName>LinerNotes.Presentation</AssemblyName>
     <UserSecretsId>linernotes-secrets-app-v1</UserSecretsId>
+    <!-- Frontend sources/tooling are not server content; build:local supplies wwwroot assets. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);ClientApp/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

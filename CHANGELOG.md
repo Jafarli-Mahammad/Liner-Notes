@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add the Superdesign-based React Home, Discover, Your Taste and History pages,
+  with the approved logo, locally hosted fonts, responsive layouts and accessible
+  loading, empty, error and artwork-placeholder states.
+- Connect the personal interface to existing guest/account APIs: catalog search,
+  taste persistence, recommendation jobs, stored explanations, feedback, history,
+  registration/login, guest import, data export and deletion. Preserve server
+  security and surface partial account-cleanup failures accurately.
+- Remove the temporary Home sample-feed mode; Home always reads the real public
+  recommendations API. Keep controlled visual fixtures exclusively in tests.
+- Add a direct YouTube search beside Spotify and Apple Music on featured picks,
+  with subtle platform-tinted link backgrounds that preserve button dimensions.
 - Show cached album covers on discoveries and Recent recommendations, resolving
   recording MBIDs through ListenBrainz and falling back from release artwork to
   release-group artwork, then a placeholder. Warm images independently of page

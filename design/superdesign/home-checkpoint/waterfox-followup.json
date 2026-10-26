@@ -1,0 +1,37 @@
+{
+  "reportedProblem": "Black page in Waterfox at http://localhost:5080/",
+  "installedWaterfoxVersion": "6.7.6",
+  "freshSeparateHeadlessProfile": "Home renders with logo, navigation and truthful empty public feed",
+  "activeUserProfile": "Reported black page remains unverified; waiting for hard-refresh/console evidence",
+  "userProfileModified": false,
+  "applicationCodeChanged": false,
+  "chromiumLoopbackChecks": [
+    {
+      "host": "localhost",
+      "status": 200,
+      "heading": "Recent recommendations",
+      "root": 3,
+      "background": "rgb(250, 249, 246)",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "host": "127.0.0.1",
+      "status": 200,
+      "heading": "Recent recommendations",
+      "root": 3,
+      "background": "rgb(250, 249, 246)",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "host": "[::1]",
+      "status": 200,
+      "heading": "Recent recommendations",
+      "root": 3,
+      "background": "rgb(250, 249, 246)",
+      "errors": [],
+      "failed": []
+    }
+  ]
+}

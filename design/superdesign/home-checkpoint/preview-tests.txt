@@ -1,0 +1,15 @@
+
+> liner-notes-frontend@0.1.0 test
+> playwright test
+
+
+Running 4 tests using 1 worker
+
+(node:1130936) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node-22 --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/preview.spec.ts:5:3 › temporary external preview feed at 390px (2.1s)
+  ✓  2 tests/preview.spec.ts:5:3 › temporary external preview feed at 768px (2.3s)
+  ✓  3 tests/preview.spec.ts:5:3 › temporary external preview feed at 1440px (2.3s)
+  ✓  4 tests/preview.spec.ts:33:1 › content comes from removable JSON rather than components (418ms)
+
+  4 passed (8.8s)

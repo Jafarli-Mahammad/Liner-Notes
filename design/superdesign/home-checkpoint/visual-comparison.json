@@ -1,0 +1,218 @@
+[
+  {
+    "width": 390,
+    "scope": "Production build with explicitly intercepted reference-only data; not live recommendations",
+    "reference": {
+      "logo": {
+        "x": 20,
+        "y": 0.328125,
+        "width": 190,
+        "height": 63.328125
+      },
+      "heading": {
+        "x": 20,
+        "y": 97,
+        "width": 339.03125,
+        "height": 36
+      },
+      "firstFrame": {
+        "x": 20,
+        "y": 153,
+        "width": 350,
+        "height": 350
+      },
+      "callout": {
+        "x": 20,
+        "y": 2081,
+        "width": 350,
+        "height": 222.25
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "30px",
+        "weight": "700",
+        "tracking": "-1.35px"
+      },
+      "background": "rgb(250, 249, 246)",
+      "overflow": false
+    },
+    "implementation": {
+      "logo": {
+        "x": 20,
+        "y": 0.328125,
+        "width": 190,
+        "height": 63.328125
+      },
+      "heading": {
+        "x": 20,
+        "y": 97,
+        "width": 339.03125,
+        "height": 36
+      },
+      "firstFrame": {
+        "x": 20,
+        "y": 153,
+        "width": 350,
+        "height": 350
+      },
+      "callout": {
+        "x": 20,
+        "y": 2081,
+        "width": 350,
+        "height": 222.25
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "30px",
+        "weight": "700",
+        "tracking": "-1.35px"
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "overflow": false
+    }
+  },
+  {
+    "width": 768,
+    "scope": "Production build with explicitly intercepted reference-only data; not live recommendations",
+    "reference": {
+      "logo": {
+        "x": 32,
+        "y": -6.328125,
+        "width": 230,
+        "height": 76.65625
+      },
+      "heading": {
+        "x": 32,
+        "y": 97,
+        "width": 393.046875,
+        "height": 40
+      },
+      "firstFrame": {
+        "x": 32,
+        "y": 157,
+        "width": 342,
+        "height": 342
+      },
+      "callout": {
+        "x": 32,
+        "y": 1121,
+        "width": 704,
+        "height": 138
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "36px",
+        "weight": "700",
+        "tracking": "-1.62px"
+      },
+      "background": "rgb(250, 249, 246)",
+      "overflow": false
+    },
+    "implementation": {
+      "logo": {
+        "x": 32,
+        "y": -6.328125,
+        "width": 230,
+        "height": 76.65625
+      },
+      "heading": {
+        "x": 32,
+        "y": 97,
+        "width": 393.046875,
+        "height": 40
+      },
+      "firstFrame": {
+        "x": 32,
+        "y": 157,
+        "width": 342,
+        "height": 342
+      },
+      "callout": {
+        "x": 32,
+        "y": 1121,
+        "width": 704,
+        "height": 138
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "36px",
+        "weight": "700",
+        "tracking": "-1.62px"
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "overflow": false
+    }
+  },
+  {
+    "width": 1440,
+    "scope": "Production build with explicitly intercepted reference-only data; not live recommendations",
+    "reference": {
+      "logo": {
+        "x": 102,
+        "y": -6.328125,
+        "width": 230,
+        "height": 76.65625
+      },
+      "heading": {
+        "x": 102,
+        "y": 113,
+        "width": 393.046875,
+        "height": 40
+      },
+      "firstFrame": {
+        "x": 102,
+        "y": 173,
+        "width": 291,
+        "height": 291
+      },
+      "callout": {
+        "x": 102,
+        "y": 644,
+        "width": 1236,
+        "height": 114
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "36px",
+        "weight": "700",
+        "tracking": "-1.62px"
+      },
+      "background": "rgb(250, 249, 246)",
+      "overflow": false
+    },
+    "implementation": {
+      "logo": {
+        "x": 102,
+        "y": -6.328125,
+        "width": 230,
+        "height": 76.65625
+      },
+      "heading": {
+        "x": 102,
+        "y": 113,
+        "width": 393.046875,
+        "height": 40
+      },
+      "firstFrame": {
+        "x": 102,
+        "y": 173,
+        "width": 291,
+        "height": 291
+      },
+      "callout": {
+        "x": 102,
+        "y": 644,
+        "width": 1236,
+        "height": 114
+      },
+      "headingStyle": {
+        "fontFamily": "\"DM Sans\", sans-serif",
+        "size": "36px",
+        "weight": "700",
+        "tracking": "-1.62px"
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "overflow": false
+    }
+  }
+]

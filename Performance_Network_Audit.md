@@ -620,7 +620,11 @@ Saving onboarding/taste resolves selected catalog IDs one at a time. Reading a c
 
 ### P12 — Public evidence publication scans cache-wide quota totals
 
-Status: **structural database work; latency and query plans unmeasured**. Priority: medium. Location: [PublicEvidenceStore.cs:48](src/DataAccess/Persistence/Repositories/PublicEvidenceStore.cs#L48); caller: `SharedPublicEvidence.GetAsync` publication through coordinated write admission.
+Status: **structural datab4. Grouping Rules
+
+A group, called a basic rectangle in your lecture, must satisfy these rules:
+
+    Only group cells containing 1.ase work; latency and query plans unmeasured**. Priority: medium. Location: [PublicEvidenceStore.cs:48](src/DataAccess/Persistence/Repositories/PublicEvidenceStore.cs#L48); caller: `SharedPublicEvidence.GetAsync` publication through coordinated write admission.
 
 Every successful publication computes `SumAsync(StoredBytes)` and `CountAsync` over all `PublicEvidenceCache` entries before quota decisions. The current indexes cover key and expiry, without a maintained aggregate for these totals. At E entries, each publication requests cache-wide aggregate work, even when its own payload is small; the configured maximum permits 50,000 entries. Eviction additionally selects/sorts up to 100 victims. This happens inside the global admitted mutation, so aggregate time also extends its lock/transaction lifetime. It is separate from P01's filesystem scans.
 

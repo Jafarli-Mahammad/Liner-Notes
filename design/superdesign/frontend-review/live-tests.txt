@@ -1,0 +1,12 @@
+
+> liner-notes-frontend@0.1.0 test
+> playwright test --grep actual provider-backed
+
+
+Running 1 test using 1 worker
+
+(node:1214689) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node-22 --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/live.spec.ts:6:1 › actual provider-backed guest and account journey (19.3s)
+
+  1 passed (20.7s)

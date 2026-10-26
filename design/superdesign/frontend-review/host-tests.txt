@@ -1,0 +1,4 @@
+Test run for /home/mahammadjafarli/source/repos/Liner Notes/tests/Presentation.Tests/bin/Debug/net10.0/LinerNotes.Presentation.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    13, Skipped:     0, Total:    13, Duration: 1 s - LinerNotes.Presentation.Tests.dll (net10.0)

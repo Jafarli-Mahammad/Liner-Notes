@@ -1,0 +1,144 @@
+{
+  "scope": "Single cold local Chromium navigation, actual public API, no CPU/network throttling; not a production benchmark",
+  "browser": "155.0.8059.12",
+  "viewport": "1440×1000",
+  "responseStatus": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "cache-control": "no-cache",
+    "content-length": "747",
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+    "content-type": "text/html",
+    "date": "Mon, 26 Oct 2026 18:43:34 GMT",
+    "etag": "\"1dd6579370c89eb\"",
+    "last-modified": "Mon, 26 Oct 2026 18:38:38 GMT",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY"
+  },
+  "assets": [
+    {
+      "file": "Account-dM_ubMoR.js",
+      "bytes": 9695,
+      "gzipBytes": 3512
+    },
+    {
+      "file": "Discover-CVNFMXNr.js",
+      "bytes": 10410,
+      "gzipBytes": 3824
+    },
+    {
+      "file": "History-DXqGfILu.js",
+      "bytes": 4276,
+      "gzipBytes": 1721
+    },
+    {
+      "file": "Taste-6iDHmpIt.js",
+      "bytes": 15676,
+      "gzipBytes": 5315
+    },
+    {
+      "file": "index-CwDPsZTK.js",
+      "bytes": 335353,
+      "gzipBytes": 104680
+    },
+    {
+      "file": "index-dWXK6TQc.css",
+      "bytes": 27613,
+      "gzipBytes": 5817
+    },
+    {
+      "file": "models-CuG_3uaR.js",
+      "bytes": 191,
+      "gzipBytes": 165
+    },
+    {
+      "file": "useRetryDelay-Dm_mXI3n.js",
+      "bytes": 380,
+      "gzipBytes": 269
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:5080/",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/index-dWXK6TQc.css",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/inter-latin-Dx4kXJAl.woff2",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/liner-notes-logo-DMs1Hexu.png",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/api/discovery/recent?limit=4",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/dm-sans-latin-Bf69Tn_J.woff2",
+      "method": "GET"
+    }
+  ],
+  "measurements": {
+    "cls": 0.04996094521604938,
+    "lcp": 124,
+    "longTasks": 0,
+    "paints": [
+      {
+        "name": "first-paint",
+        "milliseconds": 52
+      },
+      {
+        "name": "first-contentful-paint",
+        "milliseconds": 52
+      }
+    ],
+    "resources": [
+      {
+        "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js",
+        "milliseconds": 13.899999998509884,
+        "transferSize": 335653
+      },
+      {
+        "url": "http://localhost:5080/home-assets/index-dWXK6TQc.css",
+        "milliseconds": 10.799999997019768,
+        "transferSize": 27913
+      },
+      {
+        "url": "http://localhost:5080/home-assets/inter-latin-Dx4kXJAl.woff2",
+        "milliseconds": 16.69999999552965,
+        "transferSize": 48556
+      },
+      {
+        "url": "http://localhost:5080/home-assets/liner-notes-logo-DMs1Hexu.png",
+        "milliseconds": 2.7000000029802322,
+        "transferSize": 436708
+      },
+      {
+        "url": "http://localhost:5080/api/discovery/recent?limit=4",
+        "milliseconds": 5.200000002980232,
+        "transferSize": 330
+      },
+      {
+        "url": "http://localhost:5080/home-assets/dm-sans-latin-Bf69Tn_J.woff2",
+        "milliseconds": 17.19999999552965,
+        "transferSize": 63024
+      },
+      {
+        "url": "http://localhost:5080/favicon.ico",
+        "milliseconds": 1.4000000059604645,
+        "transferSize": 300
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "scope": "Home checkpoint only",
+  "referenceDraft": "079fdf42-6283-4cec-b55c-8548658b3329",
+  "logoSha256": "e013aeb35429d0fb80707c9005d2657183023b5b4b8a64010d9244d9e3b535d7",
+  "allDirectDependenciesExactlyLocked": true,
+  "referenceGeometryEqualAtWidths": [
+    390,
+    768,
+    1440
+  ],
+  "geometryChecked": [
+    "logo",
+    "heading",
+    "firstFrame",
+    "callout"
+  ],
+  "headingFontMetricsEqual": true,
+  "legacyDocumentPreservedExceptEntryBridge": true,
+  "browserTestsPassed": 18,
+  "focusedDotnetTestsPassed": 11,
+  "backendSourceChanged": false,
+  "committed": false
+}

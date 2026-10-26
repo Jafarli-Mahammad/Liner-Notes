@@ -291,3 +291,27 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Source-head restore and container checks passed, while the PR merge inherited a malformed dependency lock from its target branch. NU1510 warnings in the excerpt distracted from the actual NU1004 failure.
 **Suggested improvement:** Confirm which revision each job checks out, reproduce that merge in a disposable tree, and check lock-file JSON for duplicate keys before weakening locked restore or removing dependencies.
 **Principle:** A passing branch-head check does not validate the code that a merge-based PR workflow builds.
+
+### Observation 029: Verify PR refs separately after rewriting a branch
+
+**Status:** OPEN
+**Date:** 2026-10-19
+**Session context:** Replacing a PR branch history to remove flagged historical commits.
+**Skill:** task-observer
+**Type:** open-source
+**Phase/Area:** GitHub PR history and security checks
+**Issue:** Force-updating the source branch did not update the closed PR's recorded head SHA or clear its failed GitGuardian check. A new PR scan was not created by pushing a branch, and this environment had SSH push access but no GitHub API write credential.
+**Suggested improvement:** After a history rewrite, verify both the remote branch SHA and the PR head/state through GitHub's API. Treat a clean branch history, an open PR, and passing secret-scanning checks as separate states; confirm API write access before promising PR creation or incident resolution.
+**Principle:** Branch refs, PR refs, and security incidents have independent lifecycle state.
+
+### Observation 030: Validate diagnostic flags against installed tools
+
+**Status:** OPEN
+**Date:** 2026-10-24
+**Session context:** Building reusable Fedora .NET diagnostic scripts.
+**Skill:** task-observer; diagnostics scripting
+**Type:** open-source
+**Phase/Area:** CLI compatibility and bounded collection
+**Issue:** A remembered duration option for dotnet-counters was absent from the installed version, which would have made the memory monitor fail after launch.
+**Suggested improvement:** Inspect each installed tool's help output before composing commands. Use an external timeout with graceful interruption when the tool does not provide a duration option, and verify one representative invocation before documenting it.
+**Principle:** Diagnostic automation should bind flags and shutdown behavior to the actual installed CLI contract.

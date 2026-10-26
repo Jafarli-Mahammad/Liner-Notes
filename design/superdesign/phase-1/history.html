@@ -1,0 +1,294 @@
+<!DOCTYPE html><html lang="en" class="scroll-smooth"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="view-transition" content="same-origin">
+<title>History — Liner Notes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<link rel="prefetch" href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/1c3494b2-a972-4d0b-9686-dd82a6495693" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/01873523-0319-4c75-853a-74c7fe37e0c6" as="document">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,700;9..40,800&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --surface-main: #FAF9F6;
+    --surface-card: #FFFFFF;
+    --ink-main: #18211F;
+    --ink-secondary: #626B69;
+    --ink-subtle: #78817D;
+    --outline: #E6E9E4;
+    --accent-coral: #FF674A;
+    --accent-coral-ink: #CF4C30;
+    --accent-mint: #C9F0D9;
+    --accent-honey: #F9DB8B;
+    --accent-lilac: #DCCFFD;
+    --accent-blue: #BBDCE9;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--surface-main);
+    color: var(--ink-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: -0.045em;
+  }
+
+  .editorial-meta {
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-secondary);
+    font-weight: 600;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 24px rgba(24, 33, 31, 0.04);
+  }
+
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(24, 33, 31, 0.08);
+  }
+
+  .image-zoom img {
+    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .image-zoom:hover img {
+    transform: scale(1.025);
+  }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--accent-coral-ink);
+    outline-offset: 3px;
+  }
+
+  @view-transition { navigation: auto; }
+  ::view-transition { background-color: var(--surface-main); }
+
+  ::view-transition-old(main-nav),
+  ::view-transition-new(main-nav) {
+      animation: none;
+      mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(main-content) {
+      animation: 0.25s ease-out both fade-out;
+  }
+  ::view-transition-new(main-content) {
+      animation: 0.25s ease-in 0.1s both fade-in;
+  }
+
+  @keyframes fade-out {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(0.98); }
+  }
+  @keyframes fade-in {
+      from { opacity: 0; transform: scale(1.02); }
+      to { opacity: 1; transform: scale(1); }
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift, .image-zoom img, * { transition: none !important; animation: none !important; }
+    html { scroll-behavior: auto !important; }
+  }
+</style>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          surface: {
+            main: '#FAF9F6',
+            card: '#FFFFFF'
+          },
+          ink: {
+            main: '#18211F',
+            secondary: '#626B69',
+            subtle: '#78817D'
+          },
+          outline: '#E6E9E4',
+          accent: {
+            coral: '#FF674A',
+            coralInk: '#CF4C30',
+            mint: '#C9F0D9',
+            honey: '#F9DB8B',
+            lilac: '#DCCFFD',
+            blue: '#BBDCE9'
+          }
+        }
+      }
+    }
+  }
+</script>
+</head>
+<body>
+  <div class="min-h-screen bg-surface-main text-ink-main pb-12">
+    <!-- Navigation -->
+    <nav style="view-transition-name: main-nav" class="sticky top-0 z-40 bg-surface-main border-b border-outline/50">
+      <div class="max-w-[1380px] mx-auto px-5 md:px-8 lg:px-[72px] h-16 flex items-center justify-between">
+        <div class="flex items-center gap-10">
+          <a href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" id="nav-brand" aria-label="Liner Notes home" class="flex items-center">
+            <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png" alt="Liner Notes" class="w-[190px] md:w-[230px] h-auto" decoding="async">
+          </a>
+          <div class="hidden md:flex items-center gap-8">
+            <a href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" id="nav-home" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">Home</a>
+            <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="nav-discover" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">Discover</a>
+            <a href="https://p.superdesign.dev/draft/1c3494b2-a972-4d0b-9686-dd82a6495693" id="nav-taste" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">Your taste</a>
+            <a href="https://p.superdesign.dev/draft/01873523-0319-4c75-853a-74c7fe37e0c6" id="nav-history" class="text-sm font-medium text-ink-main border-b-2 border-accent-coral pb-1">History</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <a href="#" id="nav-signin" class="text-sm font-medium text-ink-main hover:text-accent-coral transition-colors hidden sm:block">
+            Sign in
+          </a>
+          <button id="nav-menu-btn" type="button" aria-label="Open navigation" class="md:hidden text-ink-main min-w-11 min-h-11 flex items-center justify-center">
+            <iconify-icon icon="lucide:menu" class="text-2xl"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main style="view-transition-name: main-content" class="max-w-[1380px] mx-auto px-5 md:px-8 lg:px-[72px] pt-9 lg:pt-11">
+
+      <!-- Header -->
+      <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+          <div class="editorial-meta text-accent-coralInk mb-3">
+            Past finds
+          </div>
+          <h1 class="text-4xl lg:text-5xl font-display font-bold text-ink-main">
+            Discovery history
+          </h1>
+        </div>
+        <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="btn-header-discover" class="bg-surface-card border border-outline hover:border-ink-main text-ink-main px-6 py-3 rounded-xl font-medium transition-colors inline-flex items-center justify-center gap-2 max-w-fit">
+          Discover again
+          <iconify-icon icon="lucide:arrow-right" class="text-sm"></iconify-icon>
+        </a>
+      </header>
+
+      <!-- History List -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+
+        <!-- Batch 1 -->
+        <article class="bg-surface-card border border-outline rounded-3xl p-6 md:p-8 card-shadow hover-lift flex flex-col">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-xl font-display font-bold text-ink-main mb-1">October 24, 2026</h2>
+              <p class="text-sm text-ink-secondary">04 recommendations</p>
+            </div>
+            <span class="px-3 py-1 bg-surface-main border border-outline rounded-full text-xs font-medium text-ink-secondary">
+              Local guest session
+            </span>
+          </div>
+
+          <div class="flex-1">
+            <div class="flex flex-wrap gap-4 mb-6">
+               <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-ink-main/5 border border-outline">
+                  <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg" alt="Heaven or Las Vegas" loading="lazy" decoding="async" class="object-cover w-full h-full">
+               </div>
+               <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-ink-main/5 border border-outline">
+                  <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/depeche-mode-violator/cover-violator.jpg" alt="Violator" loading="lazy" decoding="async" class="object-cover w-full h-full">
+               </div>
+               <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-ink-main/5 border border-outline">
+                  <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/beach-house-bloom/cover-bloom.jpg" alt="Bloom" loading="lazy" decoding="async" class="object-cover w-full h-full">
+               </div>
+            </div>
+
+            <div class="space-y-3 mb-8">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-ink-main truncate pr-4">Heaven or Las Vegas <span class="text-ink-secondary font-normal">· Cocteau Twins</span></span>
+                <span class="flex items-center gap-1 text-accent-coralInk"><iconify-icon icon="lucide:heart" class="text-xs"></iconify-icon> Liked</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-ink-main truncate pr-4">Violator <span class="text-ink-secondary font-normal">· Depeche Mode</span></span>
+                <span class="flex items-center gap-1 text-ink-secondary"><iconify-icon icon="lucide:check" class="text-xs"></iconify-icon> Known</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-ink-main truncate pr-4">Bloom <span class="text-ink-secondary font-normal">· Beach House</span></span>
+                <span class="flex items-center gap-1 text-ink-subtle px-2 bg-surface-main rounded-md">8/10</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-5 border-t border-outline/60 mt-auto">
+            <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="btn-view-batch-1" class="text-sm font-semibold text-accent-coralInk hover:text-accent-coral inline-flex items-center transition-colors">
+              View recommendations <iconify-icon icon="lucide:arrow-right" class="ml-1"></iconify-icon>
+            </a>
+          </div>
+        </article>
+
+        <!-- Batch 2 -->
+        <article class="bg-surface-card border border-outline rounded-3xl p-6 md:p-8 card-shadow hover-lift flex flex-col">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-xl font-display font-bold text-ink-main mb-1">October 12, 2026</h2>
+              <p class="text-sm text-ink-secondary">05 recommendations</p>
+            </div>
+             <span class="px-3 py-1 bg-surface-main border border-outline rounded-full text-xs font-medium text-ink-secondary">
+              Local guest session
+            </span>
+          </div>
+
+          <div class="flex-1">
+            <div class="flex flex-wrap gap-4 mb-6">
+               <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-ink-main/5 border border-outline">
+                  <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/brian-eno-music-for-airports/cover-music-for-airports.jpg" alt="Ambient 1: Music for Airports" loading="lazy" decoding="async" class="object-cover w-full h-full">
+               </div>
+            </div>
+
+            <div class="space-y-3 mb-8">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-ink-main truncate pr-4">Ambient 1: Music for Airports <span class="text-ink-secondary font-normal">· Brian Eno</span></span>
+                <span class="flex items-center gap-1 text-ink-secondary"><iconify-icon icon="lucide:check" class="text-xs"></iconify-icon> Known</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-ink-main truncate pr-4">SAW 85-92 <span class="text-ink-secondary font-normal">· Aphex Twin</span></span>
+                <span class="flex items-center gap-1 text-ink-secondary"><iconify-icon icon="lucide:x" class="text-xs"></iconify-icon> Passed</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-5 border-t border-outline/60 mt-auto">
+            <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="btn-view-batch-2" class="text-sm font-semibold text-accent-coralInk hover:text-accent-coral inline-flex items-center transition-colors">
+              View recommendations <iconify-icon icon="lucide:arrow-right" class="ml-1"></iconify-icon>
+            </a>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- Guest Notice -->
+      <div class="mt-12 bg-surface-main border border-outline rounded-2xl p-6 text-center max-w-2xl mx-auto">
+        <iconify-icon icon="lucide:history" class="text-3xl text-ink-subtle mb-3"></iconify-icon>
+        <h3 class="text-lg font-display font-bold text-ink-main mb-2">Browsing as a guest</h3>
+        <p class="text-sm text-ink-secondary mb-4">
+          Guest history is kept on this device. Creating an account lets you keep your saved discoveries across devices.
+        </p>
+        <a href="#" id="btn-guest-signin" class="inline-flex px-5 py-2.5 bg-surface-card border border-outline hover:border-ink-main rounded-xl text-sm font-medium text-ink-main transition-colors">
+          Create free account
+        </a>
+      </div>
+
+    </main>
+  </div>
+</body></html>

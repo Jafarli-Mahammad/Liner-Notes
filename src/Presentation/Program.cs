@@ -12,6 +12,22 @@ using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
+{
+    var settingsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,
+        "..", "..", ".linernotes", "live", "settings.json"));
+    if (!File.Exists(settingsPath))
+        throw new InvalidOperationException("Local live settings are missing. Run bash scripts/run_live.sh once from the repository root.");
+    builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
+    if (builder.Configuration["Generation:Origin"] != "Live" ||
+        !builder.Configuration.GetValue<bool>("Generation:LiveEnabled") ||
+        builder.Configuration["ListenBrainz:Mode"] != "LiveOnly" ||
+        !builder.Configuration.GetValue<bool>("ListenBrainz:LiveUseApproved") ||
+        !builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled") ||
+        !builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+        throw new InvalidOperationException("The local live profile requires live provider configuration.");
+}
+
 // Hosting logs run before middleware: omit query-bearing request start/finish messages.
 if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled") || builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
     builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
@@ -37,6 +53,7 @@ if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
         throw new InvalidOperationException("Concurrent guest discovery and local email capture require pending storage writer integration.");
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
+    builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
 }
 
 // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
@@ -130,7 +147,11 @@ app.Use(async (context, next) =>
 });
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+var staticFileOptions = new StaticFileOptions
+{
+    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
+};
+app.UseStaticFiles(staticFileOptions);
 
 app.UseRouting();
 app.UseCors("ConfiguredOrigins");
@@ -145,7 +166,7 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health");
 
 // Guest-first discovery SPA fallback
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFileOptions);
 
 app.Run();
 

@@ -1,0 +1,129 @@
+{
+  "retrievedAt": "2026-10-26",
+  "cliVersion": "0.14.0",
+  "projectId": "0297b205-654d-40c9-bbc2-33b2f207125b",
+  "referenceOnly": true,
+  "drafts": [
+    {
+      "file": "home.html",
+      "draftId": "079fdf42-6283-4cec-b55c-8548658b3329",
+      "bytes": 12268,
+      "sha256": "9085cd7eeae3f973a89813f239788fba2fbbc65345911808df9c6e2b0802a689",
+      "images": [
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png",
+          "alt": "Liner Notes"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg",
+          "alt": "Heaven or Las Vegas"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/depeche-mode-violator/cover-violator.jpg",
+          "alt": "Violator"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/beach-house-bloom/cover-bloom.jpg",
+          "alt": "Bloom"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/brian-eno-music-for-airports/cover-music-for-airports.jpg",
+          "alt": "Ambient 1: Music for Airports"
+        }
+      ],
+      "externalScripts": [
+        "https://cdn.tailwindcss.com",
+        "https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
+      ],
+      "downloadedSha256": "366a7fd274650cbf4b7e6720b2ff094e5110c22d1d50a98aae9d914795ccea50"
+    },
+    {
+      "file": "discover.html",
+      "draftId": "6da1a4f6-b08c-4d64-881a-d62d7bff86ed",
+      "bytes": 17278,
+      "sha256": "106c1915cd8735771b41ddd42126edf04e32acebca4ffa0d748e19ad96fe8463",
+      "images": [
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png",
+          "alt": "Liner Notes"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg",
+          "alt": "Album artwork for Heaven or Las Vegas by Cocteau Twins"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/depeche-mode-violator/cover-violator.jpg",
+          "alt": "Album artwork for Violator by Depeche Mode"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/beach-house-bloom/cover-bloom.jpg",
+          "alt": "Album artwork for Bloom by Beach House"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/brian-eno-music-for-airports/cover-music-for-airports.jpg",
+          "alt": "Album artwork for Ambient 1: Music for Airports by Brian Eno"
+        }
+      ],
+      "externalScripts": [
+        "https://cdn.tailwindcss.com",
+        "https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
+      ],
+      "downloadedSha256": "106c1915cd8735771b41ddd42126edf04e32acebca4ffa0d748e19ad96fe8463"
+    },
+    {
+      "file": "taste.html",
+      "draftId": "1c3494b2-a972-4d0b-9686-dd82a6495693",
+      "bytes": 19453,
+      "sha256": "111ed450bfbf5b3cf5e719f4a16b9681ef176f2f59a90c9e0a6c1140e0ea4fd3",
+      "images": [
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png",
+          "alt": "Liner Notes"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg",
+          "alt": "Heaven or Las Vegas"
+        }
+      ],
+      "externalScripts": [
+        "https://cdn.tailwindcss.com",
+        "https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
+      ],
+      "downloadedSha256": "0029ea6f55c324841473d95f600442c82e524b39a83c5fb19393b490b3deafb8"
+    },
+    {
+      "file": "history.html",
+      "draftId": "01873523-0319-4c75-853a-74c7fe37e0c6",
+      "bytes": 14432,
+      "sha256": "b2992e47a47d06db23f678ccc4d4b1e4716b87863bf7fb9241640a1d430a00b7",
+      "images": [
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png",
+          "alt": "Liner Notes"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg",
+          "alt": "Heaven or Las Vegas"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/depeche-mode-violator/cover-violator.jpg",
+          "alt": "Violator"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/beach-house-bloom/cover-bloom.jpg",
+          "alt": "Bloom"
+        },
+        {
+          "src": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/brian-eno-music-for-airports/cover-music-for-airports.jpg",
+          "alt": "Ambient 1: Music for Airports"
+        }
+      ],
+      "externalScripts": [
+        "https://cdn.tailwindcss.com",
+        "https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
+      ],
+      "downloadedSha256": "52a87f2c2671b809dc520cb5a96d1e0be7df6bf39e5d396d628d69fc1718db80"
+    }
+  ],
+  "normalization": "Trailing line whitespace removed locally; HTML markup, CSS and script content otherwise retained. downloadedSha256 identifies the original export."
+}

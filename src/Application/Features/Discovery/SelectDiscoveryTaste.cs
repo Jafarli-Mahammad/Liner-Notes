@@ -37,9 +37,11 @@ public sealed class SelectDiscoveryTaste(ICatalogReader catalog, IDiscoveryTaste
             signals.Add(legacy);
         }
 
+        var items = selection.CatalogRecordIds.Count == 0 ? new Dictionary<Guid, CatalogItemDto>()
+            : (await catalog.GetManyAsync(selection.CatalogRecordIds, clock.GetUtcNow(), ct)).ToDictionary(item => item.Id);
         foreach (var id in selection.CatalogRecordIds)
         {
-            var item = await catalog.GetAsync(id, clock.GetUtcNow(), ct);
+            items.TryGetValue(id, out var item);
             if (item is null && retained is not null)
             {
                 var prior = retained.FirstOrDefault(s => s.ProfileId == profileId && s.Source == TasteSignalSource.InitialSeedManual &&

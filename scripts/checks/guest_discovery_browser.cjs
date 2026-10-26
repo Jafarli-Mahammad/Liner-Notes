@@ -159,6 +159,7 @@ async function main() {
     check('registration preserves the same profile and history with weekly email opt-in off');
 
     await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await page.getByRole('button', { name: 'Sign out', exact: true }).isVisible(), 'Mobile users must be able to sign out.');
     await page.screenshot({ path: path.join(output, 'mobile-taste.png'), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     check('taste editor fits a narrow viewport');

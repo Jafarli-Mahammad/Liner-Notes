@@ -26,9 +26,13 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
         if (responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
         try
         {
-            if (Interlocked.Increment(ref sentRequests) > options.MaximumRequests)
+            if (Volatile.Read(ref sentRequests) >= options.MaximumRequests)
                 throw new GenerationStoppedException("upstream_request_limit");
             await gate.WaitAsync(request.Provider, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (responseCache.TryGetValue(cacheKey, out hit) && hit is not null) return hit;
+            if (Interlocked.Increment(ref sentRequests) > options.MaximumRequests)
+                throw new GenerationStoppedException("upstream_request_limit");
             using var message = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(root), request.RelativeUri()));
             message.Headers.UserAgent.ParseAdd(options.UserAgent);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -56,7 +60,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
                     return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live, "response_size_limit");
                 output.Write(buffer, 0, read);
             }
-            var parsed = ListenBrainzResponse.Parse(request, output.ToArray(), EvidenceOrigin.Live, clock.GetUtcNow());
+            var parsed = ListenBrainzResponse.Parse(request, output.GetBuffer().AsMemory(0, checked((int)output.Length)), EvidenceOrigin.Live, clock.GetUtcNow());
             if (!response.IsSuccessStatusCode)
                 return ListenBrainzResponse.Gap(request, EvidenceOrigin.Live,
                     response.StatusCode == HttpStatusCode.TooManyRequests ? "rate_limit" :
@@ -67,8 +71,9 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             if (parsed.Gaps.IsEmpty && response.Headers.CacheControl is not { NoStore: true } and not { NoCache: true } and not { Private: true })
             {
                 TimeSpan ttl = TimeSpan.FromSeconds(options.CacheSeconds);
-                if (response.Headers.CacheControl?.MaxAge is { } supplied && supplied < ttl) ttl = supplied;
-                if (response.Headers.CacheControl?.MaxAge is null && response.Content.Headers.Expires is { } expires)
+                var sharedLifetime = response.Headers.CacheControl?.SharedMaxAge ?? response.Headers.CacheControl?.MaxAge;
+                if (sharedLifetime is { } supplied && supplied < ttl) ttl = supplied;
+                if (sharedLifetime is null && response.Content.Headers.Expires is { } expires)
                 {
                     var lifetime = expires - (response.Headers.Date ?? clock.GetUtcNow());
                     if (lifetime < ttl) ttl = lifetime;

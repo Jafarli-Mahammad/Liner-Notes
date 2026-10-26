@@ -1,0 +1,15 @@
+{
+  "userAuthorizedTemporarySampleData": true,
+  "activeBuildMode": "design-preview",
+  "temporaryDataFile": "src/Presentation/wwwroot/home-preview/feed.json",
+  "dataEmbeddedInReact": false,
+  "databaseModified": false,
+  "publicApiResponse": {
+    "items": [],
+    "nextCursor": null
+  },
+  "normalModeTestsPassed": 18,
+  "previewTestsPassed": 4,
+  "restoreCommand": "npm run build:local",
+  "committed": false
+}

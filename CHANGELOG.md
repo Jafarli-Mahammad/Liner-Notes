@@ -1,6 +1,43 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add the Superdesign-based React Home, Discover, Your Taste and History pages,
+  with the approved logo, locally hosted fonts, responsive layouts and accessible
+  loading, empty, error and artwork-placeholder states.
+- Connect the personal interface to existing guest/account APIs: catalog search,
+  taste persistence, recommendation jobs, stored explanations, feedback, history,
+  registration/login, guest import, data export and deletion. Preserve server
+  security and surface partial account-cleanup failures accurately.
+- Remove the temporary Home sample-feed mode; Home always reads the real public
+  recommendations API. Keep controlled visual fixtures exclusively in tests.
+- Add a direct YouTube search beside Spotify and Apple Music on featured picks,
+  with subtle platform-tinted link backgrounds that preserve button dimensions.
+- Show cached album covers on discoveries and Recent recommendations, resolving
+  recording MBIDs through ListenBrainz and falling back from release artwork to
+  release-group artwork, then a placeholder. Warm images independently of page
+  requests and recommendation generation, with bounded downloads and caching.
+- Keep local discovery setup resumable after an interrupted first initialization,
+  and skip public catalog names that the catalog index cannot normalize.
+- Continue artwork warmup after rejecting oversized chunked cover responses.
+- Honor server retry delays while polling discovery jobs. Reuse public metadata
+  populated during provider pacing and avoid an extra response-body array copy.
+- Reuse invariant taste/configuration work within scoring batches and index
+  candidate aliases during merging, preserving scores, ranking and explanations.
+- Batch catalog selection and lookup-result reads, and check both account
+  eligibility conditions in one query while preserving immediate revocation.
+
+- Start the normal local website with live ListenBrainz/MusicBrainz providers,
+  a persistent dedicated database and private storage configuration. Add
+  `bash scripts/run_live.sh`, including selection of the installed pinned SDK.
+- Display the actual discovery evidence mode in the frontend.
+- Publish eligible core metadata acquired during live preparation into the public
+  catalog so real picks can appear in recipient-free Recent recommendations.
+
+- Fix the legacy taste form sending incorrect tag and weight fields to the API.
+  Show backend validation messages when saving taste, registering or signing in.
+- Keep account controls, including sign out, accessible in the mobile navigation.
+- Revalidate frontend assets so browsers load current API integration code after
+  an update instead of continuing to use cached, unversioned scripts.
 - Preserve canonical recording identity when storing onsite picks; keep recordings
   with useful recording tags even when artist tags are missing.
 - Reject weekly saves after optional taste answers change, and allow catalog

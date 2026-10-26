@@ -27,3 +27,4 @@
 **/*.eml.enc
 **/recordings/**
 **/TestResults/**
+**/.linernotes/**

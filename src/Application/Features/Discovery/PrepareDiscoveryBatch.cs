@@ -73,10 +73,10 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                 SimilarityInfluence = Influence(c)
             })).ToArray();
         var familiar = effective.FamiliarArtists.Concat(taste.FamiliarArtists).ToHashSet(StringComparer.Ordinal);
-        var scored = candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excluded.Contains))
-            .Select(c => new BaselineAPick(c.Track, week is null
-                ? scorer.ScoreForBatch(c, taste.Vector, familiar.Contains(c.Track.NormalizedArtistName), batchId, scoring)
-                : scorer.Score(c, taste.Vector, familiar.Contains(c.Track.NormalizedArtistName), week, scoring)));
+        var eligible = candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excluded.Contains));
+        var scored = week is null
+            ? scorer.ScoreForBatch(eligible, taste.Vector, familiar, batchId, scoring)
+            : scorer.Score(eligible, taste.Vector, familiar, week, scoring);
         var picks = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Rank(scored, answers, configuration.MaximumPicks);
         long bytes = 65_536;
         foreach (var pick in picks)
@@ -125,16 +125,24 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
 
     private static IReadOnlyList<HydratedCandidateTrack> Merge(IEnumerable<HydratedCandidateTrack> candidates)
     {
-        var groups = new List<List<HydratedCandidateTrack>>();
+        var groups = new Dictionary<List<HydratedCandidateTrack>, (HashSet<string> Aliases, int Order)>();
+        var byAlias = new Dictionary<string, List<HydratedCandidateTrack>>(StringComparer.Ordinal);
+        int order = 0;
         foreach (var candidate in candidates.OrderBy(c => c.Track.TrackKey, StringComparer.Ordinal))
         {
             var aliases = TrackIdentity.Aliases(candidate.Track);
-            var matches = groups.Where(g => g.Any(c => TrackIdentity.Aliases(c.Track).Intersect(aliases, StringComparer.Ordinal).Any())).ToArray();
+            var matches = aliases.Where(byAlias.ContainsKey).Select(alias => byAlias[alias]).Distinct()
+                .OrderBy(group => groups[group].Order).ToArray();
             var group = new List<HydratedCandidateTrack> { candidate };
-            foreach (var match in matches) { group.AddRange(match); groups.Remove(match); }
-            groups.Add(group);
+            var groupAliases = new HashSet<string>(aliases, StringComparer.Ordinal);
+            foreach (var match in matches)
+            {
+                group.AddRange(match); groupAliases.UnionWith(groups[match].Aliases); groups.Remove(match);
+            }
+            foreach (var alias in groupAliases) byAlias[alias] = group;
+            groups.Add(group, (groupAliases, order++));
         }
-        return groups.Select(g =>
+        return groups.Keys.Select(g =>
         {
             var first = g.OrderByDescending(c => c.TagScope == "recording").ThenByDescending(c => c.TagVector.Weights.Count).ThenBy(c => c.Track.TrackKey, StringComparer.Ordinal).First();
             return new HydratedCandidateTrack(first.Track, first.TagVector,

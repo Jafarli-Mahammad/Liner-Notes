@@ -1,0 +1,12 @@
+{
+  "retrieved": "2026-10-26",
+  "assets": {
+    "liner-notes-logo.png": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png",
+    "dm-sans-latin.woff2": "https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2",
+    "dm-sans-latin-ext.woff2": "https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZ2IHSeH.woff2",
+    "inter-latin.woff2": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "inter-latin-ext.woff2": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "DM-Sans-OFL.txt": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt",
+    "Inter-OFL.txt": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/OFL.txt"
+  }
+}

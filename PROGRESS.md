@@ -6,7 +6,114 @@ Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data 
 
 Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).
 
+### Recommendation-quality concern — 2026-10-26
+
+The developer reports that recent recommendations from the ListenBrainz-default
+path feel less personally tied to named seed artists, including Jakuzi and Lin
+Pesto, despite choosing to stay close to their taste. Recent examples: Depeche
+Mode's "Zenstation (Halbermensch edit)" (51% displayed tag overlap; marked "not
+for me"), The Cure's "Closedown" (44%; rated 7/10), and Gary Numan's "Airlane"
+(rated 7/10). This is subjective feedback and a product-quality concern, not
+evidence that the provider switch caused a regression. The responses are mixed:
+two tracks were liked and one was rejected. Displayed tag-overlap percentages are
+not a validated measure of perceived musical closeness. Compare stored
+recommendation evidence and, if authorized, a controlled provider evaluation
+before changing scoring or provider configuration. Recommendation quality
+remains unverified; Phase 5 real-data evaluation remains unauthorized.
+
+## React frontend review — 2026-10-26
+
+The developer approved Home and authorized the remaining frontend. Discover,
+Your Taste, History and supported account controls now use the existing APIs.
+Home's temporary sample-feed mode is removed. The local ASP.NET host serves the
+built React application at `http://localhost:5080/`.
+
+Local verification passed 45 browser checks, a real provider-backed guest/account
+journey and 13 targeted host/artwork tests. Responsive screenshots and comparison
+notes are in [the frontend review](design/superdesign/frontend-review/REVIEW.md).
+The live account-deletion response reported incomplete local email-copy cleanup;
+the UI reports that warning. No backend fix, performance-audit change, CI/Docker
+change, commit, push or deployment was made. Final developer approval remains open.
+
 ## Guest discovery
+### Album artwork — 2026-10-26
+ListenBrainz recording metadata now resolves release and release-group covers
+through Cover Art Archive. A separate background lane warms public recommendations;
+discovery cards read a bounded image cache and show placeholders while unavailable.
+Local verification: 54 targeted .NET tests and two offline JavaScript checks passed.
+Real-data Chromium review showed three cached JPEG covers among five recent picks,
+with placeholders for the others, no page errors, no browser upstream requests,
+and no horizontal overflow at 390px. Images are cached in memory and warm again
+after restart. Developer confirmation and deployment remain pending.
+
+
+### Efficiency audit continuation — 2026-10-25
+
+The developer approved architectural directions for P01, P06/P13, P09/P12,
+P05/P15 and P16, **without implementation authorization**. Complete the remaining
+CPU, memory, SQL, contention, network and deployment investigations and review
+the prioritized plan before implementation. See `Performance_Network_Audit.md`.
+
+P01 remains an outstanding architectural optimization: retain SHA-256 and the
+existing five-pass implementation while designing immutable artifacts, independently
+integrity-protected versioned manifests and incremental verification. Define the
+external-change detection window and privileged-administrator threat-model limits;
+preserve fail-closed integrity, cross-process coordination, atomicity, accounting
+and recovery. A replacement needs design approval, benchmarks and verification.
+
+### Efficiency audit evidence — 2026-10-25
+
+The remaining available investigations are recorded in the root audit: usable
+CPU/allocation traces, three managed heap graphs, SQL plans and trigger costs,
+actual login/write contention, 25-owner reads, two successful ten-job bursts,
+HTTP/cache/pacing controls, two paced public metadata samples, browser revalidation
+and mobile throttling, storage growth, and local resource-limit comparisons.
+P18 compression, P19 ledger-trigger cost and P20 scheduled-capture inventory
+publication/recovery are recorded alongside all original partial/open findings.
+The actual scheduled CLI stops safely for 1/10/100 new recipients; successful
+unattended throughput is unverified and must not be inferred from stop timings.
+
+No VPS exists yet. The practical initial estimate is 2 vCPU / 2 GiB / 25 GiB SSD;
+4 GiB provides a more defensible budget for concurrent large exports before the
+approved staged-streaming design. Actual VPS and representative live-discovery
+acceptance remain separate. No optimization implementation, schema/dependency
+change, purchase, deployment or push was performed. Review the prioritized plan
+and design contracts before explicitly authorizing implementation.
+
+### Performance remediation — 2026-10-24
+
+Bounded fixes from the root [performance audit](Performance_Network_Audit.md) now
+honor polling retry delays, reuse metadata after pacing, remove one body copy,
+prepare invariant scoring inputs once, index candidate aliases, batch catalog
+reads and combine account eligibility checks. All 702 Release tests passed with
+zero failures/skips against disposable PostgreSQL; both offline Node checks passed.
+Isolated allocation comparisons preserve serialized output hashes. Larger storage,
+export, authentication coordination and evidence-policy decisions remain deferred
+in the report. No migrations, dependency changes, live-provider measurements or
+deployment were performed; developer confirmation remains pending.
+
+### Actual local live website — 2026-10-23
+
+The normal `Liner Notes` IDE profile now selects live ListenBrainz/MusicBrainz
+configuration. `bash scripts/run_live.sh` starts the real site at
+`http://localhost:5080/`, using the persistent `liner_notes_live` database and
+private `.linernotes/live/` state. It selects the installed pinned SDK and never
+substitutes fixture generation when live configuration fails.
+
+Playwright MCP verified actual artist, album and recording lookup, real
+recommendation generation, stored live evidence, feedback persistence and real
+recipient-free Recent recommendations. Live metadata acquisition now imports
+eligible public core recording metadata into the catalog before scoring. The
+provider client honors upstream `s-maxage` for shared freshness while retaining
+no-store/no-cache/private restrictions.
+
+The final regression run passed 695 .NET checks with no failures or skips.
+These targeted live journeys establish local integration, not recommendation
+quality or public deployment readiness. The developer explicitly selected running
+on this machine with real provider data. See [operation](docs/renewal/local-live-run.md)
+and [live verification](docs/renewal/2026-10-23-local-live-verification.md).
+
+### Earlier synthetic implementation evidence
 
 The guest-first discovery design and sequential implementation were approved. The first onsite flow now supports artist, album, and style-tag selection; immediate synthetic recommendations with persisted explanations; explicit catalog lookup; feedback; export; registration with guest data preservation; explicit import into an existing account; and guest data deletion.
 

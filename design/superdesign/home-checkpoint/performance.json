@@ -1,0 +1,114 @@
+{
+  "scope": "Single cold local Chromium navigation, live empty API response, no CPU/network throttling; not a production benchmark",
+  "browser": "155.0.8059.12",
+  "viewport": "1440×1000",
+  "responseStatus": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "cache-control": "no-cache",
+    "content-length": "679",
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+    "content-type": "text/html",
+    "date": "Mon, 26 Oct 2026 17:10:51 GMT",
+    "etag": "\"1dd656cc19abf27\"",
+    "last-modified": "Mon, 26 Oct 2026 17:09:27 GMT",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY"
+  },
+  "assets": [
+    {
+      "file": "index-BGzrgUFj.js",
+      "bytes": 265336,
+      "gzipBytes": 83527
+    },
+    {
+      "file": "index-Db3vr4Gz.css",
+      "bytes": 8137,
+      "gzipBytes": 2450
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:5080/",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/index-BGzrgUFj.js",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/index-Db3vr4Gz.css",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/liner-notes-logo-DMs1Hexu.png",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/dm-sans-latin-Bf69Tn_J.woff2",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/home-assets/inter-latin-Dx4kXJAl.woff2",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5080/api/discovery/recent?limit=4",
+      "method": "GET"
+    }
+  ],
+  "measurements": {
+    "cls": 0.029964429012345677,
+    "lcp": 160,
+    "longTasks": 0,
+    "paints": [
+      {
+        "name": "first-paint",
+        "milliseconds": 36
+      },
+      {
+        "name": "first-contentful-paint",
+        "milliseconds": 160
+      }
+    ],
+    "resources": [
+      {
+        "url": "http://localhost:5080/home-assets/index-BGzrgUFj.js",
+        "milliseconds": 14.399999998509884,
+        "transferSize": 265636
+      },
+      {
+        "url": "http://localhost:5080/home-assets/index-Db3vr4Gz.css",
+        "milliseconds": 12.899999998509884,
+        "transferSize": 8437
+      },
+      {
+        "url": "http://localhost:5080/home-assets/liner-notes-logo-DMs1Hexu.png",
+        "milliseconds": 5.300000004470348,
+        "transferSize": 436708
+      },
+      {
+        "url": "http://localhost:5080/home-assets/dm-sans-latin-Bf69Tn_J.woff2",
+        "milliseconds": 53.600000001490116,
+        "transferSize": 63024
+      },
+      {
+        "url": "http://localhost:5080/home-assets/inter-latin-Dx4kXJAl.woff2",
+        "milliseconds": 53.19999999552965,
+        "transferSize": 48556
+      },
+      {
+        "url": "http://localhost:5080/api/discovery/recent?limit=4",
+        "milliseconds": 7,
+        "transferSize": 330
+      },
+      {
+        "url": "http://localhost:5080/favicon.ico",
+        "milliseconds": 2,
+        "transferSize": 300
+      }
+    ]
+  }
+}

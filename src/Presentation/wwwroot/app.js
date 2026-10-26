@@ -341,6 +341,11 @@ function setSeedStatus(message, kind = '') {
   status.classList.toggle('is-success', kind === 'success');
 }
 
+function problemMessage(problem, fallback) {
+  const errors = Object.values(problem.errors ?? {}).flat().filter(value => typeof value === 'string');
+  return errors.length ? errors.join(' ') : problem.detail || problem.title || fallback;
+}
+
 async function submitSeeds() {
   if (!state.token) {
     setSeedStatus('Sign in or create an account to save your taste profile.', 'error');
@@ -352,8 +357,8 @@ async function submitSeeds() {
     .split(',')
     .map(artist => artist.trim())
     .filter(Boolean)
-    .map(artistName => ({ artistName, initialWeight: 1.0 }));
-  const tags = Array.from(state.selectedTags).map(tagName => ({ tagName, initialWeight: 1.0 }));
+    .map(artistName => ({ artistName, weight: 1.0 }));
+  const tags = Array.from(state.selectedTags).map(tag => ({ tag, weight: 1.0 }));
   const total = tags.length + artists.length;
 
   if (total < 3 || total > 5) {
@@ -378,7 +383,7 @@ async function submitSeeds() {
     }
 
     const problem = await response.json();
-    setSeedStatus(problem.detail || 'Your taste profile could not be saved.', 'error');
+    setSeedStatus(problemMessage(problem, 'Your taste profile could not be saved.'), 'error');
   } catch (error) {
     setSeedStatus(`Your taste profile could not be saved: ${error.message}`, 'error');
   }
@@ -499,7 +504,7 @@ async function handleRegister(e) {
     const data = await res.json();
     if (attemptId !== state.authAttemptId) return;
     if (!res.ok) {
-      alert('Registration failed: ' + (data.detail || data.title || 'Check credentials.'));
+      alert('Registration failed: ' + problemMessage(data, 'Check credentials.'));
       return;
     }
 
@@ -529,7 +534,7 @@ async function handleLogin(e) {
     const data = await res.json();
     if (attemptId !== state.authAttemptId) return;
     if (!res.ok) {
-      alert('Login failed: ' + (data.detail || 'Invalid credentials.'));
+      alert('Login failed: ' + problemMessage(data, 'Invalid credentials.'));
       return;
     }
 

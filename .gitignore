@@ -22,6 +22,7 @@ venv/
 # Antigravity & Agent scratch
 .system_generated/
 .codebase-memory/
+.linernotes/
 .codex/
 scratches/
 
@@ -35,3 +36,13 @@ secrets.json
 *.p12
 recordings/
 TestResults/
+diagnostics/results/
+
+# Frontend local build and browser outputs
+node_modules/
+src/Presentation/ClientApp/dist/
+src/Presentation/ClientApp/test-results/
+src/Presentation/ClientApp/test-results-live/
+src/Presentation/ClientApp/playwright-report/
+src/Presentation/wwwroot/home-assets/
+src/Presentation/wwwroot/home-preview/

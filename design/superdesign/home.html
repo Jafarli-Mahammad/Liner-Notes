@@ -1,0 +1,255 @@
+/p<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="view-transition" content="same-origin">
+<title>Liner Notes — Home</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<link rel="prefetch" href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/1c3494b2-a972-4d0b-9686-dd82a6495693" as="document">
+<link rel="prefetch" href="https://p.superdesign.dev/draft/01873523-0319-4c75-853a-74c7fe37e0c6" as="document">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,700;9..40,800&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --surface-main: #FAF9F6;
+    --surface-card: #FFFFFF;
+    --ink-main: #18211F;
+    --ink-secondary: #626B69;
+    --ink-subtle: #78817D;
+    --outline: #E6E9E4;
+    --accent-coral: #FF674A;
+    --accent-coral-ink: #CF4C30;
+    --accent-mint: #C9F0D9;
+    --accent-honey: #F9DB8B;
+    --accent-lilac: #DCCFFD;
+    --accent-blue: #BBDCE9;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--surface-main);
+    color: var(--ink-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: -0.045em;
+  }
+
+  .editorial-meta {
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-secondary);
+    font-weight: 600;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 24px rgba(24, 33, 31, 0.04);
+  }
+
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(24, 33, 31, 0.08);
+  }
+
+  .image-zoom img {
+    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .image-zoom:hover img {
+    transform: scale(1.025);
+  }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--accent-coral-ink);
+    outline-offset: 3px;
+  }
+
+  @view-transition { navigation: auto; }
+  ::view-transition {
+      background-color: #FAF9F6;
+  }
+  ::view-transition-old(main-nav),
+  ::view-transition-new(main-nav) {
+      animation: none;
+      mix-blend-mode: normal;
+  }
+  ::view-transition-old(main-content) {
+      animation: 0.25s ease-out both fade-out;
+  }
+  ::view-transition-new(main-content) {
+      animation: 0.25s ease-in 0.1s both fade-in;
+  }
+  @keyframes fade-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+  }
+  @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift, .image-zoom img, * { transition: none !important; animation: none !important; }
+    html { scroll-behavior: auto !important; }
+  }
+</style>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          surface: {
+            main: '#FAF9F6',
+            card: '#FFFFFF'
+          },
+          ink: {
+            main: '#18211F',
+            secondary: '#626B69',
+            subtle: '#78817D'
+          },
+          outline: '#E6E9E4',
+          accent: {
+            coral: '#FF674A',
+            coralInk: '#CF4C30',
+            mint: '#C9F0D9',
+            honey: '#F9DB8B',
+            lilac: '#DCCFFD',
+            blue: '#BBDCE9'
+          }
+        }
+      }
+    }
+  }
+</script>
+</head>
+<body>
+  <div class="min-h-screen bg-surface-main text-ink-main pb-12">
+    <!-- Navigation -->
+    <nav style="view-transition-name: main-nav" class="sticky top-0 z-40 bg-surface-main border-b border-outline/50">
+      <div class="max-w-[1380px] mx-auto px-5 md:px-8 lg:px-[72px] h-16 flex items-center justify-between">
+        <div class="flex items-center gap-10">
+          <a href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" id="nav-brand" aria-label="Liner Notes home" class="flex items-center">
+            <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/brand-assets/brand-liner-notes-working-violet-pink-wordmark.png/liner-notes-logo-concept-02.png" alt="Liner Notes" class="w-[190px] md:w-[230px] h-auto" decoding="async">
+          </a>
+          <div class="hidden md:flex items-center gap-8">
+            <a href="https://p.superdesign.dev/draft/079fdf42-6283-4cec-b55c-8548658b3329" id="nav-home" class="text-sm font-medium text-ink-main border-b-2 border-accent-coral pb-1">Home</a>
+            <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="nav-discover" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">Discover</a>
+            <a href="https://p.superdesign.dev/draft/1c3494b2-a972-4d0b-9686-dd82a6495693" id="nav-taste" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">Your taste</a>
+            <a href="https://p.superdesign.dev/draft/01873523-0319-4c75-853a-74c7fe37e0c6" id="nav-history" class="text-sm font-medium text-ink-secondary hover:text-ink-main transition-colors">History</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <a href="#" id="nav-signin" class="text-sm font-medium text-ink-main hover:text-accent-coral transition-colors hidden sm:block">
+            Sign in
+          </a>
+          <button id="nav-menu-btn" type="button" aria-label="Open navigation" class="md:hidden text-ink-main min-w-11 min-h-11 flex items-center justify-center">
+            <iconify-icon icon="lucide:menu" class="text-2xl"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main style="view-transition-name: main-content" class="max-w-[1380px] mx-auto px-5 md:px-8 lg:px-[72px] pt-8 lg:pt-12">
+
+      <div class="flex flex-col gap-9">
+        <!-- Public recommendation feed is the first page content, not a sidebar. -->
+        <section class="w-full" aria-labelledby="recent-heading">
+            <div class="flex items-end justify-between mb-5">
+              <h1 id="recent-heading" class="text-3xl md:text-4xl font-display font-bold text-ink-main">Recent recommendations</h1>
+              <div class="editorial-meta hidden sm:block">Public Feed</div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+
+              <!-- Card 1 -->
+              <div class="group image-zoom flex flex-col">
+                <div class="bg-surface-card rounded-2xl border border-outline p-2 md:p-3 card-shadow hover-lift mb-4">
+                  <div class="relative aspect-square overflow-hidden rounded-xl bg-ink-main/5">
+                    <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/cocteau-twins-heaven-or-las-vegas/cover-heaven-or-las-vegas.jpg" alt="Heaven or Las Vegas" fetchpriority="high" decoding="async" class="object-cover w-full h-full">
+                  </div>
+                </div>
+                <h3 class="text-xl md:text-2xl font-display font-bold text-ink-main mb-1">Heaven or Las Vegas</h3>
+                <p class="text-base text-ink-secondary mb-3">Cocteau Twins</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs font-medium px-2.5 py-1 bg-accent-mint/40 text-ink-main rounded-md">Dream pop</span>
+                </div>
+              </div>
+
+              <!-- Card 2 -->
+              <div class="group image-zoom flex flex-col">
+                <div class="bg-surface-card rounded-2xl border border-outline p-2 md:p-3 card-shadow hover-lift mb-4">
+                  <div class="relative aspect-square overflow-hidden rounded-xl bg-ink-main/5">
+                    <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/depeche-mode-violator/cover-violator.jpg" alt="Violator" loading="lazy" decoding="async" class="object-cover w-full h-full">
+                  </div>
+                </div>
+                <h3 class="text-xl md:text-2xl font-display font-bold text-ink-main mb-1">Violator</h3>
+                <p class="text-base text-ink-secondary mb-3">Depeche Mode</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs font-medium px-2.5 py-1 bg-accent-lilac/40 text-ink-main rounded-md">Synth-pop</span>
+                </div>
+              </div>
+
+              <!-- Card 3 -->
+              <div class="group image-zoom flex flex-col">
+                <div class="bg-surface-card rounded-2xl border border-outline p-2 md:p-3 card-shadow hover-lift mb-4">
+                  <div class="relative aspect-square overflow-hidden rounded-xl bg-ink-main/5">
+                    <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/beach-house-bloom/cover-bloom.jpg" alt="Bloom" loading="lazy" decoding="async" class="object-cover w-full h-full">
+                  </div>
+                </div>
+                <h3 class="text-xl md:text-2xl font-display font-bold text-ink-main mb-1">Bloom</h3>
+                <p class="text-base text-ink-secondary mb-3">Beach House</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs font-medium px-2.5 py-1 bg-accent-blue/30 text-ink-main rounded-md">Dream pop</span>
+                </div>
+              </div>
+
+              <!-- Card 4 -->
+              <div class="group image-zoom flex flex-col">
+                <div class="bg-surface-card rounded-2xl border border-outline p-2 md:p-3 card-shadow hover-lift mb-4">
+                  <div class="relative aspect-square overflow-hidden rounded-xl bg-ink-main/5">
+                    <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/0297b205-654d-40c9-bbc2-33b2f207125b/content-assets/brian-eno-music-for-airports/cover-music-for-airports.jpg" alt="Ambient 1: Music for Airports" loading="lazy" decoding="async" class="object-cover w-full h-full">
+                  </div>
+                </div>
+                <h3 class="text-xl md:text-2xl font-display font-bold text-ink-main mb-1">Ambient 1: Music for Airports</h3>
+                <p class="text-base text-ink-secondary mb-3">Brian Eno</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs font-medium px-2.5 py-1 bg-accent-honey/40 text-ink-main rounded-md">Ambient</span>
+                </div>
+              </div>
+
+            </div>
+        </section>
+
+        <!-- Compact callout follows the artwork-led public feed. -->
+        <section class="bg-accent-mint/25 border border-accent-mint/50 rounded-2xl p-5 md:px-8 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-5" aria-label="Personal music discovery">
+          <div>
+            <h2 class="text-2xl font-display font-bold text-ink-main mb-2">Great music, explained.</h2>
+            <p class="text-sm md:text-base text-ink-secondary leading-relaxed max-w-2xl">A few genuinely good recommendations, shaped by what you love and why it resonates.</p>
+          </div>
+          <a href="https://p.superdesign.dev/draft/6da1a4f6-b08c-4d64-881a-d62d7bff86ed" id="btn-start-discovering" class="shrink-0 inline-flex items-center justify-center bg-accent-coral hover:bg-accent-coralInk text-white px-6 py-3.5 rounded-xl font-medium transition-colors min-h-11">Start discovering <iconify-icon icon="lucide:arrow-up-right" class="ml-2"></iconify-icon></a>
+        </section>
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "react": {
+    "version": "19.3.1",
+    "engines": {
+      "node": ">=0.10.0"
+    },
+    "license": "MIT"
+  },
+  "react-dom": {
+    "version": "19.3.1",
+    "peerDependencies": {
+      "react": "^19.3.1"
+    },
+    "license": "MIT"
+  },
+  "router": {
+    "version": "8.5.0",
+    "engines": {
+      "node": ">=22.22.0"
+    },
+    "peerDependencies": {
+      "react": ">=19.2.7",
+      "react-dom": ">=19.2.7",
+      "@types/react": ">=19.2.0",
+      "@types/react-dom": ">=19.2.0"
+    },
+    "license": "MIT"
+  },
+  "vite": {
+    "version": "8.3.5",
+    "engines": {
+      "node": "^20.19.0 || >=22.12.0"
+    },
+    "license": "MIT"
+  },
+  "plugin": {
+    "version": "6.1.2",
+    "engines": {
+      "node": "^20.19.0 || >=22.12.0"
+    },
+    "peerDependencies": {
+      "vite": "^8.0.0",
+      "oxc-transform-react": "^0.152.0",
+      "@rolldown/plugin-babel": "^0.1.7 || ^0.2.0",
+      "babel-plugin-react-compiler": "^1.0.0"
+    },
+    "license": "MIT"
+  },
+  "typescript": {
+    "version": "7.0.2",
+    "engines": {
+      "node": ">=16.20.0"
+    },
+    "license": "Apache-2.0"
+  },
+  "playwright": {
+    "version": "1.64.1",
+    "engines": {
+      "node": ">=20"
+    },
+    "license": "Apache-2.0"
+  },
+  "axe": {
+    "version": "4.14.0",
+    "peerDependencies": {
+      "playwright-core": ">= 1.0.0"
+    },
+    "license": "MPL-2.0"
+  },
+  "types-react": "19.3.0",
+  "types-dom": "19.3.0",
+  "verifiedOn": "2026-10-26",
+  "source": "npm registry via npm view",
+  "nodeRuntime": "22.23.1",
+  "pluginOptionalPeers": "oxc-transform-react, @rolldown/plugin-babel and babel-plugin-react-compiler are optional; compiler not enabled"
+}

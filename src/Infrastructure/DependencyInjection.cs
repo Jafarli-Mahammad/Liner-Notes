@@ -99,6 +99,10 @@ public static class DependencyInjection
         services.Configure<ListenBrainzOptions>(configuration.GetSection(ListenBrainzOptions.SectionName));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ListenBrainzOptions>>().Value);
         services.AddSingleton<IMetaBrainzRequestGate, MetaBrainzRequestGate>();
+        services.AddSingleton<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
+        services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddScoped<IListenBrainzApiClient>(sp =>

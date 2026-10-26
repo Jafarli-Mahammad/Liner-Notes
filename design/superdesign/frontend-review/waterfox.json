@@ -1,0 +1,251 @@
+{
+  "browser": "153.5.0",
+  "scope": "Fresh isolated Waterfox profile; real anonymous routes, no intercepted data or writes",
+  "results": [
+    {
+      "name": "home",
+      "width": 390,
+      "title": "Home — Liner Notes",
+      "heading": "Recent recommendations",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "home",
+      "width": 768,
+      "title": "Home — Liner Notes",
+      "heading": "Recent recommendations",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "home",
+      "width": 1440,
+      "title": "Home — Liner Notes",
+      "heading": "Recent recommendations",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "discover",
+      "width": 390,
+      "title": "Discover — Liner Notes",
+      "heading": "Meet your next obsession.",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "discover",
+      "width": 768,
+      "title": "Discover — Liner Notes",
+      "heading": "Meet your next obsession.",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "discover",
+      "width": 1440,
+      "title": "Discover — Liner Notes",
+      "heading": "Meet your next obsession.",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "taste",
+      "width": 390,
+      "title": "Your taste — Liner Notes",
+      "heading": "Your taste",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "taste",
+      "width": 768,
+      "title": "Your taste — Liner Notes",
+      "heading": "Your taste",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "taste",
+      "width": 1440,
+      "title": "Your taste — Liner Notes",
+      "heading": "Your taste",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "history",
+      "width": 390,
+      "title": "History — Liner Notes",
+      "heading": "Discovery history",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "history",
+      "width": 768,
+      "title": "History — Liner Notes",
+      "heading": "Discovery history",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "history",
+      "width": 1440,
+      "title": "History — Liner Notes",
+      "heading": "Discovery history",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "account",
+      "width": 390,
+      "title": "Account — Liner Notes",
+      "heading": "Your account",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "account",
+      "width": 768,
+      "title": "Account — Liner Notes",
+      "heading": "Your account",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "account",
+      "width": 1440,
+      "title": "Account — Liner Notes",
+      "heading": "Your account",
+      "overflow": false,
+      "logo": 2172,
+      "body": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "logs": [
+    {
+      "type": "console",
+      "method": "warn",
+      "source": {
+        "realm": "a3a81bdb-bf2b-4019-9366-0d81053d457c",
+        "context": "c78ea02b-552e-4875-b075-3429446971cc"
+      },
+      "args": [
+        {
+          "type": "string",
+          "value": "No `HydrateFallback` element provided to render during initial hydration"
+        }
+      ],
+      "level": "warn",
+      "text": "No `HydrateFallback` element provided to render during initial hydration",
+      "timestamp": 1793040375295,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "columnNumber": 51331,
+            "functionName": "w",
+            "lineNumber": 9,
+            "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js"
+          }
+        ]
+      }
+    },
+    {
+      "type": "console",
+      "method": "warn",
+      "source": {
+        "realm": "61601e69-bafe-4a79-b376-644ff7636aa2",
+        "context": "c78ea02b-552e-4875-b075-3429446971cc"
+      },
+      "args": [
+        {
+          "type": "string",
+          "value": "No `HydrateFallback` element provided to render during initial hydration"
+        }
+      ],
+      "level": "warn",
+      "text": "No `HydrateFallback` element provided to render during initial hydration",
+      "timestamp": 1793040376132,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "columnNumber": 51331,
+            "functionName": "w",
+            "lineNumber": 9,
+            "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js"
+          }
+        ]
+      }
+    },
+    {
+      "type": "console",
+      "method": "warn",
+      "source": {
+        "realm": "901212cc-814f-4467-bc16-4f4b5e1ff580",
+        "context": "c78ea02b-552e-4875-b075-3429446971cc"
+      },
+      "args": [
+        {
+          "type": "string",
+          "value": "No `HydrateFallback` element provided to render during initial hydration"
+        }
+      ],
+      "level": "warn",
+      "text": "No `HydrateFallback` element provided to render during initial hydration",
+      "timestamp": 1793040377134,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "columnNumber": 51331,
+            "functionName": "w",
+            "lineNumber": 9,
+            "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js"
+          }
+        ]
+      }
+    },
+    {
+      "type": "console",
+      "method": "warn",
+      "source": {
+        "realm": "0b9c04cb-788e-46de-8d0f-bddfd698b135",
+        "context": "c78ea02b-552e-4875-b075-3429446971cc"
+      },
+      "args": [
+        {
+          "type": "string",
+          "value": "No `HydrateFallback` element provided to render during initial hydration"
+        }
+      ],
+      "level": "warn",
+      "text": "No `HydrateFallback` element provided to render during initial hydration",
+      "timestamp": 1793040378076,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "columnNumber": 51331,
+            "functionName": "w",
+            "lineNumber": 9,
+            "url": "http://localhost:5080/home-assets/index-CwDPsZTK.js"
+          }
+        ]
+      }
+    }
+  ]
+}

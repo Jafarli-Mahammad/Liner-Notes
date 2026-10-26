@@ -75,6 +75,14 @@ requires explicit configuration and usage review. Liner Notes applies determinis
 that evidence. We do not build the providers' similarity data or claim a new
 recommendation algorithm. V1 uses no custom machine learning.
 
+Album covers use the same recording identities: ListenBrainz release metadata
+maps recording MBIDs to Cover Art Archive release covers, with a release-group
+fallback and a placeholder when unavailable. A separate background task warms
+eligible live recommendations; page views only read the image cache. No artwork
+API key is required. Images remain copyrighted by their respective owners.
+See the [ListenBrainz metadata API](https://listenbrainz.readthedocs.io/en/latest/users/api/metadata.html)
+and [Cover Art Archive](https://coverartarchive.org/).
+
 ```mermaid
 flowchart LR
     Taste["Your artists, genres<br>and feedback"] --> Discover["Provider candidates<br>and tag evidence"]

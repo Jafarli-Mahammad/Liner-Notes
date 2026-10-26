@@ -72,26 +72,33 @@ public sealed class CatalogReader(DataContext db) : ICatalogReader
     }
 
     public async Task<CatalogItemDto?> GetAsync(Guid recordId, DateTimeOffset now, CancellationToken ct)
+        => (await GetManyAsync([recordId], now, ct)).SingleOrDefault();
+
+    public async Task<IReadOnlyList<CatalogItemDto>> GetManyAsync(IReadOnlyList<Guid> recordIds, DateTimeOffset now, CancellationToken ct)
     {
-        var eligible = await (from r in db.CatalogRecords.AsNoTracking()
-                              join p in db.CatalogPublications.AsNoTracking() on r.PublicationId equals p.Id
-                              where r.Id == recordId && p.State == CatalogPublicationState.Published && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)
-                              select r.Id).AnyAsync(ct);
-        return eligible ? (await ReadItemsAsync([recordId], ct)).SingleOrDefault() : null;
+        ct.ThrowIfCancellationRequested();
+        if (recordIds.Count == 0) return [];
+        var items = (await ReadItemsAsync(recordIds.Distinct().ToArray(), ct, now)).ToDictionary(item => item.Id);
+        return recordIds.Where(items.ContainsKey).Select(id => items[id]).ToArray();
     }
 
-    private async Task<CatalogItemDto[]> ReadItemsAsync(Guid[] ids, CancellationToken ct)
+    private async Task<CatalogItemDto[]> ReadItemsAsync(Guid[] ids, CancellationToken ct, DateTimeOffset? eligibleAt = null)
     {
         var rows = await (from r in db.CatalogRecords.AsNoTracking()
                           join p in db.CatalogPublications.AsNoTracking() on r.PublicationId equals p.Id
-                          where ids.Contains(r.Id)
+                          where ids.Contains(r.Id) && (eligibleAt == null ||
+                              p.State == CatalogPublicationState.Published && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > eligibleAt))
                           select new { Record = r, Publication = p }).ToArrayAsync(ct);
-        return rows.Select(row => new CatalogItemDto(row.Record.Id, row.Record.CanonicalId, row.Record.Kind, row.Record.DisplayName,
+        return rows.Select(row =>
+        {
+            var tags = JsonSerializer.Deserialize<CatalogTagInput[]>(row.Record.TagsJson) ?? [];
+            return new CatalogItemDto(row.Record.Id, row.Record.CanonicalId, row.Record.Kind, row.Record.DisplayName,
             row.Record.ArtistDisplayName, row.Record.Disambiguation, row.Record.FirstReleaseDate,
-            (JsonSerializer.Deserialize<CatalogTagInput[]>(row.Record.TagsJson) ?? []).Select(t => t.Name).ToArray(),
+            tags.Select(t => t.Name).ToArray(),
             row.Publication.Source, row.Publication.Attribution, row.Publication.Id, row.Publication.Origin,
             JsonSerializer.Deserialize<CatalogArtistCreditDto[]>(row.Record.CreditsJson) ?? [], row.Publication.MetadataLicense, row.Publication.TagLicense,
-            JsonSerializer.Deserialize<CatalogTagInput[]>(row.Record.TagsJson) ?? [], row.Publication.AcquiredAtUtc,
-            row.Publication.ExpiresAtUtc, row.Publication.ContentSha256, row.Publication.NormalizationVersion, JsonSerializer.Deserialize<CatalogReleaseDto[]>(row.Record.ReleasesJson) ?? [])).ToArray();
+            tags, row.Publication.AcquiredAtUtc,
+            row.Publication.ExpiresAtUtc, row.Publication.ContentSha256, row.Publication.NormalizationVersion, JsonSerializer.Deserialize<CatalogReleaseDto[]>(row.Record.ReleasesJson) ?? []);
+        }).ToArray();
     }
 }

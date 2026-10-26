@@ -77,6 +77,11 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             if (raw.Count > configuration.MaximumCandidates || raw.Any(r => r.Origin != configuration.Origin))
                 throw new GenerationStoppedException("prepared_evidence_origin_or_size_mismatch");
             var hydrated = await provider.Hydrator.HydrateCandidatesBatchAsync(raw.Items, deadline.Token);
+            if (configuration.Origin == EvidenceOrigin.Live &&
+                provider.Source is LinerNotes.Application.Common.Interfaces.Catalog.IPublicRecordingCatalogSource publicMetadata &&
+                publicMetadata.ReadPublicRecordingMetadata() is { Count: > 0 } publicRecordings)
+                await LinerNotes.Infrastructure.Catalog.PublicRecordingCatalog.PublishAsync(publicRecordings,
+                    scope.ServiceProvider.GetRequiredService<LinerNotes.Application.Features.Catalog.ImportCatalog>(), deadline.Token);
             if (hydrated.Count > configuration.MaximumCandidates || hydrated.Any(c => c.Origin != configuration.Origin ||
                 c.TagResponse.Origin != configuration.Origin || c.SupportingResponses.Any(r => r.Origin != configuration.Origin)))
                 throw new GenerationStoppedException("prepared_evidence_origin_or_size_mismatch");

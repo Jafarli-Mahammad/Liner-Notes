@@ -33,10 +33,10 @@ function client(fetch, seedSession = true) {
     alert: message => alerts.push(message),
     localStorage: { removeItem() {} },
     window: { addEventListener() {} },
-    document: { addEventListener() {}, getElementById: getElement, querySelectorAll() { return []; } }
+    document: { addEventListener() {}, getElementById: getElement, querySelector() { return getElement('page-heading'); }, querySelectorAll() { return []; } }
   };
   vm.createContext(sandbox);
-  vm.runInContext(source + '\nglobalThis.api = {state, acceptSession, apiFetch, logout, renderTrackCard, loadYourData, handleLogin, handleRegister, submitFeedback, setRatingSelection, handleFeedbackAction};', sandbox);
+  vm.runInContext(source + '\nglobalThis.api = {state, acceptSession, apiFetch, logout, renderTrackCard, loadYourData, handleLogin, handleRegister, submitFeedback, submitSeeds, problemMessage, setRatingSelection, handleFeedbackAction};', sandbox);
   sandbox.api.element = getElement('export-container');
   sandbox.api.alerts = alerts;
   sandbox.api.setValue = (id, value) => { values.set(id, value); getElement(id).value = value; };
@@ -46,6 +46,22 @@ function client(fetch, seedSession = true) {
 }
 
 (async () => {
+  let seedPayload;
+  const seeds = client(async (url, options) => {
+    assert.ok(url.endsWith('/taste/seed'));
+    seedPayload = JSON.parse(options.body);
+    return Response.json({ signalsAdded: 3 });
+  });
+  seeds.state.selectedTags.add('post-punk');
+  seeds.state.selectedTags.add('ambient');
+  seeds.setValue('seed-artists', 'Synthetic Atlas');
+  await seeds.submitSeeds();
+  assert.deepEqual(seedPayload, {
+    tags: [{ tag: 'post-punk', weight: 1 }, { tag: 'ambient', weight: 1 }],
+    artists: [{ artistName: 'Synthetic Atlas', weight: 1 }]
+  }, 'The legacy taste form must send the API DTO field names');
+  assert.equal(seeds.problemMessage({ errors: { Password: ['Use a stronger password.'] } }, 'Failed'), 'Use a stronger password.');
+  assert.equal(seeds.problemMessage({ detail: 'Try again.' }, 'Failed'), 'Try again.');
   let refreshes = 0;
   const api = client(async (url, options) => {
     if (url.endsWith('/auth/refresh')) {

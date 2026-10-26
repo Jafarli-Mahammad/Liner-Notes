@@ -1,0 +1,161 @@
+{
+  "scope": "Downloaded reference HTML only; cached Chromium; not live application verification",
+  "checks": [
+    {
+      "draft": "home",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "36px"
+    },
+    {
+      "draft": "home",
+      "viewportWidth": 768,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "36px"
+    },
+    {
+      "draft": "home",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "30px"
+    },
+    {
+      "draft": "discover",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "52.8px"
+    },
+    {
+      "draft": "discover",
+      "viewportWidth": 768,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "48px"
+    },
+    {
+      "draft": "discover",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "48px"
+    },
+    {
+      "draft": "taste",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 2,
+      "loadedImageCount": 2,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "48px"
+    },
+    {
+      "draft": "taste",
+      "viewportWidth": 768,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 2,
+      "loadedImageCount": 2,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "48px"
+    },
+    {
+      "draft": "taste",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 2,
+      "loadedImageCount": 2,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "36px"
+    },
+    {
+      "draft": "history",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "48px"
+    },
+    {
+      "draft": "history",
+      "viewportWidth": 768,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "36px"
+    },
+    {
+      "draft": "history",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "horizontalOverflow": false,
+      "imageCount": 5,
+      "loadedImageCount": 5,
+      "loadedFontFamilies": [
+        "DM Sans",
+        "Inter"
+      ],
+      "headingFontSize": "36px"
+    }
+  ]
+}

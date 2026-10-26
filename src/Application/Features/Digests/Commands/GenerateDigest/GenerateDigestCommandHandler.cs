@@ -170,19 +170,27 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
     private static IReadOnlyList<RawCandidateTrack> MergeCandidates(IEnumerable<RawCandidateTrack> candidates,
         IReadOnlySet<string> excludedAliases)
     {
-        var groups = new List<List<RawCandidateTrack>>();
+        var groups = new Dictionary<List<RawCandidateTrack>, (HashSet<string> Aliases, int Order)>();
+        var byAlias = new Dictionary<string, List<RawCandidateTrack>>(StringComparer.Ordinal);
+        int order = 0;
         foreach (var candidate in candidates.OrderBy(c => c.CandidateKey, StringComparer.Ordinal))
         {
             var aliases = TrackIdentity.Aliases(Track.Create(candidate.Title, candidate.ArtistName, mbid: candidate.Mbid));
-            var matches = groups.Where(g => g.Any(c => TrackIdentity.Aliases(Track.Create(c.Title, c.ArtistName, mbid: c.Mbid)).Intersect(aliases, StringComparer.Ordinal).Any())).ToArray();
+            var matches = aliases.Where(byAlias.ContainsKey).Select(alias => byAlias[alias]).Distinct()
+                .OrderBy(group => groups[group].Order).ToArray();
             var group = new List<RawCandidateTrack> { candidate };
-            foreach (var match in matches) { group.AddRange(match); groups.Remove(match); }
-            groups.Add(group);
+            var groupAliases = new HashSet<string>(aliases, StringComparer.Ordinal);
+            foreach (var match in matches)
+            {
+                group.AddRange(match); groupAliases.UnionWith(groups[match].Aliases); groups.Remove(match);
+            }
+            foreach (var alias in groupAliases) byAlias[alias] = group;
+            groups.Add(group, (groupAliases, order++));
         }
-        return groups.Where(g => !g.SelectMany(c => TrackIdentity.Aliases(
-                Track.Create(c.Title, c.ArtistName, mbid: c.Mbid))).Any(excludedAliases.Contains))
-            .Select(g =>
+        return groups.Where(g => !g.Value.Aliases.Any(excludedAliases.Contains))
+            .Select(pair =>
         {
+            var g = pair.Key;
             var first = g.OrderByDescending(c => c.Mbid != null).ThenBy(c => c.CandidateKey, StringComparer.Ordinal).First();
             return new RawCandidateTrack(first.Title, first.ArtistName, first.Mbid, g.SelectMany(c => c.Paths).Distinct());
         }).OrderBy(c => c.CandidateKey, StringComparer.Ordinal).ToArray();

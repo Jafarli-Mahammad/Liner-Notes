@@ -7,10 +7,12 @@ window.discoveryApp = (() => {
   let onboarding = { version: 'taste-onboarding-v1', step: 'questions', goal: null, exploration: null, vocals: null, allStyles: false };
   let recentMode = false, recentCursor = null, authDraft = null, mutationBusy = false;
   let hits = [], activeHit = -1, searchVersion = 0;
+  let artworkTimer = null;
 
   function leave() {
     version++;
     clearTimeout(timer); clearTimeout(searchTimer); clearInterval(countdown);
+    clearTimeout(artworkTimer);
     searchAbort?.abort(); searchVersion++;
   }
   function sessionChanged(preserveDraft = false) {
@@ -42,9 +44,13 @@ window.discoveryApp = (() => {
     const response = await apiFetch(`${API_BASE}${path}`, { method, credentials: 'same-origin', headers,
       signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     if (!response.ok) {
-      const seconds = Math.min(600, Math.max(1, Number(response.headers.get('Retry-After')) || 1));
-      if (response.status === 429 && page) page.nextRequestAtUtc = new Date(Date.now() + seconds * 1000).toISOString();
-      const error = new Error(errorMessage(response.status)); error.status = response.status; throw error;
+      const header = response.headers.get('Retry-After')?.trim();
+      const retryAt = header && /^\d+$/.test(header) ? Date.now() + Number(header) * 1000
+        : header && /^[A-Za-z]{3},/.test(header) ? Date.parse(header) : NaN;
+      const error = new Error(errorMessage(response.status)); error.status = response.status;
+      error.retryAt = Number.isFinite(retryAt) && Math.abs(retryAt) <= 8640000000000000 ? retryAt : null;
+      if (response.status === 429 && page) page.nextRequestAtUtc = new Date(error.retryAt ?? Date.now() + 1000).toISOString();
+      throw error;
     }
     return response.status === 204 ? null : response.json();
   }
@@ -54,6 +60,7 @@ window.discoveryApp = (() => {
     document.getElementById('reg-preserve-label').hidden = !session.profile?.isGuest;
     const overview = await request('/discovery');
     page = overview.page; styles = overview.styles; evidenceOrigin = overview.evidenceOrigin;
+    root('runtime-label').textContent = evidenceOrigin === 'Live' ? 'Live discovery' : evidenceOrigin === 'Synthetic' ? 'Synthetic test data' : 'Recorded evidence';
     if (!dirty) {
       favorites = (page?.favorites ?? []).map(f => ({ id: f.catalogRecordId, signalId: f.signalId, name: f.name, artistName: f.artistName, kind: f.kind, disambiguation: f.disambiguation, releases: f.releases }));
       tags = new Set(page?.tags ?? []);
@@ -121,8 +128,12 @@ window.discoveryApp = (() => {
     const target = root('discovery-progress');
     if (target) { target.textContent = copy; target.className = 'notice'; }
   }
-  async function pollGeneration(id, current) {
+  async function pollGeneration(id, current, retryAt = 0) {
     if (current !== version || state.activeTab !== 'discovery') return;
+    if (retryAt > Date.now()) {
+      timer = setTimeout(() => pollGeneration(id, current, retryAt), Math.min(retryAt - Date.now(), 2147483647));
+      return;
+    }
     try {
       const job = await request(`/discovery/jobs/${encodeURIComponent(id)}`);
       if (current !== version) return;
@@ -143,12 +154,36 @@ window.discoveryApp = (() => {
     } catch (error) {
       if (current !== version) return;
       message(error.message, true);
-      timer = setTimeout(() => pollGeneration(id, current), 5000);
+      const retryAt = Math.max(Date.now() + 1000, error.retryAt ?? Date.now() + 5000);
+      timer = setTimeout(() => pollGeneration(id, current, retryAt), Math.min(retryAt - Date.now(), 2147483647));
     }
   }
+  function coverImage(mbid) {
+    const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mbid ?? '')
+      ? mbid : '00000000-0000-0000-0000-000000000000';
+    return `<img class="discovery-cover" src="/api/artwork/recordings/${id}" width="80" height="80" loading="lazy" decoding="async" alt="" referrerpolicy="no-referrer">`;
+  }
+  function refreshArtwork(attempt = 0) {
+    clearTimeout(artworkTimer);
+    if (attempt >= 4) return;
+    artworkTimer = setTimeout(() => {
+      document.querySelectorAll('.discovery-cover').forEach(img => {
+        // The placeholder is 80px; keep already-loaded cover thumbnails cached.
+        if (img.naturalWidth && img.naturalWidth !== 80) return;
+        img.src = img.src.split('?')[0] + '?refresh=' + (attempt + 1);
+      });
+      refreshArtwork(attempt + 1);
+    }, 30000);
+  }
+  document.addEventListener('error', event => {
+    if (event.target.matches?.('.discovery-cover')) event.target.style.visibility = 'hidden';
+  }, true);
+  document.addEventListener('load', event => {
+    if (event.target.matches?.('.discovery-cover')) event.target.style.visibility = '';
+  }, true);
   function pickCard(pick) {
     return `<article class="surface discovery-pick" data-pick="${html(pick.id)}" data-current-feedback="${html(pick.feedback)}">
-      <div class="discovery-pick-heading"><span class="discovery-rank" aria-label="Pick ${pick.rank}">${pick.rank}</span>
+      <div class="discovery-pick-heading">${coverImage(pick.mbid)}<span class="discovery-rank" aria-label="Pick ${pick.rank}">${pick.rank}</span>
         <div><h3>${html(pick.title)}</h3><p>${html(pick.artistName)}${pick.album ? ` — ${html(pick.album)}` : ''}</p></div></div>
       <p class="discovery-explanation">${html(pick.explanation)}</p>
       ${pick.matchedTags.length ? `<p class="field-help">Shared styles: ${pick.matchedTags.map(html).join(', ')}</p>` : ''}
@@ -166,6 +201,7 @@ window.discoveryApp = (() => {
   async function showBatch(id, current = version) {
     const batch = await request(`/discovery/batches/${encodeURIComponent(id)}`);
     if (current !== version) return;
+    refreshArtwork();
     root('discovery-results').innerHTML = `${batch.coverage?.Origin === 'Synthetic' ? '<div class="notice notice-preview"><strong>Demo recommendations</strong><p>These use synthetic music data to demonstrate the flow.</p></div>' : ''}
       <div class="discovery-batch-heading"><h3>Picked for your taste</h3><time datetime="${html(batch.createdAtUtc)}">${html(new Date(batch.createdAtUtc).toLocaleDateString())}</time></div>
       ${batch.picks.length ? batch.picks.map(pickCard).join('') : '<div class="surface"><h3>No new supported picks yet</h3><p>Try different favorites or styles. We will not repeat your previous picks just to fill the list.</p></div>'}
@@ -317,7 +353,7 @@ window.discoveryApp = (() => {
     const response = await request(`/discovery/recent?limit=20${before ? `&before=${before}` : ''}`);
     if (current !== version) return;
     const target = root('discovery-results');
-    const cards = response.items.map(item => `<article class="surface discovery-pick"><h3>${html(item.title)}</h3><p>${html(item.artistName)}</p>
+    const cards = response.items.map(item => `<article class="surface discovery-pick"><div class="discovery-pick-heading">${coverImage(item.recordingId)}<div><h3>${html(item.title)}</h3><p>${html(item.artistName)}</p></div></div>
       ${item.origin === 'Synthetic' ? '<p class="notice notice-preview">Synthetic demo recommendation</p>' : ''}
       ${buildDeepLinks(item.artistName, item.title)}<p class="field-help">${html(item.attribution)}</p></article>`).join('');
     if (!append) target.innerHTML = `<h2 tabindex="-1">Recent recommendations</h2><p>Music previously recommended here. No recipient information is shared.</p>
@@ -326,6 +362,7 @@ window.discoveryApp = (() => {
       ${page?.batches?.length ? '<button class="button button-secondary" data-discovery-action="own-results">My discoveries</button>' : ''}
       <button id="recent-more" class="button button-secondary" data-discovery-action="recent-more">More recommendations</button></div>`;
     root('recent-music').insertAdjacentHTML('beforeend', cards);
+    refreshArtwork();
     recentCursor = response.nextCursor; root('recent-more').hidden = !recentCursor;
     if (!append) focusStep(target);
   }

@@ -1,0 +1,34 @@
+
+> liner-notes-frontend@0.1.0 build:local
+> npm run build && node scripts/publish-local.mjs
+
+
+> liner-notes-frontend@0.1.0 build
+> npm run typecheck && vite build && node scripts/licenses.mjs
+
+
+> liner-notes-frontend@0.1.0 typecheck
+> tsc --noEmit
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 112 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      0.74 kB │ gzip:   0.45 kB
+dist/home-assets/dm-sans-latin-ext-oos9povj.woff2   31.29 kB
+dist/home-assets/inter-latin-Dx4kXJAl.woff2         48.25 kB
+dist/home-assets/dm-sans-latin-Bf69Tn_J.woff2       62.72 kB
+dist/home-assets/inter-latin-ext-DO1Apj_S.woff2     85.06 kB
+dist/home-assets/liner-notes-logo-DMs1Hexu.png     436.40 kB
+dist/home-assets/index-dWXK6TQc.css                 27.61 kB │ gzip:   5.84 kB
+dist/home-assets/models-CuG_3uaR.js                  0.19 kB │ gzip:   0.16 kB
+dist/home-assets/useRetryDelay-Dm_mXI3n.js           0.38 kB │ gzip:   0.26 kB
+dist/home-assets/History-DXqGfILu.js                 4.27 kB │ gzip:   1.72 kB
+dist/home-assets/Account-dM_ubMoR.js                 9.69 kB │ gzip:   3.52 kB
+dist/home-assets/Discover-CVNFMXNr.js               10.41 kB │ gzip:   3.82 kB
+dist/home-assets/Taste-6iDHmpIt.js                  15.67 kB │ gzip:   5.32 kB
+dist/home-assets/index-CwDPsZTK.js                 335.35 kB │ gzip: 105.81 kB
+
+✓ built in 245ms
+Home build copied to /home/mahammadjafarli/source/repos/Liner Notes/src/Presentation/wwwroot/; existing assets retained.

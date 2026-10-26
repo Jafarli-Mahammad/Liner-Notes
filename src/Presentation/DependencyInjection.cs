@@ -131,8 +131,8 @@ public static class DependencyInjection
                     var id = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
                     var db = context.HttpContext.RequestServices.GetRequiredService<DataContext>();
                     if (!Guid.TryParse(id, out var userId) ||
-                        !await db.ApplicationUsers.AnyAsync(u => u.Id == userId && !u.IsDeleted, context.HttpContext.RequestAborted) ||
-                        !await db.Users.AnyAsync(u => u.Id == userId, context.HttpContext.RequestAborted))
+                        !await db.ApplicationUsers.AnyAsync(u => u.Id == userId && !u.IsDeleted &&
+                            db.Users.Any(subscriber => subscriber.Id == u.Id), context.HttpContext.RequestAborted))
                         context.Fail("Account is not active.");
                 }
             };

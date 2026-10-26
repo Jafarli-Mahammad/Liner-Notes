@@ -1,0 +1,29 @@
+
+> liner-notes-frontend@0.1.0 test
+> playwright test
+
+
+Running 18 tests using 1 worker
+
+(node:1112181) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node-22 --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/home.spec.ts:20:3 › real API and Home integration at 390px (1.6s)
+  ✓   2 tests/home.spec.ts:51:3 › populated cards and accessibility at 390px — intercepted data (873ms)
+  ✓   3 tests/home.spec.ts:20:3 › real API and Home integration at 768px (1.0s)
+  ✓   4 tests/home.spec.ts:51:3 › populated cards and accessibility at 768px — intercepted data (768ms)
+  ✓   5 tests/home.spec.ts:20:3 › real API and Home integration at 1440px (1.2s)
+  ✓   6 tests/home.spec.ts:51:3 › populated cards and accessibility at 1440px — intercepted data (1.2s)
+  ✓   7 tests/home.spec.ts:65:1 › keyboard skip link and mobile disclosure close/restore focus (716ms)
+  ✓   8 tests/home.spec.ts:88:1 › loading geometry and empty response remain honest (451ms)
+  ✓   9 tests/home.spec.ts:102:3 › recoverable feed failure: network (434ms)
+  ✓  10 tests/home.spec.ts:102:3 › recoverable feed failure: 503 (471ms)
+  ✓  11 tests/home.spec.ts:102:3 › recoverable feed failure: 404 (439ms)
+  ✓  12 tests/home.spec.ts:102:3 › recoverable feed failure: html (373ms)
+  ✓  13 tests/home.spec.ts:102:3 › recoverable feed failure: invalid (457ms)
+  ✓  14 tests/home.spec.ts:122:3 › Retry-After seconds prevents early retry (419ms)
+  ✓  15 tests/home.spec.ts:122:3 › Retry-After date prevents early retry (414ms)
+  ✓  16 tests/home.spec.ts:140:1 › cold-cache placeholders, invalid identities, image failures and bounded refresh (1.0s)
+  ✓  17 tests/home.spec.ts:158:1 › reduced motion and long text reflow at 320px (518ms)
+  ✓  18 tests/home.spec.ts:169:1 › deferred routes open existing interface, with no new personal UI (529ms)
+
+  18 passed (15.3s)

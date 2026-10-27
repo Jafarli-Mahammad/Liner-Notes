@@ -62,7 +62,7 @@ export default function Discover() {
           : status.state === 'Cancelled' ? 'Your taste changed and that request was cancelled. You can request more discoveries when ready.'
             : 'The music source could not complete that request. Your saved picks are still here.'));
       } catch (e) {
-        if (isAbort(e)) return;
+        if (controller.signal.aborted) return;
         setError(e);
         if (e instanceof ApiError && [401, 403, 404].includes(e.status)) { setJob(null); return; }
         schedule(Math.max(Date.now() + 5000, e instanceof ApiError ? e.retryAt ?? 0 : 0));

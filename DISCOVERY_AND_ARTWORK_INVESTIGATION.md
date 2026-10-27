@@ -2,6 +2,9 @@
 
 Investigated 2026-10-27 against source commit `930e107` in this checkout.
 
+Follow-up: [implemented fixes, verification and deferred quality decisions](DISCOVERY_AND_ARTWORK_FIXES.md).
+The findings below describe the investigation checkpoint before those changes.
+
 This is an investigation, not a fix. No application behavior or provider limits were changed. The findings below cover the traced discovery and artwork paths; they do not claim that every possible production failure has been reproduced.
 
 ## Main findings

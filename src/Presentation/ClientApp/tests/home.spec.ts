@@ -53,6 +53,7 @@ for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('/');
     await expect(page.locator('.music-card')).toHaveCount(4);
+    for (const image of await page.locator('.music-card img').all()) await image.scrollIntoViewIfNeeded();
     await expect(page.locator('.artwork-ready')).toHaveCount(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await page.locator('.music-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(width === 390 ? 1 : width === 768 ? 2 : 4);
@@ -137,22 +138,22 @@ for (const header of ['seconds', 'date']) {
   });
 }
 
-test('cold-cache placeholders, invalid identities, image failures and bounded refresh', async ({ page }) => {
+test('unavailable artwork stops retrying while transport failures have bounded recovery', async ({ page }) => {
   await page.clock.install();
   await feed(page, { items: items.map((item, index) => ({ ...item, recordingId: index === 3 ? 'not-a-recording' : item.recordingId })), nextCursor: null });
   let requests = 0;
   await page.route('**/api/artwork/recordings/*', route => {
     requests++;
     if (route.request().url().includes(items[0].recordingId)) return route.abort();
-    return route.fulfill({ contentType: 'image/svg+xml', body: cover.replace('width="500" height="500"', 'width="80" height="80"') });
+    return route.fulfill({ headers: { 'X-Artwork-State': 'unavailable' }, contentType: 'image/svg+xml', body: cover.replace('width="500" height="500"', 'width="80" height="80"') });
   });
   await page.goto('/');
-  await expect(page.locator('.artwork-missing')).toHaveCount(4);
+  await expect(page.locator('.artwork-missing')).toHaveCount(3);
   const initial = requests;
   for (let i = 0; i < 5; i++) { await page.clock.fastForward(30_000); await page.waitForTimeout(100); }
   expect(requests).toBeLessThanOrEqual(initial + 12);
   await expect(page.locator('.artwork-ready')).toHaveCount(0);
-  await expect(page.getByText('Cover unavailable')).toHaveCount(4);
+  await expect(page.getByText('Cover unavailable')).toHaveCount(3);
 });
 
 test('reduced motion and long text reflow at 320px', async ({ page }) => {

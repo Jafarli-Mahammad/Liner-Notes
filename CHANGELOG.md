@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Bound discovery requests to ten minutes, overlap independent public preparation
+  without changing candidate selection, and recover completed results after failed reloads.
+- Prioritize requested album covers, distinguish pending artwork from unavailable
+  artwork, and retain validated covers across restarts in a separately bounded cache.
 - Add a contributor guide, bug and feature request forms, and a pull request checklist.
 - Add an Actions workflow that publishes an interactive Codebase Memory graph to Pages and refreshes its snapshot from `main` on each successful deployment.
 - Add the Superdesign-based React Home, Discover, Your Taste and History pages,

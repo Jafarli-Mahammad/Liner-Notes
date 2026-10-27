@@ -6,7 +6,8 @@ using LinerNotes.Domain.Discovery;
 namespace LinerNotes.Application.Features.Discovery;
 
 public sealed class RunDiscoveryJob(IDiscoveryBatchStore batches,
-    PrepareDiscoveryBatch preparation, IDiscoveryWriteCoordinator admission, DiscoveryRuntimeOptions options, TimeProvider clock)
+    PrepareDiscoveryBatch preparation, IDiscoveryWriteCoordinator admission, DiscoveryRuntimeOptions options, TimeProvider clock,
+    IArtworkQueue? artwork = null)
 {
     public async Task ExecuteAsync(DiscoveryJob job, bool allowAcquisition, CancellationToken ct)
     {
@@ -26,5 +27,7 @@ public sealed class RunDiscoveryJob(IDiscoveryBatchStore batches,
                 prepared.CoverageJson, prepared.EvidenceExpiry, clock.GetUtcNow(), cancellation);
             return true;
         }, ct);
+        artwork?.Enqueue(prepared.Picks.Select(p => Guid.TryParse(p.Track.Mbid, out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty).Distinct().ToArray(), priority: true);
     }
 }

@@ -85,7 +85,13 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const response = await apiResponse(path, options);
   if (response.status === 204) return undefined as T;
   if (!response.headers.get('Content-Type')?.includes('json')) throw new ApiError(502, 'The server returned an unreadable response. Please try again.');
-  const body = await response.json();
+  let body: T;
+  try { body = await response.json(); }
+  catch (error) {
+    if (isAbort(error) && !options.signal?.aborted)
+      throw new ApiError(408, 'The request took too long. Your saved information is safe. Please try again.');
+    throw error;
+  }
   if (epoch !== identity.epoch) throw new DOMException('Session changed', 'AbortError');
   return body;
 }

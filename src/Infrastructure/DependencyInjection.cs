@@ -100,6 +100,8 @@ public static class DependencyInjection
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ListenBrainzOptions>>().Value);
         services.AddSingleton<IMetaBrainzRequestGate, MetaBrainzRequestGate>();
         services.AddSingleton<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IStoredArtwork, LinerNotes.Infrastructure.Artwork.StoredArtwork>();
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkQueue>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>());
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });

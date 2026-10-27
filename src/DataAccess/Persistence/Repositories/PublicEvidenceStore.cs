@@ -45,11 +45,14 @@ public sealed class PublicEvidenceStore(DataContext db) : IPublicEvidenceStore
             throw new ArgumentException("public_evidence_publication_invalid");
         var row = await LockAsync(lease.Key, ct) ?? throw new InvalidOperationException("public_evidence_lease_lost");
         Fence(row, lease, now);
-        long total = await Entries.SumAsync(e => e.StoredBytes, ct);
-        int count = await Entries.CountAsync(ct);
+        // Image bytes have their own quota and must never evict recommendation evidence.
+        var partition = Entries.Where(e => document.Kind == PublicEvidenceKind.Artwork
+            ? e.Kind == PublicEvidenceKind.Artwork : e.Kind != PublicEvidenceKind.Artwork);
+        long total = await partition.SumAsync(e => e.StoredBytes, ct);
+        int count = await partition.CountAsync(ct);
         if (total + bytes > maximumBytes || count > maximumEntries)
         {
-            var victims = await Entries.Where(e => e.Key != lease.Key && (e.LeaseToken == null || e.LeaseExpiresAtUtc <= now))
+            var victims = await partition.Where(e => e.Key != lease.Key && (e.LeaseToken == null || e.LeaseExpiresAtUtc <= now))
                 .OrderBy(e => e.ExpiresAtUtc).ThenBy(e => e.UpdatedAtUtc).ThenBy(e => e.Key)
                 .Select(e => new { e.Key, e.StoredBytes }).Take(100).ToArrayAsync(ct);
             var keys = new List<string>();

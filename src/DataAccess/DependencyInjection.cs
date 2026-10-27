@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<IDiscoveryBatchStore, DiscoveryBatchStore>();
         services.AddScoped<IDiscoveryReader, DiscoveryReader>();
         services.AddScoped<IRecentRecommendations, RecentRecommendations>();
+        services.AddScoped<IArtworkCatalog, ArtworkCatalog>();
         services.AddScoped<IPublicEvidenceStore, PublicEvidenceStore>();
         services.AddScoped<IManagedStorageIntegrity, LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageIntegrity>();
         services.AddScoped<ICatalogReader, CatalogReader>();

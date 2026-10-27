@@ -351,3 +351,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A cached image endpoint can respond in milliseconds while background acquisition takes minutes; finite browser retries can expire before preparation finishes. A fast warm probe alone would miss the user-visible failure.
 **Suggested improvement:** Trace enqueue-to-ready time, cache state, and browser retry horizon separately from HTTP response duration. Test cold, warm, delayed, and terminal-error states before assigning a cause.
 **Principle:** Measure the time until useful content is visible, including work outside the request that serves it.
+
+### Observation 034: Check CSP before changing image loading
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Adding explicit image readiness and asynchronous retry recovery.
+**Skill:** performance-reviewer; frontend verification
+**Type:** open-source
+**Phase/Area:** Image delivery and security policy
+**Issue:** A blob URL image-loading approach passed typechecking but failed in the real host because its CSP excluded blob images. Contract tests running against the real host caught the incompatibility.
+**Suggested improvement:** Read the host's CSP before choosing blob/data/direct URL delivery. Prefer an existing permitted delivery path where possible, and verify image decoding under actual response headers.
+**Principle:** Loading-state improvements must be tested with the application's security policy active.

@@ -36,6 +36,15 @@ the UI reports that warning. No backend fix, performance-audit change, CI/Docker
 change, commit, push or deployment was made. Final developer approval remains open.
 
 ## Guest discovery
+### Discovery and artwork reliability — 2026-10-27
+
+Local fixes add ten-minute job expiry, bounded acquisition/pool overlap, independent
+completed-result recovery, prioritized public-artwork scheduling and a separately
+bounded persistent cover cache. Candidate selection, score weights and supporting
+evidence requirements are preserved. Quality-affecting shortcuts are deferred in
+[the fix report](DISCOVERY_AND_ARTWORK_FIXES.md), with verification and remaining
+provider/storage limits. Developer confirmation and production acceptance remain pending.
+
 ### Album artwork — 2026-10-26
 ListenBrainz recording metadata now resolves release and release-group covers
 through Cover Art Archive. A separate background lane warms public recommendations;

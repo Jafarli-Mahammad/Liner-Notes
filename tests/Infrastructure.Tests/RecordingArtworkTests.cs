@@ -14,6 +14,112 @@ public sealed class RecordingArtworkTests
     private const string Release = "76df3287-6cda-33eb-8e9a-044b5e15ffdd";
     private const string Group = "48140466-cff6-3222-bd55-63c27e43190d";
 
+    [Fact]
+    public async Task RequestsPrioritizeVisibleCoversCoalesceDuplicatesAndNeverFetchOnRead()
+    {
+        using var cache = new RecordingArtworkCache();
+        using var http = new HttpClient(new Handler(_ => throw new InvalidOperationException("No HTTP on a read")));
+        var (service, metadata, _) = Create(cache, http);
+        var old = Guid.NewGuid();
+        cache.Enqueue([old, Recording]);
+        Assert.Equal(RecordingArtworkState.Pending, service.Request(Recording));
+        Assert.Equal(RecordingArtworkState.Pending, service.Request(Recording));
+        var batch = await cache.TakeAsync(default);
+        Assert.Equal(new[] { Recording, old }, batch);
+        await metadata.DidNotReceive().SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>());
+        cache.Complete(batch);
+        Assert.Equal(RecordingArtworkState.Unavailable, service.Request(Recording));
+    }
+
+    [Fact]
+    public async Task QueueIsBoundedAndVisibleRequestsDisplaceMaintenance()
+    {
+        using var cache = new RecordingArtworkCache();
+        var background = Enumerable.Range(0, 300).Select(_ => Guid.NewGuid()).ToArray();
+        cache.Enqueue(background);
+        var visible = Guid.NewGuid();
+        cache.Enqueue([visible], priority: true);
+        var all = new List<Guid>();
+        for (int i = 0; i < 32; i++)
+        {
+            var batch = await cache.TakeAsync(default);
+            all.AddRange(batch); cache.Complete(batch);
+        }
+        Assert.Equal(visible, all[0]);
+        Assert.Equal(256, all.Distinct().Count());
+        Assert.DoesNotContain(background[255], all);
+        using var stop = new CancellationTokenSource(); stop.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cache.TakeAsync(stop.Token));
+    }
+
+    [Fact]
+    public async Task UsesDistinctCaaReleaseBeforeGroupFallback()
+    {
+        using var cache = new RecordingArtworkCache();
+        var paths = new List<string>();
+        using var http = new HttpClient(new Handler(request =>
+        {
+            paths.Add(request.RequestUri!.AbsolutePath);
+            return paths.Count == 1 ? new(HttpStatusCode.NotFound) : Image();
+        }));
+        var (service, metadata, _) = Create(cache, http);
+        var caa = Guid.NewGuid();
+        metadata.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(call => Task.FromResult(
+            ListenBrainzResponse.Parse(call.Arg<ListenBrainzRequest>(), System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+                new Dictionary<string, object> { [Recording.ToString()] = new { release = new { mbid = Release, caa_release_mbid = caa, release_group_mbid = Group } } }),
+                EvidenceOrigin.Live, DateTimeOffset.UtcNow)));
+        await service.WarmAsync([Recording], default);
+        Assert.Equal(new[] { $"/release/{Release}/front-500", $"/release/{caa}/front-500" }, paths);
+        Assert.NotNull(service.GetCached(Recording));
+    }
+
+    [Fact]
+    public async Task RestoresPersistedCoverWithoutUpstreamRequests()
+    {
+        using var cache = new RecordingArtworkCache();
+        var metadata = Substitute.For<IListenBrainzApiClient>();
+        var stored = Substitute.For<IStoredArtwork>();
+        var cover = new RecordingCover([0xff, 0xd8, 0xff], "image/jpeg", DateTimeOffset.UtcNow.AddMinutes(5));
+        stored.FindAsync(Recording, Arg.Any<CancellationToken>()).Returns(cover);
+        var service = new RecordingArtwork(cache, metadata, Substitute.For<IHttpClientFactory>(), Substitute.For<IMetaBrainzRequestGate>(),
+            new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true }, TimeProvider.System, stored);
+        await service.WarmAsync([Recording], default, allowAcquisition: false);
+        Assert.Same(cover, service.GetCached(Recording));
+        await metadata.DidNotReceive().SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task NoStoreImagesAreNotPersistedAndRetainNoReusableFreshness()
+    {
+        using var cache = new RecordingArtworkCache();
+        using var http = new HttpClient(new Handler(_ =>
+        {
+            var response = Image(); response.Headers.CacheControl = new() { NoStore = true }; return response;
+        }));
+        var stored = Substitute.For<IStoredArtwork>();
+        var (service, _, _) = Create(cache, http, stored);
+        await service.WarmAsync([Recording], default);
+        Assert.False(service.GetCached(Recording)!.CanPersist);
+        Assert.True(service.GetCached(Recording)!.ExpiresAtUtc <= DateTimeOffset.UtcNow.AddSeconds(2));
+        await stored.DidNotReceive().SaveAsync(Arg.Any<Guid>(), Arg.Any<RecordingCover>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UncacheableRecordingMappingsDoNotEnterPersistentImageStorage()
+    {
+        using var cache = new RecordingArtworkCache();
+        using var http = new HttpClient(new Handler(_ => Image()));
+        var stored = Substitute.For<IStoredArtwork>();
+        var (service, metadata, _) = Create(cache, http, stored);
+        metadata.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+            ListenBrainzResponse.Parse(call.Arg<ListenBrainzRequest>(), System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+                new Dictionary<string, object> { [Recording.ToString()] = new { release = new { mbid = Release } } }),
+                EvidenceOrigin.Live, DateTimeOffset.UtcNow));
+        await service.WarmAsync([Recording], default);
+        Assert.False(service.GetCached(Recording)!.CanPersist);
+        await stored.DidNotReceive().SaveAsync(Arg.Any<Guid>(), Arg.Any<RecordingCover>(), Arg.Any<CancellationToken>());
+    }
+
     [Theory]
     [InlineData(false, 1)]
     [InlineData(true, 2)]
@@ -126,23 +232,24 @@ public sealed class RecordingArtworkTests
         await service.WarmAsync([Recording], default);
         await gate.Received().DeferAsync("CoverArtArchive", TimeSpan.FromSeconds(45), Arg.Any<CancellationToken>());
         Assert.Null(service.GetCached(Recording));
+        Assert.Equal(RecordingArtworkState.Pending, service.Request(Recording));
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.WarmAsync([Guid.NewGuid()], cancelled.Token));
     }
 
     private static (RecordingArtwork Service, IListenBrainzApiClient Metadata, IMetaBrainzRequestGate Gate)
-        Create(RecordingArtworkCache cache, HttpClient http)
+        Create(RecordingArtworkCache cache, HttpClient http, IStoredArtwork? stored = null)
     {
         var metadata = Substitute.For<IListenBrainzApiClient>();
         metadata.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
             ListenBrainzResponse.Parse(call.Arg<ListenBrainzRequest>(), System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
                 new Dictionary<string, object> { [Recording.ToString()] = new { release = new { mbid = Release, release_group_mbid = Group } } }),
-                EvidenceOrigin.Live, DateTimeOffset.UtcNow));
+                EvidenceOrigin.Live, DateTimeOffset.UtcNow) with { SharedCacheUntilUtc = DateTimeOffset.UtcNow.AddHours(1) });
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("CoverArtArchive").Returns(_ => new HttpClient(new Forward(http)));
         var gate = Substitute.For<IMetaBrainzRequestGate>();
-        return (new(cache, metadata, factory, gate, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true }, TimeProvider.System), metadata, gate);
+        return (new(cache, metadata, factory, gate, new() { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true }, TimeProvider.System, stored), metadata, gate);
     }
 
     private static HttpResponseMessage Image()

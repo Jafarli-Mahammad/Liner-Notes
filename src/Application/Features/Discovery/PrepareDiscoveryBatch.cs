@@ -39,7 +39,19 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         if (requests.Length > configuration.MaximumArtistSeeds + configuration.MaximumTagSeeds)
             throw new GenerationStoppedException("seed_limit");
         var pools = new List<PreparedDiscoveryPool>();
-        foreach (var request in requests) pools.Add(await preparation.GetAsync(request, allowAcquisition, ct));
+        // Independent public pools have their own scopes/leases. Keep input order for evidence and tie-breaking.
+        if (allowAcquisition)
+        {
+            using var parallelism = new SemaphoreSlim(2);
+            var pending = requests.Select(async request =>
+            {
+                await parallelism.WaitAsync(ct);
+                try { return await preparation.GetAsync(request, true, ct); }
+                finally { parallelism.Release(); }
+            });
+            pools.AddRange(await Task.WhenAll(pending));
+        }
+        else foreach (var request in requests) pools.Add(await preparation.GetAsync(request, false, ct));
         if (pools.Any(p => p.Origin != configuration.Origin)) throw new GenerationStoppedException("origin_mismatch");
         var gaps = taste.Gaps.Concat(pools.SelectMany(p => p.Gaps))
             .Concat(legacy.Length > artistSlots ? new[] { new CoverageGap("profile", "discovery", "artist_seed_window_applied") } : [])

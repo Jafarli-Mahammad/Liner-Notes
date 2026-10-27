@@ -15,6 +15,46 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 
 public sealed class PrepareDiscoveryBatchTests
 {
+    [Fact]
+    public async Task BoundedParallelAcquisitionPreservesEveryPickScoreAndEvidenceOrder()
+    {
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        var now = DateTimeOffset.UtcNow;
+        var pools = new[] { "ambient", "jazz", "rock" }.ToDictionary(seed => seed, seed =>
+            new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, now, now.AddMinutes(5),
+                CatalogText.Version, [Candidate(seed, "Artist " + seed, seed)], [], 1000, new string('b', 64)));
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), false, Arg.Any<CancellationToken>())
+            .Returns(call => pools[call.Arg<DiscoveryPoolRequest>().Seed]);
+        int active = 0, peak = 0;
+        var twoStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            int count = Interlocked.Increment(ref active);
+            Assert.InRange(count, 1, 2);
+            if (count == 2) { Interlocked.Exchange(ref peak, 2); twoStarted.TrySetResult(); }
+            try { await twoStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)); return pools[call.Arg<DiscoveryPoolRequest>().Seed]; }
+            finally { Interlocked.Decrement(ref active); }
+        });
+        var store = Substitute.For<IDiscoveryBatchStore>();
+        store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()));
+        var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        var signals = pools.Keys.Select(seed => TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, seed, 1,
+            TasteSignalSource.InitialSeedManual, "Selected style.")).ToArray();
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation, store, configuration, new());
+        var batch = Guid.NewGuid();
+        var sequential = await runner.PrepareAsync(new(profile, signals, []), batch, false, default);
+        var parallel = await runner.PrepareAsync(new(profile, signals, []), batch, true, default);
+        Assert.Equal(2, peak);
+        Assert.Equal(JsonSerializer.Serialize(sequential.Picks), JsonSerializer.Serialize(parallel.Picks));
+        Assert.Equal(sequential.CoverageJson, parallel.CoverageJson);
+        Assert.Equal(sequential.EvidenceExpiry, parallel.EvidenceExpiry);
+    }
+
     [Theory]
     [InlineData("rate_limit", true)]
     [InlineData("transport_error", true)]

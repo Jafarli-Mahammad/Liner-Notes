@@ -17,8 +17,10 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class DiscoveryJobServiceTests
 {
-    [Fact]
-    public async Task PreparedProfileCompletesWhileAcquisitionForAnotherProfileIsBlocked()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnotherProfileCompletesWhileAcquisitionIsBlocked(bool readyNeedsAcquisition)
     {
         var slow = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
         var ready = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
@@ -71,6 +73,7 @@ public sealed class DiscoveryJobServiceTests
         var preparation = Substitute.For<IDiscoveryPreparation>();
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(async c => {
             Assert.False(admission.Active);
+            if (readyNeedsAcquisition && !c.ArgAt<bool>(1)) throw new DiscoveryPreparationRequiredException();
             if (c.ArgAt<DiscoveryPoolRequest>(0).Seed == "ambient") {
                 if (!c.ArgAt<bool>(1)) throw new DiscoveryPreparationRequiredException();
                 acquiring.TrySetResult(); await release.Task.WaitAsync(c.ArgAt<CancellationToken>(2));

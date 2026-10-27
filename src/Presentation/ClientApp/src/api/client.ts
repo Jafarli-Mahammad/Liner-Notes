@@ -18,7 +18,10 @@ export function retryDeadline(value: string | null) {
   const time = raw && /^\d+$/.test(raw) ? Date.now() + Number(raw) * 1000 : Date.parse(raw ?? '');
   return Number.isFinite(time) && Math.abs(time) <= 8_640_000_000_000_000 ? time : null;
 }
-export function errorText(error: unknown) { return error instanceof Error ? error.message : 'That request could not finish. Please try again.'; }
+export function errorText(error: unknown) {
+  if (error instanceof DOMException && error.name === 'TimeoutError') return 'The request took too long. Your saved information is safe. Please try again.';
+  return error instanceof Error ? error.message : 'That request could not finish. Please try again.';
+}
 export function isAbort(error: unknown) { return error instanceof DOMException && error.name === 'AbortError'; }
 
 async function check(response: Response) {
@@ -41,7 +44,7 @@ async function refresh(epoch: number) {
   const saved = credentials;
   const operation = (async () => {
     if (!saved) return;
-    const response = await fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store', credentials: 'omit',
+    const response = await fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(30_000),
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: saved.accessToken, refreshToken: saved.refreshToken }) });
     if (identity.epoch !== epoch) throw new DOMException('Session changed', 'AbortError');
     if (!response.ok) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
@@ -58,8 +61,10 @@ export interface RequestOptions { method?: string; body?: unknown; signal?: Abor
 export async function apiResponse(path: string, options: RequestOptions = {}) {
   if (!path.startsWith('/api/') || path.includes('://')) throw new Error('Invalid API address.');
   const epoch = identity.epoch, previousToken = credentials?.accessToken;
+  const timeout = AbortSignal.timeout(30_000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   const send = () => fetch(path, {
-    method: options.method ?? 'GET', signal: options.signal, credentials: 'same-origin', cache: 'no-store',
+    method: options.method ?? 'GET', signal, credentials: 'same-origin', cache: 'no-store',
     headers: { Accept: 'application/json', ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(credentials ? { Authorization: `Bearer ${credentials.accessToken}` } : {}), ...(options.csrf ? { 'X-CSRF-TOKEN': options.csrf } : {}) },
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),

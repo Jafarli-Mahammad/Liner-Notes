@@ -12,7 +12,8 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         options.Validate();
-        return options.RunJobs ? Task.WhenAll(LaneAsync(false, stoppingToken), LaneAsync(true, stoppingToken)) : Task.CompletedTask;
+        return options.RunJobs ? Task.WhenAll(Enumerable.Range(0, options.AcquisitionConcurrency)
+            .Select(_ => LaneAsync(true, stoppingToken)).Prepend(LaneAsync(false, stoppingToken))) : Task.CompletedTask;
     }
 
     private async Task LaneAsync(bool acquisition, CancellationToken ct)
@@ -51,7 +52,9 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
     private async Task ProcessAsync(DiscoveryJob job, bool acquisition, CancellationToken stoppingToken)
     {
         using var work = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        work.CancelAfter(TimeSpan.FromSeconds(options.MaximumWorkSeconds));
+        var remaining = job.CreatedAtUtc.AddSeconds(options.MaximumJobAgeSeconds) - clock.GetUtcNow();
+        if (remaining <= TimeSpan.Zero) remaining = TimeSpan.FromMilliseconds(1);
+        work.CancelAfter(remaining < TimeSpan.FromSeconds(options.MaximumWorkSeconds) ? remaining : TimeSpan.FromSeconds(options.MaximumWorkSeconds));
         using var heartbeatStop = CancellationTokenSource.CreateLinkedTokenSource(work.Token);
         var heartbeat = HeartbeatAsync(job, work, heartbeatStop.Token);
         string? error = null;

@@ -3,6 +3,23 @@ using Xunit;
 namespace LinerNotes.Domain.Tests;
 public sealed class DiscoveryJobLeaseTests
 {
+    [Fact]
+    public void TotalDeadlineExpiresDeferredAndLeasedJobsAndFencesTheirWorkers()
+    {
+        var job = new DiscoveryJob(Guid.NewGuid(), "deadline", new string('a', 64), DiscoveryJobKind.Generation, 0, "{\"input\":1}", Now);
+        var token = Guid.NewGuid();
+        job.AcquireLease(token, Now, TimeSpan.FromSeconds(60), 3);
+        job.DeferLease(token, Now.AddSeconds(1), TimeSpan.Zero, "waiting_for_music");
+        Assert.False(job.Expire(Now.AddSeconds(599), TimeSpan.FromMinutes(10)));
+        job.AcquireLease(token, Now.AddSeconds(599), TimeSpan.FromSeconds(60), 3);
+        Assert.True(job.Expire(Now.AddSeconds(600), TimeSpan.FromMinutes(10)));
+        Assert.Equal(DiscoveryJobState.Failed, job.State);
+        Assert.Equal("job_timeout", job.ErrorCode);
+        Assert.Equal("{}", job.PayloadJson);
+        Assert.Throws<InvalidOperationException>(() => job.Complete(token, Now.AddSeconds(601), Guid.NewGuid(), null));
+        Assert.False(job.Expire(Now.AddSeconds(601), TimeSpan.FromMinutes(10)));
+    }
+
     private static readonly DateTimeOffset Now = DateTimeOffset.UnixEpoch;
     [Fact]
     public void PreparationHandoffReleasesLeaseWithoutConsumingRetryBudget()

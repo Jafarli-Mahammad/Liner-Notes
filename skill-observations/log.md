@@ -339,3 +339,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A text-focused cleanup removed diagrams that helped readers understand the product loop, source layout and code relationships.
 **Suggested improvement:** Inventory existing visual assets and diagrams before rewriting documentation; keep the useful ones, update their labels and limits, and verify the rendered references.
 **Principle:** Simplify prose without discarding visuals that carry useful project context.
+
+### Observation 033: Trace readiness separately from response latency
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Investigating slow background discovery and cover loading.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Asynchronous preparation and browser retries
+**Issue:** A cached image endpoint can respond in milliseconds while background acquisition takes minutes; finite browser retries can expire before preparation finishes. A fast warm probe alone would miss the user-visible failure.
+**Suggested improvement:** Trace enqueue-to-ready time, cache state, and browser retry horizon separately from HTTP response duration. Test cold, warm, delayed, and terminal-error states before assigning a cause.
+**Principle:** Measure the time until useful content is visible, including work outside the request that serves it.

@@ -118,7 +118,14 @@ class McpProcess:
     def call_tool(self, name: str, arguments: dict[str, Any], timeout: int = 900) -> dict[str, Any]:
         result = self.request("tools/call", {"name": name, "arguments": arguments}, timeout)
         if result.get("isError"):
-            raise ExportError(f"Codebase Memory tool {name} reported an error")
+            details = [
+                block["text"]
+                for block in result.get("content", [])
+                if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str)
+            ]
+            detail = "; ".join(details)
+            suffix = f": {detail[:1500]}" if detail else ""
+            raise ExportError(f"Codebase Memory tool {name} reported an error{suffix}")
         structured = result.get("structuredContent")
         if isinstance(structured, dict):
             return structured
@@ -250,7 +257,7 @@ def main() -> int:
             if not required_tools.issubset(tool_names):
                 raise ExportError("Pinned Codebase Memory release is missing required MCP tools")
 
-            indexed = client.call_tool("index_repository", {"repo_path": str(repo)})
+            indexed = client.call_tool("index_repository", {"repo_path": str(repo), "name": PROJECT})
             status = client.call_tool("index_status", {"project": PROJECT, "format": "json"})
             if status.get("status") != "ready":
                 raise ExportError("Codebase Memory index did not reach ready status")

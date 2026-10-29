@@ -8,9 +8,13 @@ namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 public sealed partial class ListenBrainzRecommendationProvider : IPublicRecordingCatalogSource
 {
     public IReadOnlyList<CatalogLookupResult> ReadPublicRecordingMetadata()
+        => ReadPublicRecordingMetadata(responses.Values.Where(value => value.Reference.Method == "metadata.recording"));
+
+    internal static IReadOnlyList<CatalogLookupResult> ReadPublicRecordingMetadata(IEnumerable<ListenBrainzResponse> responses,
+        IReadOnlySet<Guid>? allowedRecordings = null)
     {
         var results = new List<CatalogLookupResult>();
-        foreach (var response in responses.Values.Where(value => value.Reference.Method == "metadata.recording"))
+        foreach (var response in responses)
         {
             if (response.Reference.Origin != EvidenceOrigin.Live || response.Gaps.Length != 0 ||
                 response.Reference.RetrievedAtUtc is not { } acquired ||
@@ -21,6 +25,7 @@ public sealed partial class ListenBrainzRecommendationProvider : IPublicRecordin
             var recordings = new List<CatalogArtifactRow>();
             foreach (var item in data.EnumerateObject().OrderBy(item => item.Name, StringComparer.Ordinal))
             {
+                if (allowedRecordings is not null && (!Guid.TryParseExact(item.Name, "D", out var requested) || !allowedRecordings.Contains(requested))) continue;
                 var recording = ListenBrainzEvidenceParser.Recording(response, item.Name);
                 if (recording is null || !Text(recording.Title) ||
                     !item.Value.TryGetProperty("artist", out var credit) ||

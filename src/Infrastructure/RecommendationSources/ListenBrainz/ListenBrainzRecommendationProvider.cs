@@ -107,6 +107,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
     public async Task<IngestionResult<HydratedCandidateTrack>> HydrateCandidatesBatchAsync(IReadOnlyList<RawCandidateTrack> rawCandidates,
         CancellationToken cancellationToken = default)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("provider.hydration");
         cancellationToken.ThrowIfCancellationRequested();
         if (rawCandidates.Count > 400) throw new ArgumentException("listenbrainz_candidate_limit");
         var hydrated = new List<HydratedCandidateTrack>();

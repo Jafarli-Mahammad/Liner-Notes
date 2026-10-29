@@ -1,3 +1,4 @@
+using LinerNotes.Application.Features.Discovery;
 using System.Security.Cryptography;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Discovery;
@@ -53,7 +54,8 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
                         "canonical_seed_tags_not_supported", []);
                 }
                 else seed = await provider.SeedTags.GetAsync(request.Name, token);
-                var now = clock.GetUtcNow();
+                DiscoverySourceValidation.ThrowIfFailed(seed.Gaps);
+            var now = clock.GetUtcNow();
                 DateTimeOffset? expiry = configuration.Origin == EvidenceOrigin.Synthetic ? now.AddMinutes(10)
                     : provider.Source is IPublicEvidenceFreshness freshness ? freshness.SharedUntilUtc : null;
                 return PublicEvidenceCodec.EncodeSeed(key, provider.Id, seed, now, expiry);

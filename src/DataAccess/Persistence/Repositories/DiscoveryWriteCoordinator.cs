@@ -14,6 +14,7 @@ public sealed class DiscoveryWriteCoordinator(DataContext db, IUnitOfWork unit,
     private long outerEstimate;
     public async Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("reclamation.total");
         if (active || db.Database.CurrentTransaction is not null)
             throw new GenerationStoppedException("storage_requires_outer_reclamation");
         await using var databaseLease = await inventory.AcquireBatchAsync(ct);
@@ -50,6 +51,7 @@ public sealed class DiscoveryWriteCoordinator(DataContext db, IUnitOfWork unit,
     }
     public async Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("persistence.total");
         if (estimatedBytes is < 0 or > 67_108_864) throw new GenerationStoppedException("storage_estimate_invalid");
         if (active)
         {

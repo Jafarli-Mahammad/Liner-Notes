@@ -50,6 +50,7 @@ Working preferences
 [stated] Explain dependency-removal audit findings, exploitability evidence, and upgrade alternatives before removing a dependency. (2026-10-06)
 [stated] Remove generic committed development credentials; configure database and signing secrets through User Secrets or environment variables. Keep synthetic test fixtures separate from runtime credentials. (2026-10-13)
 Decisions (with reasons)
+[stated] Storage P01/P19/P20 and authentication-lock changes require a unified measured proposal before architectural implementation; preserve external filesystem change detection, SHA-256, exact accounting, atomic publication/recovery and concurrent-write safety. Bounded revalidation of previously public recordings is conditionally approved with fresh eligibility/licensing checks and no private-data use. Non-cacheable artwork forwarding and recommendation coverage/evidence shortcuts are rejected. Safe history/export/archive improvements remain authorized with unchanged snapshot, ownership, retention and accounting guarantees. (2026-10-29)
 [stated] No custom ML in V1, including ML.NET matrix factorization: no budget, and no feedback data to train on at launch. Revisit in V2 with real data. (2026-09-28)
 [stated] No Spotify similarity/audio-feature integration: those endpoints were removed for new apps. Re-check before relying on this. (2026-09-28)
 [stated] Don't fork Troi (ListenBrainz's engine): it's Python and we call the API instead of running their engine. (2026-09-28)

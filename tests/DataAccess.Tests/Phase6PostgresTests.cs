@@ -164,6 +164,34 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
     }
 
     [LocalPostgresMigrationFact]
+    public async Task StreamedInputRevisionMatchesTheOriginalSerializedBytes()
+    {
+        var generated = await GenerateAsync();
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(new RecordRecommendationFeedbackCommand(
+            generated.Digest!.Recommendations[0].Id, userId, UserFeedback.Liked, Rating: 9));
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var profile = await db.ListenerProfiles.SingleAsync(p => p.UserId == userId);
+        var inputs = await scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadInputsAsync(userId);
+        // Compatibility oracle: the original revision algorithm materialized these exact JSON bytes.
+        var original = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            Exists = inputs.UserExists,
+            ProfileId = inputs.ProfileId,
+            ProfileRevision = (long?)profile.Revision,
+            Onboarding = profile.OnboardingJson,
+            Signals = inputs.Signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
+            Feedback = inputs.Feedback.Select(r => new
+            {
+                r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt, r.LastModifiedAt,
+                r.Track.TrackKey, r.Track.NormalizedArtistName, r.Track.NormalizedTitle, r.ScoreBreakdown.MatchedTags
+            })
+        });
+        Assert.NotEmpty(inputs.Feedback);
+        Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(original)), inputs.Revision);
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task StoredByteFailureAndCancellation_RollBackDigestAndCatalog()
     {
         await using var scope = services.CreateAsyncScope();

@@ -6,7 +6,8 @@ usage() {
 Usage:
   diagnostics/profile.sh --pid PID [--duration SECONDS] [--name NAME]
   diagnostics/profile.sh --launch --duration SECONDS [--name NAME] -- COMMAND [ARG...]
-Capture CPU samples and write an original .nettrace plus Speedscope JSON profile.
+Capture sampled managed thread stacks and write .nettrace plus Speedscope JSON.
+Samples include waits; combine them with runtime CPU counters and stage timings.
 Attach mode requires an explicit PID. Duration defaults to 30 seconds (maximum 3600).
 HELP
 }
@@ -43,13 +44,20 @@ dir="$RESULTS_DIR/profile-$name"
 mkdir -p -- "$dir"
 trace="$dir/$name.nettrace"
 duration_arg="$(printf '%02d:%02d:%02d:%02d' "$((duration / 86400))" "$((duration / 3600 % 24))" "$((duration / 60 % 60))" "$((duration % 60))")"
-args=(collect --duration "$duration_arg" --profile cpu-sampling --format NetTrace --output "$trace")
+# .NET diagnostics 10 separates native CPU sampling (collect-linux) from
+# launch-compatible EventPipe thread sampling. Older tools call the latter cpu-sampling.
+profile=cpu-sampling
+if dotnet-trace list-profiles | grep -q 'dotnet-sampled-thread-time'; then
+  profile=dotnet-sampled-thread-time
+fi
+args=(collect --duration "$duration_arg" --profile "$profile" --format NetTrace --output "$trace")
 if [[ "$launch" == true ]]; then
   dotnet-trace "${args[@]}" --show-child-io -- "${command_args[@]}"
 else
   dotnet-trace "${args[@]}" --process-id "$pid"
 fi
 [[ -s "$trace" ]] || die "No trace was written; target may have exited or collection failed."
-dotnet-trace convert --format Speedscope --output "$dir/$name.speedscope.json" "$trace"
+dotnet-trace convert --format Speedscope --output "$dir/$name" "$trace"
+[[ -s "$dir/$name.speedscope.json" ]] || die "No Speedscope file was written."
 printf '\nOriginal trace: %s\nSpeedscope: %s\n' "$trace" "$dir/$name.speedscope.json"
 printf 'Hotspot summary: dotnet-trace report %q topN -n 20\n' "$trace"

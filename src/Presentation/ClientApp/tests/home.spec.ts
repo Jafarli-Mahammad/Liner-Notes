@@ -173,3 +173,112 @@ test('personal navigation opens the React taste editor without a legacy redirect
   await expect(page.getByRole('heading', { name: 'Your taste', exact: true })).toBeVisible();
   await expect(page.locator('#tab-seeding')).toHaveCount(0);
 });
+
+
+test('artwork recovers when GET fails after a successful readiness check', async ({ page }) => {
+  await page.clock.install();
+  await feed(page, { items: [items[0]], nextCursor: null });
+  let gets = 0;
+  await page.route('**/api/artwork/recordings/*', route => {
+    if (route.request().method() === 'GET' && ++gets === 1) return route.abort();
+    return route.fulfill({ headers: { 'X-Artwork-State': 'ready' }, contentType: 'image/svg+xml', body: cover });
+  });
+  await page.goto('/');
+  await expect.poll(() => gets).toBe(1);
+  await page.clock.fastForward(2500);
+  await expect(page.locator('.artwork-ready')).toHaveCount(1);
+  expect(gets).toBe(2);
+});
+
+
+test('artwork honors a negative-cache retry window without repeated HEAD requests', async ({ page }) => {
+  await page.clock.install();
+  await feed(page, { items: [items[0]], nextCursor: null });
+  let heads = 0;
+  await page.route('**/api/artwork/recordings/*', route => {
+    if (route.request().method() === 'HEAD' && ++heads === 1)
+      return route.fulfill({ headers: { 'X-Artwork-State': 'pending', 'Retry-After': '60' }, body: '' });
+    return route.fulfill({ headers: { 'X-Artwork-State': 'ready' }, contentType: 'image/svg+xml', body: cover });
+  });
+  await page.goto('/'); await expect.poll(() => heads).toBe(1);
+  await page.clock.fastForward(45_000); expect(heads).toBe(1);
+  await page.clock.fastForward(16_000);
+  await expect(page.locator('.artwork-ready')).toHaveCount(1); expect(heads).toBe(2);
+});
+
+test('artwork visibility changes do not reset the total retry deadline', async ({ page }) => {
+  await page.clock.install();
+  await feed(page, { items: [items[0]], nextCursor: null });
+  let heads = 0;
+  await page.route('**/api/artwork/recordings/*', route => {
+    heads++; return route.fulfill({ headers: { 'X-Artwork-State': 'pending' }, body: '' });
+  });
+  await page.goto('/'); await expect.poll(() => heads).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.fastForward(11 * 60_000);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.locator('.artwork-missing')).toHaveCount(1); expect(heads).toBe(1);
+});
+
+
+test('an image GET failure while hidden recovers when the tab becomes visible', async ({ page }) => {
+  await feed(page, { items: [items[0]], nextCursor: null });
+  let gets = 0, release!: () => void;
+  const failed = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/artwork/recordings/*', async route => {
+    if (route.request().method() === 'GET' && ++gets === 1) { await failed; return route.abort(); }
+    return route.fulfill({ headers: { 'X-Artwork-State': 'ready' }, contentType: 'image/svg+xml', body: cover });
+  });
+  await page.goto('/'); await expect.poll(() => gets).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(100); release();
+  await expect(page.locator('.artwork-frame img')).not.toHaveAttribute('src');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.locator('.artwork-ready')).toHaveCount(1); expect(gets).toBe(2);
+});
+
+
+test('artwork recovers when the ready cover expires between HEAD and GET', async ({ page }) => {
+  await page.clock.install(); await feed(page, { items: [items[0]], nextCursor: null });
+  let gets = 0;
+  await page.route('**/api/artwork/recordings/*', route => {
+    if (route.request().method() === 'GET' && ++gets === 1)
+      return route.fulfill({ status: 503, headers: { 'X-Artwork-State': 'pending', 'Retry-After': '2' }, body: '' });
+    return route.fulfill({ headers: { 'X-Artwork-State': 'ready' }, contentType: 'image/svg+xml', body: cover });
+  });
+  await page.goto('/'); await expect.poll(() => gets).toBe(1);
+  await page.clock.fastForward(2500);
+  await expect(page.locator('.artwork-ready')).toHaveCount(1); expect(gets).toBe(2);
+});
+
+
+test('offscreen artwork starts its retry budget on first visible demand', async ({ page }) => {
+  await page.clock.install(); await feed(page, { items: [items[0]], nextCursor: null });
+  let release!: () => void, heads = 0;
+  const pendingFeed = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/discovery/recent?limit=4', async route => {
+    await pendingFeed; return route.fulfill({ json: { items: [items[0]], nextCursor: null } });
+  });
+  await page.route('**/api/artwork/recordings/*', route => {
+    if (route.request().method() === 'HEAD') heads++;
+    return route.fulfill({ headers: { 'X-Artwork-State': 'ready' }, contentType: 'image/svg+xml', body: cover });
+  });
+  await page.goto('/'); await page.addStyleTag({ content: '.artwork-frame { transform: translateY(3000px); }' }); release();
+  await expect(page.locator('.artwork-frame')).toHaveCount(1);
+  await page.clock.fastForward(11 * 60_000); expect(heads).toBe(0);
+  await page.addStyleTag({ content: '.artwork-frame { transform: none !important; }' });
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(page.locator('.artwork-ready')).toHaveCount(1); expect(heads).toBe(1);
+});

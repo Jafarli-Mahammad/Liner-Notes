@@ -23,7 +23,20 @@ diagnostics/coverage.sh --configuration Debug --timeout 300
 
 The script runs each test project separately with Coverlet line and branch coverage. Default timeout is 300 seconds per project; set `--timeout` to a positive number of seconds. Output includes per-project Cobertura files, a combined Cobertura report at `diagnostics/results/coverage-<UTC>/report/Cobertura.xml`, HTML at `.../report/index.html`, and a short `Summary.txt`. `--no-build` requires that configuration to have already been built.
 
-## CPU profiling
+## Managed thread sampling
+
+Discovery/artwork instrumentation exposes the `LinerNotes.Discovery` meter and
+activity source. Fixed stage names cover preparation, provider gates/dispatch,
+metadata coalescing, ranking, persistence/database admission, artifact scans,
+job age and artwork preparation/queue/acquisition/revalidation. Cache counters
+use fixed layer/outcome labels. No exporter or persistent collection is enabled
+automatically; use bounded sessions and never add owner IDs, seed text, tokens
+or payloads as labels. Thread samples include waits and require runtime counters
+and stage timings for interpretation.
+
+Reproducible design-only probes and their limits are in
+[proposals/README.md](proposals/README.md). They do not implement the proposed
+storage/accounting/authentication protocol.
 
 ```bash
 diagnostics/profile.sh --pid 12345 --duration 30
@@ -33,7 +46,7 @@ diagnostics/profile.sh --launch --duration 30 -- dotnet exec src/Presentation/bi
 
 Attach requires an explicit PID; the script never discovers or attaches to a process automatically. Durations are whole seconds, 13600. Launch mode records from application startup and forwards child IO. Each run retains the original `.nettrace` plus a `.speedscope.json` profile. Open the latter at [speedscope.app](https://www.speedscope.app). For a CLI hotspot report, run the printed `dotnet-trace report <trace> topN -n 20` command.
 
-Sampling shows where CPU samples landed. It does not establish request latency or prove a regression by itself.
+With diagnostics tools 10, the script selects `dotnet-sampled-thread-time`; older tools use their `cpu-sampling` EventPipe profile. These samples include waiting threads. Combine them with `System.Runtime` CPU counters and stage timings; a high inclusive sample percentage alone does not establish CPU cost. Native CPU sampling uses `dotnet-trace collect-linux`, which requires additional privileges and is deliberately not selected by this launch script.
 
 ## Memory diagnostics
 

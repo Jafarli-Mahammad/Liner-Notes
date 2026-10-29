@@ -56,11 +56,15 @@ public sealed class PrepareDiscoveryBatchTests
     }
 
     [Theory]
-    [InlineData("rate_limit", true)]
-    [InlineData("transport_error", true)]
-    [InlineData("permission_denied", false)]
-    [InlineData("invalid_json", false)]
-    public async Task SourceFailuresDoNotBecomeSuccessfulEmptyBatches(string reason, bool retryable)
+    [InlineData("rate_limit", true, false)]
+    [InlineData("transport_error", true, false)]
+    [InlineData("permission_denied", false, false)]
+    [InlineData("invalid_json", false, false)]
+    [InlineData("rate_limit", true, true)]
+    [InlineData("transport_error", true, true)]
+    [InlineData("request_timeout", true, true)]
+    [InlineData("upstream_unavailable", true, true)]
+    public async Task SourceFailuresDoNotBecomeSuccessfulEmptyOrPartialBatches(string reason, bool retryable, bool hasCandidates)
     {
         var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
         var resolver = Substitute.For<IRecommendationProviderResolver>();
@@ -69,7 +73,7 @@ public sealed class PrepareDiscoveryBatchTests
         var preparation = Substitute.For<IDiscoveryPreparation>();
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(
             new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, null,
-                CatalogText.Version, [], [new("jazz", "discovery", reason)], 0, new string('b', 64)));
+                CatalogText.Version, hasCandidates ? [Candidate("Supported", "Artist", "jazz")] : [], [new("jazz", "discovery", reason)], 0, new string('b', 64)));
         var profile = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
         var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "Selected style.");
         var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation,

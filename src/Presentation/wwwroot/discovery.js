@@ -165,21 +165,21 @@ window.discoveryApp = (() => {
   }
   function refreshArtwork(attempt = 0) {
     clearTimeout(artworkTimer);
-    if (attempt >= 4) return;
+    if (attempt >= 20) return;
     artworkTimer = setTimeout(() => {
       document.querySelectorAll('.discovery-cover').forEach(img => {
-        // The placeholder is 80px; keep already-loaded cover thumbnails cached.
-        if (img.naturalWidth && img.naturalWidth !== 80) return;
+        // Only successful image loads establish readiness; legitimate covers can also be 80px.
+        if (img.dataset.artworkReady === 'true') return;
         img.src = img.src.split('?')[0] + '?refresh=' + (attempt + 1);
       });
       refreshArtwork(attempt + 1);
     }, 30000);
   }
   document.addEventListener('error', event => {
-    if (event.target.matches?.('.discovery-cover')) event.target.style.visibility = 'hidden';
+    if (event.target.matches?.('.discovery-cover')) { event.target.dataset.artworkReady = 'false'; event.target.style.visibility = 'hidden'; }
   }, true);
   document.addEventListener('load', event => {
-    if (event.target.matches?.('.discovery-cover')) event.target.style.visibility = '';
+    if (event.target.matches?.('.discovery-cover')) { event.target.dataset.artworkReady = 'true'; event.target.style.visibility = ''; }
   }, true);
   function pickCard(pick) {
     return `<article class="surface discovery-pick" data-pick="${html(pick.id)}" data-current-feedback="${html(pick.feedback)}">

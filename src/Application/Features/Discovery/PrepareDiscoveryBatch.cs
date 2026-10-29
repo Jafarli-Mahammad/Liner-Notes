@@ -16,6 +16,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
 {
     public async Task<PreparedDiscoveryBatch> PrepareAsync(DiscoveryInputs inputs, Guid batchId, bool allowAcquisition, CancellationToken ct, LinerNotes.Domain.Digest.IsoWeek? week = null)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.total");
         var scoring = configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         var effective = EffectiveTasteInputs.FromProfile(inputs.Profile.Id, inputs.Signals, inputs.Feedback,
@@ -58,38 +59,39 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             .Distinct().ToArray();
         if (pools.Sum(p => p.Candidates.Count) > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var hydrated = Merge(pools.SelectMany(p => p.Candidates));
-        if (gaps.Any(g => g.Reason is "permission_denied" or "http_error" or "invalid_json" or "invalid_discovery_shape_or_identifier"))
-            throw new DiscoverySourceException("source_configuration_or_response_invalid", false);
-        if (hydrated.Count == 0 && gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "request_timeout" or "upstream_unavailable"))
-            throw new DiscoverySourceException("source_temporarily_unavailable", true);
+        DiscoverySourceValidation.ThrowIfFailed(gaps.Concat(hydrated.SelectMany(candidate => candidate.Gaps)));
         if (hydrated.Count > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var aliases = hydrated.SelectMany(c => TrackIdentity.Aliases(c.Track)).Distinct(StringComparer.Ordinal).ToArray();
         var excluded = (await store.FindExcludedAsync(inputs.Profile.Id, aliases, ct)).Concat(effective.ExcludedAliases).ToHashSet(StringComparer.Ordinal);
         string inputHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.PositiveSignals.OrderBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).Select(s => new { s.TargetType, s.NormalizedTargetValue, s.Weight, s.CanonicalEntityId }))));
-        var candidates = hydrated.Select(c => new BaselineACandidate(c.Track, c.TagVector,
-            new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? taste.Seeds.Any(seed => seed.SignalId == s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), taste.Seeds,
-                c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
-                c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
-                c.TagScope, c.PopularityMissingReason)
-            {
-                MaterializationVersion = DiscoveryTasteMaterializer.Version,
-                TagNormalizationVersion = c.TagNormalizationVersion,
-                SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray(),
-                FullInputSha256 = inputHash,
-                FullInputCount = effective.PositiveSignals.Count,
-                SelectionPolicy = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Version,
-                SelectionAnswers = answers is null ? null : JsonSerializer.Serialize(answers),
-                SelectionReasons = PreferenceReasons(c),
-                AcquisitionWindow = requests.Select(r => (r.IsRecording ? "recording:" : r.IsTag ? "tag:" : "artist:") + (r.ArtistId?.ToString("D") ?? r.Seed)).ToArray(),
-                AlbumFallbacks = Fallbacks(c),
-                SimilarityInfluence = Influence(c)
-            })).ToArray();
-        var familiar = effective.FamiliarArtists.Concat(taste.FamiliarArtists).ToHashSet(StringComparer.Ordinal);
-        var eligible = candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excluded.Contains));
-        var scored = week is null
-            ? scorer.ScoreForBatch(eligible, taste.Vector, familiar, batchId, scoring)
-            : scorer.Score(eligible, taste.Vector, familiar, week, scoring);
-        var picks = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Rank(scored, answers, configuration.MaximumPicks);
+        IReadOnlyList<BaselineAPick> picks;
+        using (LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.evidence_ranking"))
+        {
+            var candidates = hydrated.Select(c => new BaselineACandidate(c.Track, c.TagVector,
+                new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? taste.Seeds.Any(seed => seed.SignalId == s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), taste.Seeds,
+                    c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
+                    c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
+                    c.TagScope, c.PopularityMissingReason)
+                {
+                    MaterializationVersion = DiscoveryTasteMaterializer.Version,
+                    TagNormalizationVersion = c.TagNormalizationVersion,
+                    SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray(),
+                    FullInputSha256 = inputHash,
+                    FullInputCount = effective.PositiveSignals.Count,
+                    SelectionPolicy = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Version,
+                    SelectionAnswers = answers is null ? null : JsonSerializer.Serialize(answers),
+                    SelectionReasons = PreferenceReasons(c),
+                    AcquisitionWindow = requests.Select(r => (r.IsRecording ? "recording:" : r.IsTag ? "tag:" : "artist:") + (r.ArtistId?.ToString("D") ?? r.Seed)).ToArray(),
+                    AlbumFallbacks = Fallbacks(c),
+                    SimilarityInfluence = Influence(c)
+                })).ToArray();
+            var familiar = effective.FamiliarArtists.Concat(taste.FamiliarArtists).ToHashSet(StringComparer.Ordinal);
+            var eligible = candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excluded.Contains));
+            var scored = week is null
+                ? scorer.ScoreForBatch(eligible, taste.Vector, familiar, batchId, scoring)
+                : scorer.Score(eligible, taste.Vector, familiar, week, scoring);
+            picks = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Rank(scored, answers, configuration.MaximumPicks);
+        }
         long bytes = 65_536;
         foreach (var pick in picks)
         {

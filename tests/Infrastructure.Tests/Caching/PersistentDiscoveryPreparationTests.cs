@@ -1,3 +1,4 @@
+using NSubstitute;
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Common.Models.Recommendation;
@@ -12,6 +13,40 @@ namespace LinerNotes.Infrastructure.Tests.Caching;
 
 public sealed class PersistentDiscoveryPreparationTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TemporaryFailuresAreNotPublishedOrReusedByTheNextAcquisition(bool seed)
+    {
+        int artistCalls = 0;
+        var client = Substitute.For<IListenBrainzApiClient>();
+        var data = new FixtureListenBrainzApiClient();
+        client.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            var request = call.Arg<ListenBrainzRequest>();
+            if (request.Kind == ListenBrainzRequestKind.ArtistMetadata && Interlocked.Increment(ref artistCalls) == 1)
+                return ListenBrainzResponse.Gap(request, EvidenceOrigin.Synthetic, "rate_limit");
+            return await data.SendAsync(request, call.Arg<CancellationToken>());
+        });
+        using var fixture = new Fixture(client);
+        using var caches = new DiscoveryMemoryCaches(new());
+        using var memory = fixture.Memory(caches);
+        var pools = new PersistentDiscoveryPreparation(memory, fixture.Evidence);
+        var seeds = fixture.Seeds(caches);
+        async Task Acquire()
+        {
+            if (seed) Assert.False((await seeds.GetAsync(new(Guid.Parse("11111111-1111-4111-8111-111111111111"), "Artist", false), true, default)).Vector.IsEmpty);
+            else Assert.NotEmpty((await pools.GetAsync(new(null, "jazz", true), true, default)).Candidates);
+        }
+        var error = await Assert.ThrowsAsync<DiscoverySourceException>(Acquire);
+        Assert.True(error.Retryable);
+        Assert.Empty(fixture.Store.Documents);
+        Assert.Empty(fixture.Store.Leases);
+        await Acquire(); await Acquire();
+        Assert.Equal(2, artistCalls);
+        Assert.Single(fixture.Store.Documents);
+    }
+
     [Theory]
     [InlineData(201, false)]
     [InlineData(256, false)]
@@ -146,8 +181,10 @@ public sealed class PersistentDiscoveryPreparationTests
         private readonly ServiceProvider services;
         private readonly GenerationConfiguration generation = new() { Origin = EvidenceOrigin.Synthetic };
         public SharedPublicEvidence Evidence { get; }
-        public Fixture()
+        private readonly IListenBrainzApiClient client;
+        public Fixture(IListenBrainzApiClient? client = null)
         {
+            this.client = client ?? new FixtureListenBrainzApiClient();
             services = new ServiceCollection().AddSingleton<IPublicEvidenceStore>(Store)
                 .AddSingleton<IDiscoveryWriteCoordinator>(Coordinator).AddSingleton<IRecommendationProviderResolver>(this).BuildServiceProvider();
             Evidence = new(services.GetRequiredService<IServiceScopeFactory>(), generation, new DiscoveryRuntimeOptions(), Clock);
@@ -160,7 +197,7 @@ public sealed class PersistentDiscoveryPreparationTests
         {
             Assert.False(Coordinator.Active);
             Acquisitions++;
-            var provider = new ListenBrainzRecommendationProvider(new FixtureListenBrainzApiClient());
+            var provider = new ListenBrainzRecommendationProvider(client);
             return new("listenbrainz", provider, provider, provider);
         }
         public void Dispose() => services.Dispose();

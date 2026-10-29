@@ -147,6 +147,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
 
     private async Task<Dictionary<string, ArtifactMeasurement>> MeasureAsync(CancellationToken ct, IReadOnlySet<string>? excluded = null)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("storage.artifact_scan");
         var measurements = new Dictionary<string, ArtifactMeasurement>(StringComparer.Ordinal);
         long sharedBytes = 0;
         try

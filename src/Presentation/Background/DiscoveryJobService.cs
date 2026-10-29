@@ -51,6 +51,10 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
 
     private async Task ProcessAsync(DiscoveryJob job, bool acquisition, CancellationToken stoppingToken)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("job.execution");
+        LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.RecordDuration("job.age_at_dispatch", clock.GetUtcNow() - job.CreatedAtUtc);
+        using var diagnosticScope = logger.BeginScope(new Dictionary<string, object?> { ["JobId"] = job.Id, ["JobKind"] = job.Kind.ToString() });
+
         using var work = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var remaining = job.CreatedAtUtc.AddSeconds(options.MaximumJobAgeSeconds) - clock.GetUtcNow();
         if (remaining <= TimeSpan.Zero) remaining = TimeSpan.FromMilliseconds(1);

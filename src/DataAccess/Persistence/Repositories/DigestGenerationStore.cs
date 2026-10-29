@@ -17,6 +17,7 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
     // Session lease covers the read-only acquisition phase as well as persistence, across local hosts.
     public async Task<IAsyncDisposable> AcquireBatchAsync(CancellationToken cancellationToken = default)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("storage.database_gate");
         bool opened = db.Database.GetDbConnection().State != ConnectionState.Open;
         if (opened) await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -44,7 +45,9 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var feedback = await db.WeeklyRecommendations.Include(r => r.Track)
             .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId) && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
-        var revision = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+        using var revisionHash = SHA256.Create();
+        await using var revisionStream = new CryptoStream(Stream.Null, revisionHash, CryptoStreamMode.Write, leaveOpen: true);
+        await JsonSerializer.SerializeAsync(revisionStream, new
         {
             Exists = exists,
             ProfileId = profileId,
@@ -63,12 +66,15 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
                 r.Track.NormalizedTitle,
                 r.ScoreBreakdown.MatchedTags
             })
-        })));
+        }, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await revisionStream.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
+        var revision = Convert.ToHexStringLower(revisionHash.Hash!);
         return new(exists, signals, feedback, revision, profileId);
     }
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("storage.database_inventory");
         var connection = db.Database.GetDbConnection();
         bool opened = connection.State != ConnectionState.Open;
         if (opened) await db.Database.OpenConnectionAsync(cancellationToken);
@@ -157,10 +163,12 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
 
     private sealed class BatchLease(DataContext context, bool opened) : IAsyncDisposable
     {
+        private readonly LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measurement hold =
+            LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("storage.database_hold");
         public async ValueTask DisposeAsync()
         {
             try { await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(1280200758)", CancellationToken.None).ConfigureAwait(false); }
-            finally { if (opened) await context.Database.CloseConnectionAsync().ConfigureAwait(false); }
+            finally { try { if (opened) await context.Database.CloseConnectionAsync().ConfigureAwait(false); } finally { hold.Dispose(); } }
         }
     }
 

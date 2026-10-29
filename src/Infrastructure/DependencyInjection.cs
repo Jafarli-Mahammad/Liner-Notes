@@ -103,10 +103,16 @@ public static class DependencyInjection
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IStoredArtwork, LinerNotes.Infrastructure.Artwork.StoredArtwork>();
         services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkQueue>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>());
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkPublicRevalidation, LinerNotes.Infrastructure.Artwork.ArtworkPublicRevalidation>();
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = false, UseCookies = false,
+                // The client bounds the decompressed stream before parsing or hashing evidence.
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
+            });
         services.AddScoped<IListenBrainzApiClient>(sp =>
         {
             var generation = sp.GetRequiredService<GenerationConfiguration>();

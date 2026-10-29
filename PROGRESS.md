@@ -2,6 +2,24 @@
 
 ## Current status
 
+### Discovery/performance remediation — 2026-10-29
+
+Safe discovery, artwork, cache, recovery and diagnostic corrections are implemented;
+local verification and measured limits are recorded in
+[the remediation report](DISCOVERY_PERFORMANCE_REMEDIATION.md). Exact fixed-fixture
+recommendation serialization remains unchanged. Synthetic cold/warm discovery
+timings do not demonstrate an overall speedup; a controlled saturated artwork
+queue does show lower requested-cover latency. These results are not production
+capacity or recommendation-quality validation.
+
+The developer conditionally approved bounded revalidation of previously public
+recordings and rejected non-cacheable image forwarding and recommendation
+shortcuts. The [unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md)
+includes measurements, alternatives, invariants, recovery, migration/rollback
+and acceptance tests. Its architectural implementation remains unapproved.
+Full histories/exports/archive processing and multi-host/provider limits remain
+explicit in the remediation report. Developer confirmation remains pending.
+
 Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data recommendation evaluation is not authorized. Local implementation evidence does not establish recommendation quality, external provider approval, production readiness, or developer confirmation.
 
 Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).

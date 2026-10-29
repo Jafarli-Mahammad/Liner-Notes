@@ -91,3 +91,24 @@ test('Account ignores an in-flight private response after sign-out', async ({ pa
   await expect(page.getByRole('form', { name: 'Sign in', exact: true })).toBeVisible();
   await expect(page.getByText('stale-private@example.test', { exact: true })).toHaveCount(0);
 });
+
+
+test('temporary refresh failure preserves sign-in and recovers on the next private read', async ({ page }) => {
+  await accountFixture(page);
+  let refreshed = 0;
+  await page.route('**/api/auth/me', route => route.fulfill(route.request().headers().authorization === 'Bearer test-access'
+    ? { status: 401, json: {} } : { json: user }));
+  await page.route('**/api/auth/refresh', route => {
+    refreshed++;
+    return route.fulfill(refreshed === 1 ? { status: 503, headers: { 'Retry-After': '5' }, json: {} }
+      : { json: { ...auth, accessToken: 'test-refreshed' } });
+  });
+  await login(page);
+  await expect.poll(() => refreshed).toBe(1);
+  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'History', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Discovery history' })).toBeVisible();
+  await page.getByRole('link', { name: 'Account', exact: true }).click();
+  await expect.poll(() => refreshed).toBe(2);
+  await expect(page.getByText(user.email, { exact: true })).toBeVisible();
+});

@@ -23,62 +23,94 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
         return RecordingArtworkState.Pending;
     }
 
-    public async Task WarmAsync(IReadOnlyList<Guid> recordingIds, CancellationToken ct, bool allowAcquisition = true)
+    public TimeSpan? RetryDelay(Guid recordingId) => cache.RetryAt(recordingId) is { } retryAt && retryAt > clock.GetUtcNow()
+        ? retryAt - clock.GetUtcNow() : null;
+
+    // Restore and metadata preparation are separate from individual image acquisition.
+    // The worker can therefore preserve batching without holding a download lane for a whole batch.
+    public async Task<IReadOnlyList<ArtworkAcquisition>> PrepareAcquisitionAsync(IReadOnlyList<Guid> recordingIds, CancellationToken ct)
     {
-        if (options.Mode != ListenBrainzClientMode.LiveOnly || !options.LiveUseApproved) return;
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("artwork.metadata");
+        ct.ThrowIfCancellationRequested();
+        var plans = new List<ArtworkAcquisition>();
+        if (options.Mode != ListenBrainzClientMode.LiveOnly || !options.LiveUseApproved) return plans;
         foreach (var batch in recordingIds.Where(id => id != Guid.Empty).Distinct().Where(id => !cache.Contains(id)).Chunk(50))
         {
-            var missing = new List<Guid>();
+            var response = await metadata.SendAsync(new(ListenBrainzRequestKind.ArtworkMetadata,
+                string.Join(',', batch.Select(id => id.ToString("D")))), ct);
+            bool retryable = response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "upstream_unavailable");
             foreach (var id in batch)
             {
-                var retained = stored is null ? null : await stored.FindAsync(id, ct);
-                if (retained is null) missing.Add(id);
-                else Remember(id, retained);
-            }
-            if (missing.Count == 0 || !allowAcquisition) continue;
-            {
-                var response = await metadata.SendAsync(new(ListenBrainzRequestKind.ArtworkMetadata,
-                    string.Join(',', missing.Select(id => id.ToString("D")))), ct);
-                await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = ct }, async (id, token) =>
+                if (response.SharedCacheUntilUtc is not { } expiry || expiry <= clock.GetUtcNow())
+                { Remember(id, null, retryable); continue; }
+                Guid? releaseId = null, caaId = null, groupId = null;
+                if (response.Data is { ValueKind: JsonValueKind.Object } data && data.TryGetProperty(id.ToString("D"), out var item) &&
+                    item.ValueKind == JsonValueKind.Object && item.TryGetProperty("release", out var release))
                 {
-                    RecordingCover? cover = null;
-                    bool retryable = response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "upstream_unavailable");
-                    if (response.Data is { ValueKind: JsonValueKind.Object } data &&
-                        data.TryGetProperty(id.ToString("D"), out var item) &&
-                        item.ValueKind == JsonValueKind.Object && item.TryGetProperty("release", out var release))
-                    {
-                        var releaseId = Id(release, "mbid");
-                        var caaId = Id(release, "caa_release_mbid");
-                        var groupId = Id(release, "release_group_mbid");
-                        if (releaseId is { } rid) await Fetch("release", rid);
-                        if (cover is null && caaId is { } cid && caaId != releaseId) await Fetch("release", cid);
-                        if (cover is null && groupId is { } gid) await Fetch("release-group", gid);
-                    }
-                    if (cover is not null)
-                    {
-                        var now = clock.GetUtcNow();
-                        var mappingExpiry = response.SharedCacheUntilUtc;
-                        if (mappingExpiry is null || mappingExpiry <= now)
-                            cover = cover with { CanPersist = false, ExpiresAtUtc = now.AddSeconds(1) };
-                        else if (cover.ExpiresAtUtc > mappingExpiry) cover = cover with { ExpiresAtUtc = mappingExpiry };
-                    }
-                    Remember(id, cover, retryable);
-                    async Task Fetch(string kind, Guid identity)
-                    {
-                        var result = await FetchAsync(kind, identity, token);
-                        cover = result.Cover; retryable |= result.Retryable;
-                    }
-                });
-                // The scoped EF store is intentionally used sequentially after network work.
-                if (stored is not null)
-                    foreach (var id in missing)
-                        if (cache.Get(id) is { ExpiresAtUtc: not null, CanPersist: true } cover) await stored.SaveAsync(id, cover, ct);
+                    releaseId = Id(release, "mbid"); caaId = Id(release, "caa_release_mbid"); groupId = Id(release, "release_group_mbid");
+                }
+                if (releaseId is null && caaId is null && groupId is null) Remember(id, null, retryable);
+                else plans.Add(new(id, releaseId, caaId, groupId, expiry));
             }
+        }
+        return plans;
+    }
+
+    public async Task AcquireAsync(ArtworkAcquisition acquisition, CancellationToken ct)
+    {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("artwork.acquire");
+        var cover = await AcquireCoreAsync(acquisition, ct);
+        if (stored is not null && cover is { CanPersist: true, ExpiresAtUtc: not null })
+            await stored.SaveAsync(acquisition.RecordingId, cover, ct);
+    }
+
+    public async Task WarmAsync(IReadOnlyList<Guid> recordingIds, CancellationToken ct, bool allowAcquisition = true)
+    {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("artwork.warm");
+        if (options.Mode != ListenBrainzClientMode.LiveOnly || !options.LiveUseApproved) return;
+        foreach (var id in recordingIds.Where(id => id != Guid.Empty).Distinct().Where(id => !cache.Contains(id)))
+            if (stored is not null && await stored.FindAsync(id, ct) is { } retained) Remember(id, retained);
+        if (!allowAcquisition) return;
+        var plans = await PrepareAcquisitionAsync(recordingIds, ct);
+        using var persistence = new SemaphoreSlim(1, 1);
+        await Parallel.ForEachAsync(plans, new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = ct }, async (plan, token) =>
+        {
+            var cover = await AcquireCoreAsync(plan, token);
+            if (stored is null || cover is not { CanPersist: true, ExpiresAtUtc: not null }) return;
+            // A direct batch warmup still owns one scoped EF store. Never use it concurrently.
+            await persistence.WaitAsync(token);
+            try { await stored.SaveAsync(plan.RecordingId, cover, token); }
+            finally { persistence.Release(); }
+        });
+    }
+
+    private async Task<RecordingCover?> AcquireCoreAsync(ArtworkAcquisition plan, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (options.Mode != ListenBrainzClientMode.LiveOnly || !options.LiveUseApproved) return null;
+        if (cache.Contains(plan.RecordingId)) return cache.Get(plan.RecordingId);
+        if (plan.ExpiresAtUtc <= clock.GetUtcNow()) { Remember(plan.RecordingId, null, true); return null; }
+        RecordingCover? cover = null;
+        bool retryable = false;
+        if (plan.ReleaseId is { } rid) await Fetch("release", rid);
+        if (cover is null && plan.CaaReleaseId is { } cid && plan.CaaReleaseId != plan.ReleaseId) await Fetch("release", cid);
+        if (cover is null && plan.ReleaseGroupId is { } gid) await Fetch("release-group", gid);
+        if (cover is not null)
+        {
+            if (plan.ExpiresAtUtc <= clock.GetUtcNow()) { cover = null; retryable = true; }
+            else if (cover.ExpiresAtUtc > plan.ExpiresAtUtc) cover = cover with { ExpiresAtUtc = plan.ExpiresAtUtc };
+        }
+        Remember(plan.RecordingId, cover, retryable);
+        return cover;
+        async Task Fetch(string kind, Guid identity)
+        {
+            var result = await FetchAsync(kind, identity, ct);
+            cover = result.Cover; retryable |= result.Retryable;
         }
     }
 
     private void Remember(Guid id, RecordingCover? cover, bool retryable = false) => cache.Entries.Set("recording:" + id,
-        new ArtworkCacheEntry(cover, cover is null && retryable), new MemoryCacheEntryOptions
+        new ArtworkCacheEntry(cover, cover is null && retryable, cover is null && retryable ? clock.GetUtcNow().AddMinutes(1) : null), new MemoryCacheEntryOptions
     {
         Size = (cover?.Bytes.Length ?? 0) + 128,
         AbsoluteExpirationRelativeToNow = cover?.ExpiresAtUtc is { } expiry
@@ -92,11 +124,12 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
 
     private async Task<ArtworkCacheEntry> FetchAsync(string kind, Guid id, CancellationToken ct)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("artwork.release");
         string key = kind + ":" + id;
-        var stripe = cache.Gates[(uint)key.GetHashCode() % (uint)cache.Gates.Length];
-        await stripe.WaitAsync(ct);
+        using var release = await cache.Releases.AcquireAsync(key, ct);
+        await cache.Downloads.WaitAsync(ct);
         try { return await FetchCoreAsync(key, kind, id, ct); }
-        finally { stripe.Release(); }
+        finally { cache.Downloads.Release(); }
     }
 
     private async Task<ArtworkCacheEntry> FetchCoreAsync(string key, string kind, Guid id, CancellationToken ct)
@@ -129,28 +162,40 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
                 }
                 if ((int)response.StatusCode is 301 or 302 or 303 or 307 or 308)
                 {
-                    if (response.Headers.Location is not { } location) break;
+                    if (response.Headers.Location is not { } location)
+                    { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
                     var next = new Uri(uri, location);
                     // CAA still documents HTTP redirects; upgrade known archive hosts to HTTPS.
-                    if (!Allowed(next)) break;
+                    if (!Allowed(next))
+                    { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
                     uri = new UriBuilder(next) { Scheme = "https", Port = -1 }.Uri;
                     continue;
                 }
                 if (response.StatusCode == HttpStatusCode.NotFound) { lifetime = TimeSpan.FromHours(6); retryable = false; break; }
-                if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > MaximumBytes) break;
+                if (!response.IsSuccessStatusCode)
+                {
+                    if ((int)response.StatusCode is >= 400 and < 500 and not (408 or 425))
+                    { retryable = false; lifetime = TimeSpan.FromHours(6); }
+                    break;
+                }
+                if (response.Content.Headers.ContentLength > MaximumBytes)
+                { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
                 string? type = response.Content.Headers.ContentType?.MediaType;
-                if (type is not ("image/jpeg" or "image/png" or "image/webp")) break;
+                if (type is not ("image/jpeg" or "image/png" or "image/webp"))
+                { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
                 await using var input = await response.Content.ReadAsStreamAsync(token);
                 using var output = new MemoryStream();
                 var buffer = new byte[8192];
                 int read;
                 while ((read = await input.ReadAsync(buffer, token)) > 0)
                 {
-                    if (output.Length + read > MaximumBytes) throw new InvalidDataException("artwork_too_large");
+                    if (output.Length + read > MaximumBytes)
+                    { retryable = false; lifetime = TimeSpan.FromHours(6); throw new InvalidDataException("artwork_too_large"); }
                     output.Write(buffer, 0, read);
                 }
                 var bytes = output.ToArray();
-                if (!ValidImage(bytes, type)) break;
+                if (!ValidImage(bytes, type))
+                { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
                 lifetime = TimeSpan.FromDays(1);
                 var control = response.Headers.CacheControl;
                 if (control?.SharedMaxAge is { } shared && shared < lifetime) lifetime = shared;
@@ -161,7 +206,8 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
                 if (control?.SharedMaxAge is null && control?.MaxAge is null && response.Content.Headers.Expires is { } suppliedExpiry && suppliedExpiry - clock.GetUtcNow() < lifetime)
                     lifetime = suppliedExpiry - clock.GetUtcNow();
                 bool reusable = control is not ({ NoStore: true } or { NoCache: true } or { Private: true }) && lifetime > TimeSpan.Zero;
-                if (!reusable) lifetime = TimeSpan.FromSeconds(1);
+                if (!reusable)
+                { retryable = false; lifetime = TimeSpan.FromMinutes(1); break; }
                 var until = clock.GetUtcNow() + lifetime;
                 var expiry = new DateTimeOffset(until.Ticks - until.Ticks % 10, TimeSpan.Zero);
                 cover = new(bytes, type, expiry, reusable);

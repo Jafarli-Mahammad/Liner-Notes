@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Separate artwork metadata preparation from per-image scheduling, promote visible covers without starving maintenance, and revalidate retained public recording provenance before refreshing expired artwork metadata.
+- Retry incomplete discovery acquisition rather than publishing a reduced pool. Share overlapping cacheable metadata requests while preserving cancellation, request budgets and upstream cache restrictions.
+- Recover failed image retrieval, tab visibility changes and temporary database/session failures. Compress public assets and metadata within the existing security boundaries; add bounded stage diagnostics.
+- Stream weekly input revision hashing without changing its serialized-byte digest. Preserve recommendation coverage, scoring and supporting evidence.
 - Bound discovery requests to ten minutes, overlap independent public preparation
   without changing candidate selection, and recover completed results after failed reloads.
 - Prioritize requested album covers, distinguish pending artwork from unavailable

@@ -1,3 +1,4 @@
+using LinerNotes.Application.Common.Diagnostics;
 using LinerNotes.Infrastructure.Caching;
 using System.Globalization;
 using System.Net;
@@ -23,14 +24,31 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
         string root = request.Kind == ListenBrainzRequestKind.SimilarRecordings ? "https://labs.api.listenbrainz.org/" :
             request.Provider == "MusicBrainz" ? "https://musicbrainz.org/" : "https://api.listenbrainz.org/";
         string cacheKey = "metabrainz-public-v1:" + root + request.Key;
-        if (responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null) return hit;
+        bool cached = responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? hit) && hit is not null;
+        DiscoveryDiagnostics.CacheRead("metadata.initial", cached);
+        if (cached) return hit!;
+        // Share only a completed, retainable public response. A cancelled owner releases the key;
+        // each waiter keeps its own cancellation, dispatch budget, and no-store/private semantics.
+        IDisposable? acquiredRequestLease;
+        using (DiscoveryDiagnostics.Measure("metadata.request_gate"))
+            acquiredRequestLease = memoryCaches is null ? null : await memoryCaches.MetadataRequests.AcquireAsync(cacheKey, cancellationToken);
+        using var requestLease = acquiredRequestLease;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (responseCache.TryGetValue(cacheKey, out ListenBrainzResponse? completed) && completed is not null)
+        {
+            DiscoveryDiagnostics.CacheRead("metadata.coalesced", true);
+            return completed;
+        }
         try
         {
             if (Volatile.Read(ref sentRequests) >= options.MaximumRequests)
                 throw new GenerationStoppedException("upstream_request_limit");
-            await gate.WaitAsync(request.Provider, cancellationToken).ConfigureAwait(false);
+            using (DiscoveryDiagnostics.Measure("provider.gate"))
+                await gate.WaitAsync(request.Provider, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            if (responseCache.TryGetValue(cacheKey, out hit) && hit is not null) return hit;
+            bool filledDuringWait = responseCache.TryGetValue(cacheKey, out hit) && hit is not null;
+            DiscoveryDiagnostics.CacheRead("metadata.after_gate", filledDuringWait);
+            if (filledDuringWait) return hit!;
             if (Interlocked.Increment(ref sentRequests) > options.MaximumRequests)
                 throw new GenerationStoppedException("upstream_request_limit");
             using var message = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(root), request.RelativeUri()));
@@ -38,6 +56,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             if (request.Provider == "ListenBrainz" && request.Kind != ListenBrainzRequestKind.SimilarRecordings && !string.IsNullOrEmpty(options.Token))
                 message.Headers.Authorization = new AuthenticationHeaderValue("Token", options.Token);
+            using var upstreamMeasurement = DiscoveryDiagnostics.Measure("provider.dispatch_body_parse");
             using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             TimeSpan backoff = response.Headers.RetryAfter?.Delta ??
                 (response.Headers.RetryAfter?.Date is { } date ? date - clock.GetUtcNow() : TimeSpan.Zero);

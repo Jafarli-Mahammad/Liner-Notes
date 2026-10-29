@@ -34,7 +34,7 @@ async function check(response: Response) {
     400: 'Check your answers and try again.', 401: 'Your session has expired. Please sign in or start again.',
     403: 'Request verification expired. Refresh this page before trying again.', 404: 'This information is no longer available.',
     409: 'Your taste or request changed. Refresh the saved information before trying again.',
-    429: 'Please wait before trying again.', 503: 'New requests are temporarily paused. Saved discoveries are still available.',
+    429: 'Please wait before trying again.', 503: 'The service is temporarily unavailable. Please try again shortly.',
   };
   throw new ApiError(response.status, messages[response.status] ?? 'That request could not finish. Please try again.', retryDeadline(response.headers.get('Retry-After')), problem.errors ?? {});
 }
@@ -47,7 +47,10 @@ async function refresh(epoch: number) {
     const response = await fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(30_000),
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: saved.accessToken, refreshToken: saved.refreshToken }) });
     if (identity.epoch !== epoch) throw new DOMException('Session changed', 'AbortError');
-    if (!response.ok) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
+    if (!response.ok) {
+      if ([400, 401, 403].includes(response.status)) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
+      await check(response); // Temporary failures retain the session for a later retry.
+    }
     const next: AuthResponse = await response.json();
     if (identity.epoch !== epoch) throw new DOMException('Session changed', 'AbortError');
     if (!next.accessToken || !next.refreshToken) { signOut(); throw new ApiError(401, 'Please sign in again.'); }

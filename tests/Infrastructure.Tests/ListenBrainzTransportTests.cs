@@ -10,6 +10,66 @@ namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class ListenBrainzTransportTests
 {
+    [Theory]
+    [InlineData("public, max-age=60", 1)]
+    [InlineData("no-store", 8)]
+    [InlineData("no-cache", 8)]
+    [InlineData("private", 8)]
+    public async Task OverlappingRequestsShareOnlyRetainableResponses(string policy, int expectedRequests)
+    {
+        using var caches = new LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches(new());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using var http = new HttpClient(new AsyncHandler(async (_, ct) =>
+        {
+            Interlocked.Increment(ref requests); started.TrySetResult(); await release.Task.WaitAsync(ct);
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+            response.Headers.CacheControl = System.Net.Http.Headers.CacheControlHeaderValue.Parse(policy);
+            return response;
+        }));
+        var options = new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, MaximumRequests = 1 };
+        var clients = Enumerable.Range(0, 8).Select(_ => new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches)).ToArray();
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "coalesced-fixture");
+        var pending = clients.Select(client => client.SendAsync(request)).ToArray();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        release.TrySetResult();
+        var responses = await Task.WhenAll(pending).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(expectedRequests, requests);
+        Assert.All(responses, response => Assert.Empty(response.Gaps));
+        if (expectedRequests == 1) Assert.All(responses, response => Assert.Same(responses[0], response));
+    }
+
+    [Fact]
+    public async Task CancelledOwnerDoesNotCancelIndependentWaiterOrConsumeItsBudget()
+    {
+        using var caches = new LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches(new());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using var http = new HttpClient(new AsyncHandler(async (_, ct) =>
+        {
+            if (Interlocked.Increment(ref requests) == 1)
+            { started.TrySetResult(); await Task.Delay(Timeout.Infinite, ct); }
+            return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        }));
+        var options = new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, MaximumRequests = 1 };
+        var owner = new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches);
+        var waiter = new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches);
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "cancelled-owner-fixture");
+        using var stop = new CancellationTokenSource();
+        var first = owner.SendAsync(request, stop.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = waiter.SendAsync(request); stop.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.Empty((await second.WaitAsync(TimeSpan.FromSeconds(5))).Gaps);
+        Assert.Equal(2, requests);
+    }
+
+    private sealed class AsyncHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => respond(request, ct);
+    }
+
     [Fact]
     public async Task CacheFilledDuringPacingAvoidsDispatchAndDoesNotConsumeRequestBudget()
     {

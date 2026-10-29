@@ -33,6 +33,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         => BuildAsync(signals, true, ct);
     public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, bool allowAcquisition, CancellationToken ct, long round = 0)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.taste");
         options.Validate();
         var provider = resolver.Resolve();
         var evidence = new List<EntityTasteEvidence>();

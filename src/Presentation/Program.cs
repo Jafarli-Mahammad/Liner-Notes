@@ -45,6 +45,14 @@ builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
 builder.Services.AddPresentation(builder.Configuration);
+// Installed only on the terminal public-static branch below, including HTTPS.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    options.MimeTypes = ["text/css", "text/javascript", "application/javascript", "image/svg+xml"];
+});
 if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
 {
     if (!builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
@@ -151,6 +159,14 @@ var staticFileOptions = new StaticFileOptions
 {
     OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
 };
+// Terminal branch: API responses, authentication, errors and SPA HTML never enter compression.
+app.MapWhen(context => context.Request.Path.StartsWithSegments("/home-assets") ||
+    context.Request.Path.Value is "/app.js" or "/discovery.js" or "/styles.css", assets =>
+{
+    assets.UseResponseCompression();
+    assets.UseStaticFiles(staticFileOptions);
+    assets.Run(context => { context.Response.StatusCode = StatusCodes.Status404NotFound; return Task.CompletedTask; });
+});
 app.UseStaticFiles(staticFileOptions);
 
 app.UseRouting();

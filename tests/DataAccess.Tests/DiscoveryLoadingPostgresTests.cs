@@ -37,6 +37,9 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         var admitted = await scope.ServiceProvider.GetRequiredService<IArtworkCatalog>()
             .EligibleAsync([publicId, syntheticId, expiredId, Guid.NewGuid()], now, default);
         Assert.Equal(new[] { publicId }, admitted);
+        var previouslyPublic = await scope.ServiceProvider.GetRequiredService<IArtworkCatalog>()
+            .PreviouslyPublicAsync([publicId, syntheticId, expiredId, Guid.NewGuid()], default);
+        Assert.Equal(new[] { publicId, expiredId }.Order(), previouslyPublic.Order());
     }
 
     [LocalPostgresMigrationFact]

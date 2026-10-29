@@ -363,3 +363,26 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A blob URL image-loading approach passed typechecking but failed in the real host because its CSP excluded blob images. Contract tests running against the real host caught the incompatibility.
 **Suggested improvement:** Read the host's CSP before choosing blob/data/direct URL delivery. Prefer an existing permitted delivery path where possible, and verify image decoding under actual response headers.
 **Principle:** Loading-state improvements must be tested with the application's security policy active.
+
+
+### Observation 035: Freeze outputs and verify diagnostic profile compatibility
+
+**Status:** OPEN
+**Date:** 2026-10-28
+**Session context:** Discovery, artwork and storage performance remediation.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Baselines and diagnostic evidence
+**Issue:** A profiler's old profile name can fail after a tool update, and a passing suite alone does not establish unchanged recommendation outputs. Partial upstream failures also need an explicit success/failure contract even when some valid candidates remain.
+**Suggested improvement:** Freeze the baseline assemblies before editing, execute the same fixed-input serialization probe against baseline and changed assemblies, and separately exercise partial failures. Check installed profile names before collection and distinguish sampled thread waits from CPU usage.
+**Principle:** Preserve comparable evidence and test the exact guarantee before interpreting a faster or passing result.
+
+### Observation 036: Test priority across preparation and acquisition
+**Status:** OPEN
+**Date:** 2026-10-29
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Concurrent queues and performance claims
+**Issue:** Adding whole-batch workers improved a small backlog but made a larger saturated backlog worse; batch ownership hid available per-item capacity. Separate end-to-end measurements also showed that a faster component did not make the complete workflow faster.
+**Suggested improvement:** Test demand arriving while preparation is active and after handoff, saturate every worker, retain maintenance fairness and verify unchanged completed work/request limits. Compare end-to-end distributions separately from component latency. Record environment failures separately and rerun all assertions through supported configuration.
+**Principle:** Preserve priority through every queue stage and limit each performance claim to the workload actually measured.

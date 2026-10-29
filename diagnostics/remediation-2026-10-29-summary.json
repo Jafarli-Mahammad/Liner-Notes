@@ -1,0 +1,284 @@
+{
+  "scope": "Local synthetic fixtures, server GC; no real-provider or production performance claim.",
+  "discovery": {
+    "before": {
+      "cold": {
+        "n": 5,
+        "p50": 3530.624,
+        "p95": 3640.101,
+        "min": 3499.865,
+        "max": 3640.101
+      },
+      "warm": {
+        "n": 20,
+        "p50": 1091.792,
+        "p95": 1110.223,
+        "min": 619.4,
+        "max": 1320.463
+      },
+      "large-10-tags": {
+        "n": 5,
+        "p50": 1100.885,
+        "p95": 2899.595,
+        "min": 1092.694,
+        "max": 2899.595
+      },
+      "concurrent-4": {
+        "n": 20,
+        "p50": 1215.836,
+        "p95": 1390.396,
+        "min": 940.952,
+        "max": 1496.98
+      },
+      "allCompleted": true,
+      "static": {
+        "wireBytes": [
+          336730
+        ],
+        "decodedBytes": [
+          336730
+        ],
+        "encoding": [
+          null
+        ],
+        "sha256": [
+          "65a09d9bb7e57a98bc7884ad0a0e28d00461897e1c093abd7cb5589f792d4ad6"
+        ]
+      },
+      "runtime": {
+        "serverGc": true,
+        "processorCount": 20,
+        "elapsedMs": 42516.6421,
+        "cpuMs": 18451.046,
+        "peakWorkingSet": 291635200,
+        "stages": {},
+        "cache": {}
+      }
+    },
+    "after": {
+      "cold": {
+        "n": 5,
+        "p50": 3568.836,
+        "p95": 3772.927,
+        "min": 3482.441,
+        "max": 3772.927
+      },
+      "warm": {
+        "n": 20,
+        "p50": 1091.88,
+        "p95": 1122.186,
+        "min": 621.197,
+        "max": 1320.635
+      },
+      "large-10-tags": {
+        "n": 5,
+        "p50": 1107.05,
+        "p95": 2895.179,
+        "min": 1101.119,
+        "max": 2895.179
+      },
+      "concurrent-4": {
+        "n": 20,
+        "p50": 1212.143,
+        "p95": 1488.096,
+        "min": 852.47,
+        "max": 1499.31
+      },
+      "allCompleted": true,
+      "static": {
+        "wireBytes": [
+          149086
+        ],
+        "decodedBytes": [
+          336730
+        ],
+        "encoding": [
+          "gzip"
+        ],
+        "sha256": [
+          "65a09d9bb7e57a98bc7884ad0a0e28d00461897e1c093abd7cb5589f792d4ad6"
+        ]
+      },
+      "runtime": {
+        "serverGc": true,
+        "processorCount": 20,
+        "elapsedMs": 42876.9886,
+        "cpuMs": 19141.951,
+        "peakWorkingSet": 292204544,
+        "stages": {
+          "persistence.total": {
+            "count": 209,
+            "p50Ms": 58.7832,
+            "p95Ms": 178.6247,
+            "totalMs": 15675.399400000008
+          },
+          "preparation.evidence_ranking": {
+            "count": 46,
+            "p50Ms": 0.2246,
+            "p95Ms": 0.7822,
+            "totalMs": 25.075899999999997
+          },
+          "preparation.pool_gate": {
+            "count": 10,
+            "p50Ms": 0.0093,
+            "p95Ms": 0.0109,
+            "totalMs": 1.2925
+          },
+          "reclamation.total": {
+            "count": 2,
+            "p50Ms": 312.9014,
+            "p95Ms": 92.0956,
+            "totalMs": 404.997
+          },
+          "job.age_at_dispatch": {
+            "count": 48,
+            "p50Ms": 775.2695,
+            "p95Ms": 982.875,
+            "totalMs": 40420.34589999999
+          },
+          "storage.database_gate": {
+            "count": 212,
+            "p50Ms": 0.7299,
+            "p95Ms": 120.6685,
+            "totalMs": 4531.8954
+          },
+          "artwork.queue": {
+            "count": 5,
+            "p50Ms": 1.493,
+            "p95Ms": 1.4937,
+            "totalMs": 7.5985000000000005
+          },
+          "preparation.total": {
+            "count": 48,
+            "p50Ms": 3.3922,
+            "p95Ms": 6.382,
+            "totalMs": 1566.7922
+          },
+          "preparation.taste": {
+            "count": 48,
+            "p50Ms": 0.101,
+            "p95Ms": 0.2984,
+            "totalMs": 22.402
+          },
+          "storage.database_inventory": {
+            "count": 634,
+            "p50Ms": 8.119,
+            "p95Ms": 10.1229,
+            "totalMs": 4924.934800000001
+          },
+          "job.execution": {
+            "count": 48,
+            "p50Ms": 87.9903,
+            "p95Ms": 103.2447,
+            "totalMs": 5722.664400000001
+          },
+          "artwork.metadata": {
+            "count": 1,
+            "p50Ms": 0.0328,
+            "p95Ms": 0.0328,
+            "totalMs": 0.0328
+          },
+          "storage.database_hold": {
+            "count": 212,
+            "p50Ms": 49.0417,
+            "p95Ms": 90.0197,
+            "totalMs": 11735.256299999995
+          },
+          "provider.hydration": {
+            "count": 10,
+            "p50Ms": 0.5057,
+            "p95Ms": 1.0318,
+            "totalMs": 27.5337
+          },
+          "artwork.warm": {
+            "count": 1,
+            "p50Ms": 0.0023,
+            "p95Ms": 0.0023,
+            "totalMs": 0.0023
+          },
+          "preparation.public_pool": {
+            "count": 93,
+            "p50Ms": 0.0544,
+            "p95Ms": 177.6011,
+            "totalMs": 1998.7006999999999
+          },
+          "storage.artifact_scan": {
+            "count": 1054,
+            "p50Ms": 0.1661,
+            "p95Ms": 0.3009,
+            "totalMs": 185.19419999999982
+          }
+        },
+        "cache": {
+          "discovery.cache.reads:cache=prepared.memory:result=hit": 81,
+          "discovery.cache.reads:cache=prepared.memory:result=miss": 12,
+          "discovery.cache.reads:cache=public_evidence:result=miss": 12
+        }
+      }
+    }
+  },
+  "artwork": {
+    "before": {
+      "demandReadyMs": {
+        "n": 20,
+        "p50": 994.417,
+        "p95": 997.648,
+        "min": 991.91,
+        "max": 998.295
+      },
+      "downloads": [
+        17
+      ],
+      "peakDownloads": [
+        2
+      ]
+    },
+    "after": {
+      "demandReadyMs": {
+        "n": 20,
+        "p50": 240.439,
+        "p95": 242.028,
+        "min": 238.56,
+        "max": 242.15
+      },
+      "downloads": [
+        17
+      ],
+      "peakDownloads": [
+        2
+      ]
+    }
+  },
+  "verification": {
+    "backend": {
+      "Domain": 151,
+      "Application": 147,
+      "Infrastructure": 249,
+      "DataAccess": 136,
+      "Presentation": 95,
+      "total": 778,
+      "failed": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "passed": 55,
+      "failed": 0,
+      "notes": "Full rerun used installed Chromium via supported LINER_BROWSER_EXECUTABLE after the default executable was absent."
+    },
+    "frontendBuildAndTypecheck": "passed",
+    "recommendationCompatibility": {
+      "scenarios": 16,
+      "picks": 80,
+      "bytes": 364769,
+      "sha256": "6b8e6dd62d50a4ce6060a333ef7a2867879bd09f7077b29bd017fc596135faef",
+      "identical": true
+    },
+    "artworkFreshProcessRestore": {
+      "processes": 2,
+      "bytes": 68,
+      "providerCalls": 0,
+      "sha256": "1e725698d27128e5f87dc3a466a535924680e92436638335bdc991ec9caf4ba4",
+      "passed": true
+    }
+  }
+}

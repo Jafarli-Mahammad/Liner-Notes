@@ -10,8 +10,11 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
   const [visible, setVisible] = useState(false);
   const frame = useRef<HTMLDivElement>(null);
   const loaded = useRef<string | null>(null);
+  const retryUntil = useRef(0);
+  const imageFailed = useRef<(() => void) | null>(null);
   useEffect(() => {
-    loaded.current = null; setSource(undefined); setStatus('loading');
+    loaded.current = null; retryUntil.current = 0;
+    setSource(undefined); setStatus('loading');
   }, [id]);
   useEffect(() => {
     const update = () => {
@@ -27,7 +30,8 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
     if (!valid || !visible || loaded.current === id) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>, attempts = 0;
-    const deadline = Date.now() + 10 * 60_000;
+    if (retryUntil.current === 0) retryUntil.current = Date.now() + 10 * 60_000;
+    const deadline = retryUntil.current;
     const schedule = (retryAt = 0) => {
       const delay = Math.max(Math.min(2000 * 2 ** Math.min(attempts++, 3), 15_000), retryAt - Date.now());
       if (Date.now() + delay >= deadline) { setStatus('missing'); return; }
@@ -39,6 +43,7 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
         const timeoutMs = Math.max(1, Math.min(20_000, deadline - Date.now()));
         const response = await fetch(`/api/artwork/recordings/${id}`, {
           method: 'HEAD',
+          cache: attempts > 0 ? 'reload' : 'default',
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(timeoutMs)]), credentials: 'omit',
           referrerPolicy: 'no-referrer', priority: eager ? 'high' : 'auto',
         });
@@ -50,13 +55,16 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
         }
         if (!response.ok || state === 'unavailable') { await response.body?.cancel(); setStatus('missing'); return; }
         if (controller.signal.aborted) return;
-        loaded.current = id; setSource(`/api/artwork/recordings/${id}`);
+        setSource(`/api/artwork/recordings/${id}`);
       } catch {
         if (!controller.signal.aborted) schedule();
       }
     };
+    imageFailed.current = () => {
+      loaded.current = null; setSource(undefined); setStatus('loading'); schedule();
+    };
     void load();
-    return () => { controller.abort(); clearTimeout(timer); };
+    return () => { imageFailed.current = null; controller.abort(); clearTimeout(timer); };
   }, [id, valid, visible, eager]);
   return <div ref={frame} className={`artwork-frame artwork-${valid ? status : 'missing'}`}>
     <div className="artwork-square">
@@ -64,8 +72,11 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
       {valid && <img src={source}
         width="500" height="500" alt="" loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : 'auto'}
         decoding="async" referrerPolicy="no-referrer"
-        onLoad={() => setStatus('ready')}
-        onError={() => setStatus('missing')} />}
+        onLoad={() => { loaded.current = id; setStatus('ready'); }}
+        onError={() => {
+          loaded.current = null; setSource(undefined); setStatus('loading');
+          imageFailed.current?.();
+        }} />}
     </div>
     {(status === 'missing' || !valid) && <span className="sr-only">Cover unavailable</span>}
   </div>;

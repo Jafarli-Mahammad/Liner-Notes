@@ -1,0 +1,935 @@
+{
+  "date": "2026-10-29",
+  "scope": "Local generated fixtures; not production performance. Scan samples overlapped other development checks; acceptance requires isolated target-host reproduction.",
+  "scanAlternatives": [
+    {
+      "MiB": 100,
+      "files": 1,
+      "variants": {
+        "buffer64k": {
+          "durationMs": {
+            "n": 20,
+            "p50": 270.7871,
+            "p95": 280.2911,
+            "min": 263.1069,
+            "max": 392.2159
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 106760.0,
+            "p95": 172208,
+            "min": 106632,
+            "max": 172608
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524288127.5,
+            "p95": 524288128,
+            "min": 524288125,
+            "max": 524289150
+          }
+        },
+        "buffer64k_parallel2": {
+          "durationMs": {
+            "n": 20,
+            "p50": 270.19805,
+            "p95": 279.354,
+            "min": 261.5566,
+            "max": 284.9769
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 106752.0,
+            "p95": 107624,
+            "min": 106632,
+            "max": 108056
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524288127.0,
+            "p95": 524288128,
+            "min": 524288126,
+            "max": 524288128
+          }
+        },
+        "production": {
+          "durationMs": {
+            "n": 20,
+            "p50": 306.21465,
+            "p95": 329.909,
+            "min": 299.4603,
+            "max": 351.7886
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 133028.0,
+            "p95": 138480,
+            "min": 132872,
+            "max": 144048
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524288127.0,
+            "p95": 524289110,
+            "min": 524288126,
+            "max": 524289152
+          }
+        }
+      },
+      "sameSizeRestoredTimestampDetected": true,
+      "unchangedRevisionsEqual": true
+    },
+    {
+      "MiB": 100,
+      "files": 1000,
+      "variants": {
+        "buffer64k": {
+          "durationMs": {
+            "n": 20,
+            "p50": 318.93825,
+            "p95": 393.2078,
+            "min": 314.882,
+            "max": 409.2307
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 11558176.0,
+            "p95": 11559808,
+            "min": 11557728,
+            "max": 11567256
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524286153.0,
+            "p95": 524288201,
+            "min": 524285129,
+            "max": 524288201
+          }
+        },
+        "buffer64k_parallel2": {
+          "durationMs": {
+            "n": 20,
+            "p50": 167.46355,
+            "p95": 225.2032,
+            "min": 164.0225,
+            "max": 282.2864
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 11559080.0,
+            "p95": 11560832,
+            "min": 11558456,
+            "max": 11571696
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524286153.0,
+            "p95": 524287215,
+            "min": 524285129,
+            "max": 524288201
+          }
+        },
+        "production": {
+          "durationMs": {
+            "n": 20,
+            "p50": 365.8894,
+            "p95": 382.7891,
+            "min": 360.478,
+            "max": 615.9596
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 52742816.0,
+            "p95": 52744184,
+            "min": 52742104,
+            "max": 52744632
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 524291273.0,
+            "p95": 524292297,
+            "min": 524289225,
+            "max": 524293321
+          }
+        }
+      },
+      "sameSizeRestoredTimestampDetected": true,
+      "unchangedRevisionsEqual": true
+    },
+    {
+      "MiB": 512,
+      "files": 1,
+      "variants": {
+        "buffer64k": {
+          "durationMs": {
+            "n": 20,
+            "p50": 1743.4148,
+            "p95": 2039.1035,
+            "min": 1380.6287,
+            "max": 2199.8053
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 106648.0,
+            "p95": 106816,
+            "min": 106648,
+            "max": 172208
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 2684354690.0,
+            "p95": 2684354691,
+            "min": 2684354689,
+            "max": 2684354691
+          }
+        },
+        "buffer64k_parallel2": {
+          "durationMs": {
+            "n": 20,
+            "p50": 1683.7121000000002,
+            "p95": 2069.5572,
+            "min": 1355.1408,
+            "max": 2302.3735
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 106648.0,
+            "p95": 106680,
+            "min": 106648,
+            "max": 106688
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 2684354690.0,
+            "p95": 2684354691,
+            "min": 2684354689,
+            "max": 2684354695
+          }
+        },
+        "production": {
+          "durationMs": {
+            "n": 20,
+            "p50": 2115.60565,
+            "p95": 2505.3619,
+            "min": 1810.5558,
+            "max": 2529.4916
+          },
+          "allocatedBytes": {
+            "n": 20,
+            "p50": 132888.0,
+            "p95": 133336,
+            "min": 132888,
+            "max": 136240
+          },
+          "readBytes": {
+            "n": 20,
+            "p50": 2684354690.0,
+            "p95": 2684354728,
+            "min": 2684354689,
+            "max": 2684355714
+          }
+        }
+      },
+      "sameSizeRestoredTimestampDetected": true,
+      "unchangedRevisionsEqual": true
+    }
+  ],
+  "ledger": {
+    "experiment": "insert-only-ledger-primitive",
+    "limits": "Not a full replacement: update/delete/truncate/cascades/partition/upsert/concurrency/schema-tamper coverage remains mandatory.",
+    "results": [
+      {
+        "mode": "row",
+        "rows": 100,
+        "samples": [
+          {
+            "ms": 2.23,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 5.285,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.363,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 5.307,
+            "walBytes": 39003,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.357,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.375,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 2.404,
+            "walBytes": 39003,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 5.285,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 3.302,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 5.284,
+            "walBytes": 39003,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 3.507,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 3.776,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 3.512,
+            "walBytes": 39003,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 3.313,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.487,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 5.262,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 2.96,
+            "walBytes": 39003,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.251,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.869,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.249,
+            "walBytes": 39003,
+            "sharedHitBlocks": 338
+          }
+        ],
+        "p50Ms": 3.1310000000000002,
+        "p95Ms": 5.285,
+        "exactInsertAccountingAndRollback": true
+      },
+      {
+        "mode": "statement",
+        "rows": 100,
+        "samples": [
+          {
+            "ms": 1.481,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.425,
+            "walBytes": 39003,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 1.476,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.122,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 1.521,
+            "walBytes": 39003,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 1.409,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.737,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.858,
+            "walBytes": 38971,
+            "sharedHitBlocks": 356
+          },
+          {
+            "ms": 1.399,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 2.08,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 1.407,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.844,
+            "walBytes": 38993,
+            "sharedHitBlocks": 343
+          },
+          {
+            "ms": 2.72,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.274,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 1.906,
+            "walBytes": 38991,
+            "sharedHitBlocks": 346
+          },
+          {
+            "ms": 1.462,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 1.916,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 2.938,
+            "walBytes": 39003,
+            "sharedHitBlocks": 340
+          },
+          {
+            "ms": 1.421,
+            "walBytes": 38300,
+            "sharedHitBlocks": 338
+          },
+          {
+            "ms": 1.791,
+            "walBytes": 38300,
+            "sharedHitBlocks": 340
+          }
+        ],
+        "p50Ms": 1.911,
+        "p95Ms": 2.858,
+        "exactInsertAccountingAndRollback": true
+      },
+      {
+        "mode": "row",
+        "rows": 1000,
+        "samples": [
+          {
+            "ms": 20.05,
+            "walBytes": 385462,
+            "sharedHitBlocks": 3983
+          },
+          {
+            "ms": 19.495,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 17.807,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 19.252,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3983
+          },
+          {
+            "ms": 18.063,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 18.328,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 20.378,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3983
+          },
+          {
+            "ms": 17.342,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 17.854,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 22.439,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3982
+          },
+          {
+            "ms": 23.311,
+            "walBytes": 385982,
+            "sharedHitBlocks": 3967
+          },
+          {
+            "ms": 18.12,
+            "walBytes": 386119,
+            "sharedHitBlocks": 3973
+          },
+          {
+            "ms": 18.046,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3982
+          },
+          {
+            "ms": 21.024,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 19.469,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 18.846,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3983
+          },
+          {
+            "ms": 18.104,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3967
+          },
+          {
+            "ms": 21.184,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 27.174,
+            "walBytes": 385944,
+            "sharedHitBlocks": 3988
+          },
+          {
+            "ms": 19.165,
+            "walBytes": 385591,
+            "sharedHitBlocks": 3989
+          }
+        ],
+        "p50Ms": 19.2085,
+        "p95Ms": 23.311,
+        "exactInsertAccountingAndRollback": true
+      },
+      {
+        "mode": "statement",
+        "rows": 1000,
+        "samples": [
+          {
+            "ms": 3.746,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 6.274,
+            "walBytes": 385605,
+            "sharedHitBlocks": 3983
+          },
+          {
+            "ms": 6.732,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3968
+          },
+          {
+            "ms": 4.627,
+            "walBytes": 385984,
+            "sharedHitBlocks": 3967
+          },
+          {
+            "ms": 7.092,
+            "walBytes": 385603,
+            "sharedHitBlocks": 3982
+          },
+          {
+            "ms": 3.856,
+            "walBytes": 402464,
+            "sharedHitBlocks": 3979
+          },
+          {
+            "ms": 6.193,
+            "walBytes": 384927,
+            "sharedHitBlocks": 3802
+          },
+          {
+            "ms": 6.69,
+            "walBytes": 386183,
+            "sharedHitBlocks": 3990
+          },
+          {
+            "ms": 3.615,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.594,
+            "walBytes": 385913,
+            "sharedHitBlocks": 4022
+          },
+          {
+            "ms": 3.582,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.597,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.484,
+            "walBytes": 385913,
+            "sharedHitBlocks": 4022
+          },
+          {
+            "ms": 3.579,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.585,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 4.814,
+            "walBytes": 385913,
+            "sharedHitBlocks": 4022
+          },
+          {
+            "ms": 3.617,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.568,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          },
+          {
+            "ms": 3.836,
+            "walBytes": 385913,
+            "sharedHitBlocks": 4022
+          },
+          {
+            "ms": 3.532,
+            "walBytes": 386292,
+            "sharedHitBlocks": 4007
+          }
+        ],
+        "p50Ms": 3.6814999999999998,
+        "p95Ms": 6.732,
+        "exactInsertAccountingAndRollback": true
+      },
+      {
+        "mode": "row",
+        "rows": 10000,
+        "samples": [
+          {
+            "ms": 645.217,
+            "walBytes": 3860890,
+            "sharedHitBlocks": 39394
+          },
+          {
+            "ms": 639.867,
+            "walBytes": 3860133,
+            "sharedHitBlocks": 39234
+          },
+          {
+            "ms": 637.37,
+            "walBytes": 3860590,
+            "sharedHitBlocks": 38922
+          },
+          {
+            "ms": 637.467,
+            "walBytes": 3859594,
+            "sharedHitBlocks": 38883
+          },
+          {
+            "ms": 633.52,
+            "walBytes": 3859324,
+            "sharedHitBlocks": 38870
+          },
+          {
+            "ms": 643.071,
+            "walBytes": 3860591,
+            "sharedHitBlocks": 38856
+          },
+          {
+            "ms": 646.0,
+            "walBytes": 3860011,
+            "sharedHitBlocks": 38886
+          },
+          {
+            "ms": 629.472,
+            "walBytes": 3860270,
+            "sharedHitBlocks": 38940
+          },
+          {
+            "ms": 642.669,
+            "walBytes": 3867745,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 631.821,
+            "walBytes": 3859995,
+            "sharedHitBlocks": 38891
+          },
+          {
+            "ms": 631.684,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38929
+          },
+          {
+            "ms": 629.547,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38944
+          },
+          {
+            "ms": 638.08,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38928
+          },
+          {
+            "ms": 642.076,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38923
+          },
+          {
+            "ms": 643.368,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38942
+          },
+          {
+            "ms": 632.082,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38929
+          },
+          {
+            "ms": 648.75,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38923
+          },
+          {
+            "ms": 659.885,
+            "walBytes": 3860109,
+            "sharedHitBlocks": 38949
+          },
+          {
+            "ms": 741.752,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 638.447,
+            "walBytes": 3868172,
+            "sharedHitBlocks": 38922
+          }
+        ],
+        "p50Ms": 639.1569999999999,
+        "p95Ms": 659.885,
+        "exactInsertAccountingAndRollback": true
+      },
+      {
+        "mode": "statement",
+        "rows": 10000,
+        "samples": [
+          {
+            "ms": 27.048,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38923
+          },
+          {
+            "ms": 32.362,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38928
+          },
+          {
+            "ms": 25.84,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38942
+          },
+          {
+            "ms": 26.093,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38923
+          },
+          {
+            "ms": 26.876,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38929
+          },
+          {
+            "ms": 26.356,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38942
+          },
+          {
+            "ms": 38.51,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38930
+          },
+          {
+            "ms": 33.053,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 28.888,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38942
+          },
+          {
+            "ms": 27.595,
+            "walBytes": 3868821,
+            "sharedHitBlocks": 38930
+          },
+          {
+            "ms": 30.378,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 28.226,
+            "walBytes": 3860109,
+            "sharedHitBlocks": 38950
+          },
+          {
+            "ms": 29.077,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 27.533,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 42.085,
+            "walBytes": 3860109,
+            "sharedHitBlocks": 38952
+          },
+          {
+            "ms": 29.784,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 26.248,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38928
+          },
+          {
+            "ms": 28.815,
+            "walBytes": 3859460,
+            "sharedHitBlocks": 38944
+          },
+          {
+            "ms": 28.103,
+            "walBytes": 3859931,
+            "sharedHitBlocks": 38921
+          },
+          {
+            "ms": 31.811,
+            "walBytes": 3860580,
+            "sharedHitBlocks": 38931
+          }
+        ],
+        "p50Ms": 28.5205,
+        "p95Ms": 38.51,
+        "exactInsertAccountingAndRollback": true
+      }
+    ]
+  },
+  "passwordHash": [
+    {
+      "scenario": "identity-hash-success",
+      "iterations": 100000,
+      "durationMs": {
+        "n": 25,
+        "p50": 32.1595,
+        "p95": 73.8699,
+        "min": 31.804,
+        "max": 86.3552
+      },
+      "limits": "Hash primitive only. Database writes, lockout, security stamps and admission are not replaced or simulated."
+    },
+    {
+      "scenario": "identity-hash-failure",
+      "iterations": 100000,
+      "durationMs": {
+        "n": 25,
+        "p50": 32.9327,
+        "p95": 68.3753,
+        "min": 31.8568,
+        "max": 70.4469
+      },
+      "limits": "Hash primitive only. Database writes, lockout, security stamps and admission are not replaced or simulated."
+    },
+    {
+      "scenario": "identity-hash-rehash-required",
+      "iterations": 100000,
+      "durationMs": {
+        "n": 25,
+        "p50": 35.6066,
+        "p95": 100.0322,
+        "min": 34.8951,
+        "max": 104.1157
+      },
+      "limits": "Hash primitive only. Database writes, lockout, security stamps and admission are not replaced or simulated."
+    }
+  ]
+}

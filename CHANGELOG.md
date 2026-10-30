@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Let slow ListenBrainz radio responses finish within existing acquisition deadlines, overlap four independent discovery pools, and shorten acquisition handoff and completion polling without changing candidates, ranking or evidence.
 
 - Report missing managed-storage migrations and uninitialized inventories clearly, exiting cleanly instead of aborting and generating a core dump. Preserve fail-closed startup and add baseline-verified operator establishment.
 

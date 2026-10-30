@@ -93,6 +93,8 @@ public sealed class DiscoveryJobServiceTests
         await runner.StartAsync(default);
         try {
             await acquiring.Task.WaitAsync(TimeSpan.FromSeconds(8));
+            await jobs.Received().DeferAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(),
+                TimeSpan.Zero, "waiting_for_music", Arg.Any<CancellationToken>());
             lock (gate) queue.Add(Create(ready));
             await completed[ready.Id].Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.False(completed[slow.Id].Task.IsCompleted);

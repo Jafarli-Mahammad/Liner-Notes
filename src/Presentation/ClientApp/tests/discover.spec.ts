@@ -67,7 +67,7 @@ test('Discover polling honors the server deadline and stops after completion', a
     return route.fulfill({ json: { ...pending, state: 'Completed' } });
   });
   await page.goto('/discover'); await expect(page.getByRole('button', { name: 'Finding your next favorites…' })).toBeDisabled();
-  await page.clock.fastForward(2000); await expect.poll(() => polls).toBe(1);
+  await page.clock.fastForward(1000); await expect.poll(() => polls).toBe(1);
   await page.clock.fastForward(11_000); expect(polls).toBe(1);
   await page.clock.fastForward(1000); await expect.poll(() => polls).toBe(2);
   await expect(page.getByRole('button', { name: 'Find my next favorites', exact: true })).toBeEnabled();

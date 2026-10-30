@@ -43,7 +43,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         // Independent public pools have their own scopes/leases. Keep input order for evidence and tie-breaking.
         if (allowAcquisition)
         {
-            using var parallelism = new SemaphoreSlim(2);
+            using var parallelism = new SemaphoreSlim(4);
             var pending = requests.Select(async request =>
             {
                 await parallelism.WaitAsync(ct);

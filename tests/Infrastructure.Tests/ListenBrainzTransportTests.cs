@@ -5,11 +5,40 @@ using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 using Microsoft.Extensions.Caching.Memory;
 using Xunit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class ListenBrainzTransportTests
 {
+    [Fact]
+    public async Task RegisteredClientAllowsSlowRadioResponseWithoutRestartingAcquisition()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Generation:Provider"] = "listenbrainz", ["Generation:Origin"] = "Synthetic",
+            ["ListenBrainz:Mode"] = "LiveOnly", ["ListenBrainz:LiveUseApproved"] = "true"
+        }).Build();
+        var registrations = new ServiceCollection().AddLogging().AddInfrastructure(configuration);
+        registrations.AddSingleton<IMetaBrainzRequestGate>(new Gate());
+        bool completed = false;
+        int dispatches = 0;
+        registrations.AddHttpClient<ListenBrainzApiClient>().ConfigurePrimaryHttpMessageHandler(() => new AsyncHandler(async (_, ct) =>
+        {
+            Interlocked.Increment(ref dispatches);
+            await Task.Delay(TimeSpan.FromSeconds(16), ct);
+            completed = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        }));
+        await using var services = registrations.BuildServiceProvider();
+        var response = await services.GetRequiredService<ListenBrainzApiClient>()
+            .SendAsync(new(ListenBrainzRequestKind.TagRadio, "slow-radio"));
+        Assert.Empty(response.Gaps);
+        Assert.True(completed);
+        Assert.Equal(1, dispatches);
+    }
+
     [Theory]
     [InlineData("public, max-age=60", 1)]
     [InlineData("no-store", 8)]

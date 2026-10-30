@@ -110,7 +110,8 @@ public static class DependencyInjection
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkPublicRevalidation, LinerNotes.Infrastructure.Artwork.ArtworkPublicRevalidation>();
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
-        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
+        // Live tag radio can exceed 15s; the existing pool/job deadlines still bound acquisition.
+        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 AllowAutoRedirect = false, UseCookies = false,

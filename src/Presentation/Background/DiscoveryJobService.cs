@@ -63,6 +63,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         var heartbeat = HeartbeatAsync(job, work, heartbeatStop.Token);
         string? error = null;
         bool retry = false, defer = false;
+        var deferDelay = TimeSpan.FromSeconds(1);
         try
         {
             await using var scope = scopes.CreateAsyncScope();
@@ -70,7 +71,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
                 await scope.ServiceProvider.GetRequiredService<RunCatalogLookup>().ExecuteAsync(job, work.Token);
             else await scope.ServiceProvider.GetRequiredService<RunDiscoveryJob>().ExecuteAsync(job, acquisition, work.Token);
         }
-        catch (DiscoveryPreparationRequiredException) { defer = true; }
+        catch (DiscoveryPreparationRequiredException) { defer = true; deferDelay = TimeSpan.Zero; }
         catch (PublicPreparationBusyException) { defer = true; }
         catch (DiscoverySourceException ex) { error = ex.Message; retry = ex.Retryable; }
         catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested) { error = "preparation_timeout"; retry = true; }
@@ -94,7 +95,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         await using var status = scopes.CreateAsyncScope();
         var jobs = status.ServiceProvider.GetRequiredService<IDiscoveryJobStore>();
         await status.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384, async token => {
-            if (defer) await jobs.DeferAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), TimeSpan.FromSeconds(1), "waiting_for_music", token);
+            if (defer) await jobs.DeferAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), deferDelay, "waiting_for_music", token);
             else if (error is not null) await jobs.FailAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), error, retry,
                 TimeSpan.FromSeconds(Math.Min(60, job.Attempts * 5)), options.MaximumAttempts, token);
             return true;

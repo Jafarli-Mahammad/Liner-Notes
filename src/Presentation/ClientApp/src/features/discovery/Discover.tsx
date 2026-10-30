@@ -56,7 +56,7 @@ export default function Discover() {
       try {
         const response = await apiResponse(`/api/discovery/jobs/${encodeURIComponent(job.id)}`, { signal: controller.signal });
         const status: Job = await response.json(); if (controller.signal.aborted) return; setJob(status);
-        if (unfinished(status)) schedule(Math.max(Date.now() + 2000, retryDeadline(response.headers.get('Retry-After')) ?? 0));
+        if (unfinished(status)) schedule(Math.max(Date.now() + 1000, retryDeadline(response.headers.get('Retry-After')) ?? 0));
         else if (status.state !== 'Completed') setError(new Error(status.errorCode === 'job_timeout'
           ? 'The music source took too long. Your saved picks are safe. You can request discoveries again.'
           : status.state === 'Cancelled' ? 'Your taste changed and that request was cancelled. You can request more discoveries when ready.'
@@ -68,7 +68,7 @@ export default function Discover() {
         schedule(Math.max(Date.now() + 5000, e instanceof ApiError ? e.retryAt ?? 0 : 0));
       }
     };
-    schedule(Date.now() + 2000);
+    schedule(Date.now() + 1000);
     return () => { controller.abort(); clearTimeout(timer); };
   }, [active, job?.id]);
   useEffect(() => {

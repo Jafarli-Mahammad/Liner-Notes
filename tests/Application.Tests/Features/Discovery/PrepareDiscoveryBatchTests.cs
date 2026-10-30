@@ -24,19 +24,19 @@ public sealed class PrepareDiscoveryBatchTests
             Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
         var preparation = Substitute.For<IDiscoveryPreparation>();
         var now = DateTimeOffset.UtcNow;
-        var pools = new[] { "ambient", "jazz", "rock" }.ToDictionary(seed => seed, seed =>
+        var pools = new[] { "ambient", "jazz", "rock", "indie", "electronic" }.ToDictionary(seed => seed, seed =>
             new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, now, now.AddMinutes(5),
                 CatalogText.Version, [Candidate(seed, "Artist " + seed, seed)], [], 1000, new string('b', 64)));
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), false, Arg.Any<CancellationToken>())
             .Returns(call => pools[call.Arg<DiscoveryPoolRequest>().Seed]);
         int active = 0, peak = 0;
-        var twoStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fourStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(async call =>
         {
             int count = Interlocked.Increment(ref active);
-            Assert.InRange(count, 1, 2);
-            if (count == 2) { Interlocked.Exchange(ref peak, 2); twoStarted.TrySetResult(); }
-            try { await twoStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)); return pools[call.Arg<DiscoveryPoolRequest>().Seed]; }
+            Assert.InRange(count, 1, 4);
+            if (count == 4) { Interlocked.Exchange(ref peak, 4); fourStarted.TrySetResult(); }
+            try { await fourStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)); return pools[call.Arg<DiscoveryPoolRequest>().Seed]; }
             finally { Interlocked.Decrement(ref active); }
         });
         var store = Substitute.For<IDiscoveryBatchStore>();
@@ -49,7 +49,7 @@ public sealed class PrepareDiscoveryBatchTests
         var batch = Guid.NewGuid();
         var sequential = await runner.PrepareAsync(new(profile, signals, []), batch, false, default);
         var parallel = await runner.PrepareAsync(new(profile, signals, []), batch, true, default);
-        Assert.Equal(2, peak);
+        Assert.Equal(4, peak);
         Assert.Equal(JsonSerializer.Serialize(sequential.Picks), JsonSerializer.Serialize(parallel.Picks));
         Assert.Equal(sequential.CoverageJson, parallel.CoverageJson);
         Assert.Equal(sequential.EvidenceExpiry, parallel.EvidenceExpiry);

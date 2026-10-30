@@ -17,7 +17,7 @@ public sealed class GenerationStorageOptions
 
 public sealed record ArtifactMeasurement(long Bytes, string Revision);
 public sealed record GenerationInventory(DateTimeOffset MeasuredAtUtc, bool Reconciled,
-    long DatabaseBytes, string DatabaseRevision, Dictionary<string, ArtifactMeasurement> Categories);
+    long DatabaseBytes, string DatabaseRevision, Dictionary<string, ArtifactMeasurement> Categories, Guid? CommitId = null, long ReservedArtifactBytes = 0);
 
 /// <summary>Explicit local roots and reconciled inventory under one cross-process batch lease.</summary>
 public sealed partial class LocalGenerationStorage(GenerationStorageOptions options, TimeProvider clock) : IGenerationStorage, ILocalEmailStorage, ICoordinatedGenerationStorage

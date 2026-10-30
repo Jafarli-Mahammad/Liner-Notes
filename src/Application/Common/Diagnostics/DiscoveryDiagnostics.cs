@@ -11,6 +11,16 @@ public static class DiscoveryDiagnostics
     private static readonly ActivitySource Activities = new(MeterName);
     private static readonly Histogram<double> Duration = Meter.CreateHistogram<double>("discovery.stage.duration", "ms");
     private static readonly Counter<long> CacheReads = Meter.CreateCounter<long>("discovery.cache.reads");
+    private static readonly Counter<long> ContentChecks = Meter.CreateCounter<long>("storage.content.checks");
+    private static readonly Counter<long> ContentBytes = Meter.CreateCounter<long>("storage.content.bytes", "By");
+    private static readonly Counter<long> NamespaceScans = Meter.CreateCounter<long>("storage.namespace.scans");
+    public static void ContentRead(long bytes)
+    {
+        ContentChecks.Add(1, new KeyValuePair<string, object?>("result", "full_read"));
+        ContentBytes.Add(bytes);
+    }
+    public static void ContentReused() => ContentChecks.Add(1, new KeyValuePair<string, object?>("result", "guarded_reuse"));
+    public static void NamespaceScan() => NamespaceScans.Add(1);
 
     public static Measurement Measure(string stage) => new(stage, Duration.Enabled ? Stopwatch.GetTimestamp() : 0,
         Activities.StartActivity(stage, ActivityKind.Internal));

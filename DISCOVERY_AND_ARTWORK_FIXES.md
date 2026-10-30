@@ -1,5 +1,6 @@
 # Discovery and artwork fixes — 2026-10-27
 
+2026-10-30 follow-up: the approved storage/authentication redesign is implemented and locally verified. See [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) for measured improvements, costs, recovery guarantees and deployment requirements. Historical findings below are not a claim about the final implementation.
 Implementation follows [the investigation](DISCOVERY_AND_ARTWORK_INVESTIGATION.md).
 Follow-up verification and current limits are in [the 2026-10-29 remediation report](DISCOVERY_PERFORMANCE_REMEDIATION.md). Developer confirmation is still pending. This is local verification, not a production latency guarantee.
 

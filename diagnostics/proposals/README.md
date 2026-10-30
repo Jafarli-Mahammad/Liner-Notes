@@ -1,6 +1,8 @@
 # Storage design experiments
 
-These launch-only probes support the root [design proposal](../../STORAGE_INTEGRITY_DESIGN_PROPOSAL.md). They are not referenced by any production project and do not replace storage, accounting or authentication code.
+The subsequently implemented redesign and matched application measurements are documented in [the implementation record](../../STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) and [the storage harness](../storage-benchmarks/README.md). The `storage-protocol` mode exercises the current production storage component, with optional forced full-read fallback.
+
+These launch-only probes support the historical root [design proposal](../../STORAGE_INTEGRITY_DESIGN_PROPOSAL.md). They are not referenced by any production project and do not replace storage, accounting or authentication code.
 
 Use the repository SDK and a Release build:
 

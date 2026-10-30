@@ -1,5 +1,6 @@
 # Why discovery and album covers can take so long
 
+2026-10-30 follow-up: the approved storage/authentication redesign is implemented and locally verified. See [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) for measured improvements, costs, recovery guarantees and deployment requirements. Historical findings below are not a claim about the final implementation.
 Investigated 2026-10-27 against source commit `930e107` in this checkout.
 
 Follow-up: [implemented fixes, verification and deferred quality decisions](DISCOVERY_AND_ARTWORK_FIXES.md).

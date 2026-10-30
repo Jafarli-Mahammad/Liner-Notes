@@ -1,5 +1,6 @@
 # Discovery, artwork and performance remediation
 
+Storage/authentication implementation update, 2026-10-30: [architecture, guarantees, 839 backend tests, browser checks, matched measurements and migration instructions](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md). The original findings below remain historical evidence; the tracked register incorporates the newly verified status.
 Local verification: 2026-10-29. Developer confirmation and production acceptance remain pending. Baseline: commit `623f29a`; safe changes build on the October 27 fixes rather than replacing their design.
 
 **Result:** the saturated artwork queue is measurably faster; discovery failure/recovery and cache correctness are improved. Matched synthetic cold/warm discovery timings do **not** establish an overall discovery speedup. Storage scan/coordination costs remain. The [unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md) is for review; its architectural implementation has not been applied.
@@ -126,7 +127,7 @@ Sanitized matched results are in [the numeric summary](diagnostics/remediation-2
 | A8 validity/rendering | Mitigated | Headers/signatures/size/freshness plus browser decoding recovery. Header checks are not a full server image decoder. |
 | A9 readiness HTTP load | Mitigated | Honest 503/404/200 contract, negative-wait-aware HEAD and GET recovery; concurrent live-user network load not established. |
 | A10 artwork diagnostics | Mitigated | Queue/preparation/image/acquisition/revalidation measurements; no provider-sensitive payload logs. |
-| P01 artifact scans | Unresolved | Five reads retained; design-only alternatives measured. |
+| P01 artifact scans | Mitigated | Five integrity checkpoints retained; live kernel proofs avoid redundant full reads for eligible large files, and initial verification leaves the DB gate. Forced fallback and 900 MB distributions are in the storage/auth implementation record. |
 | P02 duplicate metadata | Mitigated | Same-process overlapping cacheable requests share; restricted responses and independent hosts intentionally do not share unsupported data. |
 | P03 response allocation | Mitigated | Existing bounded response handling retained; decoded cap/compression tested. No new allocation-reduction claim for the old optimization. |
 | P04 retry timing | Fixed | Current React and legacy browser recovery/backoff tests pass. |
@@ -138,21 +139,21 @@ Sanitized matched results are in [the numeric summary](diagnostics/remediation-2
 | P10 alias merge | Mitigated | Existing bounded merge/output behavior retained; no changed merge quality rule or speedup claimed. |
 | P11 catalog read fan-out | Mitigated | Existing batched catalog behavior/integration tests retained; no blanket query-elimination claim. |
 | P12 cache quota aggregates | Unresolved | 50k-row query cost measured; do not cache approximate totals or weaken coordinated quota admission. |
-| P13 archive scanning | Unresolved | Full ownership-authenticated scan remains. Index/cleanup changes must retain corrupt/unlinked-copy detection and join the storage design. |
+| P13 archive scanning | Mitigated | Known owned copies delete in bounded journal batches with restart recovery and fewer integrity admissions. The authenticated legacy/unlinked-copy scan remains necessary, and large archive read costs remain. |
 | P14 pool encode/decode | Mitigated | Prior serialization optimization retained; exact validated projection/output coverage remains. |
-| P15 auth admission | Deferred | Hash CPU measured; boundary change requires unified design and real Identity race/failure proof. |
+| P15 auth admission | Fixed locally | Standard Identity verification/rehash prepares outside broad admission; locked current-state fencing, parallel lockout, reset/stamp/session races and storage-pressure tests pass. Small-workload coordination overhead remains. |
 | P16 artist supporting evidence | Deferred | Same rejected shortcut/controlled quality-evaluation gate as D7. |
 | P17 account queries | Mitigated | Existing account eligibility behavior/tests retained; large exports are still separate work. |
 | P18 compression | Fixed | Production-handler/static negotiation, security boundaries and identical decoded bytes verified. |
-| P19 ledger trigger overhead | Unresolved | Insert primitive suggests batching opportunity; complete accounting redesign remains unimplemented. |
-| P20 scheduled/capture publication | Unresolved | Existing safeguards retained; exact receipts/all-writer recovery require unified approved implementation. |
+| P19 ledger trigger overhead | Mitigated | Exact statement accounting, complete coverage/fingerprint checks and deferred commit witnesses pass rollback/reconciliation tests. Additional witness SQL raises empty-storage sequential latency; no universal DB-write speedup is claimed. |
+| P20 scheduled/capture publication | Fixed locally | Durable reservations/staging/intent/finalization, process-kill restart tests, scheduled capture and interrupted account-copy cleanup pass. PostgreSQL commit and rename remain distinct recoverable states. |
 
 ## D. Remaining decisions and operations
 
-- Review [the unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md). It covers alternatives, exact guarantee boundaries, receipt self-accounting, reader publication fences, all writers, crash/concurrency scenarios, migration/rollback and acceptance tests. Its prototypes are not proof of a complete replacement.
+- The developer approved the unified storage/authentication implementation. See [the locally verified implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) for selected guarantees, test/failure evidence, measurements, remaining costs and operational requirements. The earlier proposal is historical.
 - Keep non-cacheable images unavailable. Keep all recommendation coverage, deterministic scoring, full-pool ranking and supporting evidence. No proxy or recommendation shortcut was introduced.
 - Large export/history/archive graphs remain. Further safe projection/streaming/index work is authorized, but a replacement must prove identical ownership, retained data, snapshot/failure semantics and managed accounting. No truncation or partial export is substituted as success.
-- No migration, new external service, production deployment or provider/scoring configuration change is required for the safe fixes. A diagnostic-only project references existing libraries; no new production dependency is introduced.
+- The earlier discovery/artwork safe fixes required no migration. The storage/authentication redesign requires three migrations and explicit stopped-writer establishment; follow its implementation record. No new external service, production dependency or provider/scoring configuration was introduced, and nothing was deployed.
 - Pool/seed namespaces become `prepared-pool-v3`/`prepared-seed-v2`. Expect bounded cold preparation after upgrade; prior completed discoveries remain readable. Restart participating application instances and preserve the existing shared MetaBrainz pacing directory for a shared upstream IP.
 - Rebuild/publish frontend assets through the existing production process. Artwork consumers should respect X-Artwork-State, HTTP 503/404/200 and Retry-After. CSP/private cache boundaries remain unchanged.
 - Monitor queue/attempt age, provider waits/cache hits, database wait/hold, inventory/scans and artwork queue/acquisition stages in bounded sessions. Do not add user IDs/taste text/tokens as metric labels. No telemetry export is automatically enabled.

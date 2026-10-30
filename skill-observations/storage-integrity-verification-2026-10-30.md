@@ -1,0 +1,10 @@
+# Performance verification observation — 2026-10-30
+
+Status: OPEN
+Skill: performance-reviewer
+
+A mixed storage benchmark aborted on a legitimate baseline admission failure. Timing only successful complete runs would have hidden the failure and biased comparison. The harness now records bounded failure reasons alongside successful latency distributions, retains the failed attempt, and reruns only when a correction or unresolved cause warrants it.
+
+Suggested skill improvement: require performance comparisons to report attempted/successful/failed operation counts and distinguish an isolated component improvement from end-to-end throughput, reliability and small-workload regressions. Include an explicit fallback workload when an optimization depends on an optional kernel capability.
+
+No reusable skill was changed during this task.

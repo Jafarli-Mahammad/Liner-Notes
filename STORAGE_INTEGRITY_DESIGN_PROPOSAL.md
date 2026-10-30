@@ -1,5 +1,7 @@
 # Unified storage integrity, publication and authentication proposal
 
+Historical proposal. The developer subsequently authorized implementation; [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) supersedes the approval boundary and reports the selected architecture, tests and measured limits.
+
 Status: design for developer review, 2026-10-29. **No architectural implementation or migration is included.** The current admission, hashing, ledger, authentication and fail-closed recovery boundaries remain in service. Experiments below use generated files and disposable PostgreSQL only.
 
 ## Decision requested

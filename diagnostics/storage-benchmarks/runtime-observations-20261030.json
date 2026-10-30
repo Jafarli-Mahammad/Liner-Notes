@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-30",
+  "workload": "Separately launched disposable 900 MB single-artifact workload, four sequential samples per kind plus one eight-operation mixed wave, including setup/migrations/warmup. Not a timed acceptance run.",
+  "sampling": "System.Runtime meter, one second; no process attachment or memory dump.",
+  "threadProfileLimitation": "Managed sampled-thread profiles were dominated by waiting functions and contain missing native symbols. These are not per-method CPU attribution. Compare process CPU totals and measured full-read byte counts in the primary dataset.",
+  "variants": {
+    "baseline": {
+      "counterIntervals": 49,
+      "maximumWorkingSetBytes": 210042880.0,
+      "sampledGcPauseSeconds": 0.052231,
+      "sampledProcessCpuSeconds": 100.382479,
+      "managedThreadTopFunctions": [
+        "1.  LowLevelLifoSemaphore.WaitForSignal(int32)                                39.01%              36.11%              ",
+        "2.  WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class W    18.35%              18.35%              ",
+        "3.  Missing Symbol                                                            9.18%               9.18%               ",
+        "4.  Monitor.Wait(class System.Object,int32)                                   9.18%               9.18%               ",
+        "5.  Thread.<PollGC>g__PollGCWorker|67_0()                                     8.48%               8.48%               "
+      ]
+    },
+    "current": {
+      "counterIntervals": 13,
+      "maximumWorkingSetBytes": 212832256.0,
+      "sampledGcPauseSeconds": 0.065466,
+      "sampledProcessCpuSeconds": 24.668223,
+      "managedThreadTopFunctions": [
+        "1.  WaitHandle.WaitOneNoCheck(int32,bool,class System.Object,value class W    21.03%              21.03%              ",
+        "2.  LowLevelLifoSemaphore.WaitForSignal(int32)                                31.33%              15.96%              ",
+        "3.  LowLevelLifoSemaphore.WaitNative(class Microsoft.Win32.SafeHandles.Saf    15.36%              15.36%              ",
+        "4.  Missing Symbol                                                            10.55%              10.53%              ",
+        "5.  Monitor.Wait(class System.Object,int32)                                   10.51%              10.51%              "
+      ]
+    }
+  },
+  "tools": {
+    "dotnet-trace": "10.0.750501+ad724c4b85e7ae775e42f393c6e95a7557a57954",
+    "dotnet-counters": "10.0.750501+ad724c4b85e7ae775e42f393c6e95a7557a57954"
+  }
+}

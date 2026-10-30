@@ -1,5 +1,6 @@
 # Liner Notes — Performance Issues
 
+2026-10-30 follow-up: the approved storage/authentication redesign is implemented and locally verified. See [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md) for measured improvements, costs, recovery guarantees and deployment requirements. Historical findings below are not a claim about the final implementation.
 Consolidated on 2026-10-27 from the repository based on `64d6b7d`, including the
 documentation pointers added with this consolidation. This file contains the
 current issue register followed by the complete performance reports, design,

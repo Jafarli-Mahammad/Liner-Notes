@@ -16,7 +16,7 @@ The developer conditionally approved bounded revalidation of previously public
 recordings and rejected non-cacheable image forwarding and recommendation
 shortcuts. The [unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md)
 includes measurements, alternatives, invariants, recovery, migration/rollback
-and acceptance tests. Its architectural implementation remains unapproved.
+and acceptance tests. The developer subsequently approved storage/authentication implementation. The redesign is locally verified with 839 backend checks, 55 browser regression checks, real disposable account journeys and matched 900 MB measurements; see [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md). Production deployment and developer confirmation remain outstanding.
 Full histories/exports/archive processing and multi-host/provider limits remain
 explicit in the remediation report. Developer confirmation remains pending.
 

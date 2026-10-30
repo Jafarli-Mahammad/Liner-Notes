@@ -35,8 +35,7 @@ or payloads as labels. Thread samples include waits and require runtime counters
 and stage timings for interpretation.
 
 Reproducible design-only probes and their limits are in
-[proposals/README.md](proposals/README.md). They do not implement the proposed
-storage/accounting/authentication protocol.
+[proposals/README.md](proposals/README.md). The historical design probes do not implement the protocol. The implemented redesign and matched disposable application harness are documented in [storage-benchmarks/README.md](storage-benchmarks/README.md).
 
 ```bash
 diagnostics/profile.sh --pid 12345 --duration 30

@@ -5,9 +5,10 @@ internal static partial class Audit
 {
     public static async Task Main(string[] args)
     {
-        if (args.Length != 1 || args[0] is not ("storage-alternatives" or "auth-boundary" or "artwork-persist" or "artwork-restore"))
+        if (args.Length != 1 || args[0] is not ("storage-alternatives" or "auth-boundary" or "artwork-persist" or "artwork-restore" or "storage-protocol"))
             throw new ArgumentException("Specify storage-alternatives, auth-boundary, artwork-persist or artwork-restore; production attachment is not supported.");
         if (args[0] == "storage-alternatives") await StorageAlternatives();
+        else if (args[0] == "storage-protocol") await StorageProtocol();
         else if (args[0] == "auth-boundary") AuthBoundary();
         else await ArtworkRestart(args[0] == "artwork-persist");
     }

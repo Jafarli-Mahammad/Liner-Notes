@@ -2,6 +2,9 @@
 
 ## Unreleased — renewal
 
+- Add PostgreSQL-backed storage commit witnesses, exact statement accounting and recoverable staged artifact publication. Move initial artifact verification and coordinated login password verification outside the broad database gate. Preserve full SHA-256 checkpoint checks when kernel-enforced reuse is unavailable.
+- Recover interrupted scheduled email publication and account-copy cleanup; include owned artifact lifecycle metadata in data export version 2.6. This upgrade requires three migrations, stopped writers and explicit inventory establishment; see `STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md`.
+
 - Separate artwork metadata preparation from per-image scheduling, promote visible covers without starving maintenance, and revalidate retained public recording provenance before refreshing expired artwork metadata.
 - Retry incomplete discovery acquisition rather than publishing a reduced pool. Share overlapping cacheable metadata requests while preserving cancellation, request budgets and upstream cache restrictions.
 - Recover failed image retrieval, tab visibility changes and temporary database/session failures. Compress public assets and metadata within the existing security boundaries; add bounded stage diagnostics.

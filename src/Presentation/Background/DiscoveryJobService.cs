@@ -52,6 +52,10 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
     private async Task ProcessAsync(DiscoveryJob job, bool acquisition, CancellationToken stoppingToken)
     {
         using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("job.execution");
+        System.Diagnostics.Activity.Current?.SetTag("discovery.job.id", job.Id.ToString("D"));
+        System.Diagnostics.Activity.Current?.SetTag("discovery.job.attempt", job.Attempts);
+        logger.LogInformation("Discovery operation {JobId} attempt {Attempt} started in {Lane}.",
+            job.Id, job.Attempts, acquisition ? "acquisition" : "prepared");
         LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.RecordDuration("job.age_at_dispatch", clock.GetUtcNow() - job.CreatedAtUtc);
         using var diagnosticScope = logger.BeginScope(new Dictionary<string, object?> { ["JobId"] = job.Id, ["JobKind"] = job.Kind.ToString() });
 
@@ -99,7 +103,11 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
             try { await heartbeat; } catch (OperationCanceledException) { }
         }
         if (stoppingToken.IsCancellationRequested) return;
-        if (!defer && error is null) return;
+        if (!defer && error is null)
+        {
+            logger.LogInformation("Discovery operation {JobId} attempt {Attempt} completed.", job.Id, job.Attempts);
+            return;
+        }
         await using var status = scopes.CreateAsyncScope();
         var jobs = status.ServiceProvider.GetRequiredService<IDiscoveryJobStore>();
         await status.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384, async token => {
@@ -108,6 +116,9 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
                 TimeSpan.FromSeconds(Math.Clamp(Math.Max(job.Attempts * 5, retryAfter?.TotalSeconds ?? 0), 1, 600)), options.MaximumAttempts, token);
             return true;
         }, stoppingToken);
+        logger.LogInformation("Discovery operation {JobId} attempt {Attempt} yielded {Outcome} with {FailureCode}; delay {DelaySeconds}s.",
+            job.Id, job.Attempts, defer ? "waiting_for_music" : retry && job.Attempts < options.MaximumAttempts ? "waiting_to_retry" : "failed", error,
+            defer ? deferDelay.TotalSeconds : Math.Clamp(Math.Max(job.Attempts * 5, retryAfter?.TotalSeconds ?? 0), 1, 600));
     }
 
     private async Task HeartbeatAsync(DiscoveryJob job, CancellationTokenSource work, CancellationToken ct)

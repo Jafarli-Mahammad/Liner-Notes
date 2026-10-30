@@ -2,6 +2,20 @@
 
 ## Current status
 
+### Original-account discovery recovery — 2026-10-31
+
+The unchanged revision-21 profile now has locally verified new recommendation
+batches. Controlled comparisons ruled out a direct Jakuzi/Lin Pesto data failure;
+tracing found intermittent feedback-artist name-search failures and a separate
+post-scoring receipt-size rejection. Validated recording credits now preserve
+artist identity, and oversized complete receipts use bounded, checksummed lossless
+storage within the existing 100 KB record limit. Scoring, source validation and
+preferences are unchanged. The actual signed-in Playwright click generated five
+new persisted picks; a full page reload and host restart retained that batch and
+verified four covers plus one genuine unavailable fallback. All 17 persisted taste
+signals remained unchanged. See [the final investigation](FINAL_DISCOVERY_RELIABILITY.md).
+Developer confirmation and production deployment remain outstanding.
+
 ### Discovery operation and artwork investigation — 2026-10-31
 
 Confirmed and corrected terminal treatment of shared provider backoff, artwork

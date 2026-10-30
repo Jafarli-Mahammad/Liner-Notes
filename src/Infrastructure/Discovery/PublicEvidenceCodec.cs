@@ -17,8 +17,8 @@ public static class PublicEvidenceCodec
         DateTimeOffset? ExpiresAtUtc, string NormalizationVersion, Candidate[] Candidates, CoverageGap[] Gaps,
         long SerializedBytes, string ContentSha256);
     private sealed record Seed(string ArtistName, IReadOnlyDictionary<string, double> Weights, TagObservation[] Tags,
-        ResponseReference Response, string? MissingReason, CoverageGap[] Gaps, ResponseReference[] Supporting);
-    public const string PoolVersion = "prepared-pool-v3", SeedVersion = "prepared-seed-v2";
+        ResponseReference Response, string? MissingReason, CoverageGap[] Gaps, ResponseReference[] Supporting, Guid? CanonicalArtistId);
+    public const string PoolVersion = "prepared-pool-v3", SeedVersion = "prepared-seed-v3";
     public static PublicEvidenceDocument Encode(PreparedDiscoveryPool pool)
     {
         if (pool.Origin == EvidenceOrigin.Recorded || pool.Candidates.Any(c => c.Origin != pool.Origin ||
@@ -56,7 +56,7 @@ public static class PublicEvidenceCodec
             throw new GenerationStoppedException("public_evidence_invalid");
         return Document(key, PublicEvidenceKind.Seed, provider, snapshot.Response.Origin, SeedVersion,
             new Seed(snapshot.ArtistName, snapshot.Vector.Weights, snapshot.Tags.ToArray(), snapshot.Response, snapshot.MissingReason,
-                snapshot.Gaps.ToArray(), snapshot.SupportingResponses.ToArray()), now, expiry ?? now);
+                snapshot.Gaps.ToArray(), snapshot.SupportingResponses.ToArray(), snapshot.CanonicalArtistId), now, expiry ?? now);
     }
     public static SeedTagSnapshot DecodeSeed(PublicEvidenceDocument document)
     {
@@ -64,7 +64,7 @@ public static class PublicEvidenceCodec
         if (value.Response.Origin != document.Origin || value.Tags.Any(t => t.Response.Origin != document.Origin) ||
             value.Supporting.Any(r => r.Origin != document.Origin)) throw new GenerationStoppedException("public_evidence_invalid");
         return new(value.ArtistName, WeightedTagVector.FromDictionary(value.Weights), value.Tags, value.Response, value.MissingReason, value.Gaps)
-        { SupportingResponses = value.Supporting };
+        { SupportingResponses = value.Supporting, CanonicalArtistId = value.CanonicalArtistId };
     }
     public static PublicEvidenceDocument Document<T>(string key, PublicEvidenceKind kind, string provider, EvidenceOrigin origin,
         string version, T value, DateTimeOffset acquired, DateTimeOffset expires)

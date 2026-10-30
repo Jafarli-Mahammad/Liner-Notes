@@ -11,6 +11,39 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed partial class DiscoveryCoordinationPostgresTests
 {
     [LocalPostgresMigrationFact]
+    public async Task LargeCompleteScoreReceiptSurvivesJsonbPersistenceAndReplaysExactly()
+    {
+        var profile = await GuestAsync('a'); var now = DateTimeOffset.UtcNow;
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
+            "large-receipt", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", now, 10, TimeSpan.Zero, ct));
+        var leased = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, now, TimeSpan.FromSeconds(60), 3, ct));
+        var batch = Guid.NewGuid();
+        var track = new LinerNotes.Domain.Catalog.Track("Uncommon track", "Uncommon artist");
+        var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
+        var score = new LinerNotes.Domain.Scoring.BaselineAScorer().ScoreForBatch(
+            new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batch, new()) with {
+            UnknownFields = Enumerable.Range(0, 400).ToDictionary(i => "retained-evidence-" + i,
+                i => System.Text.Json.JsonSerializer.SerializeToElement(new { source = "public-provider", identity = i, data = new string('x', 300) }))
+        };
+        var canonical = System.Text.Json.JsonSerializer.Serialize(score);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(canonical) > 100_000);
+        await WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(leased!.Id, leased.LeaseToken!.Value,
+                batch, DiscoveryBatchKind.OnDemand, [new(track, score)], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
+            return true;
+        }, 1_048_576);
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var loaded = await db.WeeklyRecommendations.AsNoTracking().SingleAsync(r => r.BatchId == batch);
+        Assert.Equal(canonical, System.Text.Json.JsonSerializer.Serialize(loaded.ScoreBreakdown));
+        Assert.Equal(loaded.ScoreBreakdown.FinalScore, new LinerNotes.Domain.Scoring.BaselineAScorer().Replay(loaded.ScoreBreakdown.Snapshot!).FinalScore);
+        var stored = await db.Database.SqlQuery<string>($"SELECT \"ScoreBreakdown\"::text AS \"Value\" FROM \"WeeklyRecommendations\" WHERE \"BatchId\"={batch}").SingleAsync();
+        Assert.Contains("linernotes-score-json-gzip-v1", stored);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(stored) < 100_000);
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task CompletionClearsExpiredMetadataButRetainsBoundedPublicArtworkProof()
     {
         var now = DateTimeOffset.UtcNow;

@@ -1,5 +1,10 @@
 # Discovery operations and artwork recovery — 2026-10-31
 
+Follow-up: [the final original-account investigation](FINAL_DISCOVERY_RELIABILITY.md)
+reproduces the remaining receipt-limit failure and verifies the repaired original
+account through a real browser request, refresh and application restart. The
+findings below remain the record of the earlier investigation.
+
 Local investigation only. Developer confirmation remains pending. Newly saved
 results were verified below; the underlying exception of the historical reported
 operation cannot be recovered from its generic persisted error.

@@ -31,7 +31,8 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
 {
     public Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, CancellationToken ct)
         => BuildAsync(signals, true, ct);
-    public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, bool allowAcquisition, CancellationToken ct, long round = 0)
+    public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, bool allowAcquisition, CancellationToken ct, long round = 0,
+        IReadOnlyDictionary<Guid, Guid>? feedbackRecordings = null)
     {
         using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.taste");
         options.Validate();
@@ -57,8 +58,11 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
                     continue;
                 }
                 // Preserve legacy name seeds without pretending they identify a canonical entity.
-                var legacy = await Seed(new(null, signal.TargetValue, false));
-                Add(signal, legacy, "legacy-artist:" + signal.NormalizedTargetValue, "artist", 1, null);
+                Guid? recording = signal.Source == TasteSignalSource.RecommendationLike && feedbackRecordings?.TryGetValue(signal.Id, out var id) == true ? id : null;
+                var legacy = await Seed(new(null, signal.TargetValue, false, ArtistRecordingId: recording));
+                if (legacy.CanonicalArtistId is { } artistId) artists.TryAdd(artistId, new(artistId, signal.TargetValue));
+                Add(signal, legacy, legacy.CanonicalArtistId is { } canonicalId ? "artist:" + canonicalId.ToString("D")
+                    : "legacy-artist:" + signal.NormalizedTargetValue, "artist", 1, null);
                 familiar.Add(signal.NormalizedTargetValue);
                 continue;
             }
@@ -119,6 +123,8 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         {
             if (preparation is not null) return await preparation.GetAsync(request, allowAcquisition, ct);
             if (!allowAcquisition) throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException();
+            if (request.ArtistRecordingId is { } recordingHint && provider.SeedTags is IRecordingArtistSeedTagSource credited)
+                return await credited.GetArtistFromRecordingAsync(recordingHint, request.Name, ct);
             if (request.IsRecording && request.EntityId is { } recording)
                 return provider.SeedTags is IRecordingSeedTagSource direct ? await direct.GetRecordingAsync(recording, request.Name, ct)
                     : new(request.Name, WeightedTagVector.Empty, [], new(provider.Id, "seed.recording.tags", recording.ToString("D"), configuration.Origin, null, null), "direct_recording_tags_not_supported", []);

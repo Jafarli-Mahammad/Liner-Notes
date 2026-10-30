@@ -113,7 +113,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             long bytes = 0;
             foreach (var pick in picks)
             {
-                int length = JsonSerializer.SerializeToUtf8Bytes(pick.Breakdown).Length;
+                int length = ScoreBreakdownJson.SerializeToUtf8Bytes(pick.Breakdown).Length;
                 if (length > config.MaximumSnapshotBytes) throw new GenerationStoppedException("snapshot_limit");
                 bytes = checked(bytes + length);
             }

@@ -31,6 +31,7 @@ public interface ISeedTagSource
 public sealed record SeedTagSnapshot(string ArtistName, LinerNotes.Domain.Catalog.WeightedTagVector Vector,
     IReadOnlyList<TagObservation> Tags, ResponseReference Response, string? MissingReason, IReadOnlyList<CoverageGap> Gaps)
 {
+    public Guid? CanonicalArtistId { get; init; }
     public IReadOnlyList<ResponseReference> SupportingResponses { get; init; } = [];
     public DateTimeOffset? SharedUntilUtc { get; init; }
 }

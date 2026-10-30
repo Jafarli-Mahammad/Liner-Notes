@@ -59,6 +59,7 @@ export default function Discover() {
         if (unfinished(status)) schedule(Math.max(Date.now() + 1000, retryDeadline(response.headers.get('Retry-After')) ?? 0));
         else if (status.state !== 'Completed') setError(new Error(status.errorCode === 'job_timeout'
           ? 'The music source took too long. Your saved picks are safe. You can request discoveries again.'
+          : status.errorCode === 'snapshot_limit' ? 'This request could not be saved within the discovery limits. Your taste and saved picks are unchanged.'
           : status.state === 'Cancelled' ? 'Your taste changed and that request was cancelled. You can request more discoveries when ready.'
             : 'The music source could not complete that request. Your saved picks are still here.'));
       } catch (e) {

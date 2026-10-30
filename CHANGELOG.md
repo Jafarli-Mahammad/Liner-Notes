@@ -2,6 +2,10 @@
 
 ## Unreleased — renewal
 
+- Resolve feedback artists from validated recording credits when available, preserving their canonical identity and full evidence through discovery preparation.
+- Store oversized complete score receipts losslessly within the existing 100 KB limit, with bounded, checksummed decoding and support for existing JSON receipts.
+- Correlate discovery attempts with operation IDs and report receipt-limit failures separately from provider outages.
+
 - Retry shared upstream backoffs using their remaining delay, and retain specific safe discovery stop codes for diagnosis.
 - Revalidate artwork from bounded public identity proofs after catalog expiry, clear expired feed metadata without losing those proofs, and keep metadata timeouts retryable.
 - Stop retrying unavailable covers when cards move in and out of view.

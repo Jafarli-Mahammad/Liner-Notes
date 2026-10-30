@@ -1,6 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { personalFixture } from './fixtures/personal';
 
+test('receipt limits are reported as an unsaved request rather than a provider outage', async ({ page }) => {
+  const fixture = await personalFixture(page);
+  const job = { id: '60000000-0000-4000-8000-000000000007', state: 'Running', progressCode: 'preparing' };
+  fixture.overview.page!.currentJob = job;
+  await page.clock.install();
+  await page.route('**/api/discovery/jobs/*', route => {
+    fixture.overview.page!.currentJob = { ...job, state: 'Failed', errorCode: 'snapshot_limit' };
+    return route.fulfill({ json: fixture.overview.page!.currentJob });
+  });
+  await page.goto('/discover');
+  await expect(page.getByRole('button', { name: 'Finding your next favorites…' })).toBeDisabled();
+  await page.clock.fastForward(2000);
+  await expect(page.getByRole('alert')).toContainText('could not be saved within the discovery limits');
+  await expect(page.getByRole('button', { name: 'Find my next favorites', exact: true })).toBeEnabled();
+});
+
 test('unavailable artwork does not restart HEAD polling after visibility changes', async ({ page }) => {
   await personalFixture(page);
   await page.setViewportSize({ width: 1440, height: 1000 });

@@ -21,7 +21,9 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         var effective = EffectiveTasteInputs.FromProfile(inputs.Profile.Id, inputs.Signals, inputs.Feedback,
             new(configuration.FeedbackTagWeight, configuration.MinimumPositiveFeedbackWeight));
-        var taste = await materializer.BuildAsync(effective.PositiveSignals, allowAcquisition, ct, inputs.GenerationOrdinal);
+        var feedbackRecordings = inputs.Feedback.Where(r => Guid.TryParse(r.Track.Mbid, out var id) && id != Guid.Empty)
+            .ToDictionary(r => r.Id, r => Guid.Parse(r.Track.Mbid!));
+        var taste = await materializer.BuildAsync(effective.PositiveSignals, allowAcquisition, ct, inputs.GenerationOrdinal, feedbackRecordings);
         var answers = OnboardingState.Read(inputs.Profile.OnboardingJson);
         var artistRequests = taste.Artists.Select(a => new DiscoveryPoolRequest(a.Id, a.Name, false))
             .Concat(taste.Recordings.Select(r => new DiscoveryPoolRequest(r.Id, r.Name, false, true)));
@@ -95,8 +97,14 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         long bytes = 65_536;
         foreach (var pick in picks)
         {
-            int length = JsonSerializer.SerializeToUtf8Bytes(pick.Breakdown).Length;
-            if (length > configuration.MaximumSnapshotBytes) throw new GenerationStoppedException("snapshot_limit");
+            int length = ScoreBreakdownJson.SerializeToUtf8Bytes(pick.Breakdown).Length;
+            if (length > configuration.MaximumSnapshotBytes)
+            {
+                var failure = new GenerationStoppedException("snapshot_limit");
+                failure.Data["SnapshotBytes"] = length;
+                failure.Data["SnapshotLimitBytes"] = configuration.MaximumSnapshotBytes;
+                throw failure;
+            }
             bytes = checked(bytes + length * 4L + 32_768);
         }
         string coverage = JsonSerializer.Serialize(new

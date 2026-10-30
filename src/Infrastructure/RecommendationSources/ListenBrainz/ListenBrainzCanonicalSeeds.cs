@@ -16,7 +16,7 @@ public sealed partial class ListenBrainzRecommendationProvider
     {
         var response = await SendAsync(new(ListenBrainzRequestKind.ArtistMetadata, artistId.ToString("D")), ct);
         var tags = ListenBrainzEvidenceParser.ArtistTags([(artistId.ToString("D"), response)]);
-        return new(name, tags.Vector, tags.Tags, response.Reference, tags.MissingReason, tags.Gaps);
+        return new(name, tags.Vector, tags.Tags, response.Reference, tags.MissingReason, tags.Gaps) { CanonicalArtistId = artistId };
     }
     public async Task<SeedTagSnapshot> GetAlbumAsync(Guid releaseGroupId, string name, CancellationToken ct)
     {

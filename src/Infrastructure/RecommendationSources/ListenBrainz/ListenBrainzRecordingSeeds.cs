@@ -7,6 +7,17 @@ namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public sealed partial class ListenBrainzRecommendationProvider
 {
+    public async Task<SeedTagSnapshot> GetArtistFromRecordingAsync(Guid recordingId, string artistName, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync(new(ListenBrainzRequestKind.RecordingMetadata, recordingId.ToString("D")), cancellationToken);
+        LinerNotes.Application.Features.Discovery.DiscoverySourceValidation.ThrowIfFailed(response.Gaps);
+        var credit = ListenBrainzEvidenceParser.Recording(response, recordingId.ToString("D"));
+        if (credit is null || credit.ArtistMbids.Count != 1 || !string.Equals(credit.ArtistName.Trim(), artistName.Trim(), StringComparison.OrdinalIgnoreCase))
+            return await GetAsync(artistName, cancellationToken);
+        var seed = await GetArtistAsync(Guid.Parse(credit.ArtistMbids[0]), artistName, cancellationToken);
+        return seed with { SupportingResponses = seed.SupportingResponses.Append(response.Reference).Distinct().ToArray() };
+    }
+
     public Task<IngestionResult<RawCandidateTrack>> GetCandidatesByRecordingsAsync(IReadOnlyList<Guid> ids, int limit, CancellationToken ct)
         => DiscoverAsync(ids.Select(id => id.ToString("D")).ToArray(), limit, false, ct, true, true);
 

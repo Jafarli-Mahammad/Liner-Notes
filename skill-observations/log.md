@@ -1,5 +1,23 @@
 # Skill Observation Log
 
+### Observation 038: Follow recovery past the first failure
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Issue:** A simple guest control bypassed feedback identity resolution and larger receipt serialization. Recovering an upstream outage exposed a separate post-scoring storage bound.
+**Suggested improvement:** Compare the full persisted input dimensions, retain operation/trace correlation across retries, and follow recovered acquisition through receipt validation and durable publication. Prove lossless data round trips when changing physical storage.
+**Principle:** A successful control or a recovered dependency is not proof that the affected workflow can finish.
+
+### Observation 039: Verify the actual browser mode before requesting sign-in
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Issue:** Removing a headless flag did not override tool defaults, so an invisible browser was mistaken for the user's visible session.
+**Suggested improvement:** Set headed mode explicitly, verify runtime user-agent/process mode, and identify the exact window before asking a user to authenticate. Check only relevant network metadata and never capture credentials.
+**Principle:** Verify tool session identity before attributing user-visible state or requesting authentication.
+
 ### Observation 037: Correlate durable operations and prove result replacement
 **Status:** OPEN
 **Date:** 2026-10-31

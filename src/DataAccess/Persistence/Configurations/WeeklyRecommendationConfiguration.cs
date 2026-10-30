@@ -25,12 +25,12 @@ public sealed class WeeklyRecommendationConfiguration : IEntityTypeConfiguration
         builder.Property(r => r.Rank)
             .IsRequired();
 
-        // Store structured ScoreBreakdown as jsonb column in PostgreSQL for full explainability
+        // Small receipts stay JSON; larger complete receipts use the versioned lossless codec.
         builder.Property(r => r.ScoreBreakdown)
             .HasColumnType("jsonb")
             .HasConversion(
-                breakdown => JsonSerializer.Serialize(breakdown, (JsonSerializerOptions?)null),
-                json => JsonSerializer.Deserialize<ScoreBreakdown>(json, (JsonSerializerOptions?)null) ?? new ScoreBreakdown())
+                breakdown => LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.Serialize(breakdown),
+                json => LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.Deserialize(json))
             .IsRequired();
 
         builder.Property(r => r.Feedback)

@@ -1,5 +1,6 @@
 using System.Net;
 using LinerNotes.Application;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess;
 using LinerNotes.Infrastructure;
 using LinerNotes.Presentation;
@@ -10,6 +11,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+try
+{
 var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
@@ -183,6 +186,13 @@ app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html", staticFileOptions);
 
 app.Run();
+}
+catch (GenerationStoppedException error)
+{
+    Console.Error.WriteLine($"Managed storage startup stopped: {error.Message}.");
+    Console.Error.WriteLine("Keep writers stopped. Back up the database and managed files, apply pending migrations, and verify/establish the storage inventory before restarting. See STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md.");
+    Environment.ExitCode = 2;
+}
 
 // Make the implicit Program class public for WebApplicationFactory in integration tests
 public partial class Program { }

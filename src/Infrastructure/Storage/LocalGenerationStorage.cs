@@ -63,10 +63,24 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
     }
 
     // Explicit operator helper, never called automatically by generation.
-    public async Task<GenerationInventory> ReconcileAsync(GenerationStorageState database, CancellationToken cancellationToken = default)
+    public Task<GenerationInventory> ReconcileAsync(GenerationStorageState database, CancellationToken cancellationToken = default)
+        => ReconcileCoreAsync(database, null, cancellationToken);
+
+    public Task<GenerationInventory> ReconcileVerifiedAsync(GenerationStorageState database,
+        IReadOnlyDictionary<string, ArtifactMeasurement> expectedArtifacts, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedArtifacts);
+        return ReconcileCoreAsync(database, expectedArtifacts, cancellationToken);
+    }
+
+    private async Task<GenerationInventory> ReconcileCoreAsync(GenerationStorageState database,
+        IReadOnlyDictionary<string, ArtifactMeasurement>? expectedArtifacts, CancellationToken cancellationToken)
     {
         await using var lease = OpenLease();
         var measurements = await MeasureAsync(cancellationToken).ConfigureAwait(false);
+        if (expectedArtifacts is not null && (expectedArtifacts.Count != measurements.Count ||
+            measurements.Any(pair => !expectedArtifacts.TryGetValue(pair.Key, out var expected) || expected != pair.Value)))
+            throw new GenerationStoppedException("artifact_inventory_changed");
         var inventory = new GenerationInventory(clock.GetUtcNow(), true, database.DatabaseBytes, database.Revision, measurements);
         if (commits is not null)
         {

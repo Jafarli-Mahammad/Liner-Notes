@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Report missing managed-storage migrations and uninitialized inventories clearly, exiting cleanly instead of aborting and generating a core dump. Preserve fail-closed startup and add baseline-verified operator establishment.
+
 - Add PostgreSQL-backed storage commit witnesses, exact statement accounting and recoverable staged artifact publication. Move initial artifact verification and coordinated login password verification outside the broad database gate. Preserve full SHA-256 checkpoint checks when kernel-enforced reuse is unavailable.
 - Recover interrupted scheduled email publication and account-copy cleanup; include owned artifact lifecycle metadata in data export version 2.6. This upgrade requires three migrations, stopped writers and explicit inventory establishment; see `STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md`.
 

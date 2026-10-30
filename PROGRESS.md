@@ -2,6 +2,10 @@
 
 ## Current status
 
+### Local storage startup upgrade — 2026-10-30
+
+Fixed the missing-migration abort and verified clean process exits for schema/inventory prerequisites. The local development database was backed up, upgraded and checked to preserve rows in 28 existing tables; `/health` returned HTTP 200 with provider jobs disabled. Affected suites passed 544 checks. See [the startup follow-up](STARTUP_CRASH_FIX.md). Production remains undeployed.
+
 ### Discovery/performance remediation — 2026-10-29
 
 Safe discovery, artwork, cache, recovery and diagnostic corrections are implemented;

@@ -7,6 +7,7 @@ using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.DataContexts;
 using LinerNotes.DataAccess.Persistence.Accounting;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LinerNotes.DataAccess.Persistence.Repositories;
 
@@ -14,8 +15,16 @@ public sealed class ManagedStorageCommitStore(DataContext db, IUnitOfWork unit, 
 {
     public async Task<ManagedStorageCommit?> ReadAsync(CancellationToken ct)
     {
-        var record = await db.Set<ManagedStorageCommitRecord>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1, ct);
-        return record is { Initialized: true } ? Convert(record) : null;
+        try
+        {
+            var record = await db.Set<ManagedStorageCommitRecord>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1, ct);
+            return record is { Initialized: true } ? Convert(record) : null;
+        }
+        catch (PostgresException error) when (error.SqlState is PostgresErrorCodes.UndefinedTable or PostgresErrorCodes.UndefinedColumn)
+        {
+            // An older deployment must not be mistaken for an empty, eligible inventory.
+            throw new GenerationStoppedException("storage_schema_upgrade_required");
+        }
     }
 
     public async Task<ManagedStorageCommit> RecordAsync(Guid commitId, StoragePublicationPlan plan, string schemaFingerprint, CancellationToken ct)

@@ -11,6 +11,18 @@ namespace LinerNotes.Infrastructure.Tests;
 public sealed class GenerationStorageTests : IDisposable
 {
     [Fact]
+    public async Task VerifiedEstablishmentRejectsChangesWithoutReplacingTheOriginalInventory()
+    {
+        var storage = new LocalGenerationStorage(options, clock);
+        var database = new GenerationStorageState(1000, "db");
+        var before = await storage.ReconcileAsync(database);
+        var original = await File.ReadAllBytesAsync(options.InventoryPath!);
+        await File.WriteAllTextAsync(Path.Combine(root, "recordings", "unexpected"), "unexpected artifact");
+        var error = await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.ReconcileVerifiedAsync(database, before.Categories));
+        Assert.Equal("artifact_inventory_changed", error.Message);
+        Assert.Equal(original, await File.ReadAllBytesAsync(options.InventoryPath!));
+    }
+    [Fact]
     public async Task NonregularArtifactFailsWithoutBlockingOnFifoOpen()
     {
         if (!OperatingSystem.IsLinux()) return;

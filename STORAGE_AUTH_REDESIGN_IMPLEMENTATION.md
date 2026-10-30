@@ -67,7 +67,7 @@ The local unsubscribe protector still uses standard Data Protection algorithms, 
 
 ## Verification
 
-Current full backend run: Domain 151, Application 147, Infrastructure 259, DataAccess 168, Presentation 114; **839 passed, zero skipped**. PostgreSQL tests use disposable databases in an owned loopback PostgreSQL 18.6 container. The initial nine HTTP environment failures were caused by their placeholder database address; those HTTP-only fixtures now explicitly supply an uninitialized witness. PostgreSQL startup/downgrade tests continue using the real store.
+Original redesign checkpoint: Domain 151, Application 147, Infrastructure 259, DataAccess 168, Presentation 114; **839 passed, zero skipped**. PostgreSQL tests use disposable databases in an owned loopback PostgreSQL 18.6 container. The initial nine HTTP environment failures were caused by their placeholder database address; those HTTP-only fixtures now explicitly supply an uninitialized witness. PostgreSQL startup/downgrade tests continue using the real store.
 
 | Requirement | Local evidence |
 | --- | --- |
@@ -171,3 +171,9 @@ No recommendation weights, seed/candidate coverage, exclusions, supporting evide
 Source changes are split into local commits `fac2d77` (filesystem/integrity primitives), `6d6497f` (ledger, publication, recovery and integration), and `d3cb0d6` (Identity preverification). The first two intermediate commits were independently built in the disposable checkout; the final combined solution also builds. Existing package warnings were not suppressed, and no dependencies were upgraded.
 
 Owned PostgreSQL/container volumes, detached verification checkouts, private connection/configuration files, browser host, raw profiler resources and generated test/benchmark scratch were removed after collecting the sanitized evidence. Unrelated staged documentation deletions and the developer runtime/database were preserved. No push or deployment was performed.
+
+## Startup upgrade follow-up — 2026-10-30
+
+The existing local development database initially lacked all three new migrations. Startup now reports that requirement and exits cleanly. Its stopped local upgrade was backed up, checked against the original artifact baseline, and verified to preserve existing rows across 28 tables. Details and backup location are in [the crash follow-up](STARTUP_CRASH_FIX.md). Production remains undeployed.
+
+Startup follow-up verification passed 116 Presentation, 168 DataAccess and 260 Infrastructure checks, including the new process-exit and strict establishment cases. A temporary real host returned `/health` HTTP 200 against the upgraded local database with provider jobs disabled, then shut down normally.

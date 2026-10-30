@@ -215,6 +215,16 @@ reported as a coverage gap. Deployment and real catalog acquisition remain separ
 
 ListenBrainz is the configured default; Last.fm remains available behind the provider abstraction. Live use is explicitly gated. Per-user provider choice and listening-history imports are deferred. Developer confirmation, deployment-specific usage and license review, and recommendation-quality evaluation remain open. See the [provider evidence](docs/renewal/listenbrainz-provider-evidence.md) and [operations guide](docs/renewal/listenbrainz-provider-runbook.md).
 
+## Performance audit decisions — 2026-10-25
+
+The following are developer-selected design directions, not implementation or deployment verification:
+
+- **P01 — Artifact validation:** Retain existing full-content SHA-256 integrity passes for now. **Open for further design review:** five full-root passes scale poorly (audit: approximately 3.85 seconds for 900 MB on warm tmpfs). Investigate a durable exclusive-writer/versioned-artifact protocol that reduces repeated full scans without weakening tamper detection, quota enforcement, cross-process safety, or crash recovery. Do not remove existing passes until the integrity contract and adversarial/crash tests are approved.
+- **P06/P13 — Data export and archive:** Design bounded staged streaming: read history in pages, write to private temporary storage, publish only after successful completion, and preserve complete failure-atomic exports. Design per-owner archive lookup/storage with authorization and a safe compatibility/migration path for existing shared archive copies.
+- **P09/P12 — Counters:** Design transactionally maintained feedback revision and evidence quota counters instead of repeatedly deriving all totals from rows. Specify all mutation paths, retries, concurrency, repair/reconciliation, and migration consistency before implementation; establish measurement baselines.
+- **P05/P15 — Concurrency:** Measure acquisition-stripe and login/write-admission contention first; selectively move toward more precise coordination where justified. Preserve password hashing, lockout/session atomicity, provider pacing, and managed-write accounting.
+- **P16 — Recording-tag evidence:** Permit direct recording tags to be sufficient without an additional artist metadata request when they support an honest explanation. Persist explicit “artist evidence not requested” provenance rather than misrepresenting it as missing; verify receipt/score behavior.
+
 ## Remaining renewal work
 
 1. **Developer confirmation:** review locally verified phase evidence and confirm the implementation.

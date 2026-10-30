@@ -1,29 +1,6 @@
 # Changelog
 
 ## Unreleased — renewal
-
-- Resolve feedback artists from validated recording credits when available, preserving their canonical identity and full evidence through discovery preparation.
-- Store oversized complete score receipts losslessly within the existing 100 KB limit, with bounded, checksummed decoding and support for existing JSON receipts.
-- Correlate discovery attempts with operation IDs and report receipt-limit failures separately from provider outages.
-
-- Retry shared upstream backoffs using their remaining delay, and retain specific safe discovery stop codes for diagnosis.
-- Revalidate artwork from bounded public identity proofs after catalog expiry, clear expired feed metadata without losing those proofs, and keep metadata timeouts retryable.
-- Stop retrying unavailable covers when cards move in and out of view.
-- Let slow ListenBrainz radio responses finish within existing acquisition deadlines, overlap four independent discovery pools, and shorten acquisition handoff and completion polling without changing candidates, ranking or evidence.
-
-- Report missing managed-storage migrations and uninitialized inventories clearly, exiting cleanly instead of aborting and generating a core dump. Preserve fail-closed startup and add baseline-verified operator establishment.
-
-- Add PostgreSQL-backed storage commit witnesses, exact statement accounting and recoverable staged artifact publication. Move initial artifact verification and coordinated login password verification outside the broad database gate. Preserve full SHA-256 checkpoint checks when kernel-enforced reuse is unavailable.
-- Recover interrupted scheduled email publication and account-copy cleanup; include owned artifact lifecycle metadata in data export version 2.6. This upgrade requires three migrations, stopped writers and explicit inventory establishment; see `STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md`.
-
-- Separate artwork metadata preparation from per-image scheduling, promote visible covers without starving maintenance, and revalidate retained public recording provenance before refreshing expired artwork metadata.
-- Retry incomplete discovery acquisition rather than publishing a reduced pool. Share overlapping cacheable metadata requests while preserving cancellation, request budgets and upstream cache restrictions.
-- Recover failed image retrieval, tab visibility changes and temporary database/session failures. Compress public assets and metadata within the existing security boundaries; add bounded stage diagnostics.
-- Stream weekly input revision hashing without changing its serialized-byte digest. Preserve recommendation coverage, scoring and supporting evidence.
-- Bound discovery requests to ten minutes, overlap independent public preparation
-  without changing candidate selection, and recover completed results after failed reloads.
-- Prioritize requested album covers, distinguish pending artwork from unavailable
-  artwork, and retain validated covers across restarts in a separately bounded cache.
 - Add a contributor guide, bug and feature request forms, and a pull request checklist.
 - Add an Actions workflow that publishes an interactive Codebase Memory graph to Pages and refreshes its snapshot from `main` on each successful deployment.
 - Add the Superdesign-based React Home, Discover, Your Taste and History pages,

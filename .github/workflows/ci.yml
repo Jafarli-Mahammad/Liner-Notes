@@ -3,7 +3,13 @@ name: CI
 on:
   push:
     branches: [main, Prism]
+    paths-ignore:
+      - 'tools/nebula/**'
+      - '.github/workflows/nebula-pages.yml'
   pull_request:
+    paths-ignore:
+      - 'tools/nebula/**'
+      - '.github/workflows/nebula-pages.yml'
   workflow_dispatch:
 
 permissions:

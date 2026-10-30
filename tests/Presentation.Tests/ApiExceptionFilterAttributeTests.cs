@@ -23,6 +23,17 @@ public class ApiExceptionFilterAttributeTests
         _filter = new ApiExceptionFilterAttribute(_logger);
     }
 
+    [Fact]
+    public void AuthenticationStorageFailuresUseAnAuthenticationMessage()
+    {
+        var context = CreateExceptionContext(new LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException("authentication_state_conflict"));
+        context.HttpContext.Request.Path = "/api/auth/login";
+        _filter.OnException(context);
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.Equal(503, result.StatusCode);
+        Assert.Contains("Authentication", Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(result.Value).Title);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

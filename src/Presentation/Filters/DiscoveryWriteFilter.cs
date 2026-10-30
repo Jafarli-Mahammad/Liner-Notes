@@ -6,17 +6,21 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace LinerNotes.Presentation.Filters;
 
 /// <summary>Admission for account mutations that share the discovery storage inventory.</summary>
-public sealed class DiscoveryWriteFilter(IDiscoveryWriteCoordinator writes, DiscoveryRuntimeOptions options)
+public sealed class DiscoveryWriteFilter(IDiscoveryWriteCoordinator writes, DiscoveryRuntimeOptions options,
+    LinerNotes.Presentation.Services.PasswordVerificationPreparation? passwords = null)
     : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        if (!options.RunJobs || HttpMethods.IsGet(context.HttpContext.Request.Method))
+        if (!options.ManagedWritesEnabled || HttpMethods.IsGet(context.HttpContext.Request.Method))
         {
             await next();
             return;
         }
 
+        using var passwordAttempt = passwords is not null && context.Controller is LinerNotes.Presentation.Controllers.AuthController &&
+            context.ActionArguments.TryGetValue("request", out var payload) && payload is LinerNotes.Presentation.Models.LoginRequest login
+                ? await passwords.PrepareAsync(login.Email, login.Password, context.HttpContext.RequestAborted) : null;
         await writes.ExecuteAsync(131_072, async _ =>
         {
             var result = await next();

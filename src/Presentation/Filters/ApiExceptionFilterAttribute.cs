@@ -79,7 +79,9 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
 
     private static void HandleDiscoveryStopped(ExceptionContext context)
     {
-        context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = "Discovery is temporarily unavailable." }) { StatusCode = 503 };
+        string title = context.HttpContext.Request.Path.StartsWithSegments("/api/auth")
+            ? "Authentication is temporarily unavailable. Please retry." : "Discovery is temporarily unavailable.";
+        context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = title }) { StatusCode = 503 };
         context.ExceptionHandled = true;
     }
     private static void HandleDiscoveryConflict(ExceptionContext context)

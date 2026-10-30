@@ -17,6 +17,55 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class DiscoveryJobServiceTests
 {
+    [Fact]
+    public async Task ProviderBackoffPersistsRetryAtInsteadOfFailingOrRetryingEarly()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        var job = new DiscoveryJob(profile.Id, "backoff", new string('a', 64), DiscoveryJobKind.Generation, 0, "{\"Kind\":0}", now);
+        job.AcquireLease(Guid.NewGuid(), now, TimeSpan.FromSeconds(60), 3);
+        var jobs = Substitute.For<IDiscoveryJobStore>();
+        int dispatched = 0;
+        jobs.HasReadyAsync(DiscoveryJobKind.Generation, DiscoveryJobLane.Prepared, Arg.Any<DateTimeOffset>(), 3, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult(Volatile.Read(ref dispatched) == 0));
+        jobs.LeaseNextAsync(DiscoveryJobKind.Generation, Arg.Any<DateTimeOffset>(), Arg.Any<TimeSpan>(), 3, Arg.Any<CancellationToken>(), DiscoveryJobLane.Prepared)
+            .Returns(_ => Task.FromResult<DiscoveryJob?>(Interlocked.Exchange(ref dispatched, 1) == 0 ? job : null));
+        var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        jobs.FailAsync(job.Id, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<TimeSpan>(), 3, Arg.Any<CancellationToken>())
+            .Returns(call => {
+                Assert.Equal("source_temporarily_unavailable", call.ArgAt<string>(3));
+                Assert.True(call.ArgAt<bool>(4));
+                Assert.Equal(TimeSpan.FromSeconds(95), call.ArgAt<TimeSpan>(5));
+                job.Fail(call.ArgAt<Guid>(1), call.ArgAt<DateTimeOffset>(2), call.ArgAt<string>(3), true, call.ArgAt<TimeSpan>(5), 3);
+                failed.TrySetResult(); return Task.CompletedTask;
+            });
+        var batches = Substitute.For<IDiscoveryBatchStore>();
+        batches.ReadInputsAsync(profile.Id, Arg.Any<DateTimeOffset>(), 20, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DiscoveryInputs?>(new(profile,
+                [TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "backoff test")], [], 0)));
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<PreparedDiscoveryPool>(new DiscoverySourceException("source_temporarily_unavailable", true, TimeSpan.FromSeconds(95))));
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(), Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        using var services = new ServiceCollection().AddSingleton(jobs).AddSingleton(batches).AddSingleton(preparation).AddSingleton(resolver)
+            .AddSingleton<IDiscoveryWriteCoordinator>(new Admission()).AddSingleton(new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic })
+            .AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true }).AddSingleton(new DiscoveryTasteOptions())
+            .AddSingleton<TimeProvider>(TimeProvider.System).AddSingleton<BaselineAScorer>()
+            .AddScoped<MaterializeDiscoveryTaste>().AddScoped<PrepareDiscoveryBatch>().AddScoped<RunDiscoveryJob>().BuildServiceProvider();
+        using var runner = new DiscoveryJobService(services.GetRequiredService<IServiceScopeFactory>(), services.GetRequiredService<DiscoveryRuntimeOptions>(),
+            TimeProvider.System, NullLogger<DiscoveryJobService>.Instance);
+        await runner.StartAsync(default);
+        try
+        {
+            await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(DiscoveryJobState.Retryable, job.State);
+            Assert.True(job.NextAttemptAtUtc >= now.AddSeconds(95));
+            Assert.Null(job.ResultBatchId);
+        }
+        finally { await runner.StopAsync(default); }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -1,6 +1,26 @@
 import { test, expect } from '@playwright/test';
 import { personalFixture } from './fixtures/personal';
 
+test('unavailable artwork does not restart HEAD polling after visibility changes', async ({ page }) => {
+  await personalFixture(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  let reads = 0;
+  await page.route('**/api/artwork/recordings/*', route => {
+    if (route.request().url().endsWith('10000000-0000-4000-8000-000000000000')) reads++;
+    return route.fulfill({ status: 404, headers: { 'X-Artwork-State': 'unavailable' }, body: '' });
+  });
+  await page.goto('/discover');
+  await expect(page.locator('.featured-pick .artwork-missing')).toHaveCount(1);
+  expect(reads).toBe(1);
+  await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => page.locator('.featured-pick .artwork-frame').evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThan(-200);
+  await page.waitForTimeout(100);
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(250);
+  expect(reads).toBe(1);
+  await expect(page.locator('.featured-pick img')).toHaveCount(0);
+});
+
 test('completed discoveries recover from a failed reload without submitting again', async ({ page }) => {
   const fixture = await personalFixture(page);
   const job = { id: '60000000-0000-4000-8000-000000000009', state: 'Running', progressCode: 'preparing' };

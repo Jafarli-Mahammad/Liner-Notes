@@ -14,5 +14,8 @@ public interface IPublicEvidenceStore
 }
 public sealed class DiscoveryPreparationRequiredException : Exception { }
 public sealed class PublicPreparationBusyException : Exception { }
-public sealed class DiscoverySourceException(string code, bool retryable) : Exception(code)
-{ public bool Retryable { get; } = retryable; }
+public sealed class DiscoverySourceException(string code, bool retryable, TimeSpan? retryAfter = null) : Exception(code)
+{
+    public bool Retryable { get; } = retryable;
+    public TimeSpan? RetryAfter { get; } = retryAfter;
+}

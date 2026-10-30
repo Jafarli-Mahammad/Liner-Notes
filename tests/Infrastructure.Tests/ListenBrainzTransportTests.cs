@@ -297,7 +297,9 @@ public sealed class ListenBrainzTransportTests
             await second.WaitAsync("ListenBrainz", default);
             Assert.True(started.Elapsed >= TimeSpan.FromSeconds(1));
             await first.DeferAsync("ListenBrainz", TimeSpan.FromMinutes(2), default);
-            await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException>(() => second.WaitAsync("ListenBrainz", default));
+            var deferred = await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException>(() => second.WaitAsync("ListenBrainz", default));
+            Assert.True(deferred.Retryable);
+            Assert.InRange(deferred.RetryAfter!.Value.TotalSeconds, 115, 120);
             await second.WaitAsync("MusicBrainz", default); // Separate upstream budget.
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }

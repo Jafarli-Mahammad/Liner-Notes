@@ -108,9 +108,6 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
         var completedAt = clock.GetUtcNow();
         if (evidenceExpiry <= completedAt) throw new GenerationStoppedException("prepared_evidence_expired");
         await jobs.SaveCompletedAsync(job, leaseToken, completedAt, batchId, null, ct);
-        await db.Database.ExecuteSqlInterpolatedAsync($"""
-            DELETE FROM "RecentRecommendations" WHERE "MetadataExpiresAtUtc" <= {completedAt}
-            """, ct);
         // Publish public catalog metadata only, in the successful completion transaction.
         foreach (var recordingId in picks.Select(p => Guid.TryParse(p.Track.Mbid, out var id) ? id : Guid.Empty).Where(id => id != Guid.Empty).Distinct())
         {
@@ -124,16 +121,22 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
                                   orderby publication.AcquiredAtUtc descending
                                   select new { r.DisplayName, r.ArtistDisplayName, publication.Origin, publication.Attribution, publication.ExpiresAtUtc }).FirstOrDefaultAsync(ct);
             if (metadata?.ArtistDisplayName is not { Length: > 0 } artistName) continue;
-            if (await db.Set<RecentRecommendation>().AnyAsync(r => r.RecordingId == recordingId, ct)) continue;
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 INSERT INTO "RecentRecommendations" ("RecordingId","Title","ArtistName","Origin","Attribution","MetadataExpiresAtUtc")
                 VALUES ({recordingId},{metadata.DisplayName},{artistName},{metadata.Origin.ToString()},{metadata.Attribution},{metadata.ExpiresAtUtc})
-                ON CONFLICT ("RecordingId") DO NOTHING
+                ON CONFLICT ("RecordingId") DO UPDATE SET
+                    "Title"=EXCLUDED."Title", "ArtistName"=EXCLUDED."ArtistName", "Origin"=EXCLUDED."Origin",
+                    "Attribution"=EXCLUDED."Attribution", "MetadataExpiresAtUtc"=EXCLUDED."MetadataExpiresAtUtc"
+                WHERE "RecentRecommendations"."MetadataExpiresAtUtc" <= {completedAt}
                 """, ct);
         }
         await db.Database.ExecuteSqlInterpolatedAsync($"""
-            DELETE FROM "RecentRecommendations" WHERE "MetadataExpiresAtUtc" <= {completedAt}
-                OR "Sequence" IN (SELECT "Sequence" FROM "RecentRecommendations" ORDER BY "Sequence" DESC OFFSET 1000)
+            UPDATE "RecentRecommendations" SET "Title"='', "ArtistName"='', "Attribution"=''
+            WHERE "MetadataExpiresAtUtc" <= {completedAt} AND "Origin"='Public'
+                AND ("Title"<>'' OR "ArtistName"<>'' OR "Attribution"<>'');
+            DELETE FROM "RecentRecommendations" WHERE "MetadataExpiresAtUtc" <= {completedAt} AND "Origin"<>'Public';
+            DELETE FROM "RecentRecommendations" WHERE "Sequence" IN
+                (SELECT "Sequence" FROM "RecentRecommendations" ORDER BY "Sequence" DESC OFFSET 1000)
             """, ct);
 
     }

@@ -38,7 +38,7 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
         {
             var response = await metadata.SendAsync(new(ListenBrainzRequestKind.ArtworkMetadata,
                 string.Join(',', batch.Select(id => id.ToString("D")))), ct);
-            bool retryable = response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "upstream_unavailable");
+            bool retryable = response.Gaps.Any(g => g.Reason is "rate_limit" or "transport_error" or "request_timeout" or "upstream_unavailable");
             foreach (var id in batch)
             {
                 if (response.SharedCacheUntilUtc is not { } expiry || expiry <= clock.GetUtcNow())
@@ -215,6 +215,7 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException ex) when (ex.Retryable) { }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or OperationCanceledException or
             LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException) { }
         var entry = new ArtworkCacheEntry(cover, cover is null && retryable);

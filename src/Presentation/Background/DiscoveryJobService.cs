@@ -64,6 +64,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         string? error = null;
         bool retry = false, defer = false;
         var deferDelay = TimeSpan.FromSeconds(1);
+        TimeSpan? retryAfter = null;
         try
         {
             await using var scope = scopes.CreateAsyncScope();
@@ -73,9 +74,16 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         }
         catch (DiscoveryPreparationRequiredException) { defer = true; deferDelay = TimeSpan.Zero; }
         catch (PublicPreparationBusyException) { defer = true; }
-        catch (DiscoverySourceException ex) { error = ex.Message; retry = ex.Retryable; }
+        catch (DiscoverySourceException ex) { error = ex.Message; retry = ex.Retryable; retryAfter = ex.RetryAfter; }
         catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested) { error = "preparation_timeout"; retry = true; }
-        catch (GenerationStoppedException) { error = "generation_unavailable"; }
+        catch (GenerationStoppedException ex)
+        {
+            error = ex.Message.Length is > 0 and <= 64 && ex.Message.All(c => c is >= 'a' and <= 'z' or '_')
+                ? ex.Message : "generation_unavailable";
+            var frame = new System.Diagnostics.StackTrace(ex, false).GetFrame(0)?.GetMethod();
+            logger.LogWarning("Discovery job {JobId} stopped with {FailureCode} in {CodeLocation}.",
+                job.Id, error, $"{frame?.DeclaringType?.FullName}.{frame?.Name}");
+        }
         catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
         {
             // Code locations help operators diagnose faults without logging messages, payloads or provider bodies.
@@ -97,7 +105,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         await status.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384, async token => {
             if (defer) await jobs.DeferAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), deferDelay, "waiting_for_music", token);
             else if (error is not null) await jobs.FailAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), error, retry,
-                TimeSpan.FromSeconds(Math.Min(60, job.Attempts * 5)), options.MaximumAttempts, token);
+                TimeSpan.FromSeconds(Math.Clamp(Math.Max(job.Attempts * 5, retryAfter?.TotalSeconds ?? 0), 1, 600)), options.MaximumAttempts, token);
             return true;
         }, stoppingToken);
     }

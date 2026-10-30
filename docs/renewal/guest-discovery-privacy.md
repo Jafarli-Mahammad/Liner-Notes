@@ -158,7 +158,11 @@ it has no ownership association. Publication reads eligible shared catalog metad
 never copies a private score/title snapshot, and commits with successful picks.
 Reads validate current public eligibility and never query private batches or call
 providers. Repeated music keeps its feed position. The projection is bounded to
-1,000 entries; expired metadata is hidden on reads and reclaimed on publication.
+1,000 entries; expired metadata is hidden on reads and cleared on publication.
+Expired public rows retain only their recording identity, origin, sequence and expiry
+as bounded proof for artwork revalidation. Titles, artist names and attribution are
+cleared. Revalidation still requires fresh, eligible CC0 catalog metadata before
+artwork acquisition; private recommendation history is never used as proof.
 
 Ordinary transaction/application logging is not an anonymity guarantee. Public
 music overlap can still permit inference; no stronger resistance is claimed.

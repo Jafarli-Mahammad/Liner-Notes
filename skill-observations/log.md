@@ -1,5 +1,15 @@
 # Skill Observation Log
 
+### Observation 037: Correlate durable operations and prove result replacement
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Phase/Area:** Background job and cache investigations
+**Issue:** Existing result cards and fast successful status reads can conceal a failed new operation. Historical generic error codes cannot establish the exception that caused a specific failure. Expiring metadata can also erase the independent public provenance needed for safe recovery.
+**Suggested improvement:** Capture the operation returned by each submission, compare its result ID with persisted rows and displayed results, test a second submission over existing content, and preserve safe failure codes. Test recovery after both freshness expiry and cleanup, retaining only bounded provenance when metadata must be cleared.
+**Principle:** Prove new durable output for the exact request and distinguish historical evidence gaps from reproduced defects.
+
 Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16

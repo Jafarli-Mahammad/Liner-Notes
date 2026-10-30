@@ -53,7 +53,7 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
           await response.body?.cancel();
           schedule(retryDeadline(response.headers.get('Retry-After')) ?? 0); return;
         }
-        if (!response.ok || state === 'unavailable') { await response.body?.cancel(); setStatus('missing'); return; }
+        if (!response.ok || state === 'unavailable') { await response.body?.cancel(); loaded.current = id; setStatus('missing'); return; }
         if (controller.signal.aborted) return;
         setSource(`/api/artwork/recordings/${id}`);
       } catch {
@@ -69,7 +69,7 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
   return <div ref={frame} className={`artwork-frame artwork-${valid ? status : 'missing'}`}>
     <div className="artwork-square">
       <svg className="artwork-placeholder" viewBox="0 0 500 500" aria-hidden="true"><path fill="#e7e3db" d="M0 0h500v500H0z" /><circle cx="250" cy="250" r="140" fill="#ccc6ba" /><circle cx="250" cy="250" r="35" fill="#e7e3db" /></svg>
-      {valid && <img src={source}
+      {valid && source && <img src={source}
         width="500" height="500" alt="" loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : 'auto'}
         decoding="async" referrerPolicy="no-referrer"
         onLoad={() => { loaded.current = id; setStatus('ready'); }}

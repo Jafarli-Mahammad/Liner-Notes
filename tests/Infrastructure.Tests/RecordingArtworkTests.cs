@@ -10,6 +10,23 @@ namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class RecordingArtworkTests
 {
+    [Theory]
+    [InlineData("request_timeout")]
+    [InlineData("rate_limit")]
+    [InlineData("transport_error")]
+    [InlineData("upstream_unavailable")]
+    public async Task TransientMetadataFailureRemainsPending(string reason)
+    {
+        using var cache = new RecordingArtworkCache();
+        using var http = new HttpClient(new Handler(_ => throw new InvalidOperationException("No image without metadata")));
+        var (service, metadata, _) = Create(cache, http);
+        metadata.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>())
+            .Returns(call => ListenBrainzResponse.Gap(call.Arg<ListenBrainzRequest>(), EvidenceOrigin.Live, reason));
+        await service.WarmAsync([Recording], default);
+        Assert.Equal(RecordingArtworkState.Pending, service.Request(Recording));
+        Assert.NotNull(service.RetryDelay(Recording));
+    }
+
     [Fact]
     public async Task DifferentReleasesDoNotShareALongHeldHashStripe()
     {

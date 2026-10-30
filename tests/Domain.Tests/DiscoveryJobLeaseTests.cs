@@ -4,6 +4,20 @@ namespace LinerNotes.Domain.Tests;
 public sealed class DiscoveryJobLeaseTests
 {
     [Fact]
+    public void OverdueNextAttemptDoesNotDispatchAJobWithALiveLease()
+    {
+        var job = new DiscoveryJob(Guid.NewGuid(), "eligibility", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", Now);
+        var owner = Guid.NewGuid();
+        job.AcquireLease(owner, Now.AddSeconds(1), TimeSpan.FromSeconds(60), 3);
+        job.RenewLease(owner, Now.AddSeconds(40), TimeSpan.FromSeconds(60), "preparing");
+        Assert.Equal(Now, job.NextAttemptAtUtc);
+        Assert.Equal(1, job.Attempts);
+        Assert.Throws<InvalidOperationException>(() => job.AcquireLease(Guid.NewGuid(), Now.AddSeconds(70), TimeSpan.FromSeconds(60), 3));
+        job.Complete(owner, Now.AddSeconds(80), Guid.NewGuid(), null);
+        Assert.Equal(DiscoveryJobState.Completed, job.State);
+    }
+
+    [Fact]
     public void TotalDeadlineExpiresDeferredAndLeasedJobsAndFencesTheirWorkers()
     {
         var job = new DiscoveryJob(Guid.NewGuid(), "deadline", new string('a', 64), DiscoveryJobKind.Generation, 0, "{\"input\":1}", Now);

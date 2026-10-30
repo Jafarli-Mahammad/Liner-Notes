@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Retry shared upstream backoffs using their remaining delay, and retain specific safe discovery stop codes for diagnosis.
+- Revalidate artwork from bounded public identity proofs after catalog expiry, clear expired feed metadata without losing those proofs, and keep metadata timeouts retryable.
+- Stop retrying unavailable covers when cards move in and out of view.
 - Let slow ListenBrainz radio responses finish within existing acquisition deadlines, overlap four independent discovery pools, and shorten acquisition handoff and completion polling without changing candidates, ranking or evidence.
 
 - Report missing managed-storage migrations and uninitialized inventories clearly, exiting cleanly instead of aborting and generating a core dump. Preserve fail-closed startup and add baseline-verified operator establishment.

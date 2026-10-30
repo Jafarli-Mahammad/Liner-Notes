@@ -11,6 +11,93 @@ namespace LinerNotes.DataAccess.Tests;
 public sealed partial class DiscoveryCoordinationPostgresTests
 {
     [LocalPostgresMigrationFact]
+    public async Task CompletionClearsExpiredMetadataButRetainsBoundedPublicArtworkProof()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var publicId = Guid.NewGuid(); var syntheticId = Guid.NewGuid();
+        await WriteAsync(async (s, ct) => {
+            var db = s.GetRequiredService<DataContext>();
+            db.Set<RecentRecommendation>().AddRange(Enumerable.Range(0, 1000).Select(_ =>
+                new RecentRecommendation(Guid.NewGuid(), "expired", "expired", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0", now.AddHours(-1))));
+            await db.SaveChangesAsync(ct);
+            db.Set<RecentRecommendation>().AddRange(
+                new RecentRecommendation(publicId, "expired", "expired", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0", now.AddHours(-1)),
+                new RecentRecommendation(syntheticId, "fixture", "fixture", LinerNotes.Domain.Catalog.CatalogOrigin.Synthetic, "fixture", now.AddHours(-1)));
+            return await db.SaveChangesAsync(ct);
+        }, 8 * 1024 * 1024);
+        var profile = await GuestAsync('a');
+        var job = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
+            "proof-cleanup", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", now, 10, TimeSpan.Zero, ct));
+        var leased = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        await WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(job.Id, leased!.LeaseToken!.Value, Guid.NewGuid(),
+                DiscoveryBatchKind.OnDemand, [], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
+            return true;
+        });
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var retained = await db.Set<RecentRecommendation>().AsNoTracking().ToArrayAsync();
+        Assert.Equal(1000, retained.Length);
+        Assert.All(retained, row => { Assert.Empty(row.Title); Assert.Empty(row.ArtistName); Assert.Empty(row.Attribution); });
+        Assert.DoesNotContain(retained, row => row.RecordingId == syntheticId);
+        Assert.Contains(retained, row => row.RecordingId == publicId);
+        Assert.Empty((await scope.ServiceProvider.GetRequiredService<IRecentRecommendations>().ReadAsync(null, 50, DateTimeOffset.UtcNow, default)).Items);
+        Assert.Equal(new[] { publicId }, await scope.ServiceProvider.GetRequiredService<IArtworkCatalog>()
+            .PreviouslyPublicAsync([publicId, syntheticId], default));
+
+        var sequence = retained.Single(row => row.RecordingId == publicId).Sequence;
+        await WriteAsync(async (s, ct) => {
+            var database = s.GetRequiredService<DataContext>();
+            var publication = new LinerNotes.Domain.Catalog.CatalogPublication(Guid.NewGuid(), "test", "refreshed",
+                "https://musicbrainz.org/", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0-1.0", null, "fresh attribution",
+                new string('a', 64), 1, 1, now, now.AddMinutes(30), isLookup: true);
+            publication.Advance(0, 1); publication.Publish(DateTimeOffset.UtcNow);
+            database.CatalogPublications.Add(publication);
+            database.CatalogRecords.Add(new(publication.Id, publicId, LinerNotes.Domain.Catalog.CatalogKind.Track, Guid.NewGuid(),
+                "Fresh title", "Fresh artist", null, null, "[]", "[]", new string('a', 64)));
+            return await database.SaveChangesAsync(ct);
+        });
+        await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
+            "proof-refresh", new string('b', 64), DiscoveryJobKind.Generation, 0, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));
+        var refreshedLease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
+            DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
+        var batchId = Guid.NewGuid();
+        var track = new LinerNotes.Domain.Catalog.Track("Fresh title", "Fresh artist", mbid: publicId.ToString("D"));
+        var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
+        var breakdown = new LinerNotes.Domain.Scoring.BaselineAScorer().ScoreForBatch(
+            new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batchId, new());
+        await WriteAsync(async (s, ct) => {
+            await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(refreshedLease!.Id, refreshedLease.LeaseToken!.Value,
+                batchId, DiscoveryBatchKind.OnDemand, [new(track, breakdown)], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
+            return true;
+        });
+        var refreshed = await db.Set<RecentRecommendation>().AsNoTracking().SingleAsync(row => row.RecordingId == publicId);
+        Assert.Equal(sequence, refreshed.Sequence);
+        Assert.Equal("Fresh title", refreshed.Title);
+        Assert.Equal("Fresh artist", refreshed.ArtistName);
+        Assert.Single((await scope.ServiceProvider.GetRequiredService<IRecentRecommendations>().ReadAsync(null, 50, DateTimeOffset.UtcNow, default)).Items);
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task ReclaimedCatalogCanRevalidateOnlyRetainedPublicFeedIdentities()
+    {
+        var publicId = Guid.NewGuid(); var syntheticId = Guid.NewGuid(); var unknown = Guid.NewGuid();
+        var expired = DateTimeOffset.UtcNow.AddHours(-1);
+        await WriteAsync(async (s, ct) => {
+            var db = s.GetRequiredService<DataContext>();
+            db.Set<RecentRecommendation>().AddRange(
+                new RecentRecommendation(publicId, "public track", "public artist", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0", expired),
+                new RecentRecommendation(syntheticId, "fixture track", "fixture artist", LinerNotes.Domain.Catalog.CatalogOrigin.Synthetic, "fixture", expired));
+            return await db.SaveChangesAsync(ct);
+        });
+        await using var scope = services.CreateAsyncScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<IArtworkCatalog>();
+        Assert.Empty(await catalog.EligibleAsync([publicId, syntheticId, unknown], DateTimeOffset.UtcNow, default));
+        Assert.Equal(new[] { publicId }, await catalog.PreviouslyPublicAsync([publicId, syntheticId, unknown], default));
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task ArtworkAdmissionOnlyAllowsPublishedUnexpiredPublicRecordings()
     {
         var now = DateTimeOffset.UtcNow;

@@ -2,6 +2,19 @@
 
 ## Current status
 
+### Discovery operation and artwork investigation — 2026-10-31
+
+Confirmed and corrected terminal treatment of shared provider backoff, artwork
+revalidation losing reclaimed public catalog identities, metadata timeout
+classification and visibility-triggered retries of unavailable covers. Expired
+public feed metadata is cleared while bounded identity proofs remain for fresh
+revalidation. Three exact Playwright MCP submissions produced separate persisted
+five-pick batches and replaced the displayed results. The original-input
+diagnostic request still failed after three attempts with a temporary upstream
+source error; the original operation's generic error does not identify its lost
+underlying exception. See [the investigation](DISCOVERY_RUNTIME_INVESTIGATION.md).
+Original-profile source recovery and developer confirmation remain outstanding.
+
 ### Local storage startup upgrade — 2026-10-30
 
 Fixed the missing-migration abort and verified clean process exits for schema/inventory prerequisites. The local development database was backed up, upgraded and checked to preserve rows in 28 existing tables; `/health` returned HTTP 200 with provider jobs disabled. Affected suites passed 544 checks. See [the startup follow-up](STARTUP_CRASH_FIX.md). Production remains undeployed.

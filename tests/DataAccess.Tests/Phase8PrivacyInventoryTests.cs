@@ -12,6 +12,10 @@ public sealed class Phase8PrivacyInventoryTests
     internal static readonly IReadOnlyDictionary<string, string[]> ReviewedColumns = new Dictionary<string, string[]>
     {
         ["public.ManagedStorageLedger"] = Columns("Id,Revision,LogicalBytes,RowCount,CoreRevision,CoreLogicalBytes"),
+        // Global commit/recovery witness; contains no user payload or credential material.
+        // Owner-scoped lifecycle data is exported; root paths are deployment configuration.
+        ["public.ArtifactPublications"] = Columns("Id,Category,Root,FinalName,StageName,ReservedBytes,ContentBytes,Sha256,Phase,Version,OwnerId,LastWriteTimeUtcTicks"),
+        ["public.ManagedStorageCommit"] = Columns("Id,Initialized,CommitId,BeforeInventoryJson,ArtifactCategoriesJson,OwnedChangesJson,RootFingerprint,MeasuredAtUtc,ExpectedRevision,ExpectedLogicalBytes,ExpectedCoreRevision,ExpectedCoreLogicalBytes,ExpectedRowCount,SchemaFingerprint"),
         ["public.PublicEvidenceCache"] = Columns("Key,Kind,Provider,Origin,Version,PayloadJson,ContentSha256,StoredBytes,AcquiredAtUtc,ExpiresAtUtc,LeaseToken,LeaseExpiresAtUtc,UpdatedAtUtc"),
         ["public.RecentRecommendations"] = Columns("Sequence,RecordingId,Title,ArtistName,Origin,Attribution,MetadataExpiresAtUtc"),
         ["public.RecommendedIdentities"] = Columns("ProfileId,Alias,FirstRecommendedAtUtc"),

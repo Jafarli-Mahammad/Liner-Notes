@@ -17,6 +17,20 @@ public class UnitOfWork : IUnitOfWork
         _dataContext = dataContext;
     }
 
+    public async Task<T> ExecuteReadSnapshotAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default)
+    {
+        if (_dataContext.Database.CurrentTransaction is not null)
+            throw new InvalidOperationException("Read snapshot requires an independent outer transaction.");
+        var strategy = _dataContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dataContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, cancellationToken);
+            await _dataContext.Database.ExecuteSqlRawAsync("SET TRANSACTION READ ONLY", cancellationToken);
+            return await operation(cancellationToken);
+            // No writes are allowed; disposing the read-only transaction releases its snapshot.
+        });
+    }
+
     private async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => await _dataContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -40,8 +54,17 @@ public class UnitOfWork : IUnitOfWork
             }
             catch
             {
-                await transaction.RollbackAsync(CancellationToken.None);
-                _dataContext.ChangeTracker.Clear();
+                try
+                {
+                    if (_dataContext.Database.GetDbConnection().State == System.Data.ConnectionState.Open)
+                        await transaction.RollbackAsync(CancellationToken.None);
+                }
+                catch (Exception rollback) when (rollback is System.Data.Common.DbException or IOException or InvalidOperationException)
+                {
+                    // Preserve the original failure, including an unknown commit outcome.
+                    // The durable witness and a fresh scope decide recovery; never claim rollback.
+                }
+                finally { _dataContext.ChangeTracker.Clear(); }
                 throw;
             }
         });

@@ -35,4 +35,5 @@ public record UserDataExportDto(
     IReadOnlyList<WeeklyDigestDto> Digests,
     LocalEmailArchiveDto? LocalEmail = null,
     AccountExportDto? Account = null,
-    DiscoveryExportDto? Discovery = null);
+    DiscoveryExportDto? Discovery = null,
+    IReadOnlyList<ArtifactPublicationExportDto>? StorageArtifacts = null);

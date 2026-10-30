@@ -7,7 +7,7 @@ namespace LinerNotes.Application.Common.Interfaces.Recommendation;
 
 public sealed record GenerationInputs(bool UserExists, IReadOnlyList<TasteSignal> Signals,
     IReadOnlyList<WeeklyRecommendation> Feedback, string Revision, Guid? ProfileId = null);
-public sealed record GenerationStorageState(long DatabaseBytes, string Revision);
+public sealed record GenerationStorageState(long DatabaseBytes, string Revision, long ReservedArtifactBytes = 0);
 
 public interface IDigestGenerationStore
 {

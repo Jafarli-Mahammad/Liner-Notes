@@ -19,6 +19,9 @@ namespace LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataExportQuery, UserDataExportDto>
 {
     private readonly ILocalEmailArchive? _archive;
+    private readonly IArtifactPublicationStore? _artifacts;
+    private readonly IUnitOfWork? _snapshot;
+    private readonly IAccountEmailLease? _ownership;
     private readonly IUserRepository _userRepository;
     private readonly ITasteSignalRepository _tasteSignalRepository;
     private readonly IWeeklyDigestRepository _weeklyDigestRepository;
@@ -32,9 +35,13 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         ITasteSignalRepository tasteSignalRepository,
         IWeeklyDigestRepository weeklyDigestRepository, IAccountProfileReader accountProfileReader,
         IDiscoveryProfileReader discoveryProfileReader,
-        ILocalEmailArchive? archive = null)
+        ILocalEmailArchive? archive = null, IArtifactPublicationStore? artifacts = null,
+        IUnitOfWork? snapshot = null, IAccountEmailLease? ownership = null)
     {
         _archive = archive;
+        _artifacts = artifacts;
+        _snapshot = snapshot;
+        _ownership = ownership;
         _userRepository = userRepository;
         _tasteSignalRepository = tasteSignalRepository;
         _weeklyDigestRepository = weeklyDigestRepository;
@@ -49,6 +56,14 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
     public async Task<UserDataExportDto> Handle(
         GetUserDataExportQuery request,
         CancellationToken cancellationToken)
+    {
+        await using var ownership = _ownership is not null ? await _ownership.AcquireAsync(request.UserId, cancellationToken) : null;
+        return _snapshot is not null
+            ? await _snapshot.ExecuteReadSnapshotAsync(ct => ReadSnapshotAsync(request, ct), cancellationToken)
+            : await ReadSnapshotAsync(request, cancellationToken);
+    }
+
+    private async Task<UserDataExportDto> ReadSnapshotAsync(GetUserDataExportQuery request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetForExportAsync(request.UserId, cancellationToken);
         if (user is null)
@@ -80,8 +95,24 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         var connectionDtos = user.Connections.Select(c => c.ToExportDto()).ToArray();
         var signalDtos = signals.Select(s => s.ToDto()).ToArray();
 
+        var artifacts = new List<ArtifactPublicationExportDto>();
+        if (_artifacts is not null)
+        {
+            Guid? afterArtifact = null;
+            while (true)
+            {
+                var page = await _artifacts.GetOwnerPageAsync(request.UserId, afterArtifact, 100, cancellationToken);
+                artifacts.AddRange(page.Select(row => new ArtifactPublicationExportDto(row.Id, row.OwnerId, row.Category,
+                    row.FinalName, row.StageName, row.ReservedBytes, row.ContentBytes, row.Sha256, row.Phase.ToString(), row.Version, row.LastWriteTimeUtcTicks)));
+                if (page.Count < 100) break;
+                if (afterArtifact is not null && page[^1].Id.CompareTo(afterArtifact.Value) <= 0)
+                    throw new InvalidOperationException("Artifact export did not advance.");
+                afterArtifact = page[^1].Id;
+            }
+        }
+
         return new UserDataExportDto(
-            ExportVersion: "2.5",
+            ExportVersion: "2.6",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
@@ -91,6 +122,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
                 : new(digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? "incomplete" : "disabled", [],
                     digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []),
             Account: account,
-            Discovery: await _discoveryProfileReader.GetForAccountAsync(request.UserId, cancellationToken).ConfigureAwait(false));
+            Discovery: await _discoveryProfileReader.GetForAccountAsync(request.UserId, cancellationToken).ConfigureAwait(false),
+            StorageArtifacts: artifacts);
     }
 }

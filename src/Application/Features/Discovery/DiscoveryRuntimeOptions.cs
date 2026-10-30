@@ -2,6 +2,9 @@ namespace LinerNotes.Application.Features.Discovery;
 public sealed class DiscoveryRuntimeOptions
 {
     public bool RunJobs { get; set; }
+    // Storage coordination must not turn off when a host pauses its background consumers.
+    public bool EnforceStorageAdmission { get; set; }
+    public bool ManagedWritesEnabled => RunJobs || EnforceStorageAdmission;
     public int QueueCapacity { get; set; } = 256;
     public int CooldownSeconds { get; set; } = 30;
     public int LookupCooldownSeconds { get; set; } = 1;

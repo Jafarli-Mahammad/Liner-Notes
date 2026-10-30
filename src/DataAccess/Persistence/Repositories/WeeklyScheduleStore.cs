@@ -140,7 +140,7 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
 
     private async Task<T> ExecuteWriteAsync<T>(Func<NpgsqlConnection, NpgsqlTransaction?, Task<T>> write, CancellationToken ct)
     {
-        if (runtime?.RunJobs == true)
+        if (runtime?.ManagedWritesEnabled == true)
         {
             if (db is null || admission is null) throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
             return await admission.ExecuteAsync(65_536, _ => write((NpgsqlConnection)db.Database.GetDbConnection(),

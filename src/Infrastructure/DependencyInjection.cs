@@ -86,7 +86,11 @@ public static class DependencyInjection
         services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
         services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().SeedTags);
         services.AddSingleton<IStorageFreeSpaceProbe, DriveStorageFreeSpaceProbe>();
+        services.AddSingleton<StorageAdmissionGate>();
+        services.AddHostedService<StorageProtocolStartup>();
+        services.AddHostedService<StorageRecoveryService>();
         services.AddScoped<LocalGenerationStorage>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecoverableArtifactPublisher, RecoverableArtifactPublisher>();
         services.Configure<CoordinatedStorageOptions>(configuration.GetSection("DiscoveryStorage"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<CoordinatedStorageOptions>>().Value);
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.ICoordinatedGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());

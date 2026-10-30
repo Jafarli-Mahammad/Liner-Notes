@@ -86,7 +86,7 @@ public sealed class SubscribersController : ApiControllerBase
 
         return NoContent();
         }, token);
-        var result = _discovery?.RunJobs == true
+        var result = _discovery?.ManagedWritesEnabled == true
             ? await (_admission ?? throw new InvalidOperationException("discovery_admission_missing"))
                 .ReclaimAsync(DeleteAsync, cancellationToken)
             : await DeleteAsync(cancellationToken);

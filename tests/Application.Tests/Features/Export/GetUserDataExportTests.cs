@@ -41,7 +41,7 @@ public class GetUserDataExportTests
         var result = await handler.Handle(new GetUserDataExportQuery(userId), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("2.5", result.ExportVersion);
+        Assert.Equal("2.6", result.ExportVersion);
         Assert.Equal(account, result.Account);
         Assert.Equal("gdpr@example.com", result.Subscriber.Email);
         Assert.Single(result.Connections);

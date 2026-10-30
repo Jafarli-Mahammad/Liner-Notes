@@ -7,8 +7,12 @@ using LinerNotes.Infrastructure.Storage;
 
 namespace LinerNotes.Infrastructure.Email;
 
-public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStorageOptions storage,
-    LocalEmailMessageSerializer serializer) : ILocalEmailArchive
+public sealed partial class LocalEmailArchive(LocalEmailOptions options, GenerationStorageOptions storage,
+    LocalEmailMessageSerializer serializer,
+    LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions? runtime = null,
+    LinerNotes.Application.Common.Interfaces.Discovery.IRecoverableArtifactPublisher? publisher = null,
+    LinerNotes.Application.Common.Interfaces.Discovery.IArtifactPublicationStore? publications = null,
+    LinerNotes.Application.Common.Interfaces.Discovery.IDiscoveryWriteCoordinator? coordinator = null) : ILocalEmailArchive
 {
     // Called only by the explicit local operator helper, never by public export or an HTTP endpoint.
     /// <summary>Reads an authenticated encrypted copy for the specified owner, retaining the unsubscribe capability for local operator use.</summary>
@@ -66,6 +70,7 @@ public sealed class LocalEmailArchive(LocalEmailOptions options, GenerationStora
     /// <remarks>Unverifiable files are retained. Integrity, file access, and configuration failures become cleanup issues; cancellation propagates. Disabled cleanup returns an incomplete result.</remarks>
     public async Task<LocalEmailCleanupResult> DeleteAsync(Guid userId, CancellationToken ct)
     {
+        if (runtime?.ManagedWritesEnabled == true) return await DeleteManagedAsync(userId, ct);
         if (!options.Enabled) return new(false, ["archive_unavailable"]);
         var issues = new List<string>();
         try

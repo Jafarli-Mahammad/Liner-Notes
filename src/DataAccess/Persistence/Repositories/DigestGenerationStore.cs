@@ -84,22 +84,39 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             command.Transaction = db.Database.CurrentTransaction?.GetDbTransaction();
             command.CommandText = """
                 SELECT pg_database_size(current_database()),l."Revision",l."LogicalBytes",l."CoreRevision",l."CoreLogicalBytes",
-                  (SELECT md5(string_agg(n.nspname||'.'||c.relname||':'||c.oid::text||':'||c.relfilenode::text||':'||
-                     COALESCE((SELECT string_agg(a.attname||':'||a.atttypid::text||':'||a.attnotnull::text,',' ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),'')||':'||
-                     COALESCE((SELECT string_agg(t.tgname||':'||t.tgenabled::text,',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal),''),',' ORDER BY n.nspname,c.relname))
-                   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','i','S','v') AND n.nspname IN ('public','identity'))
+                  (SELECT md5(
+                    COALESCE((SELECT string_agg(n.nspname||'.'||c.relname||':'||c.oid::text||':'||c.relfilenode::text||':'||
+                      COALESCE((SELECT string_agg(a.attname||':'||a.atttypid::text||':'||a.attnotnull::text,',' ORDER BY a.attnum)
+                        FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),'')||':'||
+                      COALESCE((SELECT string_agg(t.tgname||':'||t.tgenabled::text||':'||pg_get_triggerdef(t.oid),',' ORDER BY t.tgname)
+                        FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal),''),',' ORDER BY n.nspname,c.relname)
+                      FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','i','S','v') AND n.nspname IN ('public','identity')),'')||':'||
+                    COALESCE((SELECT string_agg(p.oid::text||':'||pg_get_functiondef(p.oid),',' ORDER BY p.oid) FROM pg_proc p WHERE p.oid IN
+                      (SELECT t.tgfoid FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+                       WHERE NOT t.tgisinternal AND n.nspname IN ('public','identity'))),''))),
+                  (SELECT COALESCE(sum("ReservedBytes"),0)::bigint FROM "ArtifactPublications" WHERE "Phase" IN (0,1,2,7))
                 FROM "ManagedStorageLedger" l WHERE l."Id"=1 AND current_setting('session_replication_role')='origin'
+                  AND EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid='"ManagedStorageLedger"'::regclass
+                    AND g.tgname='liner_storage_commit_witness' AND g.tgenabled='O' AND g.tgtype=17
+                    AND g.tgdeferrable AND g.tginitdeferred AND g.tgconstraint<>0
+                    AND g.tgfoid=to_regproc('liner_require_managed_commit_witness'))
                   AND NOT EXISTS (SELECT 1 FROM pg_tables t WHERE t.schemaname IN ('public','identity')
                     AND t.tablename NOT IN ('__EFMigrationsHistory','ManagedStorageLedger')
-                    AND (NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
-                      AND g.tgname='liner_storage_delta' AND g.tgenabled='O') OR
-                      NOT EXISTS (SELECT 1 FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
-                      AND g.tgname='liner_storage_truncate' AND g.tgenabled='O')))
+                    AND (t.tablename IN (SELECT c.relname FROM pg_class c WHERE c.relkind='p') OR
+                      (SELECT count(*) FROM pg_trigger g WHERE g.tgrelid=(quote_ident(t.schemaname)||'.'||quote_ident(t.tablename))::regclass
+                        AND g.tgenabled='O' AND (
+                          (g.tgname='liner_storage_truncate' AND g.tgtype=34 AND g.tgfoid=to_regproc('liner_managed_storage_delta')) OR
+                          (to_regproc('liner_managed_storage_statement_delta') IS NULL AND g.tgname='liner_storage_delta' AND g.tgtype=29 AND g.tgfoid=to_regproc('liner_managed_storage_delta')) OR
+                          (g.tgfoid=to_regproc('liner_managed_storage_statement_delta') AND
+                            ((g.tgname='liner_storage_delta' AND g.tgtype=4 AND g.tgnewtable='liner_new_rows') OR
+                             (g.tgname='liner_storage_update' AND g.tgtype=16 AND g.tgnewtable='liner_new_rows' AND g.tgoldtable='liner_old_rows') OR
+                             (g.tgname='liner_storage_delete' AND g.tgtype=8 AND g.tgoldtable='liner_old_rows')))))
+                      <> CASE WHEN to_regproc('liner_managed_storage_statement_delta') IS NULL THEN 2 ELSE 4 END))
                 """;
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken)) throw new GenerationStoppedException("managed_storage_ledger_missing_or_schema_uncovered");
             long size = reader.GetInt64(0), revision = reader.GetInt64(1), logical = reader.GetInt64(2);
-            return new(Math.Max(size, logical), $"managed-v1:{reader.GetInt64(3)}:{reader.GetInt64(4)}:{revision}:{logical}:{reader.GetString(5)}");
+            return new(Math.Max(size, logical), $"managed-v1:{reader.GetInt64(3)}:{reader.GetInt64(4)}:{revision}:{logical}:{reader.GetString(5)}", reader.GetInt64(6));
         }
         finally { if (opened) await db.Database.CloseConnectionAsync(); }
     }

@@ -7,7 +7,10 @@ public sealed class MaintainDiscoveryStorage(IDigestGenerationStore inventory, I
 {
     public async Task ExecuteAsync(CancellationToken ct)
     {
+        await using var verified = await storage.PrepareReclamationAsync(ct);
         await using var lease = await inventory.AcquireBatchAsync(ct);
-        await storage.RefreshKnownInventoryAsync(await inventory.ReadStorageAsync(ct), ct);
+        var state = await inventory.ReadStorageAsync(ct);
+        await verified.RebaseAsync(state, ct);
+        await verified.PublishCommittedInventoryAsync(state, ct);
     }
 }

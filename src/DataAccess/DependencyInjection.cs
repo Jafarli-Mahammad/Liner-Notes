@@ -71,6 +71,8 @@ public static class DependencyInjection
         services.AddScoped<IDiscoveryReader, DiscoveryReader>();
         services.AddScoped<IRecentRecommendations, RecentRecommendations>();
         services.AddScoped<IArtworkCatalog, ArtworkCatalog>();
+        services.AddScoped<IManagedStorageCommitStore, ManagedStorageCommitStore>();
+        services.AddScoped<IArtifactPublicationStore, ArtifactPublicationStore>();
         services.AddScoped<IPublicEvidenceStore, PublicEvidenceStore>();
         services.AddScoped<IManagedStorageIntegrity, LinerNotes.DataAccess.Persistence.Accounting.ManagedStorageIntegrity>();
         services.AddScoped<ICatalogReader, CatalogReader>();
@@ -85,11 +87,12 @@ public static class DependencyInjection
         services.AddScoped<ITrackRepository, TrackRepository>();
         services.AddScoped<IDigestGenerationStore, DigestGenerationStore>();
         services.AddScoped<IUnsubscribeStore, UnsubscribeStore>();
-        services.AddSingleton(_ => new LocalUnsubscribeProtection(connectionString));
+        services.AddSingleton(sp => new LocalUnsubscribeProtection(connectionString, sp.GetRequiredService<IServiceScopeFactory>()));
         services.AddSingleton<IUnsubscribeTokenProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
         services.AddSingleton<ILocalEmailFileProtection>(sp => sp.GetRequiredService<LocalUnsubscribeProtection>());
         services.AddSingleton<IAccountEmailLease>(_ => new AccountEmailLease(connectionString));
-        services.AddScoped<ILocalDigestCaptureStore>(_ => new LocalDigestCaptureStore(connectionString));
+        services.AddScoped<ILocalDigestCaptureStore>(sp => new LocalDigestCaptureStore(connectionString, sp.GetRequiredService<DataContext>(),
+            sp.GetRequiredService<IDiscoveryWriteCoordinator>(), sp.GetRequiredService<LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions>()));
 
         return services;
     }

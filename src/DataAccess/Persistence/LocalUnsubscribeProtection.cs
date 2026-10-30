@@ -1,6 +1,7 @@
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.DataAccess.DataContexts;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,15 +13,17 @@ public sealed class LocalUnsubscribeProtection : IUnsubscribeTokenProtection, IL
     private readonly Lazy<(ServiceProvider Services, IDataProtector Protector, IDataProtector FileProtector)> _provider;
 
     /// <summary>Defers creation of database-backed keys with separate protection purposes for unsubscribe tokens and captured email files.</summary>
-    public LocalUnsubscribeProtection(string connectionString)
+    public LocalUnsubscribeProtection(string connectionString, IServiceScopeFactory? managedScopes = null)
     {
         _provider = new(() =>
         {
             var services = new ServiceCollection();
             services.AddLogging();
             services.AddDbContext<DataContext>(o => o.UseNpgsql(connectionString));
-            services.AddDataProtection().SetApplicationName("LinerNotes.LocalEmail.Unsubscribe.v1")
-                .PersistKeysToDbContext<DataContext>();
+            var protection = services.AddDataProtection().SetApplicationName("LinerNotes.LocalEmail.Unsubscribe.v1");
+            if (managedScopes is null) protection.PersistKeysToDbContext<DataContext>();
+            else services.Configure<KeyManagementOptions>(options =>
+                options.XmlRepository = new ManagedDataProtectionXmlRepository(managedScopes));
             var provider = services.BuildServiceProvider();
             var keys = provider.GetRequiredService<IDataProtectionProvider>();
             return (provider, keys.CreateProtector("Unsubscribe/v1"), keys.CreateProtector("CapturedEmailFile/v1"));

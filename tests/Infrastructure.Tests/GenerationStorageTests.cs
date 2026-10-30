@@ -11,6 +11,20 @@ namespace LinerNotes.Infrastructure.Tests;
 public sealed class GenerationStorageTests : IDisposable
 {
     [Fact]
+    public async Task NonregularArtifactFailsWithoutBlockingOnFifoOpen()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string fifo = Path.Combine(root, "recordings", "unexpected-fifo");
+        using var create = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("mkfifo")
+        {
+            ArgumentList = { fifo }, UseShellExecute = false
+        })!;
+        await create.WaitForExitAsync(); Assert.Equal(0, create.ExitCode);
+        var storage = new LocalGenerationStorage(options, clock);
+        await Assert.ThrowsAsync<GenerationStoppedException>(() =>
+            storage.ReconcileAsync(new(1000, "db")).WaitAsync(TimeSpan.FromSeconds(3)));
+    }
+    [Fact]
     public async Task PhysicalShrinkWithStableRevisionKeepsConservativeBudgetButGrowthAndRevisionChangesStop()
     {
         var storage = new LocalGenerationStorage(options, clock);
@@ -105,6 +119,49 @@ public sealed class GenerationStorageTests : IDisposable
         await Assert.ThrowsAsync<GenerationStoppedException>(() => reservation.VerifyStoredAsync(201, db));
         await Assert.ThrowsAsync<GenerationStoppedException>(() => reservation.VerifyStoredAsync(100, db with { DatabaseBytes = 1201 }));
         await reservation.VerifyStoredAsync(200, db with { DatabaseBytes = 1200 });
+    }
+
+    [Theory]
+    [InlineData(true, "same-size-restored-time")]
+    [InlineData(false, "same-size-restored-time")]
+    [InlineData(true, "replacement")]
+    [InlineData(false, "replacement")]
+    [InlineData(true, "delete")]
+    [InlineData(true, "unexpected")]
+    [InlineData(true, "symlink")]
+    public async Task EveryCheckpointRejectsExternalChangesWithOrWithoutKernelProof(bool kernelProof, string mutation)
+    {
+        options.EnableKernelReadLeases = kernelProof;
+        var storage = new LocalGenerationStorage(options, clock);
+        var db = new GenerationStorageState(1000, "db");
+        string artifact = Path.Combine(root, "recordings", "stable");
+        byte[] original = Enumerable.Repeat((byte)'a', kernelProof ? 4 * 1024 * 1024 : 8).ToArray();
+        await File.WriteAllBytesAsync(artifact, original);
+        var time = File.GetLastWriteTimeUtc(artifact);
+        await storage.ReconcileAsync(db);
+        await using var lease = await storage.AcquireAsync(db);
+        var reservation = await lease.ReserveAsync(100, 1, db);
+        switch (mutation)
+        {
+            case "same-size-restored-time":
+                await using (var writer = new FileStream(artifact, FileMode.Open, FileAccess.Write))
+                    await writer.WriteAsync("modified"u8.ToArray());
+                File.SetLastWriteTimeUtc(artifact, time);
+                break;
+            case "replacement":
+                var replacement = Path.Combine(root, "replacement");
+                original[0] ^= 1;
+                await File.WriteAllBytesAsync(replacement, original);
+                File.SetLastWriteTimeUtc(replacement, time);
+                File.Move(replacement, artifact, overwrite: true);
+                break;
+            case "delete": File.Delete(artifact); break;
+            case "unexpected": await File.WriteAllTextAsync(Path.Combine(root, "recordings", "extra"), "unexpected"); break;
+            case "symlink":
+                File.CreateSymbolicLink(Path.Combine(root, "recordings", "link"), artifact);
+                break;
+        }
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => reservation.ValidateAsync(db));
     }
 
     [Fact]

@@ -66,18 +66,28 @@ export function Artwork({ id, eager = false }: { id: string; eager?: boolean }) 
     void load();
     return () => { imageFailed.current = null; controller.abort(); clearTimeout(timer); };
   }, [id, valid, visible, eager]);
+  useEffect(() => {
+    if (!source || status !== 'loading' || !visible) return;
+    const timer = window.setTimeout(() => imageFailed.current?.(), 20_000);
+    return () => window.clearTimeout(timer);
+  }, [source, status, visible]);
   return <div ref={frame} className={`artwork-frame artwork-${valid ? status : 'missing'}`}>
     <div className="artwork-square">
       <svg className="artwork-placeholder" viewBox="0 0 500 500" aria-hidden="true"><path fill="#e7e3db" d="M0 0h500v500H0z" /><circle cx="250" cy="250" r="140" fill="#ccc6ba" /><circle cx="250" cy="250" r="35" fill="#e7e3db" /></svg>
       {valid && source && <img src={source}
         width="500" height="500" alt="" loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : 'auto'}
         decoding="async" referrerPolicy="no-referrer"
-        onLoad={() => { loaded.current = id; setStatus('ready'); }}
+        onLoad={async event => {
+          const image = event.currentTarget;
+          try { await image.decode(); } catch { if (image.isConnected) imageFailed.current?.(); return; }
+          if (image.isConnected && image.getAttribute('src') === `/api/artwork/recordings/${id}`) { loaded.current = id; setStatus('ready'); }
+        }}
         onError={() => {
           loaded.current = null; setSource(undefined); setStatus('loading');
           imageFailed.current?.();
         }} />}
     </div>
+    {valid && status === 'loading' && visible && <span className="artwork-loading-mark" aria-hidden="true" />}
     {(status === 'missing' || !valid) && <span className="sr-only">Cover unavailable</span>}
   </div>;
 }

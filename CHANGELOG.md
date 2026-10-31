@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased — renewal
+- Refine page, search, feedback and artwork loading with delayed placeholders,
+  decoded-cover reveals, bounded stalled-request recovery and reduced-motion support.
+- Offer all four music services on every recommendation card with outlined logos;
+  polish sign-in fields, password visibility and submission feedback, and make
+  history ordering and failed-loading captions explicit.
 - Add a contributor guide, bug and feature request forms, and a pull request checklist.
 - Add an Actions workflow that publishes an interactive Codebase Memory graph to Pages and refreshes its snapshot from `main` on each successful deployment.
 - Add the Superdesign-based React Home, Discover, Your Taste and History pages,

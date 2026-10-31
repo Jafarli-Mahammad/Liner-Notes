@@ -8,7 +8,7 @@ import { Notice } from '../../components/Notice';
 
 interface Detail { batch?: Batch; error?: unknown; }
 export default function History() {
-  const personal = usePersonal(), summaries = personal.data?.overview.page?.batches ?? [];
+  const personal = usePersonal(), summaries = [...(personal.data?.overview.page?.batches ?? [])].sort((a, b) => Date.parse(b.createdAtUtc) - Date.parse(a.createdAtUtc));
   const [details, setDetails] = useState<Record<string, Detail>>({}), [limit, setLimit] = useState(4), [retry, setRetry] = useState(0);
   const read = useRef(personal.batch); read.current = personal.batch;
   const signature = summaries.slice(0, limit).map(summary => summary.id).join('|');
@@ -32,8 +32,8 @@ export default function History() {
     <header className="history-heading"><div><p className="editorial-meta coral-meta">Past finds</p><h1>Discovery history</h1></div><Link className="button button-secondary" to="/discover">Discover again <span aria-hidden="true">→</span></Link></header>
     {summaries.length ? <div className="history-grid">{summaries.slice(0, limit).map(summary => {
       const detail = details[summary.id], batch = detail?.batch;
-      return <article className="history-card" key={summary.id}><div className="history-card-heading"><div><h2>{new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(summary.createdAtUtc))}</h2>
-        {batch ? <p>{String(batch.picks.length).padStart(2, '0')} recommendations</p> : <p className="field-help" role="status">Loading recommendations…</p>}</div><span className="session-badge">{guest ? 'Guest session' : 'Your account'}</span></div>
+      return <article className="history-card" key={summary.id} aria-busy={!batch && !detail?.error}><div className="history-card-heading"><div><h2>{new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(summary.createdAtUtc))}</h2>
+        {batch ? <p>{String(batch.picks.length).padStart(2, '0')} recommendations</p> : detail?.error ? <p className="field-help">Recommendations unavailable</p> : <p className="field-help" role="status">Loading recommendations…</p>}</div><span className="session-badge">{guest ? 'Guest session' : 'Your account'}</span></div>
         {batch ? <div className="history-preview"><div className="history-artwork">{batch.picks.slice(0, 3).map(pick => <Artwork key={pick.id} id={pick.mbid ?? ''} />)}</div>
           <ul className="history-track-list">{batch.picks.slice(0, 3).map(pick => <li key={pick.id}><span><strong>{pick.title}</strong> <span className="history-artist">· {pick.artistName}</span></span>
             <span className={`feedback-label${pick.feedback === 'Liked' ? ' feedback-liked' : ''}`}>{pick.feedback === 'Liked' ? '♡ Liked' : pick.feedback === 'AlreadyKnown' ? '✓ Known' : pick.feedback === 'Disliked' ? '× Not for me' : pick.rating ? `${pick.rating}/10` : 'Not rated'}</span></li>)}</ul></div>

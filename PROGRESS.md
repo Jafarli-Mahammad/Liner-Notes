@@ -2,6 +2,18 @@
 
 ## Current status
 
+### Frontend refinement — 2026-11-01
+
+Shared service buttons now cover all four platforms on featured, compact and Home
+cards. Loading feedback, decoded artwork reveals, stalled-request recovery,
+sign-in details and history states follow the existing design. Local verification
+passed the frontend build and 65 browser checks. A real-provider disposable-account
+journey passed; separate host restarts retained five owned picks and four public
+feed entries. Playwright used installed Chromium because MCP's configured Chrome
+is missing. The existing local-email cleanup warning remains. See the
+[refinement review](design/frontend-refinement/REVIEW.md) for evidence and limits.
+Developer acceptance and production deployment remain outstanding.
+
 ### Original-account discovery recovery — 2026-10-31
 
 The unchanged revision-21 profile now has locally verified new recommendation

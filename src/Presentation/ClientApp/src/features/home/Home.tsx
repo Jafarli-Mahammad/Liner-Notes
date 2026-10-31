@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { MusicLinks } from '../../components/MusicLinks';
 import { Artwork } from '../../components/Artwork';
 import { ArrowIcon } from '../../components/ArrowIcon';
 import { FeedError, readRecent } from '../../api/recent';
@@ -12,6 +13,7 @@ function MusicCard({ item, index }: { item: RecentMusic; index: number }) {
     <Artwork id={item.recordingId} eager={index === 0} />
     <h2 className="music-title">{item.title}</h2>
     <p className="music-artist">{item.artistName}</p>
+    <MusicLinks pick={item} compact />
     <p className="music-attribution">{item.attribution}{item.origin === 'Synthetic' ? ' · Synthetic test data' : ''}</p>
   </article>;
 }
@@ -19,7 +21,9 @@ function MusicCard({ item, index }: { item: RecentMusic; index: number }) {
 function FeedSkeleton() {
   return <div className="music-grid" aria-hidden="true">{[0, 1, 2, 3].map(key => <div className="skeleton-card" key={key}>
     <div className="artwork-frame"><div className="artwork-square skeleton-block" /></div>
-    <div className="skeleton-line" /><div className="skeleton-line skeleton-short" />
+    <div className="music-title skeleton-block skeleton-title" /><div className="music-artist skeleton-block skeleton-artist" />
+    <div className="skeleton-services">{[0, 1, 2, 3].map(service => <span className="skeleton-block" key={service} />)}</div>
+    <div className="skeleton-block skeleton-credit" />
   </div>)}</div>;
 }
 
@@ -48,7 +52,7 @@ export function Home() {
     return () => window.clearTimeout(timer);
   }, [retryAt, waiting, now]);
   return <main id="main-content" className="page-container home-main" tabIndex={-1}>
-    <section aria-labelledby="recent-heading">
+    <section aria-labelledby="recent-heading" aria-busy={state.kind === 'loading'}>
       <div className="section-heading"><h1 id="recent-heading">Recent recommendations</h1><span className="editorial-meta">Public feed</span></div>
       <p className="sr-only" role="status">{state.kind === 'loading' ? 'Loading recent recommendations…'
         : state.kind === 'ready' ? state.items.length ? `${state.items.length} recent recommendations loaded.` : 'No public recommendations yet.' : ''}</p>

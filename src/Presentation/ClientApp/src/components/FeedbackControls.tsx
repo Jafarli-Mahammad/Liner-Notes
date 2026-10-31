@@ -6,17 +6,18 @@ import { Notice } from './Notice';
 export function FeedbackControls({ pick, onSaved }: { pick: Pick; onSaved: (next: Pick) => void }) {
   const personal = usePersonal();
   const [rating, setRating] = useState(pick.rating?.toString() ?? ''), [comment, setComment] = useState(pick.comment ?? '');
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null), [message, setMessage] = useState('');
   async function save(feedback: Feedback, clear = false) {
-    setError(null); setMessage('');
+    setError(null); setMessage(''); setSaving(true);
     try {
       const nextRating = clear || !rating ? null : Number(rating), nextComment = clear ? '' : comment;
       await personal.feedback(pick, feedback, nextRating, nextComment);
       if (clear) { setRating(''); setComment(''); }
       onSaved({ ...pick, feedback, rating: nextRating, comment: nextComment || null }); setMessage('Feedback saved.');
-    } catch (e) { setError(e); }
+    } catch (e) { setError(e); } finally { setSaving(false); }
   }
-  return <div className="feedback-controls">
+  return <div className="feedback-controls" aria-busy={saving}>
     <div className="feedback-buttons" role="group" aria-label={`Feedback for ${pick.title}`}>
       {([['Liked', '♡', 'Like'], ['AlreadyKnown', '✓', 'Already know'], ['Disliked', '×', 'Not for me']] as const).map(([value, symbol, label]) =>
         <button key={value} type="button" disabled={personal.busy} aria-pressed={pick.feedback === value} onClick={() => save(value)}><span aria-hidden="true">{symbol}</span>{label}</button>)}
@@ -27,6 +28,6 @@ export function FeedbackControls({ pick, onSaved }: { pick: Pick; onSaved: (next
       <div className="action-row"><button className="button button-secondary" disabled={personal.busy} onClick={() => save(pick.feedback)} type="button">Save rating and note</button><button className="text-button" disabled={personal.busy} onClick={() => save('None', true)} type="button">Clear feedback</button></div>
     </details>
     {!!error && <Notice error={error} onRetry={() => { personal.reload().catch(setError); }} />}
-    <p className="sr-only" role="status">{message}</p>
+    <p className={`feedback-status field-help${saving ? ' delayed-status' : ''}`} role="status">{saving ? 'Saving feedback…' : message}</p>
   </div>;
 }

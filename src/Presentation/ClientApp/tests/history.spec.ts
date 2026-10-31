@@ -13,7 +13,7 @@ for (const width of [390, 768, 1440]) {
     await expect(page.getByRole('heading', { name: 'Discovery history' })).toBeVisible();
     await expect(page.locator('.history-card')).toHaveCount(2);
     await expect(page.getByText('04 recommendations')).toBeVisible();
-    for (const image of await page.locator('.history-artwork img').all()) await image.scrollIntoViewIfNeeded();
+    for (const image of await page.locator('.history-artwork .artwork-frame').all()) await image.scrollIntoViewIfNeeded();
     await expect(page.locator('.history-artwork .artwork-ready')).toHaveCount(5);
     await page.evaluate(() => document.fonts.ready); await page.evaluate(() => scrollTo(0, 0)); await page.mouse.move(0, 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

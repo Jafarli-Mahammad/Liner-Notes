@@ -39,7 +39,8 @@ for (const width of [390, 768, 1440]) {
     expect(await page.locator('.brand img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     expect(await page.locator('.brand img').evaluate((img: HTMLImageElement) => Number(img.getAttribute('width')) / Number(img.getAttribute('height')) === img.naturalWidth / img.naturalHeight)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    expect(requests.filter(req => req.method !== 'GET')).toEqual([]);
+    expect(requests.filter(req => !['GET', 'HEAD'].includes(req.method))).toEqual([]);
+    expect(requests.filter(req => req.method === 'HEAD' && !new URL(req.url).pathname.startsWith('/api/artwork/recordings/'))).toEqual([]);
     expect(requests.filter(req => !req.url.startsWith(new URL(page.url()).origin))).toEqual([]);
     expect(requests.filter(req => /discovery\/session|api\/catalog/.test(req.url))).toEqual([]);
     expect(errors).toEqual([]);
@@ -53,7 +54,7 @@ for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('/');
     await expect(page.locator('.music-card')).toHaveCount(4);
-    for (const image of await page.locator('.music-card img').all()) await image.scrollIntoViewIfNeeded();
+    for (const image of await page.locator('.music-card .artwork-frame').all()) await image.scrollIntoViewIfNeeded();
     await expect(page.locator('.artwork-ready')).toHaveCount(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await page.locator('.music-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(width === 390 ? 1 : width === 768 ? 2 : 4);
@@ -82,6 +83,7 @@ test('keyboard skip link and mobile disclosure close/restore focus', async ({ pa
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page.screenshot({ path: '../../../design/superdesign/home-checkpoint/mobile-menu-test.png', fullPage: true });
   await page.setViewportSize({ width: 768, height: 1000 });
+  await expect(page.locator('.menu-toggle')).toHaveAttribute('aria-expanded', 'false');
   await page.setViewportSize({ width: 390, height: 1000 });
   await expect(page.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false');
 });
@@ -93,6 +95,7 @@ test('loading geometry and empty response remain honest', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('status')).toHaveText('Loading recent recommendations…');
   await expect(page.locator('.skeleton-card')).toHaveCount(4);
+  await expect(page.locator('.skeleton-card').first()).toHaveCSS('opacity', '1');
   await page.screenshot({ path: '../../../design/superdesign/home-checkpoint/loading-test.png', fullPage: true });
   resolve();
   await expect(page.getByRole('heading', { name: 'No public recommendations yet' })).toBeVisible();
@@ -241,7 +244,7 @@ test('an image GET failure while hidden recovers when the tab becomes visible', 
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.waitForTimeout(100); release();
-  await expect(page.locator('.artwork-frame img')).not.toHaveAttribute('src');
+  await expect(page.locator('.artwork-frame img')).toHaveCount(0);
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
     document.dispatchEvent(new Event('visibilitychange'));

@@ -1,0 +1,7 @@
+{
+  "realProviderPicks": 5,
+  "guestHistoryMatchesAcrossHosts": true,
+  "ownedBatchIdenticalAfterHostRestart": true,
+  "mainHostUntouched": true,
+  "disposableGuestCleared": true
+}

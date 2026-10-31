@@ -6,6 +6,7 @@ import { unfinished } from '../../api/models';
 import type { Batch, Job, Pick } from '../../api/models';
 import { Artwork } from '../../components/Artwork';
 import { FeedbackControls } from '../../components/FeedbackControls';
+import { Loading } from '../../components/Loading';
 import { MusicLinks } from '../../components/MusicLinks';
 import { Notice } from '../../components/Notice';
 import { useRetryDelay } from '../../hooks/useRetryDelay';
@@ -113,7 +114,7 @@ export default function Discover() {
         {personal.data?.overview.evidenceOrigin !== 'Live' && <p className="field-help">{personal.data?.overview.evidenceOrigin === 'Synthetic' ? 'Synthetic test data' : 'Recorded evidence'}</p>}
       </div>
       <div>{first ? <PickContent key={first.id} pick={first} featured onSaved={saved} /> : <div className="discover-empty">
-        <div className="empty-sleeve" aria-hidden="true"><span /></div>
+        {loading ? <Loading label="Reading saved recommendations…" /> : <div className="empty-sleeve" aria-hidden="true"><span /></div>}
         <h2>{loading ? 'Opening your discoveries…' : batch ? 'No picks in this batch' : 'Your next discovery starts here'}</h2>
         <p>{loading ? 'Reading your saved recommendations.' : batch ? 'The available evidence was too limited for this batch. Try adjusting your taste.' : 'Choose a little music you love, then find a few tracks worth hearing next.'}</p>
         {!hasTaste && <Link className="text-link" to="/">Explore recent recommendations</Link>}

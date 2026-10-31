@@ -5,7 +5,7 @@ using LinerNotes.Domain.Catalog;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiClient client)
-    : IRecommendationSource, ICandidateHydrator, ISeedTagSource, ICanonicalRecommendationSource, ICanonicalSeedTagSource, IRecordingRecommendationSource, IRecordingSeedTagSource, IPublicEvidenceFreshness
+    : IRecommendationSource, ICandidateHydrator, ISeedTagSource, ICanonicalRecommendationSource, ICanonicalSeedTagSource, IRecordingRecommendationSource, IRecordingSeedTagSource, IRecordingArtistSeedTagSource, IPublicEvidenceFreshness
 {
     public string SourceName => "ListenBrainz";
     private readonly Dictionary<string, ListenBrainzResponse> responses = new(StringComparer.Ordinal);
@@ -98,7 +98,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
         if (response.Reference.Origin != search.Reference.Origin) throw new GenerationStoppedException("origin_mismatch");
         var tags = ListenBrainzEvidenceParser.ArtistTags([(artist.Mbid, response)]);
         return new(name, tags.Vector, tags.Tags, response.Reference, tags.MissingReason, search.Gaps.Concat(tags.Gaps).ToArray())
-        { SupportingResponses = [search.Reference] };
+        { SupportingResponses = [search.Reference], CanonicalArtistId = Guid.Parse(artist.Mbid) };
     }
 
     public async Task<HydratedCandidateTrack?> HydrateCandidateAsync(RawCandidateTrack rawCandidate, CancellationToken cancellationToken = default)
@@ -107,6 +107,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
     public async Task<IngestionResult<HydratedCandidateTrack>> HydrateCandidatesBatchAsync(IReadOnlyList<RawCandidateTrack> rawCandidates,
         CancellationToken cancellationToken = default)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("provider.hydration");
         cancellationToken.ThrowIfCancellationRequested();
         if (rawCandidates.Count > 400) throw new ArgumentException("listenbrainz_candidate_limit");
         var hydrated = new List<HydratedCandidateTrack>();

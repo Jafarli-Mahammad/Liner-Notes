@@ -15,8 +15,10 @@ public sealed class SharedPublicEvidence(IServiceScopeFactory scopes, Generation
     {
         using var scope = scopes.CreateScope();
         var document = await scope.ServiceProvider.GetRequiredService<IPublicEvidenceStore>().FindAsync(key, clock.GetUtcNow(), ct);
-        if (document is null) return null;
+        if (document is null)
+        { LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.CacheRead("public_evidence", false); return null; }
         Validate(document, key, kind, version);
+        LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.CacheRead("public_evidence", true);
         return document;
     }
     public async Task<PublicEvidenceDocument> GetAsync(string key, PublicEvidenceKind kind, string version,

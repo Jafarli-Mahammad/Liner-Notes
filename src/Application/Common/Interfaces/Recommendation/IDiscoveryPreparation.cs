@@ -12,7 +12,8 @@ public interface ICanonicalSeedTagSource
 }
 public interface IPublicEvidenceFreshness { DateTimeOffset? SharedUntilUtc { get; } }
 public sealed record DiscoveryPoolRequest(Guid? ArtistId, string Seed, bool IsTag, bool IsRecording = false);
-public sealed record DiscoverySeedRequest(Guid? EntityId, string Name, bool IsAlbum, bool IsRecording = false);
+public sealed record DiscoverySeedRequest(Guid? EntityId, string Name, bool IsAlbum, bool IsRecording = false,
+    Guid? ArtistRecordingId = null);
 public interface IDiscoverySeedPreparation
 {
     Task<SeedTagSnapshot> GetAsync(DiscoverySeedRequest request, bool allowAcquisition, CancellationToken ct);

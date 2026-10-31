@@ -5,6 +5,51 @@ namespace LinerNotes.Infrastructure.Tests.Storage;
 public sealed class CoordinatedStorageTests : IAsyncLifetime
 {
     [Fact]
+    public async Task RepeatedReclamationDisposesEveryOwnedArtifactDescriptor()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        string directory = Path.Combine(root, "fd-cache"); Directory.CreateDirectory(directory);
+        string artifact = Path.Combine(directory, "large.bin");
+        await File.WriteAllBytesAsync(artifact, new byte[8 * 1024 * 1024]);
+        var options = new GenerationStorageOptions
+        {
+            InventoryPath = Path.Combine(root, "inventories", "fd-inventory.json"), LeasePath = Path.Combine(root, "fd-lease"),
+            DatabaseOverheadBytesPerPick = 1000,
+            ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(category => category,
+                category => category == "cache" ? new[] { directory } : Array.Empty<string>())
+        };
+        var local = new LocalGenerationStorage(options, clock, new() { FilesystemPaths = [root] }, probe);
+        await local.ReconcileAsync(Before);
+        for (int index = 0; index < 20; index++)
+        {
+            await using var lease = await local.PrepareReclamationAsync(default);
+            await lease.RebaseAsync(Before, default);
+            await lease.VerifyAsync(Before, default);
+        }
+        Assert.DoesNotContain(Directory.EnumerateFileSystemEntries("/proc/self/fd"), descriptor =>
+        {
+            try { return new FileInfo(descriptor).LinkTarget == artifact; }
+            catch (IOException) { return false; }
+        });
+    }
+
+    [Fact]
+    public async Task DatabasePreflightsShareNamespaceOwnershipAndRebaseOnlyKnownDatabasePublication()
+    {
+        await using var first = await storage.PrepareCoordinatedAsync(default);
+        await using var second = await storage.PrepareCoordinatedAsync(default);
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => storage.AcquireCoordinatedAsync(Before, default));
+        await first.RebaseAsync(Before, default);
+        await first.ReserveAsync(1024, 0, Before);
+        var committed = Before with { DatabaseBytes = Before.DatabaseBytes + 100, Revision = "managed-v1:2:0:fixture" };
+        await first.PublishCommittedInventoryAsync(committed, default);
+        await second.RebaseAsync(committed, default);
+        await second.ReserveAsync(1024, 0, committed);
+        await Assert.ThrowsAsync<GenerationStoppedException>(() => second.RebaseAsync(
+            committed with { Revision = "managed-v1:unexpected:0:fixture" }, default));
+    }
+
+    [Fact]
     public async Task ReclamationWorksAtManagedCutoffButKeepsDiskAndRevisionGuards()
     {
         var over = Before with { DatabaseBytes = 1_000_000_001 };

@@ -52,7 +52,8 @@ public sealed class MetaBrainzRequestGate(ListenBrainzOptions options, TimeProvi
                     return;
                 }
                 wait = next - now;
-                if (wait > TimeSpan.FromSeconds(30)) throw new GenerationStoppedException("upstream_backoff_active");
+                if (wait > TimeSpan.FromSeconds(30))
+                    throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException("source_temporarily_unavailable", true, wait);
             }
             catch (IOException) when (attempt < 600) { }
             await Task.Delay(wait, clock, ct).ConfigureAwait(false);

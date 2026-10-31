@@ -20,6 +20,12 @@ public interface IGuestProfileStore
 public interface IDiscoveryWriteCoordinator
 {
     Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct);
+    Task<T> PublishArtifactAsync<T>(ArtifactPublication operation, long estimatedBytes,
+        Func<CancellationToken, Task<T>> write, CancellationToken ct) => throw new NotSupportedException();
+    Task<T> RemoveArtifactAsync<T>(ArtifactPublication operation, Func<CancellationToken, Task<T>> delete, CancellationToken ct)
+        => throw new NotSupportedException();
+    Task<T> RemoveArtifactsAsync<T>(IReadOnlyList<ArtifactPublication> operations, Func<CancellationToken, Task<T>> delete, CancellationToken ct)
+        => throw new NotSupportedException();
     // For deletion only. The transaction must not increase the tracked logical byte total.
     Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct);
 }

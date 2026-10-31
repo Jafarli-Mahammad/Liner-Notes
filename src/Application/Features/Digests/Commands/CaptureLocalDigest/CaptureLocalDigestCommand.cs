@@ -10,7 +10,9 @@ public sealed record CaptureLocalDigestCommand(Guid UserId, IsoWeek Week) : IReq
 public sealed record LocalCaptureResult(string Status, Guid? DigestId = null, string? Reason = null);
 
 /// <summary>Account ownership, artifact lease, then a non-replayed SQL row transaction.</summary>
-public sealed class CaptureLocalDigestCommandHandler(ILocalDigestCaptureStore store, ILocalEmailSink sink, IAccountEmailLease ownership)
+public sealed class CaptureLocalDigestCommandHandler(ILocalDigestCaptureStore store, ILocalEmailSink sink, IAccountEmailLease ownership,
+    LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions? runtime = null,
+    LinerNotes.Application.Common.Interfaces.Discovery.IDiscoveryWriteCoordinator? coordinator = null)
     : IRequestHandler<CaptureLocalDigestCommand, LocalCaptureResult>
 {
     public async Task<LocalCaptureResult> Handle(CaptureLocalDigestCommand request, CancellationToken ct)
@@ -24,6 +26,26 @@ public sealed class CaptureLocalDigestCommandHandler(ILocalDigestCaptureStore st
                 var inputs = await store.ReadAsync(request.UserId, request.Week, ct);
                 Eligibility(inputs);
                 await using var capture = await sink.OpenAsync(inputs.Digest!, inputs.Subscriber!, inputs.Storage, ct);
+                if (runtime?.ManagedWritesEnabled == true)
+                {
+                    if (capture is not IRecoverableLocalEmailCapture recoverable || coordinator is null)
+                        throw new GenerationStoppedException("capture_coordination_missing");
+                    var operation = await recoverable.PublishPreparedAsync(ct);
+                    async Task<Guid> CommitAsync(CancellationToken token)
+                    {
+                        var freshInputs = await store.ReadWithinAdmissionAsync(request.UserId, request.Week, token);
+                        Eligibility(freshInputs);
+                        if (freshInputs.Digest!.Id != inputs.Digest!.Id) throw new GenerationStoppedException("digest_changed");
+                        await capture.PublishAsync(freshInputs.Digest, freshInputs.Subscriber!, freshInputs.Storage, token);
+                        await store.MarkCapturedWithinAdmissionAsync(request.UserId, request.Week, token);
+                        await recoverable.CompleteWithinAdmissionAsync(token);
+                        return freshInputs.Digest.Id;
+                    }
+                    var digestId = operation is null
+                        ? await coordinator.ExecuteAsync(65_536, CommitAsync, ct)
+                        : await coordinator.PublishArtifactAsync(operation, 65_536, CommitAsync, ct);
+                    return new(capture.ReceiptExists ? "already_captured" : "local_captured", digestId);
+                }
                 await using var transaction = await store.BeginAsync(request.UserId, request.Week, ct);
                 var fresh = transaction.Inputs;
                 Eligibility(fresh);

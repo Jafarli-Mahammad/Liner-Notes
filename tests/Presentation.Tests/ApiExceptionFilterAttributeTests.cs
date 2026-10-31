@@ -24,6 +24,38 @@ public class ApiExceptionFilterAttributeTests
     }
 
     [Fact]
+    public void AuthenticationStorageFailuresUseAnAuthenticationMessage()
+    {
+        var context = CreateExceptionContext(new LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException("authentication_state_conflict"));
+        context.HttpContext.Request.Path = "/api/auth/login";
+        _filter.OnException(context);
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.Equal(503, result.StatusCode);
+        Assert.Contains("Authentication", Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(result.Value).Title);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TransientDatabaseFailuresReturnRecoverableStatusWithoutLoggingPayloads(bool wrapped)
+    {
+        var failure = new TransientDatabaseFailure();
+        var context = CreateExceptionContext(wrapped
+            ? new Microsoft.EntityFrameworkCore.Storage.RetryLimitExceededException("private-payload", failure) : failure);
+        _filter.OnException(context);
+        Assert.True(context.ExceptionHandled);
+        Assert.Equal(503, Assert.IsType<ObjectResult>(context.Result).StatusCode);
+        Assert.Equal("5", context.HttpContext.Response.Headers.RetryAfter.ToString());
+        Assert.All(_logger.ReceivedCalls(), call =>
+            Assert.DoesNotContain("private-payload", string.Join(" ", call.GetArguments().Select(value => value?.ToString()))));
+    }
+
+    private sealed class TransientDatabaseFailure() : System.Data.Common.DbException("private-payload")
+    {
+        public override bool IsTransient => true;
+    }
+
+    [Fact]
     public void OnException_ValidationException_ReturnsBadRequestValidationProblemDetails()
     {
         var failures = new List<ValidationFailure>

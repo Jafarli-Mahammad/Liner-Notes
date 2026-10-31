@@ -1,19 +1,22 @@
 using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Features.Discovery;
 using LinerNotes.DataAccess.DataContexts;
 using LinerNotes.Domain.Discovery;
 using Microsoft.EntityFrameworkCore;
 namespace LinerNotes.DataAccess.Persistence.Repositories;
-public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
+public sealed class DiscoveryJobStore(DataContext db, DiscoveryRuntimeOptions? options = null) : IDiscoveryJobStore
 {
+    private readonly TimeSpan maximumAge = TimeSpan.FromSeconds((options ?? new()).MaximumJobAgeSeconds);
     private static readonly DiscoveryJobState[] Unfinished = [DiscoveryJobState.Pending, DiscoveryJobState.Running, DiscoveryJobState.Retryable];
     public Task<bool> HasReadyAsync(DiscoveryJobKind kind, DiscoveryJobLane lane, DateTimeOffset now, int maximumAttempts, CancellationToken ct)
         => db.DiscoveryJobs.AsNoTracking().AnyAsync(j => j.Kind == kind &&
+            (Unfinished.Contains(j.State) && j.CreatedAtUtc <= now - maximumAge ||
             (j.Attempts < maximumAttempts || j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now) &&
             (lane == DiscoveryJobLane.Acquisition ? kind == DiscoveryJobKind.Lookup || j.ProgressCode == "waiting_for_music" :
                 kind != DiscoveryJobKind.Lookup && j.ProgressCode != "waiting_for_music") &&
             db.ListenerProfiles.Any(p => p.Id == j.ProfileId && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)) &&
             ((j.State == DiscoveryJobState.Pending || j.State == DiscoveryJobState.Retryable) && j.NextAttemptAtUtc <= now ||
-             j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now), ct);
+             j.State == DiscoveryJobState.Running && j.LeaseExpiresAtUtc <= now)), ct);
     public Task<DiscoveryJob?> FindAsync(Guid profileId, Guid jobId, DateTimeOffset now, CancellationToken ct) =>
         db.DiscoveryJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == jobId && j.ProfileId == profileId &&
             db.ListenerProfiles.Any(p => p.Id == profileId && (p.ExpiresAtUtc == null || p.ExpiresAtUtc > now)), ct);
@@ -54,6 +57,13 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         bool acquisition = lane == DiscoveryJobLane.Acquisition;
         bool lookup = kind == DiscoveryJobKind.Lookup;
         string kindText = kind.ToString();
+        var expired = await db.DiscoveryJobs.FromSqlInterpolated($"""
+            SELECT j.* FROM "DiscoveryJobs" j WHERE j."Kind"={kindText} AND j."State" IN ('Pending','Retryable','Running')
+            AND j."CreatedAtUtc"<={now - maximumAge}
+            ORDER BY j."CreatedAtUtc",j."Id" LIMIT 16 FOR UPDATE SKIP LOCKED
+            """).AsTracking().ToArrayAsync(ct);
+        foreach (var job in expired) { await db.Entry(job).ReloadAsync(ct); job.Expire(now, maximumAge); }
+        if (expired.Length > 0) await db.SaveChangesAsync(ct);
         var exhausted = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j WHERE j."Kind"={kindText} AND j."State" IN ('Pending','Retryable','Running')
             AND j."Attempts">={maximumAttempts} AND (j."LeaseExpiresAtUtc" IS NULL OR j."LeaseExpiresAtUtc"<={now})
@@ -63,7 +73,7 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
         if (exhausted.Length > 0) await db.SaveChangesAsync(ct);
         var next = await db.DiscoveryJobs.FromSqlInterpolated($"""
             SELECT j.* FROM "DiscoveryJobs" j JOIN "ListenerProfiles" p ON p."Id"=j."ProfileId"
-            WHERE j."Kind"={kindText} AND j."Attempts"<{maximumAttempts}
+            WHERE j."Kind"={kindText} AND j."Attempts"<{maximumAttempts} AND j."CreatedAtUtc">{now - maximumAge}
               AND ({anyLane} OR ({acquisition} AND ({lookup} OR j."ProgressCode"='waiting_for_music')) OR
                 (NOT {acquisition} AND NOT {lookup} AND j."ProgressCode"<>'waiting_for_music'))
             AND (p."ExpiresAtUtc" IS NULL OR p."ExpiresAtUtc">{now}) AND
@@ -89,6 +99,7 @@ public sealed class DiscoveryJobStore(DataContext db) : IDiscoveryJobStore
             SELECT * FROM "DiscoveryJobs" WHERE "Id"={jobId} FOR UPDATE
             """).AsTracking().SingleOrDefaultAsync(ct) ?? throw new InvalidOperationException("job_lease_lost");
         await db.Entry(job).ReloadAsync(ct);
+        if (now - job.CreatedAtUtc >= maximumAge) throw new InvalidOperationException("job_deadline_passed");
         job.RequireLease(token, now);
         if (job.ProfileId != profileId || profile is null || profile.IsExpired(now) ||
             (job.Kind == DiscoveryJobKind.Generation && profile.Revision != job.InputRevision))

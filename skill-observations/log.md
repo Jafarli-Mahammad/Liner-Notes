@@ -1,5 +1,33 @@
 # Skill Observation Log
 
+### Observation 038: Follow recovery past the first failure
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Issue:** A simple guest control bypassed feedback identity resolution and larger receipt serialization. Recovering an upstream outage exposed a separate post-scoring storage bound.
+**Suggested improvement:** Compare the full persisted input dimensions, retain operation/trace correlation across retries, and follow recovered acquisition through receipt validation and durable publication. Prove lossless data round trips when changing physical storage.
+**Principle:** A successful control or a recovered dependency is not proof that the affected workflow can finish.
+
+### Observation 039: Verify the actual browser mode before requesting sign-in
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Issue:** Removing a headless flag did not override tool defaults, so an invisible browser was mistaken for the user's visible session.
+**Suggested improvement:** Set headed mode explicitly, verify runtime user-agent/process mode, and identify the exact window before asking a user to authenticate. Check only relevant network metadata and never capture credentials.
+**Principle:** Verify tool session identity before attributing user-visible state or requesting authentication.
+
+### Observation 037: Correlate durable operations and prove result replacement
+**Status:** OPEN
+**Date:** 2026-10-31
+**Skill:** task-observer
+**Type:** open-source
+**Phase/Area:** Background job and cache investigations
+**Issue:** Existing result cards and fast successful status reads can conceal a failed new operation. Historical generic error codes cannot establish the exception that caused a specific failure. Expiring metadata can also erase the independent public provenance needed for safe recovery.
+**Suggested improvement:** Capture the operation returned by each submission, compare its result ID with persisted rows and displayed results, test a second submission over existing content, and preserve safe failure codes. Test recovery after both freshness expiry and cleanup, retaining only bounded provenance when metadata must be cleared.
+**Principle:** Prove new durable output for the exact request and distinguish historical evidence gaps from reproduced defects.
+
 Status: OPEN = not yet actioned; ACTIONED = updated; DECLINED = not pursued.
 
 ## 2026-10-16
@@ -339,3 +367,50 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A text-focused cleanup removed diagrams that helped readers understand the product loop, source layout and code relationships.
 **Suggested improvement:** Inventory existing visual assets and diagrams before rewriting documentation; keep the useful ones, update their labels and limits, and verify the rendered references.
 **Principle:** Simplify prose without discarding visuals that carry useful project context.
+
+### Observation 033: Trace readiness separately from response latency
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Investigating slow background discovery and cover loading.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Asynchronous preparation and browser retries
+**Issue:** A cached image endpoint can respond in milliseconds while background acquisition takes minutes; finite browser retries can expire before preparation finishes. A fast warm probe alone would miss the user-visible failure.
+**Suggested improvement:** Trace enqueue-to-ready time, cache state, and browser retry horizon separately from HTTP response duration. Test cold, warm, delayed, and terminal-error states before assigning a cause.
+**Principle:** Measure the time until useful content is visible, including work outside the request that serves it.
+
+### Observation 034: Check CSP before changing image loading
+
+**Status:** OPEN
+**Date:** 2026-10-27
+**Session context:** Adding explicit image readiness and asynchronous retry recovery.
+**Skill:** performance-reviewer; frontend verification
+**Type:** open-source
+**Phase/Area:** Image delivery and security policy
+**Issue:** A blob URL image-loading approach passed typechecking but failed in the real host because its CSP excluded blob images. Contract tests running against the real host caught the incompatibility.
+**Suggested improvement:** Read the host's CSP before choosing blob/data/direct URL delivery. Prefer an existing permitted delivery path where possible, and verify image decoding under actual response headers.
+**Principle:** Loading-state improvements must be tested with the application's security policy active.
+
+
+### Observation 035: Freeze outputs and verify diagnostic profile compatibility
+
+**Status:** OPEN
+**Date:** 2026-10-28
+**Session context:** Discovery, artwork and storage performance remediation.
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Baselines and diagnostic evidence
+**Issue:** A profiler's old profile name can fail after a tool update, and a passing suite alone does not establish unchanged recommendation outputs. Partial upstream failures also need an explicit success/failure contract even when some valid candidates remain.
+**Suggested improvement:** Freeze the baseline assemblies before editing, execute the same fixed-input serialization probe against baseline and changed assemblies, and separately exercise partial failures. Check installed profile names before collection and distinguish sampled thread waits from CPU usage.
+**Principle:** Preserve comparable evidence and test the exact guarantee before interpreting a faster or passing result.
+
+### Observation 036: Test priority across preparation and acquisition
+**Status:** OPEN
+**Date:** 2026-10-29
+**Skill:** performance-reviewer
+**Type:** open-source
+**Phase/Area:** Concurrent queues and performance claims
+**Issue:** Adding whole-batch workers improved a small backlog but made a larger saturated backlog worse; batch ownership hid available per-item capacity. Separate end-to-end measurements also showed that a faster component did not make the complete workflow faster.
+**Suggested improvement:** Test demand arriving while preparation is active and after handoff, saturate every worker, retain maintenance fairness and verify unchanged completed work/request limits. Compare end-to-end distributions separately from component latency. Record environment failures separately and rerun all assertions through supported configuration.
+**Principle:** Preserve priority through every queue stage and limit each performance claim to the workload actually measured.

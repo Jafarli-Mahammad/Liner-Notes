@@ -14,6 +14,48 @@ using Xunit;
 namespace LinerNotes.Infrastructure.Tests.Caching;
 public sealed class SharedDiscoveryPreparationTests
 {
+    [Fact]
+    public async Task IndependentPoolKeysHaveBoundedGatesAndCancelledWaitersReleaseTheirReferences()
+    {
+        var source = Substitute.For<IRecommendationSource>();
+        var hydrator = Substitute.For<ICandidateHydrator>();
+        hydrator.HydrateCandidatesBatchAsync(Arg.Any<IReadOnlyList<RawCandidateTrack>>(), Arg.Any<CancellationToken>())
+            .Returns(new IngestionResult<HydratedCandidateTrack>([], []));
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("fixture", source, hydrator, Substitute.For<ISeedTagSource>()));
+        using var services = new ServiceCollection().AddSingleton(resolver).BuildServiceProvider();
+        using var caches = new DiscoveryMemoryCaches(new());
+        using var preparation = new SharedDiscoveryPreparation(services.GetRequiredService<IServiceScopeFactory>(), caches,
+            new() { Origin = EvidenceOrigin.Synthetic }, TimeProvider.System);
+        int started = 0;
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.GetCandidatesByTagsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            if (Interlocked.Increment(ref started) % 32 == 0) allStarted.TrySetResult();
+            await release.Task.WaitAsync(call.Arg<CancellationToken>());
+            return new IngestionResult<RawCandidateTrack>([], []);
+        });
+        for (int round = 0; round < 2; round++)
+        {
+            var requests = Enumerable.Range(round * 32, 32).Select(i => new DiscoveryPoolRequest(null, "pool-" + i, true)).ToArray();
+            var pending = requests.Select(request => preparation.GetAsync(request, default)).ToArray();
+            try
+            {
+                await allStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                using var cancellation = new CancellationTokenSource();
+                var waiter = preparation.GetAsync(requests[0], cancellation.Token);
+                cancellation.Cancel();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter);
+                await Assert.ThrowsAsync<PublicPreparationBusyException>(() => preparation.GetAsync(new(null, "overflow", true), default));
+            }
+            finally { release.TrySetResult(); await Task.WhenAll(pending); }
+            release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            allStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        Assert.Equal(64, started);
+    }
+
     [Theory]
     [InlineData(201, false)]
     [InlineData(256, false)]

@@ -1,3 +1,4 @@
+using LinerNotes.Application.Features.Discovery;
 using System.Security.Cryptography;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
@@ -11,8 +12,8 @@ namespace LinerNotes.Infrastructure.Discovery;
 public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, DiscoveryMemoryCaches caches,
     GenerationConfiguration configuration, TimeProvider clock) : IDiscoveryPreparation, IDisposable
 {
-    // Fixed stripes bound synchronization memory independently of query diversity.
-    private readonly SemaphoreSlim[] stripes = Enumerable.Range(0, 32).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
+    // Only active keys retain gates; unrelated pool keys never share a long-held gate.
+    private readonly BoundedKeyedGate gates = new(32);
     public string KeyFor(DiscoveryPoolRequest request)
     {
         configuration.Scoring();
@@ -21,7 +22,7 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue) || (request.IsRecording && (request.ArtistId is null || request.IsTag))) throw new ArgumentException("invalid_pool_seed");
         return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            Version = "public-pool-v1",
+            Version = PublicEvidenceCodec.PoolVersion,
             Configuration = configuration,
             request.ArtistId,
             Seed = request.ArtistId.HasValue ? null : request.Seed.Trim().ToLowerInvariant(),
@@ -49,9 +50,10 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
         string hash = KeyFor(request);
         string key = "pool:" + hash;
         if (caches.Prepared.TryGetValue<PreparedDiscoveryPool>(key, out var hit) && hit!.ExpiresAtUtc > clock.GetUtcNow()) return hit;
-        var gate = stripes[Convert.ToInt32(hash[..2], 16) % stripes.Length];
-        await gate.WaitAsync(ct);
-        try
+        IDisposable gate;
+        using (LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.pool_gate"))
+            gate = await gates.AcquireAsync(hash, ct);
+        using (gate)
         {
             if (caches.Prepared.TryGetValue<PreparedDiscoveryPool>(key, out hit) && hit!.ExpiresAtUtc > clock.GetUtcNow()) return hit;
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -77,6 +79,7 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             if (raw.Count > configuration.MaximumCandidates || raw.Any(r => r.Origin != configuration.Origin))
                 throw new GenerationStoppedException("prepared_evidence_origin_or_size_mismatch");
             var hydrated = await provider.Hydrator.HydrateCandidatesBatchAsync(raw.Items, deadline.Token);
+            DiscoverySourceValidation.ThrowIfFailed(raw.Gaps.Concat(hydrated.Gaps).Concat(hydrated.SelectMany(candidate => candidate.Gaps)));
             if (configuration.Origin == EvidenceOrigin.Live &&
                 provider.Source is LinerNotes.Application.Common.Interfaces.Catalog.IPublicRecordingCatalogSource publicMetadata &&
                 publicMetadata.ReadPublicRecordingMetadata() is { Count: > 0 } publicRecordings)
@@ -119,10 +122,11 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             });
             return pool;
         }
-        finally { gate.Release(); }
     }
     public Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct)
         => allowAcquisition ? GetAsync(request, ct) : Task.FromResult(TryGet(request)
             ?? throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException());
-    public void Dispose() { foreach (var gate in stripes) gate.Dispose(); }
+    public void Dispose() => gates.Dispose();
+
+
 }

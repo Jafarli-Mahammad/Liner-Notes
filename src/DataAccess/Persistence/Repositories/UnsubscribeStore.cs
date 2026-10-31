@@ -16,7 +16,7 @@ public sealed class UnsubscribeStore(DataContext db, IDiscoveryWriteCoordinator?
         Task<int> Update(CancellationToken token) => db.Users.Where(u => u.Id == userId && u.EmailUnsubscribedAtUtc == null)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.EmailUnsubscribedAtUtc, utcNow)
                 .SetProperty(u => u.LastModifiedAt, utcNow), token);
-        if (runtime?.RunJobs == true)
+        if (runtime?.ManagedWritesEnabled == true)
         {
             if (admission is null) throw new InvalidOperationException("weekly_discovery_runtime_unconfigured");
             await admission.ExecuteAsync(16_384, Update, ct);

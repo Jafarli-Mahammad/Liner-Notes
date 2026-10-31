@@ -17,9 +17,8 @@ try
     bool scheduled=builder.Configuration["action"]=="schedule";
     var options=scheduled?null:LocalWorkerOptions.Parse(builder.Configuration);
     var scheduleOptions=scheduled?LocalScheduleOptions.Parse(builder.Configuration,args):null;
-    if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs") &&
-        builder.Configuration.GetValue<bool>("LocalEmail:Enabled") && (scheduled || options!.Action != "reconcile"))
-        throw new ArgumentException("discovery_local_capture_not_integrated");
+    if (scheduled && builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+        throw new ArgumentException("synthetic_schedule_requires_jobs_disabled_use_storage_admission");
     if(scheduled) builder.Logging.ClearProviders(); // Scheduled CLI emits only its bounded result JSON.
     if(!builder.Environment.IsDevelopment()) throw new ArgumentException("development_worker_required");
     var connection=new NpgsqlConnectionStringBuilder(builder.Configuration["ConnectionStrings:DefaultConnection"]);

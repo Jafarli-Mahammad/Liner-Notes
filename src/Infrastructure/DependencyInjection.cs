@@ -86,7 +86,11 @@ public static class DependencyInjection
         services.AddScoped<ILastFmApiClient>(sp => sp.GetRequiredService<BatchTagCachingLastFmClient>());
         services.AddScoped<ISeedTagSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().SeedTags);
         services.AddSingleton<IStorageFreeSpaceProbe, DriveStorageFreeSpaceProbe>();
+        services.AddSingleton<StorageAdmissionGate>();
+        services.AddHostedService<StorageProtocolStartup>();
+        services.AddHostedService<StorageRecoveryService>();
         services.AddScoped<LocalGenerationStorage>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecoverableArtifactPublisher, RecoverableArtifactPublisher>();
         services.Configure<CoordinatedStorageOptions>(configuration.GetSection("DiscoveryStorage"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<CoordinatedStorageOptions>>().Value);
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.ICoordinatedGenerationStorage>(sp => sp.GetRequiredService<LocalGenerationStorage>());
@@ -100,11 +104,20 @@ public static class DependencyInjection
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ListenBrainzOptions>>().Value);
         services.AddSingleton<IMetaBrainzRequestGate, MetaBrainzRequestGate>();
         services.AddSingleton<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IStoredArtwork, LinerNotes.Infrastructure.Artwork.StoredArtwork>();
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkQueue>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>());
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkPublicRevalidation, LinerNotes.Infrastructure.Artwork.ArtworkPublicRevalidation>();
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
-        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        // Live tag radio can exceed 15s; the existing pool/job deadlines still bound acquisition.
+        services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = false, UseCookies = false,
+                // The client bounds the decompressed stream before parsing or hashing evidence.
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
+            });
         services.AddScoped<IListenBrainzApiClient>(sp =>
         {
             var generation = sp.GetRequiredService<GenerationConfiguration>();

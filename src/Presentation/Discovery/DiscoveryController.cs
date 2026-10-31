@@ -34,7 +34,7 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
         if (profile is null) return Unauthorized();
         var job = await Mediator.Send(new SubmitDiscovery(profile.Id, request.Revision, request.RequestKey, request.Selection), ct);
         Response.Headers.CacheControl = "no-store";
-        Response.Headers["Retry-After"] = "2";
+        Response.Headers["Retry-After"] = "1";
         return Accepted(DiscoveryJobStatus.From(job));
     }
 
@@ -47,7 +47,7 @@ public sealed class DiscoveryController(IListenerContext listener, IDiscoveryRea
         Response.Headers.CacheControl = "no-store";
         var job = await jobs.FindAsync(profile.Id, id, clock.GetUtcNow(), ct);
         if (job is null || job.Kind != LinerNotes.Domain.Discovery.DiscoveryJobKind.Generation) return NotFound();
-        if (job.IsUnfinished) Response.Headers["Retry-After"] = "2";
+        if (job.IsUnfinished) Response.Headers["Retry-After"] = "1";
         return Ok(DiscoveryJobStatus.From(job));
     }
 

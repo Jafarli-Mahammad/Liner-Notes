@@ -1,4 +1,6 @@
 using LinerNotes.Application.Common.Interfaces;
+using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Features.Discovery;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.DataAccess.Core;
@@ -12,14 +14,15 @@ using Npgsql;
 namespace LinerNotes.DataAccess.Persistence.Repositories;
 
 /// <summary>Each attempt owns a context without EnableRetryOnFailure. File publication is never replayed by EF.</summary>
-public sealed class LocalDigestCaptureStore(string connectionString) : ILocalDigestCaptureStore
+public sealed class LocalDigestCaptureStore(string connectionString, DataContext? coordinatedContext = null,
+    IDiscoveryWriteCoordinator? coordinator = null, DiscoveryRuntimeOptions? runtime = null) : ILocalDigestCaptureStore
 {
     private DataContext Context() => new(new DbContextOptionsBuilder<DataContext>()
         .UseNpgsql(connectionString, o=>o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)).Options);
 
     private static async Task<(LocalCaptureInputs Inputs, WeeklyDigest? Entity)> LoadAsync(DataContext db, Guid userId, IsoWeek week, bool tracking, CancellationToken ct)
     {
-        var user = await db.Users.SingleOrDefaultAsync(u=>u.Id==userId,ct);
+        var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u=>u.Id==userId,ct);
         var query = db.WeeklyDigests.Include(d=>d.Recommendations).ThenInclude(r=>r.Track).Where(d=>d.UserId==userId && d.Week==week);
         var digest = await (tracking ? query.AsTracking() : query.AsNoTracking()).SingleOrDefaultAsync(ct);
         var storage = await new DigestGenerationStore(db,new UnitOfWork(db)).ReadStorageAsync(ct);
@@ -53,13 +56,43 @@ public sealed class LocalDigestCaptureStore(string connectionString) : ILocalDig
         }
     }
 
+    public async Task<LocalCaptureInputs> ReadWithinAdmissionAsync(Guid userId, IsoWeek week, CancellationToken ct)
+    {
+        var db = coordinatedContext ?? throw new GenerationStoppedException("capture_coordination_missing");
+        if (db.Database.CurrentTransaction is null) throw new GenerationStoppedException("capture_requires_admission");
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM \"Users\" WHERE \"Id\"={userId} FOR UPDATE", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM \"WeeklyDigests\" WHERE \"UserId\"={userId} AND \"Week\"={week.Value} FOR UPDATE", ct);
+        return (await LoadAsync(db, userId, week, false, ct)).Inputs;
+    }
+
+    public async Task MarkCapturedWithinAdmissionAsync(Guid userId, IsoWeek week, CancellationToken ct)
+    {
+        var db = coordinatedContext ?? throw new GenerationStoppedException("capture_coordination_missing");
+        if (db.Database.CurrentTransaction is null) throw new GenerationStoppedException("capture_requires_admission");
+        var digest = await db.WeeklyDigests.AsTracking().SingleOrDefaultAsync(d => d.UserId == userId && d.Week == week, ct)
+            ?? throw new GenerationStoppedException("digest_not_found");
+        await db.Entry(digest).ReloadAsync(ct);
+        digest.MarkLocalCaptured();
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task RecordFailureAsync(Guid userId, IsoWeek week, string reason, CancellationToken ct)
     {
         if (reason is not ("email_io_unavailable" or "email_io_forbidden" or "email_alternative_too_large" or "email_message_too_large"))
             throw new ArgumentException("Bounded reason required.",nameof(reason));
-        await using var db=Context();
-        await db.WeeklyDigests.Where(d=>d.UserId==userId && d.Week==week && d.Status!=DigestStatus.LocalCaptured && d.Status!=DigestStatus.Sent)
-            .ExecuteUpdateAsync(s=>s.SetProperty(d=>d.ErrorMessage,reason).SetProperty(d=>d.Status,DigestStatus.Failed),ct);
+        async Task<int> UpdateAsync(DataContext db, CancellationToken token) => await db.WeeklyDigests
+            .Where(d => d.UserId == userId && d.Week == week && d.Status != DigestStatus.LocalCaptured && d.Status != DigestStatus.Sent)
+            .ExecuteUpdateAsync(update => update.SetProperty(d => d.ErrorMessage, reason).SetProperty(d => d.Status, DigestStatus.Failed), token);
+        if (runtime?.ManagedWritesEnabled == true)
+        {
+            if (coordinator is null || coordinatedContext is null) throw new GenerationStoppedException("capture_coordination_missing");
+            await coordinator.ExecuteAsync(65_536, token => UpdateAsync(coordinatedContext, token), ct);
+        }
+        else
+        {
+            await using var db = Context();
+            await UpdateAsync(db, ct);
+        }
     }
 
     private sealed class Transaction(DataContext db,IDbContextTransaction transaction,LocalCaptureInputs inputs,WeeklyDigest? digest) : ILocalDigestCaptureTransaction

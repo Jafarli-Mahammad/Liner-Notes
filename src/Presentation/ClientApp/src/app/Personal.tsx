@@ -89,7 +89,11 @@ export function PersonalLayout() {
         const fingerprint = JSON.stringify(body);
         if (intent.current?.fingerprint !== fingerprint) intent.current = { fingerprint, key: crypto.randomUUID(), previousJobId: saved.overview.page?.currentJob?.id ?? null };
         const job = await write<Job>('/api/discovery/batches', { ...body, requestKey: intent.current.key });
-        intent.current = null; await reload(); return job;
+        intent.current = null;
+        const latest = current.current;
+        if (latest?.overview.page) put({ ...latest, overview: { ...latest.overview,
+          page: { ...latest.overview.page, currentJob: job } } });
+        return job;
       });
     },
     async feedback(pick, feedback, rating, comment) {

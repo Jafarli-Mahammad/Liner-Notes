@@ -1,5 +1,6 @@
 using System.Net;
 using LinerNotes.Application;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess;
 using LinerNotes.Infrastructure;
 using LinerNotes.Presentation;
@@ -10,6 +11,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+try
+{
 var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
@@ -45,12 +48,18 @@ builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
 builder.Services.AddPresentation(builder.Configuration);
+// Installed only on the terminal public-static branch below, including HTTPS.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    options.MimeTypes = ["text/css", "text/javascript", "application/javascript", "image/svg+xml"];
+});
 if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
 {
     if (!builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
         throw new InvalidOperationException("Discovery jobs require GuestDiscovery:Enabled.");
-    if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled"))
-        throw new InvalidOperationException("Concurrent guest discovery and local email capture require pending storage writer integration.");
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
@@ -151,6 +160,14 @@ var staticFileOptions = new StaticFileOptions
 {
     OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
 };
+// Terminal branch: API responses, authentication, errors and SPA HTML never enter compression.
+app.MapWhen(context => context.Request.Path.StartsWithSegments("/home-assets") ||
+    context.Request.Path.Value is "/app.js" or "/discovery.js" or "/styles.css", assets =>
+{
+    assets.UseResponseCompression();
+    assets.UseStaticFiles(staticFileOptions);
+    assets.Run(context => { context.Response.StatusCode = StatusCodes.Status404NotFound; return Task.CompletedTask; });
+});
 app.UseStaticFiles(staticFileOptions);
 
 app.UseRouting();
@@ -169,6 +186,13 @@ app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html", staticFileOptions);
 
 app.Run();
+}
+catch (GenerationStoppedException error)
+{
+    Console.Error.WriteLine($"Managed storage startup stopped: {error.Message}.");
+    Console.Error.WriteLine("Keep writers stopped. Back up the database and managed files, apply pending migrations, and verify/establish the storage inventory before restarting. See STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md.");
+    Environment.ExitCode = 2;
+}
 
 // Make the implicit Program class public for WebApplicationFactory in integration tests
 public partial class Program { }

@@ -1,6 +1,6 @@
 using LinerNotes.Application.Common.Models.Recommendation;
 namespace LinerNotes.Application.Common.Interfaces.Discovery;
-public enum PublicEvidenceKind { Pool, Seed, Lookup }
+public enum PublicEvidenceKind { Pool, Seed, Lookup, Artwork }
 public sealed record PublicEvidenceDocument(string Key, PublicEvidenceKind Kind, string Provider, EvidenceOrigin Origin,
     string Version, string PayloadJson, string ContentSha256, DateTimeOffset AcquiredAtUtc, DateTimeOffset ExpiresAtUtc);
 public sealed record PublicEvidenceLease(string Key, Guid Token, DateTimeOffset ExpiresAtUtc);
@@ -14,5 +14,8 @@ public interface IPublicEvidenceStore
 }
 public sealed class DiscoveryPreparationRequiredException : Exception { }
 public sealed class PublicPreparationBusyException : Exception { }
-public sealed class DiscoverySourceException(string code, bool retryable) : Exception(code)
-{ public bool Retryable { get; } = retryable; }
+public sealed class DiscoverySourceException(string code, bool retryable, TimeSpan? retryAfter = null) : Exception(code)
+{
+    public bool Retryable { get; } = retryable;
+    public TimeSpan? RetryAfter { get; } = retryAfter;
+}

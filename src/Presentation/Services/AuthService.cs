@@ -1,4 +1,5 @@
 using LinerNotes.Application.Services;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.DataAccess.IdentityEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,14 +32,18 @@ public sealed class AuthService : IAuthService
         DataContext context,
         IOptions<JwtOptions> options,
         TimeProvider clock,
-        RoleManager<IdentityRole<Guid>>? roleManager = null)
+        RoleManager<IdentityRole<Guid>>? roleManager = null,
+        PreparedPasswordHasher? preparedPasswords = null)
     {
         _userManager = userManager;
         _context = context;
         _options = options.Value;
         _clock = clock;
         _roleManager = roleManager;
+        _preparedPasswords = preparedPasswords;
     }
+
+    private readonly PreparedPasswordHasher? _preparedPasswords;
 
     public async Task<Guid> RegisterAsync(string userName, string email, string password)
     {
@@ -139,14 +144,25 @@ public sealed class AuthService : IAuthService
 
     private async Task<(Guid UserId, string UserName, string Email)?> VerifyPasswordAsync(ApplicationUser user, string password)
     {
+        if (_context.Database.CurrentTransaction is not null)
+        {
+            // The outer managed-write coordinator establishes quota/ledger order first.
+            var currentId = await _context.Database.SqlQuery<Guid>($"SELECT \"Id\" AS \"Value\" FROM identity.\"Users\" WHERE \"Id\"={user.Id} FOR UPDATE")
+                .SingleOrDefaultAsync();
+            if (currentId == Guid.Empty) return null;
+            await _context.Entry(user).ReloadAsync();
+        }
         if (user.IsDeleted || await _userManager.IsLockedOutAsync(user)) return null;
+        if (_preparedPasswords is { HasAttempt: true } && !_preparedPasswords.Matches(user)) return null;
         if (!await _userManager.CheckPasswordAsync(user, password))
         {
             // Fail closed even when another request has changed the Identity concurrency stamp.
-            await _userManager.AccessFailedAsync(user);
+            if (!(await _userManager.AccessFailedAsync(user)).Succeeded)
+                throw new GenerationStoppedException("authentication_state_conflict");
             return null;
         }
-        if (!(await _userManager.ResetAccessFailedCountAsync(user)).Succeeded) return null;
+        if (!(await _userManager.ResetAccessFailedCountAsync(user)).Succeeded)
+            throw new GenerationStoppedException("authentication_state_conflict");
         return (user.Id, user.UserName ?? user.Email!, user.Email!);
     }
 

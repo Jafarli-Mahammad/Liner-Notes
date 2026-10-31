@@ -31,10 +31,10 @@ public sealed class DiscoveryInventoryServiceTests
         inventory.AcquireBatchAsync(Arg.Any<CancellationToken>()).Returns(new Lease());
         inventory.ReadStorageAsync(Arg.Any<CancellationToken>()).Returns(new GenerationStorageState(1024, "managed-v1:1:0:fixture"));
         var storage = Substitute.For<ICoordinatedGenerationStorage>();
-        storage.RefreshKnownInventoryAsync(Arg.Any<GenerationStorageState>(), Arg.Any<CancellationToken>()).Returns(_ =>
+        storage.PrepareReclamationAsync(Arg.Any<CancellationToken>()).Returns(_ =>
         {
             attempted.TrySetResult();
-            return Task.FromException(new GenerationStoppedException("unknown_storage_inventory"));
+            return Task.FromException<IStorageReclamationLease>(new GenerationStoppedException("unknown_storage_inventory"));
         });
         var resolver = Substitute.For<IRecommendationProviderResolver>();
         resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),

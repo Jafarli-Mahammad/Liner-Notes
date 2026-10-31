@@ -40,6 +40,21 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
 
     private void HandleException(ExceptionContext context)
     {
+        var databaseFailure = context.Exception is Microsoft.EntityFrameworkCore.Storage.RetryLimitExceededException
+            ? context.Exception.InnerException : context.Exception;
+        if (databaseFailure is System.Data.Common.DbException { IsTransient: true })
+        {
+            _logger.LogWarning("Database temporarily unavailable after {FailureType}.", databaseFailure.GetType().Name);
+            context.HttpContext.Response.Headers.RetryAfter = "5";
+            context.Result = new ObjectResult(new ProblemDetails
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = "The service is temporarily unavailable.",
+                Detail = "Please try again shortly."
+            }) { StatusCode = StatusCodes.Status503ServiceUnavailable };
+            context.ExceptionHandled = true;
+            return;
+        }
         var type = context.Exception.GetType();
         if (_exceptionHandlers.TryGetValue(type, out var handler))
         {
@@ -64,7 +79,9 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
 
     private static void HandleDiscoveryStopped(ExceptionContext context)
     {
-        context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = "Discovery is temporarily unavailable." }) { StatusCode = 503 };
+        string title = context.HttpContext.Request.Path.StartsWithSegments("/api/auth")
+            ? "Authentication is temporarily unavailable. Please retry." : "Discovery is temporarily unavailable.";
+        context.Result = new ObjectResult(new ProblemDetails { Status = 503, Title = title }) { StatusCode = 503 };
         context.ExceptionHandled = true;
     }
     private static void HandleDiscoveryConflict(ExceptionContext context)
@@ -178,7 +195,9 @@ public sealed class ApiExceptionFilterAttribute : ExceptionFilterAttribute
 
     private void HandleUnknownException(ExceptionContext context)
     {
-        _logger.LogError(context.Exception, "An unhandled exception occurred while processing request to {Path}", context.HttpContext.Request.Path);
+        var locations = (new System.Diagnostics.StackTrace(context.Exception, false).GetFrames() ?? []).Take(4)
+            .Select(frame => $"{frame.GetMethod()?.DeclaringType?.FullName}.{frame.GetMethod()?.Name}");
+        _logger.LogError("Unhandled {FailureType} in {CodeLocations}.", context.Exception.GetType().FullName, string.Join(" > ", locations));
 
         var details = new ProblemDetails
         {

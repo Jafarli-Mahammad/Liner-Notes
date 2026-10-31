@@ -48,6 +48,15 @@ public sealed class DiscoveryJob : BaseEntity
     }
 
     public bool IsUnfinished => State is DiscoveryJobState.Pending or DiscoveryJobState.Running or DiscoveryJobState.Retryable;
+    public bool Expire(DateTimeOffset now, TimeSpan maximumAge)
+    {
+        now = DiscoveryRules.Utc(now);
+        if (maximumAge <= TimeSpan.Zero || maximumAge > TimeSpan.FromHours(1)) throw new ArgumentOutOfRangeException(nameof(maximumAge));
+        if (!IsUnfinished || now - CreatedAtUtc < maximumAge) return false;
+        State = DiscoveryJobState.Failed; ProgressCode = "failed"; ErrorCode = "job_timeout";
+        ClearLease(now, clearPayload: true);
+        return true;
+    }
     public void AcquireLease(Guid token, DateTimeOffset now, TimeSpan duration, int maximumAttempts)
     {
         now = DiscoveryRules.Utc(now);

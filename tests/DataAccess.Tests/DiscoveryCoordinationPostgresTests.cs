@@ -23,6 +23,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests : IAsyncLifetime
         await services.DisposeAsync();
         registrations.AddSingleton(new DiscoveryRuntimeOptions { RunJobs = true });
         services = registrations.BuildServiceProvider();
+        // Enabling the durable protocol requires the same explicit establishment as deployment.
+        await ReconcileAsync();
         var userId = await WriteAsync(async (s, ct) =>
         {
             var db = s.GetRequiredService<DataContext>();

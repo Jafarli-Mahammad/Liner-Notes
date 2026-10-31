@@ -1,3 +1,4 @@
+using LinerNotes.Application.Features.Discovery;
 using System.Security.Cryptography;
 using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Discovery;
@@ -18,7 +19,9 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 256 || request.Name.Any(char.IsControl) ||
-            request.EntityId == Guid.Empty || (request.IsAlbum && request.EntityId is null))
+            request.EntityId == Guid.Empty || request.ArtistRecordingId == Guid.Empty ||
+            (request.ArtistRecordingId.HasValue && (request.EntityId.HasValue || request.IsAlbum || request.IsRecording)) ||
+            (request.IsAlbum && request.EntityId is null))
             throw new ArgumentException("invalid_seed_request");
         string key = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
@@ -27,6 +30,7 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
             request.EntityId,
             request.IsAlbum,
             request.IsRecording,
+            request.ArtistRecordingId,
             Name = request.EntityId.HasValue ? null : request.Name.Trim().ToLowerInvariant()
         })));
         string memoryKey = "seed:" + key;
@@ -38,7 +42,9 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
                 await using var scope = scopes.CreateAsyncScope();
                 var provider = scope.ServiceProvider.GetRequiredService<IRecommendationProviderResolver>().Resolve();
                 SeedTagSnapshot seed;
-                if (request.EntityId is { } id)
+                if (request.ArtistRecordingId is { } recordingHint && provider.SeedTags is IRecordingArtistSeedTagSource credited)
+                    seed = await credited.GetArtistFromRecordingAsync(recordingHint, request.Name, token);
+                else if (request.EntityId is { } id)
                 {
                     if (request.IsRecording)
                         seed = provider.SeedTags is IRecordingSeedTagSource recording
@@ -53,7 +59,8 @@ public sealed class SharedSeedPreparation(IServiceScopeFactory scopes, SharedPub
                         "canonical_seed_tags_not_supported", []);
                 }
                 else seed = await provider.SeedTags.GetAsync(request.Name, token);
-                var now = clock.GetUtcNow();
+                DiscoverySourceValidation.ThrowIfFailed(seed.Gaps);
+            var now = clock.GetUtcNow();
                 DateTimeOffset? expiry = configuration.Origin == EvidenceOrigin.Synthetic ? now.AddMinutes(10)
                     : provider.Source is IPublicEvidenceFreshness freshness ? freshness.SharedUntilUtc : null;
                 return PublicEvidenceCodec.EncodeSeed(key, provider.Id, seed, now, expiry);

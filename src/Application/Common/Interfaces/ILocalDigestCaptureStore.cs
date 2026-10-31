@@ -10,6 +10,8 @@ public interface ILocalDigestCaptureStore
 {
     Task<LocalCaptureInputs> ReadAsync(Guid userId, IsoWeek week, CancellationToken ct);
     Task<ILocalDigestCaptureTransaction> BeginAsync(Guid userId, IsoWeek week, CancellationToken ct);
+    Task<LocalCaptureInputs> ReadWithinAdmissionAsync(Guid userId, IsoWeek week, CancellationToken ct) => throw new NotSupportedException();
+    Task MarkCapturedWithinAdmissionAsync(Guid userId, IsoWeek week, CancellationToken ct) => throw new NotSupportedException();
     Task RecordFailureAsync(Guid userId, IsoWeek week, string reason, CancellationToken ct);
 }
 public interface ILocalDigestCaptureTransaction : IAsyncDisposable

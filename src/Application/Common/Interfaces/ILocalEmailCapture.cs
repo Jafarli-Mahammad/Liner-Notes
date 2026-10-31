@@ -35,3 +35,9 @@ public interface ILocalEmailCapture : IAsyncDisposable
     bool ReceiptExists { get; }
     Task PublishAsync(WeeklyDigestDto digest, SubscriberDto subscriber, GenerationStorageState database, CancellationToken ct);
 }
+
+public interface IRecoverableLocalEmailCapture : ILocalEmailCapture
+{
+    Task<LinerNotes.Application.Common.Interfaces.Discovery.ArtifactPublication?> PublishPreparedAsync(CancellationToken ct);
+    Task CompleteWithinAdmissionAsync(CancellationToken ct);
+}

@@ -15,12 +15,56 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 
 public sealed class PrepareDiscoveryBatchTests
 {
+    [Fact]
+    public async Task BoundedParallelAcquisitionPreservesEveryPickScoreAndEvidenceOrder()
+    {
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        var now = DateTimeOffset.UtcNow;
+        var pools = new[] { "ambient", "jazz", "rock", "indie", "electronic" }.ToDictionary(seed => seed, seed =>
+            new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, now, now.AddMinutes(5),
+                CatalogText.Version, [Candidate(seed, "Artist " + seed, seed)], [], 1000, new string('b', 64)));
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), false, Arg.Any<CancellationToken>())
+            .Returns(call => pools[call.Arg<DiscoveryPoolRequest>().Seed]);
+        int active = 0, peak = 0;
+        var fourStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            int count = Interlocked.Increment(ref active);
+            Assert.InRange(count, 1, 4);
+            if (count == 4) { Interlocked.Exchange(ref peak, 4); fourStarted.TrySetResult(); }
+            try { await fourStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)); return pools[call.Arg<DiscoveryPoolRequest>().Seed]; }
+            finally { Interlocked.Decrement(ref active); }
+        });
+        var store = Substitute.For<IDiscoveryBatchStore>();
+        store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()));
+        var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        var signals = pools.Keys.Select(seed => TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, seed, 1,
+            TasteSignalSource.InitialSeedManual, "Selected style.")).ToArray();
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation, store, configuration, new());
+        var batch = Guid.NewGuid();
+        var sequential = await runner.PrepareAsync(new(profile, signals, []), batch, false, default);
+        var parallel = await runner.PrepareAsync(new(profile, signals, []), batch, true, default);
+        Assert.Equal(4, peak);
+        Assert.Equal(JsonSerializer.Serialize(sequential.Picks), JsonSerializer.Serialize(parallel.Picks));
+        Assert.Equal(sequential.CoverageJson, parallel.CoverageJson);
+        Assert.Equal(sequential.EvidenceExpiry, parallel.EvidenceExpiry);
+    }
+
     [Theory]
-    [InlineData("rate_limit", true)]
-    [InlineData("transport_error", true)]
-    [InlineData("permission_denied", false)]
-    [InlineData("invalid_json", false)]
-    public async Task SourceFailuresDoNotBecomeSuccessfulEmptyBatches(string reason, bool retryable)
+    [InlineData("rate_limit", true, false)]
+    [InlineData("transport_error", true, false)]
+    [InlineData("permission_denied", false, false)]
+    [InlineData("invalid_json", false, false)]
+    [InlineData("rate_limit", true, true)]
+    [InlineData("transport_error", true, true)]
+    [InlineData("request_timeout", true, true)]
+    [InlineData("upstream_unavailable", true, true)]
+    public async Task SourceFailuresDoNotBecomeSuccessfulEmptyOrPartialBatches(string reason, bool retryable, bool hasCandidates)
     {
         var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
         var resolver = Substitute.For<IRecommendationProviderResolver>();
@@ -29,7 +73,7 @@ public sealed class PrepareDiscoveryBatchTests
         var preparation = Substitute.For<IDiscoveryPreparation>();
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(
             new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, null,
-                CatalogText.Version, [], [new("jazz", "discovery", reason)], 0, new string('b', 64)));
+                CatalogText.Version, hasCandidates ? [Candidate("Supported", "Artist", "jazz")] : [], [new("jazz", "discovery", reason)], 0, new string('b', 64)));
         var profile = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
         var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "Selected style.");
         var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation,

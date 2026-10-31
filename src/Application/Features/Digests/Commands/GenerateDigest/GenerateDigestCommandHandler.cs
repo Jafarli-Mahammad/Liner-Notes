@@ -37,12 +37,18 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                 throw new GenerationStoppedException("recording_manifest_unconfigured_or_expired");
             var inputs = await store.ReadInputsAsync(request.UserId, cancellationToken).ConfigureAwait(false);
             if (!inputs.UserExists) return new("stopped", null, [], "user_not_found");
-            await using (var preflight = await store.AcquireBatchAsync(cancellationToken).ConfigureAwait(false))
-            {
-                var measured = await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false);
-                await using var check = await storage.AcquireAsync(measured, cancellationToken).ConfigureAwait(false);
-            }
-            IReadOnlyList<BaselineAPick> picks;
+            if (runtime?.ManagedWritesEnabled == true)
+        {
+            if (admission is null) throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
+            await admission.ExecuteAsync(0, _ => Task.FromResult(true), cancellationToken);
+        }
+        else
+        {
+            await using var preflight = await store.AcquireBatchAsync(cancellationToken).ConfigureAwait(false);
+            var measured = await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false);
+            await using var check = await storage.AcquireAsync(measured, cancellationToken).ConfigureAwait(false);
+        }
+        IReadOnlyList<BaselineAPick> picks;
             DateTimeOffset? preparedExpiry = null;
             long preparedReservationBytes = 0;
             bool useShared = runtime?.RunJobs == true;
@@ -107,22 +113,28 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             long bytes = 0;
             foreach (var pick in picks)
             {
-                int length = JsonSerializer.SerializeToUtf8Bytes(pick.Breakdown).Length;
+                int length = ScoreBreakdownJson.SerializeToUtf8Bytes(pick.Breakdown).Length;
                 if (length > config.MaximumSnapshotBytes) throw new GenerationStoppedException("snapshot_limit");
                 bytes = checked(bytes + length);
             }
-            if (useShared)
+            if (useShared || runtime?.ManagedWritesEnabled == true)
             {
-                return await admission!.ExecuteAsync(preparedReservationBytes, async token =>
+                if (admission is null) throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
+                long estimate = useShared ? preparedReservationBytes : checked(bytes * 4 + 65_536);
+                return await admission.ExecuteAsync(estimate, async token =>
                 {
                     var existing = await store.GetExistingAsync(request.UserId, request.Week, token);
                     if (existing is not null) return new GenerateDigestResult("existing", existing.ToDto(), []);
                     var aliases = picks.SelectMany(p => TrackIdentity.Aliases(p.Track)).Distinct(StringComparer.Ordinal).ToArray();
-                    if ((await discoveryStore!.FindExcludedAsync(inputs.ProfileId ?? request.UserId, aliases, token)).Count > 0)
+                    if (useShared && (await discoveryStore!.FindExcludedAsync(inputs.ProfileId ?? request.UserId, aliases, token)).Count > 0)
                         throw new GenerationStoppedException("recommendation_history_changed");
                     if (preparedExpiry.HasValue && preparedExpiry <= (timeProvider ?? TimeProvider.System).GetUtcNow())
                         throw new GenerationStoppedException("prepared_evidence_expired");
+                    if (config.Origin == EvidenceOrigin.Recorded && config.RecordingExpiresAtUtc <= (timeProvider ?? TimeProvider.System).GetUtcNow())
+                        throw new GenerationStoppedException("recording_expired_before_persistence");
                     var digest = await store.PersistWithinAdmissionAsync(request.UserId, request.Week, inputs.Revision, picks, token);
+                    if (config.Origin == EvidenceOrigin.Recorded && config.RecordingExpiresAtUtc <= (timeProvider ?? TimeProvider.System).GetUtcNow())
+                        throw new GenerationStoppedException("recording_expired_before_persistence");
                     return new GenerateDigestResult("generated", digest.ToDto(), gaps.Distinct().ToArray());
                 }, cancellationToken);
             }

@@ -2,6 +2,55 @@
 
 ## Current status
 
+### Original-account discovery recovery — 2026-10-31
+
+The unchanged revision-21 profile now has locally verified new recommendation
+batches. Controlled comparisons ruled out a direct Jakuzi/Lin Pesto data failure;
+tracing found intermittent feedback-artist name-search failures and a separate
+post-scoring receipt-size rejection. Validated recording credits now preserve
+artist identity, and oversized complete receipts use bounded, checksummed lossless
+storage within the existing 100 KB record limit. Scoring, source validation and
+preferences are unchanged. The actual signed-in Playwright click generated five
+new persisted picks; a full page reload and host restart retained that batch and
+verified four covers plus one genuine unavailable fallback. All 17 persisted taste
+signals remained unchanged. See [the final investigation](FINAL_DISCOVERY_RELIABILITY.md).
+Developer confirmation and production deployment remain outstanding.
+
+### Discovery operation and artwork investigation — 2026-10-31
+
+Confirmed and corrected terminal treatment of shared provider backoff, artwork
+revalidation losing reclaimed public catalog identities, metadata timeout
+classification and visibility-triggered retries of unavailable covers. Expired
+public feed metadata is cleared while bounded identity proofs remain for fresh
+revalidation. Three exact Playwright MCP submissions produced separate persisted
+five-pick batches and replaced the displayed results. The original-input
+diagnostic request still failed after three attempts with a temporary upstream
+source error; the original operation's generic error does not identify its lost
+underlying exception. See [the investigation](DISCOVERY_RUNTIME_INVESTIGATION.md).
+Original-profile source recovery and developer confirmation remain outstanding.
+
+### Local storage startup upgrade — 2026-10-30
+
+Fixed the missing-migration abort and verified clean process exits for schema/inventory prerequisites. The local development database was backed up, upgraded and checked to preserve rows in 28 existing tables; `/health` returned HTTP 200 with provider jobs disabled. Affected suites passed 544 checks. See [the startup follow-up](STARTUP_CRASH_FIX.md). Production remains undeployed.
+
+### Discovery/performance remediation — 2026-10-29
+
+Safe discovery, artwork, cache, recovery and diagnostic corrections are implemented;
+local verification and measured limits are recorded in
+[the remediation report](DISCOVERY_PERFORMANCE_REMEDIATION.md). Exact fixed-fixture
+recommendation serialization remains unchanged. Synthetic cold/warm discovery
+timings do not demonstrate an overall speedup; a controlled saturated artwork
+queue does show lower requested-cover latency. These results are not production
+capacity or recommendation-quality validation.
+
+The developer conditionally approved bounded revalidation of previously public
+recordings and rejected non-cacheable image forwarding and recommendation
+shortcuts. The [unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md)
+includes measurements, alternatives, invariants, recovery, migration/rollback
+and acceptance tests. The developer subsequently approved storage/authentication implementation. The redesign is locally verified with 839 backend checks, 55 browser regression checks, real disposable account journeys and matched 900 MB measurements; see [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md). Production deployment and developer confirmation remain outstanding.
+Full histories/exports/archive processing and multi-host/provider limits remain
+explicit in the remediation report. Developer confirmation remains pending.
+
 Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data recommendation evaluation is not authorized. Local implementation evidence does not establish recommendation quality, external provider approval, production readiness, or developer confirmation.
 
 Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).
@@ -36,6 +85,15 @@ the UI reports that warning. No backend fix, performance-audit change, CI/Docker
 change, commit, push or deployment was made. Final developer approval remains open.
 
 ## Guest discovery
+### Discovery and artwork reliability — 2026-10-27
+
+Local fixes add ten-minute job expiry, bounded acquisition/pool overlap, independent
+completed-result recovery, prioritized public-artwork scheduling and a separately
+bounded persistent cover cache. Candidate selection, score weights and supporting
+evidence requirements are preserved. Quality-affecting shortcuts are deferred in
+[the fix report](DISCOVERY_AND_ARTWORK_FIXES.md), with verification and remaining
+provider/storage limits. Developer confirmation and production acceptance remain pending.
+
 ### Album artwork — 2026-10-26
 ListenBrainz recording metadata now resolves release and release-group covers
 through Cover Art Archive. A separate background lane warms public recommendations;

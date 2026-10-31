@@ -12,7 +12,9 @@ public sealed class PersistentDiscoveryPreparation(SharedDiscoveryPreparation me
 
     public async Task<PreparedDiscoveryPool> GetAsync(DiscoveryPoolRequest request, bool allowAcquisition, CancellationToken ct)
     {
+        using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.public_pool");
         var hit = memory.TryGet(request);
+        LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.CacheRead("prepared.memory", hit is not null);
         if (hit is not null) return hit;
         var document = await evidence.GetAsync(memory.KeyFor(request), PublicEvidenceKind.Pool,
             PublicEvidenceCodec.PoolVersion, allowAcquisition,

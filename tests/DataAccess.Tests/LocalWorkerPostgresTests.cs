@@ -134,7 +134,7 @@ await using (var diagnostics = services.CreateAsyncScope())
             Assert.Contains(p.ScoreBreakdown.Snapshot.Evidence.CandidateTags,t=>t.Response.Provider=="ListenBrainz" && t.EntityIdentity!=null);
         });
         var export=await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.5",export.ExportVersion);Assert.Equal(userId,export.Account!.Id);Assert.Equal("complete",export.LocalEmail!.Status);
+        Assert.Equal("2.6",export.ExportVersion);Assert.Equal(userId,export.Account!.Id);Assert.Equal("complete",export.LocalEmail!.Status);
         var copy=Assert.Single(export.LocalEmail.Copies);Assert.Contains("capability-removed",copy.PlainText);
         Assert.Contains("ListenBrainz",copy.PlainText);Assert.DoesNotContain("Last.fm",copy.PlainText);
         output.WriteLine($"Actual synthetic Worker MIME={bytes.Length} bytes; picks={export.Digests.Single().Recommendations.Count}; copy plaintext={copy.PlainText.Length} chars; HTML={copy.Html.Length} chars");

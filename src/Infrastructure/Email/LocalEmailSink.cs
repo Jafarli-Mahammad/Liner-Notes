@@ -12,9 +12,11 @@ public interface ILocalEmailBodyWriter
     Task WriteAsync(Stream stream, ReadOnlyMemory<byte> bytes, CancellationToken ct);
 }
 
-public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageOptions storageOptions,
+public sealed partial class LocalEmailSink(LocalEmailOptions options, GenerationStorageOptions storageOptions,
     ILocalEmailStorage storage, IDigestEmailRenderer renderer, LocalEmailMessageSerializer serializer,
-    ILocalEmailBodyWriter? writer = null) : ILocalEmailSink
+    ILocalEmailBodyWriter? writer = null,
+    LinerNotes.Application.Features.Discovery.DiscoveryRuntimeOptions? runtime = null,
+    LinerNotes.Application.Common.Interfaces.Discovery.IRecoverableArtifactPublisher? publisher = null) : ILocalEmailSink
 {
     /// <summary>Prepares an encrypted local capture or validates an existing receipt, acquiring a storage lease that the caller must dispose.</summary>
     /// <remarks><paramref name="database"/> supplies storage measurements for inventory validation and new-file reservation. Configuration, file access, protection, and cancellation errors propagate. Publication occurs separately through the returned capture.</remarks>
@@ -22,6 +24,7 @@ public sealed class LocalEmailSink(LocalEmailOptions options, GenerationStorageO
     public async Task<ILocalEmailCapture> OpenAsync(WeeklyDigestDto digest, SubscriberDto subscriber,
         GenerationStorageState database, CancellationToken ct)
     {
+        if (runtime?.ManagedWritesEnabled == true) return await OpenManagedAsync(digest, subscriber, ct);
         string root = LocalEmailPaths.Root(options, storageOptions);
         string final = Path.Combine(root, digest.Id.ToString("N") + ".eml.enc");
         if (File.Exists(Path.Combine(root, digest.Id.ToString("N") + ".eml")))

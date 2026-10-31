@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using LinerNotes.Application.Common.Interfaces.Discovery;
+using LinerNotes.Application.Common.Interfaces.Recommendation;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LinerNotes.Presentation.Tests;
 
@@ -118,6 +122,18 @@ public sealed class ManualTestEnvironmentTests
             foreach (var setting in settings)
                 builder.UseSetting(setting.Key, setting.Value);
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
+            // These tests exercise HTTP routing and cache headers without a database.
+            // Real initialized-witness startup and downgrade checks have PostgreSQL coverage.
+            builder.ConfigureServices(services => services.Replace(
+            ServiceDescriptor.Scoped<IManagedStorageCommitStore, UninitializedCommitStore>()));
         }
+    }
+    private sealed class UninitializedCommitStore : IManagedStorageCommitStore
+    {
+        public Task<ManagedStorageCommit?> ReadAsync(CancellationToken ct) => Task.FromResult<ManagedStorageCommit?>(null);
+        public Task<ManagedStorageCommit> RecordAsync(Guid id, StoragePublicationPlan plan, string fingerprint, CancellationToken ct)
+        => throw new InvalidOperationException("HTTP fixture must not mutate managed storage.");
+        public Task<GenerationStorageState> EstablishAsync(Guid id, StoragePublicationPlan plan, CancellationToken ct)
+        => throw new InvalidOperationException("HTTP fixture must not establish managed storage.");
     }
 }

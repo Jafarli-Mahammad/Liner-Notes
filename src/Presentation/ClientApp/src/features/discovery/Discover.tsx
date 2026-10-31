@@ -56,20 +56,45 @@ export default function Discover() {
       try {
         const response = await apiResponse(`/api/discovery/jobs/${encodeURIComponent(job.id)}`, { signal: controller.signal });
         const status: Job = await response.json(); if (controller.signal.aborted) return; setJob(status);
-        if (unfinished(status)) schedule(Math.max(Date.now() + 2000, retryDeadline(response.headers.get('Retry-After')) ?? 0));
-        else { await reloadRef.current(); if (status.state !== 'Completed') setError(new Error(status.state === 'Cancelled' ? 'Your taste changed and that request was cancelled. You can request more discoveries when ready.' : 'The music source could not complete that request. Your saved picks are still here.')); }
-      } catch (e) { if (isAbort(e)) return; setError(e); schedule(Math.max(Date.now() + 5000, e instanceof ApiError ? e.retryAt ?? 0 : 0)); }
+        if (unfinished(status)) schedule(Math.max(Date.now() + 1000, retryDeadline(response.headers.get('Retry-After')) ?? 0));
+        else if (status.state !== 'Completed') setError(new Error(status.errorCode === 'job_timeout'
+          ? 'The music source took too long. Your saved picks are safe. You can request discoveries again.'
+          : status.errorCode === 'snapshot_limit' ? 'This request could not be saved within the discovery limits. Your taste and saved picks are unchanged.'
+          : status.state === 'Cancelled' ? 'Your taste changed and that request was cancelled. You can request more discoveries when ready.'
+            : 'The music source could not complete that request. Your saved picks are still here.'));
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setError(e);
+        if (e instanceof ApiError && [401, 403, 404].includes(e.status)) { setJob(null); return; }
+        schedule(Math.max(Date.now() + 5000, e instanceof ApiError ? e.retryAt ?? 0 : 0));
+      }
     };
-    schedule(Date.now() + 2000);
+    schedule(Date.now() + 1000);
     return () => { controller.abort(); clearTimeout(timer); };
   }, [active, job?.id]);
+  useEffect(() => {
+    if (batchId || !job || unfinished(job)) return;
+    let cancelled = false, timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const refresh = async () => {
+      try { await reloadRef.current(); if (!cancelled && job.state === 'Completed') setError(null); }
+      catch (e) {
+        if (cancelled || isAbort(e)) return;
+        setError(e);
+        if (++attempts < 4 && !(e instanceof ApiError && [401, 403, 404].includes(e.status)))
+          timer = setTimeout(refresh, Math.max(attempts * 2000, e instanceof ApiError ? (e.retryAt ?? 0) - Date.now() : 0));
+      }
+    };
+    void refresh();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [batchId, job?.id, job?.state, readVersion]);
   const hasTaste = !!(page?.favorites.length || page?.tags.length || page?.onboarding?.allStyles);
   const disabled = personal.busy || active || next > now || retryDelay > 0;
   async function generate() { setError(null); try { setJob(await personal.generate()); } catch (e) { setError(e); } }
   async function refreshSaved() { try { await personal.reload(); setError(null); setReadVersion(value => value + 1); } catch (e) { setError(e); } }
   function saved(pick: Pick) { setBatch(value => value ? { ...value, picks: value.picks.map(p => p.id === pick.id ? pick : p) } : value); }
   const first = batch?.picks[0];
-  const progress: Record<string, string> = { queued: 'Your discoveries are queued.', waiting_for_music: 'Getting music for your taste…', preparing: 'Finding and checking your picks…', persisting: 'Saving your discoveries…', retrying: 'The music source needs a moment. Your request is still queued.' };
+  const progress: Record<string, string> = { queued: 'Your discoveries are queued.', waiting_for_music: 'Getting music for your taste…', preparing: 'Finding and checking your picks…', persisting: 'Saving your discoveries…', waiting_to_retry: 'The music source needs a moment. Your request will retry automatically.' };
   return <main id="main-content" className="page-container personal-main discover-main" tabIndex={-1}>
     {batchId && <Link className="back-link" to="/history">← Discovery history</Link>}
     <section className="discovery-hero">

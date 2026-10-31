@@ -5,11 +5,100 @@ using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 using Microsoft.Extensions.Caching.Memory;
 using Xunit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class ListenBrainzTransportTests
 {
+    [Fact]
+    public async Task RegisteredClientAllowsSlowRadioResponseWithoutRestartingAcquisition()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Generation:Provider"] = "listenbrainz", ["Generation:Origin"] = "Synthetic",
+            ["ListenBrainz:Mode"] = "LiveOnly", ["ListenBrainz:LiveUseApproved"] = "true"
+        }).Build();
+        var registrations = new ServiceCollection().AddLogging().AddInfrastructure(configuration);
+        registrations.AddSingleton<IMetaBrainzRequestGate>(new Gate());
+        bool completed = false;
+        int dispatches = 0;
+        registrations.AddHttpClient<ListenBrainzApiClient>().ConfigurePrimaryHttpMessageHandler(() => new AsyncHandler(async (_, ct) =>
+        {
+            Interlocked.Increment(ref dispatches);
+            await Task.Delay(TimeSpan.FromSeconds(16), ct);
+            completed = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        }));
+        await using var services = registrations.BuildServiceProvider();
+        var response = await services.GetRequiredService<ListenBrainzApiClient>()
+            .SendAsync(new(ListenBrainzRequestKind.TagRadio, "slow-radio"));
+        Assert.Empty(response.Gaps);
+        Assert.True(completed);
+        Assert.Equal(1, dispatches);
+    }
+
+    [Theory]
+    [InlineData("public, max-age=60", 1)]
+    [InlineData("no-store", 8)]
+    [InlineData("no-cache", 8)]
+    [InlineData("private", 8)]
+    public async Task OverlappingRequestsShareOnlyRetainableResponses(string policy, int expectedRequests)
+    {
+        using var caches = new LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches(new());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using var http = new HttpClient(new AsyncHandler(async (_, ct) =>
+        {
+            Interlocked.Increment(ref requests); started.TrySetResult(); await release.Task.WaitAsync(ct);
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+            response.Headers.CacheControl = System.Net.Http.Headers.CacheControlHeaderValue.Parse(policy);
+            return response;
+        }));
+        var options = new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, MaximumRequests = 1 };
+        var clients = Enumerable.Range(0, 8).Select(_ => new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches)).ToArray();
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "coalesced-fixture");
+        var pending = clients.Select(client => client.SendAsync(request)).ToArray();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        release.TrySetResult();
+        var responses = await Task.WhenAll(pending).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(expectedRequests, requests);
+        Assert.All(responses, response => Assert.Empty(response.Gaps));
+        if (expectedRequests == 1) Assert.All(responses, response => Assert.Same(responses[0], response));
+    }
+
+    [Fact]
+    public async Task CancelledOwnerDoesNotCancelIndependentWaiterOrConsumeItsBudget()
+    {
+        using var caches = new LinerNotes.Infrastructure.Caching.DiscoveryMemoryCaches(new());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using var http = new HttpClient(new AsyncHandler(async (_, ct) =>
+        {
+            if (Interlocked.Increment(ref requests) == 1)
+            { started.TrySetResult(); await Task.Delay(Timeout.Infinite, ct); }
+            return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        }));
+        var options = new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true, MaximumRequests = 1 };
+        var owner = new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches);
+        var waiter = new ListenBrainzApiClient(http, options, new Gate(), caches.Metadata, TimeProvider.System, caches);
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.TagRadio, "cancelled-owner-fixture");
+        using var stop = new CancellationTokenSource();
+        var first = owner.SendAsync(request, stop.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = waiter.SendAsync(request); stop.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.Empty((await second.WaitAsync(TimeSpan.FromSeconds(5))).Gaps);
+        Assert.Equal(2, requests);
+    }
+
+    private sealed class AsyncHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => respond(request, ct);
+    }
+
     [Fact]
     public async Task CacheFilledDuringPacingAvoidsDispatchAndDoesNotConsumeRequestBudget()
     {
@@ -208,7 +297,9 @@ public sealed class ListenBrainzTransportTests
             await second.WaitAsync("ListenBrainz", default);
             Assert.True(started.Elapsed >= TimeSpan.FromSeconds(1));
             await first.DeferAsync("ListenBrainz", TimeSpan.FromMinutes(2), default);
-            await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException>(() => second.WaitAsync("ListenBrainz", default));
+            var deferred = await Assert.ThrowsAsync<LinerNotes.Application.Common.Interfaces.Discovery.DiscoverySourceException>(() => second.WaitAsync("ListenBrainz", default));
+            Assert.True(deferred.Retryable);
+            Assert.InRange(deferred.RetryAfter!.Value.TotalSeconds, 115, 120);
             await second.WaitAsync("MusicBrainz", default); // Separate upstream budget.
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }

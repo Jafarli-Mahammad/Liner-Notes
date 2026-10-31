@@ -100,6 +100,11 @@ public static class DependencyInjection
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<DataContext>()
         .AddDefaultTokenProviders();
+        services.AddScoped<PasswordHasher<ApplicationUser>>();
+        services.AddScoped<PreparedPasswordHasher>();
+        services.AddScoped<IPasswordHasher<ApplicationUser>>(sp => sp.GetRequiredService<PreparedPasswordHasher>());
+        services.AddSingleton<PasswordVerificationGate>();
+        services.AddScoped<PasswordVerificationPreparation>();
 
         // 4. JWT Bearer Authentication & Authorization
         services.AddAuthentication(options =>

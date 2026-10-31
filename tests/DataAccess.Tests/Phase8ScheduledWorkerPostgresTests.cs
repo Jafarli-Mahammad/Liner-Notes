@@ -26,7 +26,7 @@ using Xunit;
 
 namespace LinerNotes.DataAccess.Tests;
 
-public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
+public sealed partial class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
 {
     private readonly string _name = "liner_phase8_schedule_" + Guid.NewGuid().ToString("N");
     private readonly string _root = Path.Combine(Path.GetTempPath(), "liner-phase8-schedule-" + Guid.NewGuid().ToString("N"));
@@ -385,7 +385,7 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         await CaptureAfterExplicitReconciliationAsync();
         await using var scope = _services.CreateAsyncScope(); var sp = scope.ServiceProvider; var db = sp.GetRequiredService<DataContext>();
         var export = await sp.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(_user));
-        Assert.Equal("2.5", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
+        Assert.Equal("2.6", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
         Assert.Equal(_due.AddDays(7), export.Subscriber.NextDigestAt);
         var digest = Assert.Single(export.Digests); Assert.Equal(WeeklySchedulePolicy.Week(_due).Value, digest.Week);
         Assert.NotEmpty(digest.Recommendations); Assert.All(digest.Recommendations, pick => Assert.NotNull(pick.ScoreBreakdown.Snapshot));
@@ -491,6 +491,11 @@ public sealed class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         info.Environment["Generation__Origin"] = "Synthetic";
         info.Environment["LocalEmail__Enabled"] = "true"; info.Environment["LocalEmail__ApplicationOrigin"] = _email.ApplicationOrigin;
         info.Environment["LocalEmail__SinkRoot"] = _email.SinkRoot;
+        if (_managedCapture)
+        {
+            info.Environment["DiscoveryRuntime__EnforceStorageAdmission"] = "true";
+            info.Environment["DiscoveryStorage__FilesystemPaths__0"] = _root;
+        }
         info.Environment["GenerationStorage__InventoryPath"] = _storage.InventoryPath;
         info.Environment["GenerationStorage__LeasePath"] = _storage.LeasePath;
         info.Environment["GenerationStorage__DatabaseOverheadBytesPerPick"] = "1000000";

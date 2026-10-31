@@ -23,6 +23,7 @@ public sealed class DiscoveryMemoryCaches : IDisposable
     public MemoryCache LastFm { get; }
     public MemoryCache Metadata { get; }
     public MemoryCache Prepared { get; }
+    internal BoundedKeyedGate MetadataRequests { get; } = new(32);
     public long MaximumBytes { get; }
     public DiscoveryMemoryCaches(DiscoveryCacheOptions options)
     {
@@ -39,5 +40,5 @@ public sealed class DiscoveryMemoryCaches : IDisposable
         if (serializedBytes < 0) throw new ArgumentOutOfRangeException(nameof(serializedBytes));
         return checked(serializedBytes * 4 + Encoding.UTF8.GetByteCount(key) * 2L + 1024);
     }
-    public void Dispose() { LastFm.Dispose(); Metadata.Dispose(); Prepared.Dispose(); }
+    public void Dispose() { MetadataRequests.Dispose(); LastFm.Dispose(); Metadata.Dispose(); Prepared.Dispose(); }
 }

@@ -14,6 +14,28 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class DiscoveryTasteTests
 {
     [Fact]
+    public async Task PositiveFeedbackPreservesRecordingIdentityAndResolvedArtistEvidence()
+    {
+        var profile = Guid.NewGuid(); var recording = Guid.NewGuid(); var artist = Guid.NewGuid();
+        var signal = TasteSignal.ForProfile(profile, null, TasteTargetType.Artist, "Uncommon credited artist", 0.8,
+            TasteSignalSource.RecommendationLike, "Effective positive feedback");
+        DiscoverySeedRequest? requested = null;
+        var seeds = Substitute.For<IDiscoverySeedPreparation>();
+        seeds.GetAsync(Arg.Any<DiscoverySeedRequest>(), true, Arg.Any<CancellationToken>()).Returns(call => {
+            requested = call.Arg<DiscoverySeedRequest>();
+            return Task.FromResult(Snapshot(signal.TargetValue, true) with { CanonicalArtistId = artist });
+        });
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", null!, null!, Substitute.For<ISeedTagSource>()));
+        var builder = new MaterializeDiscoveryTaste(resolver, new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic }, new(), TimeProvider.System, seeds);
+        var result = await builder.BuildAsync([signal], true, default, feedbackRecordings: new Dictionary<Guid, Guid> { [signal.Id] = recording });
+        Assert.Equal(recording, requested!.ArtistRecordingId);
+        Assert.Equal(artist, Assert.Single(result.Artists).Id);
+        Assert.Equal("artist:" + artist.ToString("D"), Assert.Single(result.Seeds).EntityIdentity);
+        Assert.Equal(0.8, result.Vector["jazz"], 10);
+    }
+
+    [Fact]
     public async Task PreviouslyQueuedV1RequestKeysReplayAfterOnboardingUpgrade()
     {
         var profile = LinerNotes.Domain.Discovery.ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));

@@ -1,6 +1,6 @@
 # Production foundations for v0.5.0 beta
 
-Date: 2026-11-01. Status: proposed written design, awaiting developer review.
+Date: 2026-11-01. Status: approved by the developer on 2026-11-01; implementation-plan approval remains separate.
 Baseline: Prism at `6425d52`. This document is not implementation evidence.
 
 ## Goal and agreed constraints

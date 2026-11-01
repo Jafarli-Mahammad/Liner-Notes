@@ -1,5 +1,8 @@
 {
     admin off
+    servers {
+        strict_sni_host on
+    }
 }
 
 {$LINER_SITE} {

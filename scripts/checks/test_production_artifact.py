@@ -39,6 +39,11 @@ class ProductionArtifactTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate(self.root)
 
+    def test_font_referenced_by_css_must_exist(self):
+        (self.root/'home-assets/app.css').write_text('@font-face{src:url(/home-assets/missing.woff2)}')
+        with self.assertRaisesRegex(ValueError,'missing_release_asset'):
+            validate(self.root)
+
 
 if __name__ == '__main__':
     unittest.main()

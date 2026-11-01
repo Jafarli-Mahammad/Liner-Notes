@@ -4,6 +4,7 @@ import argparse
 from hashlib import sha256
 from html.parser import HTMLParser
 import json
+import re
 from pathlib import Path
 import subprocess
 import tarfile
@@ -36,7 +37,12 @@ def validate(root):
     if not any(urlsplit(p).path.endswith('.js') for p in parser.assets) or not any(
             urlsplit(p).path.endswith('.css') for p in parser.assets):
         raise ValueError('release_requires_script_and_stylesheet')
-    for reference in parser.assets:
+    pending=list(dict.fromkeys(parser.assets))
+    checked=[]
+    while pending:
+        reference=pending.pop()
+        if reference in checked: continue
+        checked.append(reference)
         url = urlsplit(reference)
         path = unquote(url.path)
         if url.scheme or url.netloc or not path.startswith('/home-assets/') or '..' in path.split('/'):
@@ -46,11 +52,13 @@ def validate(root):
             raise ValueError('missing_release_asset')
         if target.read_bytes().lstrip().lower().startswith((b'<!doctype html', b'<html')):
             raise ValueError('html_instead_of_asset')
+        if target.suffix in ['.js','.css']:
+            pending.extend(re.findall(r'''["'(](/home-assets/[^"'()\s]+)''',target.read_text()))
     for name in LICENSES:
         target = root / 'home-assets/licenses' / name
         if not target.is_file() or not target.stat().st_size:
             raise ValueError('missing_license')
-    return parser.assets
+    return checked
 
 
 def verify_http(root, origin):
@@ -91,7 +99,7 @@ def main():
             source.mkdir()
             with tarfile.open(archive) as contents:
                 contents.extractall(source, filter='data')
-            subprocess.run(['docker', 'build', '--target', 'web', '-t', args.tag, str(source)], check=True)
+            subprocess.run(['docker', 'build', '--target', 'web', '--build-arg','LINER_SOURCE_TREE='+tree,'-t', args.tag, str(source)], check=True)
         args.image = args.tag
         print(json.dumps({'sourceTree': tree, 'imageId': subprocess.check_output(
             ['docker', 'image', 'inspect', args.image, '--format', '{{.Id}}'], text=True).strip()}))

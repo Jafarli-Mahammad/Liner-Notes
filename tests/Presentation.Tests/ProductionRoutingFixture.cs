@@ -24,7 +24,7 @@ internal static class ProductionRoutingFixture
         {
             // These routing fixtures have no initialized storage/database. Never disable this in a release image.
             foreach (var registration in services.Where(s => s.ServiceType == typeof(IHostedService) &&
-                s.ImplementationType?.Name is "StorageProtocolStartup" or "StorageRecoveryService").ToArray())
+                s.ImplementationType?.Name is "StorageProtocolStartup" or "StorageRecoveryService" or "OperationalHealth").ToArray())
                 services.Remove(registration);
             services.AddSingleton<IHostedService>(_ => new StateLifetime(root));
         });

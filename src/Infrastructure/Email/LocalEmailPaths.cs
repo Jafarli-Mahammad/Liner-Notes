@@ -15,7 +15,21 @@ internal static class LocalEmailPaths
     public static string Root(LocalEmailOptions email, GenerationStorageOptions storage)
     {
         email.Validate();
-        string root = email.SinkRoot ?? "";
+        return ValidateRoot(email.SinkRoot ?? "", storage);
+    }
+
+    // Erasure remains available when delivery is disabled. Every configured copy
+    // root retains the same accounting, ownership, permissions and link checks.
+    public static IReadOnlyList<string> CleanupRoots(LocalEmailOptions email, GenerationStorageOptions storage)
+    {
+        if (email.Enabled) return [Root(email, storage)];
+        if (!storage.ArtifactRoots.TryGetValue("copies", out var roots) || roots.Length == 0)
+            throw new GenerationStoppedException("email_sink_unconfigured");
+        return roots.Select(root => ValidateRoot(root, storage)).Distinct(StringComparer.Ordinal).ToArray();
+    }
+
+    private static string ValidateRoot(string root, GenerationStorageOptions storage)
+    {
         if (!Path.IsPathFullyQualified(root) || !Directory.Exists(root)) throw new GenerationStoppedException("email_sink_unconfigured");
         root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
         if (!storage.ArtifactRoots.TryGetValue("copies", out var copies) || !copies.Any(c => Path.TrimEndingDirectorySeparator(Path.GetFullPath(c)) == root))

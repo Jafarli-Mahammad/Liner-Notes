@@ -55,6 +55,7 @@ public sealed class ProductionConfigurationTests
     [InlineData("ForwardedHeaders:KnownProxies:0", "not-an-address")]
     [InlineData("LocalLive:Enabled", "true")]
     [InlineData("LocalEmail:Enabled", "true")]
+    [InlineData("Generation:LiveEnabled", "invalid-boolean")]
     [InlineData("FORWARDEDHEADERS_ENABLED", "true")]
     [InlineData("Generation:Origin", "Synthetic")]
     [InlineData("Generation:LiveEnabled", "false")]

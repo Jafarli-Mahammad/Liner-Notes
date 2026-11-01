@@ -8,16 +8,17 @@ namespace LinerNotes.DataAccess.Persistence.Repositories;
 
 /// <summary>Serialize only admission and mutation. This scope must never enclose acquisition.</summary>
 public sealed class DiscoveryWriteCoordinator(DataContext db, IUnitOfWork unit,
-    IDigestGenerationStore inventory, ICoordinatedGenerationStorage storage, IManagedStorageCommitStore? commits = null) : IDiscoveryWriteCoordinator
+    IDigestGenerationStore inventory, ICoordinatedGenerationStorage storage, IManagedStorageCommitStore? commits = null,
+    LinerNotes.Application.Common.Diagnostics.OperationalStatus? status = null) : IDiscoveryWriteCoordinator
 {
     private bool active;
     private long outerEstimate;
     public Task<T> ReclaimAsync<T>(Func<CancellationToken, Task<T>> delete, CancellationToken ct)
-        => ReclaimCoreAsync(delete, null, ct);
+        => ObserveAsync(()=>ReclaimCoreAsync(delete, null, ct));
     public Task<T> RemoveArtifactAsync<T>(ArtifactPublication operation, Func<CancellationToken, Task<T>> delete, CancellationToken ct)
-        => ReclaimCoreAsync(delete, operation, ct);
+        => ObserveAsync(()=>ReclaimCoreAsync(delete, operation, ct));
     public Task<T> RemoveArtifactsAsync<T>(IReadOnlyList<ArtifactPublication> operations, Func<CancellationToken, Task<T>> delete, CancellationToken ct)
-        => ReclaimCoreAsync(delete, null, ct, operations);
+        => ObserveAsync(()=>ReclaimCoreAsync(delete, null, ct, operations));
     private async Task<T> ReclaimCoreAsync<T>(Func<CancellationToken, Task<T>> delete, ArtifactPublication? removed, CancellationToken ct,
         IReadOnlyList<ArtifactPublication>? removedBatch = null)
     {
@@ -69,10 +70,26 @@ public sealed class DiscoveryWriteCoordinator(DataContext db, IUnitOfWork unit,
         return result;
     }
     public Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct)
-        => ExecuteCoreAsync(estimatedBytes, write, null, ct);
+        => ObserveAsync(()=>ExecuteCoreAsync(estimatedBytes, write, null, ct));
     public Task<T> PublishArtifactAsync<T>(ArtifactPublication operation, long estimatedBytes,
         Func<CancellationToken, Task<T>> write, CancellationToken ct)
-        => ExecuteCoreAsync(estimatedBytes, write, operation, ct);
+        => ObserveAsync(()=>ExecuteCoreAsync(estimatedBytes, write, operation, ct));
+    private async Task<T> ObserveAsync<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            var result=await operation();
+            status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Storage,true);
+            return result;
+        }
+        catch(GenerationStoppedException error) when(error.Message.StartsWith("storage_",StringComparison.Ordinal) ||
+            error.Message.StartsWith("artifact_",StringComparison.Ordinal) || error.Message.StartsWith("managed_",StringComparison.Ordinal) ||
+            error.Message.StartsWith("database_inventory_",StringComparison.Ordinal) || error.Message.StartsWith("filesystem_",StringComparison.Ordinal))
+        {
+            status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Storage,false,error.Message);
+            throw;
+        }
+    }
     private async Task<T> ExecuteCoreAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write,
         ArtifactPublication? publication, CancellationToken ct)
     {

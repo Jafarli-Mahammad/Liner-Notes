@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import ipaddress
 from pathlib import Path
 import subprocess
 
@@ -12,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 def resolve(acceptance=False):
     env = dict(os.environ, LINER_SITE='music.example.test', LINER_PRIVATE_DIR='/private/liner-check',
                LINER_PROVIDER_USE_APPROVED='false', LINER_WEB_IMAGE='fixture-web', LINER_WORKER_IMAGE='fixture-worker',
-               LINER_TOOLS_IMAGE='fixture-tools', LINER_VOLUME_IMAGE='fixture-init', LINER_ACCEPTANCE_PORT='8443')
+               LINER_TOOLS_IMAGE='fixture-tools', LINER_VOLUME_IMAGE='fixture-init', LINER_ACCEPTANCE_PORT='8443',
+               LINER_FRONTEND_SUBNET='172.30.85.0/28',LINER_PROXY_IP='172.30.85.2',LINER_WEB_IP='172.30.85.3')
     args = ['docker', 'compose', '-f', str(ROOT / 'deploy/compose.production.yaml')]
     if acceptance:
         args += ['-f', str(ROOT / 'deploy/compose.acceptance.yaml')]
@@ -41,9 +43,18 @@ def validate(config, acceptance=False):
             raise ValueError('unsafe_production_writes')
         if not service.get('read_only') or service.get('cap_drop') != ['ALL']:
             raise ValueError('runtime_hardening_missing')
+        if service.get('tmpfs') != ['/tmp:rw,noexec,nosuid,size=64m']:
+            raise ValueError('runtime_temporary_mount_invalid')
         if any(key.startswith(('Jwt__', 'ConnectionStrings__')) for key in settings):
             raise ValueError('secrets_in_expanded_environment')
     ports = services['proxy']['ports']
+    proxy=services['proxy']['networks']['frontend']['ipv4_address']
+    web=services['web']['networks']['frontend']['ipv4_address']
+    network=ipaddress.ip_network(config['networks']['frontend']['ipam']['config'][0]['subnet'])
+    if proxy==web or any(ipaddress.ip_address(ip) not in network for ip in [proxy,web]):
+        raise ValueError('proxy_and_web_addresses_must_be_distinct')
+    if services['web']['environment']['ForwardedHeaders__KnownProxies__0']!=proxy:
+        raise ValueError('proxy_trust_does_not_match_topology')
     if acceptance:
         if len(ports) != 1 or ports[0].get('host_ip') != '127.0.0.1':
             raise ValueError('acceptance_not_loopback_only')

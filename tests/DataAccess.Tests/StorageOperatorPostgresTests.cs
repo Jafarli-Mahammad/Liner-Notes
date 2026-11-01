@@ -5,6 +5,7 @@ using LinerNotes.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Npgsql;
 
 namespace LinerNotes.DataAccess.Tests;
 
@@ -83,5 +84,32 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         Assert.Equal("established",(await StorageOperator.ExecuteAsync(sp,"change-storage-policy",config)).Status);
         Assert.Equal("verified",(await StorageOperator.ExecuteAsync(sp,"verify-storage",config)).Status);
         Assert.Equal(profile.Id,(await sp.GetRequiredService<IGuestProfileStore>().FindGuestAsync(new string('e',64),DateTimeOffset.UtcNow,default))!.Id);
+    }
+
+    [LocalPostgresMigrationFact]
+    public async Task OnlyVerifiedRestoreRebindsPhysicalIdentityWithMatchingPortableSchema()
+    {
+        await EnableDurableProtocolAsync();
+        await using var scope=services.CreateAsyncScope();
+        var sp=scope.ServiceProvider;
+        var configuration=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["writers-stopped"]="true" }).Build();
+        var source=await StorageOperator.ExecuteAsync(sp,"verify-storage",configuration);
+        var expected=Path.Combine(root,"restore-proof.json");
+        await File.WriteAllTextAsync(expected,System.Text.Json.JsonSerializer.Serialize(new StorageRestoreManifest(source.Inventory!,source.SchemaFingerprint!)));
+        await using var owner=new NpgsqlConnection(connection); await owner.OpenAsync();
+        string index,definition;
+        await using(var query=new NpgsqlCommand("SELECT quote_ident(indexname),indexdef FROM pg_indexes WHERE tablename='ListenerProfiles' AND indexname NOT LIKE 'PK_%' LIMIT 1",owner))
+        await using(var reader=await query.ExecuteReaderAsync())
+        {
+            Assert.True(await reader.ReadAsync()); index=reader.GetString(0); definition=reader.GetString(1);
+        }
+        await using(var replace=new NpgsqlCommand("DROP INDEX public."+index+"; "+definition,owner)) await replace.ExecuteNonQueryAsync();
+        Assert.Equal(source.SchemaFingerprint,await sp.GetRequiredService<IManagedStorageIntegrity>().ReadPortableSchemaFingerprintAsync(default));
+        var refused=await Assert.ThrowsAsync<GenerationStoppedException>(()=>StorageOperator.ExecuteAsync(sp,"verify-storage",configuration));
+        Assert.Equal("database_inventory_changed",refused.Message);
+        var restoreConfig=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>
+            { ["writers-stopped"]="true",["StorageOperator:ExpectedInventoryFile"]=expected }).Build();
+        Assert.Equal("established",(await StorageOperator.ExecuteAsync(sp,"restore-storage",restoreConfig)).Status);
+        Assert.NotNull(await GuestAsync('d'));
     }
 }

@@ -7,7 +7,7 @@ x-runtime: &runtime
   GuestDiscovery__Enabled: "true"
   GuestDiscovery__PublicOrigin: https://${LINER_SITE:?Set the public hostname}
   AllowedHosts: ${LINER_SITE:?Set the public hostname}
-  ForwardedHeaders__KnownProxies__0: 172.30.85.2
+  ForwardedHeaders__KnownProxies__0: ${LINER_PROXY_IP:-172.30.85.2}
   Generation__Provider: listenbrainz
   Generation__Origin: Live
   Generation__LiveEnabled: "true"
@@ -46,7 +46,7 @@ services:
       - proxy-data:/data
       - proxy-config:/config
     networks:
-      frontend: {ipv4_address: 172.30.85.2}
+      frontend: {ipv4_address: "${LINER_PROXY_IP:-172.30.85.2}"}
     restart: unless-stopped
     mem_limit: 128m
     cpus: 0.5
@@ -70,7 +70,7 @@ services:
     cpus: 1
     command: [postgres, -c, shared_buffers=64MB, -c, work_mem=4MB, -c, max_connections=30]
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U liner_operator -d liner_notes"]
+      test: [CMD-SHELL, 'PGPASSWORD="$$(cat /run/secrets/application-password)" psql -X -h 127.0.0.1 -U liner_app -d liner_notes -Atqc "SELECT 1" >/dev/null']
       interval: 10s
       timeout: 5s
       retries: 12
@@ -91,14 +91,16 @@ services:
     environment: *runtime
     secrets: [runtime-settings.json]
     volumes: [local-state:/app/local-state, keys:/app/keys]
-    networks: [frontend, backend]
+    networks:
+      frontend: {ipv4_address: "${LINER_WEB_IP:-172.30.85.3}"}
+      backend: {}
     depends_on:
       db: {condition: service_healthy}
     restart: unless-stopped
     mem_limit: 768m
     cpus: 1
     read_only: true
-    tmpfs: [/tmp:rw,noexec,nosuid,size=64m]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     logging: *logging
@@ -114,7 +116,7 @@ services:
     mem_limit: 768m
     cpus: 1
     read_only: true
-    tmpfs: [/tmp:rw,noexec,nosuid,size=64m]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     logging: *logging
@@ -138,7 +140,7 @@ services:
 networks:
   frontend:
     ipam:
-      config: [{subnet: 172.30.85.0/28}]
+      config: [{subnet: "${LINER_FRONTEND_SUBNET:-172.30.85.0/28}"}]
   backend: {}
 
 volumes:

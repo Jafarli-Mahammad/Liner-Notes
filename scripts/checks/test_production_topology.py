@@ -24,6 +24,17 @@ class ProductionTopologyTests(unittest.TestCase):
         config['services']['web']['environment']['Generation__Origin'] = 'Synthetic'
         with self.assertRaisesRegex(ValueError, 'development_runtime_in_production'):
             validate(config)
+
+    def test_split_tmpfs_options_are_rejected(self):
+        config = copy.deepcopy(self.config)
+        config['services']['web']['tmpfs'] = ['/tmp:rw','noexec','nosuid','size=64m']
+        with self.assertRaisesRegex(ValueError,'runtime_temporary_mount_invalid'):
+            validate(config)
+
+    def test_web_cannot_take_reserved_proxy_address(self):
+        config=copy.deepcopy(self.config)
+        config['services']['web']['networks']['frontend']['ipv4_address']=config['services']['proxy']['networks']['frontend']['ipv4_address']
+        with self.assertRaisesRegex(ValueError,'proxy_and_web_addresses_must_be_distinct'): validate(config)
         config = copy.deepcopy(self.config)
         config['services']['db'].pop('mem_limit')
         with self.assertRaisesRegex(ValueError, 'service_resources_unbounded'):

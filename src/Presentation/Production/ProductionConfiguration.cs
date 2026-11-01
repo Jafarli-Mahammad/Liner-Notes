@@ -7,9 +7,9 @@ public static class ProductionConfiguration
 {
     public static void Validate(IConfiguration configuration)
     {
-        if (configuration.GetValue<bool>("ForwardedHeaders_Enabled") || configuration.GetValue<bool>("FORWARDEDHEADERS_ENABLED"))
+        if (Flag(configuration,"ForwardedHeaders_Enabled") || Flag(configuration,"FORWARDEDHEADERS_ENABLED"))
             throw new InvalidOperationException("production_unrestricted_forwarding_forbidden");
-        if (configuration.GetValue<bool>("LocalLive:Enabled") || configuration.GetValue<bool>("LocalEmail:Enabled"))
+        if (Flag(configuration,"LocalLive:Enabled") || Flag(configuration,"LocalEmail:Enabled"))
             throw new InvalidOperationException("production_local_services_forbidden");
         var origin = configuration["GuestDiscovery:PublicOrigin"];
         if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
@@ -23,13 +23,16 @@ public static class ProductionConfiguration
                 ip.Equals(IPAddress.Any) || ip.Equals(IPAddress.IPv6Any)))
             throw new InvalidOperationException("production_explicit_proxy_required");
         if (configuration["Generation:Provider"] != "listenbrainz" || configuration["Generation:Origin"] != "Live" ||
-            !configuration.GetValue<bool>("Generation:LiveEnabled") || configuration["ListenBrainz:Mode"] != "LiveOnly" ||
-            !configuration.GetValue<bool>("ListenBrainz:LiveUseApproved"))
+            !Flag(configuration,"Generation:LiveEnabled") || configuration["ListenBrainz:Mode"] != "LiveOnly" ||
+            !Flag(configuration,"ListenBrainz:LiveUseApproved"))
             throw new InvalidOperationException("production_live_provider_configuration_required");
-        if (!configuration.GetValue<bool>("DiscoveryRuntime:EnforceStorageAdmission"))
+        if (!Flag(configuration,"DiscoveryRuntime:EnforceStorageAdmission"))
             throw new InvalidOperationException("production_storage_admission_required");
         foreach (var key in new[] { "GenerationStorage:InventoryPath", "GenerationStorage:LeasePath", "DataProtection:KeyPath" })
             if (!Path.IsPathFullyQualified(configuration[key] ?? ""))
                 throw new InvalidOperationException("production_absolute_state_paths_required");
     }
+
+    private static bool Flag(IConfiguration configuration,string key) => configuration[key] is not { } value ? false :
+        bool.TryParse(value,out var enabled) ? enabled : throw new InvalidOperationException("production_setting_invalid");
 }

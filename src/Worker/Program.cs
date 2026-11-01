@@ -19,7 +19,7 @@ if (builder.Configuration["Production:ConfigurationFile"] is { } configurationFi
     if (!Path.IsPathFullyQualified(configurationFile)) throw new ArgumentException("absolute_operator_configuration_required");
     builder.Configuration.AddJsonFile(configurationFile,optional:false,reloadOnChange:false);
 }
-if (builder.Configuration["action"] is "verify-storage" or "establish-storage" or "change-storage-policy" or "restore-storage")
+if (builder.Configuration["action"] is "verify-storage" or "establish-storage" or "change-storage-policy" or "restore-storage" or "schema-fingerprint" or "migration-status")
 {
     var action = builder.Configuration["action"]!;
     builder.Logging.ClearProviders();
@@ -33,14 +33,17 @@ if (builder.Configuration["action"] is "verify-storage" or "establish-storage" o
     return 0;
 }
     bool scheduled=builder.Configuration["action"]=="schedule";
+var production = builder.Environment.IsProduction() ? ProductionWorkerOptions.Parse(builder.Configuration) : null;
+if(production is not null) builder.Logging.ClearProviders();
     var options=scheduled?null:LocalWorkerOptions.Parse(builder.Configuration);
     var scheduleOptions=scheduled?LocalScheduleOptions.Parse(builder.Configuration,args):null;
     if (scheduled && builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
         throw new ArgumentException("synthetic_schedule_requires_jobs_disabled_use_storage_admission");
     if(scheduled) builder.Logging.ClearProviders(); // Scheduled CLI emits only its bounded result JSON.
-    if(!builder.Environment.IsDevelopment()) throw new ArgumentException("development_worker_required");
+if(!builder.Environment.IsDevelopment() && production is null) throw new ArgumentException("development_worker_required");
     var connection=new NpgsqlConnectionStringBuilder(builder.Configuration["ConnectionStrings:DefaultConnection"]);
-    if(connection.Host is not ("127.0.0.1" or "::1" or "localhost")) throw new ArgumentException("loopback_database_required");
+if(production is null && connection.Host is not ("127.0.0.1" or "::1" or "localhost")) throw new ArgumentException("loopback_database_required");
+if(production is not null) builder.Configuration["DiscoveryRuntime:RunJobs"]="true";
     builder.Configuration["Generation:Origin"]=scheduled?"Synthetic":options!.Origin.ToString();
     builder.Services.AddApplication().AddDataAccess(builder.Configuration).AddInfrastructure(builder.Configuration);
     builder.Services.AddSingleton<LocalDigestWorkerRunner>();
@@ -52,10 +55,11 @@ if (builder.Configuration["action"] is "verify-storage" or "establish-storage" o
     }
     using var host=builder.Build();
     using var cancellation=new CancellationTokenSource();
+if(production is not null) cancellation.CancelAfter(production.Timeout);
     Console.CancelKeyPress+=(_,e)=>{e.Cancel=true;cancellation.Cancel();};
     if(scheduled)
     {
-        host.Services.GetRequiredService<LocalEmailOptions>().Validate();
+    if (production is null) host.Services.GetRequiredService<LocalEmailOptions>().Validate();
         host.Services.GetRequiredService<LinerNotes.Application.Common.Models.Recommendation.GenerationConfiguration>().Scoring();
         var runState=host.Services.GetRequiredService<LocalScheduleRunState>();
         await host.RunAsync(cancellation.Token);
@@ -63,7 +67,10 @@ if (builder.Configuration["action"] is "verify-storage" or "establish-storage" o
         Console.WriteLine(JsonSerializer.Serialize(scheduledResult));
         return scheduledResult.Status=="cancelled"?130:scheduledResult.Status=="completed"?0:2;
     }
-    var result=await host.Services.GetRequiredService<LocalDigestWorkerRunner>().RunAsync(options!,cancellation.Token);
+if(production is not null) await host.StartAsync(cancellation.Token);
+LocalWorkerResult result;
+try { result=await host.Services.GetRequiredService<LocalDigestWorkerRunner>().RunAsync(options!,cancellation.Token); }
+finally { if(production is not null) await host.StopAsync(CancellationToken.None); }
     Console.WriteLine(JsonSerializer.Serialize(result));
     return result.Status=="stopped"?2:0;
 }

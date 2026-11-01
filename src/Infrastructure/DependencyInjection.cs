@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<GenerationConfiguration>>().Value);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<GenerationStorageOptions>>().Value);
         services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddSingleton<LinerNotes.Application.Common.Diagnostics.OperationalStatus>();
         services.AddScoped<BatchTagCachingLastFmClient>(sp =>
         {
             var generation = sp.GetRequiredService<GenerationConfiguration>();

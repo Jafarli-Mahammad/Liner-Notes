@@ -15,11 +15,11 @@ public sealed class UnsubscribeRouteTests
 {
     [Theory]
     [InlineData("Development", false)]
-    [InlineData("Production", true)]
+    [InlineData("Production", false)]
     public async Task DisabledOrProduction_Returns404(string env, bool enabled)
     {
         await using var app = new App(env, enabled);
-        using var client = app.CreateClient(new() { AllowAutoRedirect = false });
+        using var client = app.CreateClient(new() { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         foreach (var method in new[] { HttpMethod.Get, HttpMethod.Post })
         {
             using var request = new HttpRequestMessage(method, "/api/digests/unsubscribe?token=valid");
@@ -51,6 +51,7 @@ public sealed class UnsubscribeRouteTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(env);
+            if (env == "Production") ProductionRoutingFixture.Configure(builder);
             builder.UseSetting("LocalEmail:Enabled", enabled.ToString());
             builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=127.0.0.1;Database=unused;Username=unused;Password=unused");
             builder.UseSetting("Jwt:SecretKey", "unsubscribe-route-tests-only-12345678901234567890");

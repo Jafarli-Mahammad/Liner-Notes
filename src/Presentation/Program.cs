@@ -57,6 +57,8 @@ builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
 builder.Services.AddPresentation(builder.Configuration);
+if (builder.Environment.IsProduction())
+    builder.Services.AddHostedService<LinerNotes.Presentation.Production.OperationalHealth>();
 // Installed only on the terminal public-static branch below, including HTTPS.
 builder.Services.AddResponseCompression(options =>
 {
@@ -146,7 +148,9 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
-    app.UseHttpsRedirection();
+    // Private health/diagnostic probes carry no credentials; the public proxy still serves HTTPS.
+    app.UseWhen(context => !context.Request.Path.StartsWithSegments("/health") &&
+        !context.Request.Path.StartsWithSegments("/ops"), branch => branch.UseHttpsRedirection());
 }
 
 app.Use(async (context, next) =>
@@ -159,7 +163,8 @@ app.Use(async (context, next) =>
         context.Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
             "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
-    if (context.Request.Path.StartsWithSegments("/api"))
+    if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/ops") ||
+        context.Request.Path.StartsWithSegments("/health"))
         context.Response.Headers.CacheControl = "no-store";
     await next();
 });
@@ -190,6 +195,14 @@ app.MapControllers();
 if (app.Environment.IsDevelopment())
     app.MapManualTestEndpoints();
 app.MapHealthChecks("/health");
+app.MapGet("/health/live",()=>Results.Json(new { status="live" }));
+app.MapGet("/health/ready",(LinerNotes.Application.Common.Diagnostics.OperationalStatus status) =>
+    LinerNotes.Presentation.Production.OperationalHealth.Ready(status.Snapshot())
+        ? Results.Json(new { status="ready" }) : Results.Json(new { status="unavailable" },statusCode:503));
+app.MapGet("/ops/status",(HttpContext context,LinerNotes.Application.Common.Diagnostics.OperationalStatus status,IConfiguration configuration) =>
+    context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address)
+        ? Results.Json(new { components=status.Snapshot().ToDictionary(p=>p.Key.ToString(),p=>p.Value),queue=status.Queue,
+            jobsEnabled=configuration.GetValue<bool>("DiscoveryRuntime:RunJobs") }) : Results.NotFound());
 
 // Guest-first discovery SPA fallback
 app.MapFallbackToFile("index.html", staticFileOptions);

@@ -2,6 +2,19 @@
 
 ## Current status
 
+### Production beta engineering — 2026-11-01
+
+The production design and sequential implementation plan are approved. Clean-tree
+React image packaging is committed and locally verified. Production configuration
+guards, persistent default key storage, private/resource-bounded Compose topology
+and separate database-role coverage are implemented: 45 targeted host/security
+tests, one restricted-role PostgreSQL test and three topology tests passed; the
+pinned Caddy configuration validated. Storage-policy/operator work, consistent
+backup/restore automation and integrated final-image acceptance remain in progress.
+No production deployment, push or release publication has occurred. See
+[the engineering evidence](docs/operations/production-beta-evidence.md) and
+[the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).
+
 ### Frontend refinement — 2026-11-01
 
 Shared service buttons now cover all four platforms on featured, compact and Home

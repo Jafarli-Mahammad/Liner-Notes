@@ -50,6 +50,7 @@ public sealed class Phase9SwaggerTests
                     ["LastFm:Mode"] = "FixtureOnly",
                     ["Generation:Origin"] = "Synthetic"
                 }));
+            if (environment == "Production") ProductionRoutingFixture.Configure(builder);
         }
     }
 }

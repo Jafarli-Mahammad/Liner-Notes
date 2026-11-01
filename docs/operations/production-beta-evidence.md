@@ -16,3 +16,12 @@ Local checks on 2026-11-01:
 - The same image ran in a disposable loopback container with provider jobs disabled and no database use. `production_artifact.py --image ... --url ...` fetched HTML and both assets and compared their SHA-256 hashes to the image contents; all passed. This was packaging verification under Development, not Production acceptance.
 
 Production topology, recovery and live-provider acceptance remain separate plan tasks; packaging alone does not establish readiness.
+
+## Production host and topology
+
+- 45 targeted Presentation tests passed with a disposable PostgreSQL fixture, including Production settings, transport/authentication/CSRF, hidden development routes and file-backed key decryption after service-provider restart.
+- The restricted-role PostgreSQL test passed: guarded guest creation and full managed-accounting verification succeed with DML privileges; schema creation is rejected. This reuses the existing DataAccess coordination fixture rather than duplicating database setup in Presentation tests.
+- Three topology tests passed against resolved Compose JSON: only proxy ports are public, acceptance is loopback-only, runtime containers are hardened, and services have resource/log limits. The configuration is not a provisioning or host-firewall test.
+- Production routing-only WebApplicationFactory fixtures explicitly replace storage startup; real startup, witness and role coverage remain separate PostgreSQL tests. No runtime fixture/synthetic bypass was added.
+- Caddy 2.11.7 and restic 0.19.1 were verified against their official GitHub latest-release metadata on 2026-11-01. Caddy's official Alpine image is pinned by manifest digest. Actual TLS and final-image browser checks are later acceptance tasks.
+- The pinned Caddy container accepted `deploy/Caddyfile` with `caddy validate`. No public certificate was requested and no public service was started.

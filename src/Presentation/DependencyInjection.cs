@@ -11,6 +11,7 @@ using LinerNotes.Presentation.Options;
 using LinerNotes.Presentation.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -68,6 +69,8 @@ public static class DependencyInjection
 
         // 2. Core Presentation Services
         services.AddHttpContextAccessor();
+        if (string.Equals(configuration["Environment"], "Production", StringComparison.OrdinalIgnoreCase))
+            services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(configuration["DataProtection:KeyPath"]!));
         services.Configure<LinerNotes.Presentation.Discovery.GuestDiscoveryOptions>(configuration.GetSection("GuestDiscovery"));
         services.AddScoped<LinerNotes.Presentation.Discovery.IListenerContext, LinerNotes.Presentation.Discovery.ListenerContext>();
         services.AddAntiforgery(options =>

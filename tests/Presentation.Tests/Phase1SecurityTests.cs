@@ -395,6 +395,7 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
                 services.AddSingleton(clock);
                 if (interceptor is not null) services.AddDbContext<DataContext>(options => options.AddInterceptors(interceptor));
             });
+            if (environment == "Production") ProductionRoutingFixture.Configure(builder);
         }
     }
 }

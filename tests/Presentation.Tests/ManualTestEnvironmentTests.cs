@@ -126,6 +126,7 @@ public sealed class ManualTestEnvironmentTests
             // Real initialized-witness startup and downgrade checks have PostgreSQL coverage.
             builder.ConfigureServices(services => services.Replace(
             ServiceDescriptor.Scoped<IManagedStorageCommitStore, UninitializedCommitStore>()));
+            if (environment == "Production") ProductionRoutingFixture.Configure(builder);
         }
     }
     private sealed class UninitializedCommitStore : IManagedStorageCommitStore

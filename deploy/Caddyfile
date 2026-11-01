@@ -1,0 +1,10 @@
+{
+    admin off
+}
+
+{$LINER_SITE} {
+    {$LINER_TLS_CONFIG}
+    @private path /ops/* /manual-test* /api/dev/* /swagger*
+    respond @private 404
+    reverse_proxy web:8080
+}

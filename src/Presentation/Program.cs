@@ -14,6 +14,15 @@ using Microsoft.Extensions.Hosting;
 try
 {
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsProduction())
+{
+    if (builder.Configuration["Production:ConfigurationFile"] is { } configurationFile)
+    {
+        if (!Path.IsPathFullyQualified(configurationFile)) throw new InvalidOperationException("production_absolute_configuration_path_required");
+        builder.Configuration.AddJsonFile(configurationFile, optional: false, reloadOnChange: false);
+    }
+    LinerNotes.Presentation.Production.ProductionConfiguration.Validate(builder.Configuration);
+}
 
 if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
 {
@@ -191,6 +200,11 @@ catch (GenerationStoppedException error)
 {
     Console.Error.WriteLine($"Managed storage startup stopped: {error.Message}.");
     Console.Error.WriteLine("Keep writers stopped. Back up the database and managed files, apply pending migrations, and verify/establish the storage inventory before restarting. See STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md.");
+    Environment.ExitCode = 2;
+}
+catch (InvalidOperationException error) when (error.Message.StartsWith("production_", StringComparison.Ordinal))
+{
+    Console.Error.WriteLine($"Production startup stopped: {error.Message}.");
     Environment.ExitCode = 2;
 }
 

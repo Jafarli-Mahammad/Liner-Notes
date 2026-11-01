@@ -39,12 +39,12 @@ ENTRYPOINT ["dotnet", "run", "--file", "/src/scripts/phase7_local_email.cs", "--
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.12@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
-RUN mkdir -p /app/local-state && chown "$APP_UID:$APP_UID" /app/local-state && chmod 700 /app/local-state
+RUN mkdir -p /app/local-state /app/keys && chown "$APP_UID:$APP_UID" /app/local-state /app/keys && chmod 700 /app/local-state /app/keys
 
 # Root is used only to initialize this dedicated local volume.
 FROM runtime AS volume-init
 USER root
-ENTRYPOINT ["sh", "-c", "set -eu; for category in copies recordings cache reports backups partials; do mkdir -p /app/local-state/$category; chown $APP_UID:$APP_UID /app/local-state/$category; chmod 700 /app/local-state/$category; done; chown $APP_UID:$APP_UID /app/local-state; chmod 700 /app/local-state"]
+ENTRYPOINT ["sh", "-c", "set -eu; for category in copies recordings cache reports backups partials upstream-pacing; do mkdir -p /app/local-state/$category; chown $APP_UID:$APP_UID /app/local-state/$category; chmod 700 /app/local-state/$category; done; mkdir -p /app/keys; chown $APP_UID:$APP_UID /app/local-state /app/keys; chmod 700 /app/local-state /app/keys"]
 
 FROM runtime AS worker
 COPY --from=build /out/worker/ ./

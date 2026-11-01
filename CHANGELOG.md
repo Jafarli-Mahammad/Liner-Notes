@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Add guarded Production configuration, persistent authentication keys and a private, resource-bounded VPS topology with separate application and migration database roles.
 - Build the React frontend and bundled license notices inside the release image; verify release assets from tracked Git inputs in CI.
 - Refine page, search, feedback and artwork loading with delayed placeholders,
   decoded-cover reveals, bounded stalled-request recovery and reduced-motion support.

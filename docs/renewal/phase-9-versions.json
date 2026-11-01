@@ -21,68 +21,84 @@
       "license_source": "https://raw.githubusercontent.com/jbogard/MediatR/v12.5.0/LICENSE"
     },
     "Microsoft.AspNetCore.Authentication.JwtBearer": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.authentication.jwtbearer/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.authentication.jwtbearer/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.dataprotection.entityframeworkcore/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.dataprotection.entityframeworkcore/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.identity.entityframeworkcore/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.identity.entityframeworkcore/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.AspNetCore.Mvc.Testing": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.mvc.testing/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.aspnetcore.mvc.testing/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.EntityFrameworkCore": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.EntityFrameworkCore.Design": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.design/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.design/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.EntityFrameworkCore.InMemory": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.inmemory/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.inmemory/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.EntityFrameworkCore.Relational": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.relational/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.entityframeworkcore.relational/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Caching.Memory": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.caching.memory/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.caching.memory/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Configuration.Abstractions": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.abstractions/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.abstractions/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Configuration.EnvironmentVariables": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.environmentvariables/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.environmentvariables/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Configuration.UserSecrets": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.usersecrets/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.usersecrets/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.DependencyInjection.Abstractions": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencyinjection.abstractions/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencyinjection.abstractions/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.diagnostics.healthchecks.entityframeworkcore/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.diagnostics.healthchecks.entityframeworkcore/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Hosting": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.hosting/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.hosting/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Extensions.Http": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.http/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.http/index.json",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.NET.Test.Sdk": {
       "version": "18.10.1",
@@ -101,13 +117,14 @@
       "source": "https://api.nuget.org/v3-flatcontainer/system.identitymodel.tokens.jwt/index.json"
     },
     "System.Security.Cryptography.Xml": {
-      "version": "10.0.13",
-      "checked_on": "2026-10-19",
+      "version": "10.0.14",
+      "checked_on": "2026-11-01",
       "source": "https://api.nuget.org/v3-flatcontainer/system.security.cryptography.xml/index.json"
     },
     "dotnet-ef": {
-      "version": "10.0.12",
-      "source": "https://api.nuget.org/v3-flatcontainer/dotnet-ef/index.json"
+      "version": "10.0.14",
+      "source": "https://api.nuget.org/v3-flatcontainer/dotnet-ef/index.json",
+      "checked_on": "2026-11-01"
     },
     "xunit": {
       "version": "2.9.3",
@@ -163,39 +180,46 @@
       "scope": "transitive pin"
     },
     "System.CodeDom": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.codedom/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition.AttributedModel": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition.attributedmodel/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition.Convention": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition.convention/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition.Hosting": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition.hosting/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition.Runtime": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition.runtime/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "System.Composition.TypedParts": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.composition.typedparts/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "Castle.Core": {
       "version": "5.2.1",
@@ -203,14 +227,16 @@
       "scope": "transitive pin"
     },
     "System.Diagnostics.EventLog": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/system.diagnostics.eventlog/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.Bcl.Cryptography": {
-      "version": "10.0.12",
+      "version": "10.0.14",
       "source": "https://api.nuget.org/v3-flatcontainer/microsoft.bcl.cryptography/index.json",
-      "scope": "transitive pin"
+      "scope": "transitive pin",
+      "checked_on": "2026-11-01"
     },
     "Microsoft.IdentityModel.Protocols": {
       "version": "8.23.0",
@@ -262,8 +288,8 @@
       "scope": "transitive pin"
     }
   },
-  "sdk": "10.0.401",
-  "runtime": "10.0.12",
+  "sdk": "10.0.403",
+  "runtime": "10.0.14",
   "sdk_source": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json",
   "actions": {
     "checkout": {
@@ -279,12 +305,19 @@
   },
   "images": {
     "sdk": {
-      "version": "10.0.401",
-      "digest": "sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317"
+      "version": "10.0.403",
+      "digest": "sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b",
+      "checked_on": "2026-11-01",
+      "security_packages": {
+        "libbrotli1": "1.1.0-2ubuntu0.1"
+      },
+      "apt_snapshot": "20261101T000000Z",
+      "security_source": "https://ubuntu.com/security/CVE-2026-111497"
     },
     "aspnet": {
-      "version": "10.0.12",
-      "digest": "sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4"
+      "version": "10.0.14",
+      "digest": "sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee",
+      "checked_on": "2026-11-01"
     },
     "postgres": {
       "version": "18.6-alpine",
@@ -299,5 +332,6 @@
     "finding": "Swashbuckle10.3.0 with OpenApi3.10.2 gives MissingMethodException in get_Content and HTTP500; developer chose investigating replacement rather than pinning2.7.5.",
     "candidate": "MIT-licensed NSwag.AspNetCore14.7.1",
     "status": "Verified NSwag document generation, bearer security and Production hiding; full suite472 passed."
-  }
+  },
+  "framework_security_review": "2026-11-01; stable .NET 10.0.14 / SDK 10.0.403; other entries retain their original review date"
 }

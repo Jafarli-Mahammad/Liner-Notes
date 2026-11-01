@@ -164,7 +164,7 @@ Disk pressure first pauses optional refresh/imports and evicts only eligible pub
 
 ## 11. Verification and implementation stages
 
-This is a substantial backend change across eight stages. The [written execution plan](../plans/2026-10-16-guest-discovery.md) refines this into ten focused implementation commits, separating additive schema from ownership cutover and storage coordination from runner activation. Each stage must leave a runnable, verifiable state. The catalog measurement stage determines final scope estimates; no delivery date or production-capacity claim is justified yet.
+This is a substantial backend change across eight stages. The written execution plan (historical record in Git) refines this into ten focused implementation commits, separating additive schema from ownership cutover and storage coordination from runner activation. Each stage must leave a runnable, verifiable state. The catalog measurement stage determines final scope estimates; no delivery date or production-capacity claim is justified yet.
 
 | Stage | Deliverable | Required verification |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ Each authorized implementation stage ends with relevant verification and a focus
 
 ## 12. Review and remaining decisions
 
-The developer approved the design, guest lifetime, cooldown and [written execution plan](../plans/2026-10-16-guest-discovery.md), selecting sequential execution. Actual progress belongs in the [evidence ledger](../../renewal/guest-discovery-evidence.md). This approval does not bypass source-specific live acquisition gates.
+The developer approved the design, guest lifetime, cooldown and written execution plan (historical record in Git), selecting sequential execution. Actual progress belongs in the [evidence ledger](../../renewal/guest-discovery-evidence.md). This approval does not bypass source-specific live acquisition gates.
 
 Engineering questions to resolve in stage 1 rather than guessing now:
 

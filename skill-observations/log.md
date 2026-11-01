@@ -414,3 +414,11 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Adding whole-batch workers improved a small backlog but made a larger saturated backlog worse; batch ownership hid available per-item capacity. Separate end-to-end measurements also showed that a faster component did not make the complete workflow faster.
 **Suggested improvement:** Test demand arriving while preparation is active and after handoff, saturate every worker, retain maintenance fairness and verify unchanged completed work/request limits. Compare end-to-end distributions separately from component latency. Record environment failures separately and rerun all assertions through supported configuration.
 **Principle:** Preserve priority through every queue stage and limit each performance claim to the workload actually measured.
+
+### Observation 037: Check generated-output producers before removing captures
+**Status:** OPEN
+**Date:** 2026-11-01
+**Skill:** ponytail
+**Type:** open-source
+**Issue:** Historical design captures can still be referenced by screenshot tests and one-off comparison scripts.
+**Suggested improvement:** Check both consumers and output producers before deleting artifacts; direct maintained tests to ignored output directories and remove completed comparison scripts with their inputs.

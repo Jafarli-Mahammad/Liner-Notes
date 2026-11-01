@@ -44,7 +44,7 @@ for (const width of [390, 768, 1440]) {
     expect(requests.filter(req => !req.url.startsWith(new URL(page.url()).origin))).toEqual([]);
     expect(requests.filter(req => /discovery\/session|api\/catalog/.test(req.url))).toEqual([]);
     expect(errors).toEqual([]);
-    await page.screenshot({ path: `../../../design/superdesign/home-checkpoint/live-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `test-results/screenshots/live-${width}.png`, fullPage: true });
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(axe.violations).toEqual([]);
   });
@@ -81,7 +81,7 @@ test('keyboard skip link and mobile disclosure close/restore focus', async ({ pa
   await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused();
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden();
   await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.screenshot({ path: '../../../design/superdesign/home-checkpoint/mobile-menu-test.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/screenshots/mobile-menu-test.png', fullPage: true });
   await page.setViewportSize({ width: 768, height: 1000 });
   await expect(page.locator('.menu-toggle')).toHaveAttribute('aria-expanded', 'false');
   await page.setViewportSize({ width: 390, height: 1000 });
@@ -96,7 +96,7 @@ test('loading geometry and empty response remain honest', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Loading recent recommendations…');
   await expect(page.locator('.skeleton-card')).toHaveCount(4);
   await expect(page.locator('.skeleton-card').first()).toHaveCSS('opacity', '1');
-  await page.screenshot({ path: '../../../design/superdesign/home-checkpoint/loading-test.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/screenshots/loading-test.png', fullPage: true });
   resolve();
   await expect(page.getByRole('heading', { name: 'No public recommendations yet' })).toBeVisible();
   await expect(page.locator('.music-card')).toHaveCount(0);
@@ -114,7 +114,7 @@ for (const kind of ['network', '503', '404', 'html', 'invalid']) {
     });
     await page.goto('/');
     await expect(page.getByRole('alert')).toBeVisible();
-    if (kind === '503') await page.screenshot({ path: '../../../design/superdesign/home-checkpoint/error-test.png', fullPage: true });
+    if (kind === '503') await page.screenshot({ path: 'test-results/screenshots/error-test.png', fullPage: true });
     await expect(page.locator('.music-card')).toHaveCount(0);
     retry = true;
     await page.getByRole('button', { name: 'Try again', exact: true }).click();

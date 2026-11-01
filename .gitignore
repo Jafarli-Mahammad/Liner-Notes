@@ -47,3 +47,6 @@ src/Presentation/ClientApp/playwright-report/
 src/Presentation/wwwroot/home-assets/
 src/Presentation/wwwroot/home-preview/
 /dist/nebula/
+
+# Local design captures and review output
+/design/

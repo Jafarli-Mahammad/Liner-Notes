@@ -72,5 +72,5 @@ does real catalog lookup, discovery, registration, login, export and deletion.
 Its result records partial cleanup responses as partial; it does not claim
 filesystem cleanup that the backend did not confirm.
 
-The [frontend review](../../../design/superdesign/frontend-review/REVIEW.md)
+The frontend review (historical record in Git)
 contains screenshots, review scope and known limitations.

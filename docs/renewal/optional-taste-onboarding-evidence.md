@@ -2,7 +2,7 @@
 
 The developer authorized implementation on 2026-10-19, starting from local commit
 `63a3789`. This supersedes the design's earlier documentation-only gates. The
-[execution plan](../superpowers/plans/2026-10-19-optional-taste-onboarding.md)
+execution plan (historical record in Git)
 records the concrete policy choices. Developer confirmation, live coverage,
 recommendation quality and deployment readiness remain unverified.
 

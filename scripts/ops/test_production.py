@@ -111,7 +111,7 @@ class BackupManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ops.OperationStopped,'unsafe_maintenance_requires_recovery'): operation.resume()
 
     def test_unverified_image_set_is_refused_before_backup(self):
-        operation=object.__new__(ops.Operations)
+        operation=object.__new__(ops.Operations); operation.state=self.root
         operation.run=lambda *a,**kw:json.dumps([{'Config':{'Labels':{'org.opencontainers.image.revision':'unknown'}}}]).encode()
         operation.backup=lambda **kw:self.fail('unverified images must not stop the application')
         with self.assertRaisesRegex(ops.OperationStopped,'release_images_must_share_verified_source_tree'):

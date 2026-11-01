@@ -64,11 +64,14 @@ sequenceDiagram
 | [`src/Presentation`](src/Presentation) | ASP.NET Core host, API controllers, authentication and the React app served from `wwwroot`. |
 | [`src/Worker`](src/Worker) | A second host for explicit generation, reconciliation, capture and scheduling operations. |
 | [`tests`](tests) | Domain, Application, DataAccess, Infrastructure and Presentation checks. |
-| [`scripts`](scripts) | Local setup, offline replay and evaluation, and operational helpers. |
+| [`scripts`](scripts) | Local setup, offline replay and evaluation, and operational helpers; production tooling lives in `scripts/ops`. |
+| [`deploy`](deploy) | Production and acceptance Compose files, database initialization, Caddy and systemd templates. |
+| [`diagnostics`](diagnostics) | Reusable coverage, profiling, memory and storage measurement tools. |
 | [`docs`](docs) | Product contracts, setup runbooks, evidence and design records. |
 
 The solution targets **.NET 10**. The SDK is pinned in [`global.json`](global.json);
 package versions are centrally managed in [`Directory.Packages.props`](Directory.Packages.props).
+Local .NET tools are pinned in [`.config/dotnet-tools.json`](.config/dotnet-tools.json).
 Check those files and project references before changing dependencies.
 
 ## How the layers connect
@@ -113,6 +116,8 @@ the provider can change without rewriting product workflows.
 | Feedback | [`RecordRecommendationFeedbackCommandHandler`](src/Application/Features/Digests/Commands/RecordFeedback/RecordRecommendationFeedbackCommandHandler.cs) |
 | Scoring | [`BaselineAScorer`](src/Domain/Scoring/BaselineAScorer.cs) and [`tests/Domain.Tests`](tests/Domain.Tests) |
 | Export and account deletion | [`ExportController`](src/Presentation/Controllers/ExportController.cs), [`SubscribersController`](src/Presentation/Controllers/SubscribersController.cs) and their Application handlers |
+| Guest and account discovery | [`DiscoveryController`](src/Presentation/Discovery/DiscoveryController.cs), [`GuestController`](src/Presentation/Discovery/GuestController.cs) and [`TasteOnboardingController`](src/Presentation/Discovery/TasteOnboardingController.cs) |
+| Catalog lookup and artwork | [`CatalogController`](src/Presentation/Discovery/CatalogController.cs) and [`ArtworkController`](src/Presentation/Discovery/ArtworkController.cs) |
 | Browser app | [`src/Presentation/ClientApp`](src/Presentation/ClientApp/README.md) |
 
 For a stored digest, the controller sends a query through MediatR; the handler
@@ -197,9 +202,20 @@ path, not recommendation quality or email delivery.
 Install the SDK version in `global.json`. To restore and build the solution:
 
 ```bash
-dotnet restore 'Liner Notes.sln'
+dotnet tool restore
+dotnet restore 'Liner Notes.sln' --locked-mode
 dotnet build 'Liner Notes.sln' --no-restore
 ```
+
+Build the frontend before starting the host from a fresh checkout. From
+`src/Presentation/ClientApp`, use Node 22.22.0 or later and run:
+
+```bash
+npm ci
+npm run build:local
+```
+
+This publishes the built frontend and license notices into the host's `wwwroot`.
 
 To run the actual site with live provider data, follow the
 [local website runbook](docs/renewal/local-live-run.md). It covers PostgreSQL,
@@ -210,7 +226,7 @@ short version, after setup, is:
 bash scripts/run_live.sh
 ```
 
-The site opens at `http://localhost:5080/`. The live profile uses ListenBrainz
+The site is served at `http://localhost:5080/`. The live profile uses ListenBrainz
 and MusicBrainz; it does not fall back to synthetic recommendations if live
 configuration fails. Do not share this database with synthetic or manual-QA
 runs.
@@ -246,7 +262,8 @@ verification.
 
 ## API entry points
 
-Routes are declared by controllers and use `/api/[controller]`. In Development,
+API routes are declared by controllers; discovery and catalog controllers use
+explicit route prefixes. In Development,
 Swagger is available at `/swagger`.
 
 | Route | Purpose |
@@ -258,10 +275,33 @@ Swagger is available at `/swagger`.
 | `GET /api/digests/latest` | Read the latest saved digest |
 | `POST /api/digests/recommendations/{id}/feedback` | Save feedback for a recommendation |
 | `GET /api/export/my-data` | Export the current user's data |
-| `GET /health` | Check host health |
+| `GET`, `POST /api/discovery/session` | Bootstrap the listener context or start a guest session |
+| `GET /api/discovery/session/data`, `DELETE /api/discovery/session` | Export or delete guest data |
+| `GET /api/discovery/session/import-preview`, `POST /api/discovery/session/import` | Preview or explicitly import guest taste into an account |
+| `GET /api/discovery`, `PUT /api/discovery/onboarding` | Read discovery state or save taste selections |
+| `GET /api/discovery/onboarding/tags` | Search onboarding tags |
+| `POST /api/discovery/batches`, `GET /api/discovery/jobs/{id}` | Submit generation and poll its job |
+| `GET /api/discovery/batches/{id}` | Read a saved discovery batch |
+| `POST /api/discovery/recommendations/{id}/feedback` | Save discovery feedback |
+| `GET /api/discovery/recent` | Read public recent recommendations |
+| `GET /api/catalog/search`, `POST /api/catalog/lookup`, `GET /api/catalog/lookups/{id}` | Search the local catalog or submit and poll a provider lookup |
+| `GET`, `HEAD /api/artwork/recordings/{id}` | Read cached artwork |
+| `GET /health`, `/health/live`, `/health/ready` | Check host health, liveness and operational readiness |
+| `GET /ops/status` | Read operational status from loopback only |
 
 This is a route index, not a complete API contract. Check controller models,
 validators and authorization attributes for payloads and access rules.
+
+The discovery endpoints depend on runtime configuration and listener ownership;
+mutations validate antiforgery tokens. Check [`ListenerContext`](src/Presentation/Discovery/ListenerContext.cs)
+and controller attributes when integrating a client.
+
+For production beta builds, configuration, storage verification, encrypted
+backup/recovery and upgrades, follow the [operations guide](docs/operations/production-beta.md).
+Its [verification record](docs/operations/production-beta-evidence.md) distinguishes
+local acceptance from deployment gates. Email delivery and automatic all-account
+scheduling are excluded from the beta; public hosting and developer acceptance
+remain outstanding.
 
 ## Before opening a change
 

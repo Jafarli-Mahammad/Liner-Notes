@@ -34,7 +34,10 @@ try
     using var host = builder.Build();
     await using var scope = host.Services.CreateAsyncScope();
     var services = scope.ServiceProvider;
-    await using var lease = await services.GetRequiredService<IAccountEmailLease>().AcquireAsync(userId, CancellationToken.None);
+    // Export takes its own account lease; conversion owns it directly.
+    await using var lease = action == "convert"
+        ? await services.GetRequiredService<IAccountEmailLease>().AcquireAsync(userId, CancellationToken.None)
+        : null;
     var store = services.GetRequiredService<IDigestGenerationStore>();
     var digest = await store.GetExistingAsync(userId, week);
     if (digest is null) throw new ArgumentException();
@@ -55,6 +58,8 @@ try
         if (action == "inspect") Console.WriteLine(copy.PlainText);
         else
         {
+            // Reacquire only after export has released its lease.
+            await using var archiveLease = await services.GetRequiredService<IAccountEmailLease>().AcquireAsync(userId, CancellationToken.None);
             var stored = await services.GetRequiredService<LocalEmailArchive>().ReadForOperatorAsync(userId, digest.Id, CancellationToken.None);
             var origin = services.GetRequiredService<LocalEmailOptions>().Origin();
             Console.WriteLine(new Uri(origin, "api/digests/unsubscribe?token=" + Uri.EscapeDataString(stored.Receipt.Token)).AbsoluteUri);

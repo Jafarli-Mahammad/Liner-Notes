@@ -52,7 +52,7 @@ The old `qodana_code_quality.yml` is replaced by the single pinned native-mode
 workflow in `qodana.yml`, so analysis no longer needs to pull a linter container.
 The configuration retains the dependency-license inspection and accepts either
 `QODANA_TOKEN` or the existing `QODANA_TOKEN_1205615720` secret. See the
-[Qodana runbook](../qodana.md). A successful remote Qodana run and Cloud license
+Qodana runbook (historical record in Git). A successful remote Qodana run and Cloud license
 validation remain unverified locally.
 
 ## GitGuardian findings

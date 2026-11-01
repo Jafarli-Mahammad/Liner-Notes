@@ -10,8 +10,9 @@ Liner Notes is an open-source music discovery project. The goal is to send a
 short weekly list shaped by the music you like, with an explanation saved for
 every pick and feedback that can shape what comes next.
 
-**The project is in active development.** Some parts of the site work locally;
-the full weekly email service and recommendation quality are not verified.
+**The project is in active development.** Guest and account discovery work
+locally, and production beta tooling has been verified locally. Public deployment,
+weekly email delivery and recommendation quality remain unverified.
 
 [What it does](#the-idea) · [How recommendations work](#how-recommendations-work) ·
 [Current status](#current-status) · [Developer guide](README-Developer.md)
@@ -65,9 +66,11 @@ export and deletion paths. Developers can run the site locally with live
 ListenBrainz and MusicBrainz data after completing the private local setup.
 
 The `Worker` has manual operations for reconciliation, generation and capture,
-and the repository includes scheduled processing code. Public email delivery is
-not configured. Per-user provider choice and listening-history import are not
-available.
+and the repository includes scheduled processing code. The production beta adds
+guarded configuration, container builds, storage verification, encrypted
+backup/recovery and operational health checks. Email delivery and automatic
+all-account scheduling are excluded from that beta. Per-user provider choice
+and listening-history import are not available.
 
 Local checks and browser runs show that individual flows work in this checkout.
 They do not establish recommendation quality, production capacity, provider
@@ -127,6 +130,8 @@ Useful project documents:
 - [Current progress and open work](PROGRESS.md)
 - [Product contracts](docs/renewal/contracts.md)
 - [Local configuration](docs/renewal/local-configuration.md)
+- [Production beta operation](docs/operations/production-beta.md)
+- [Production beta verification and remaining gates](docs/operations/production-beta-evidence.md)
 - [Changelog](CHANGELOG.md)
 - [Security policy](SECURITY.md)
 

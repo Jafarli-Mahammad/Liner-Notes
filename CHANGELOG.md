@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Build the React frontend and bundled license notices inside the release image; verify release assets from tracked Git inputs in CI.
 - Refine page, search, feedback and artwork loading with delayed placeholders,
   decoded-cover reveals, bounded stalled-request recovery and reduced-motion support.
 - Offer all four music services on every recommendation card with outlined logos;

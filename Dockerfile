@@ -1,3 +1,11 @@
+# Node stable LTS release and official image digest verified 2026-11-01.
+FROM node:26.13.0-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS frontend
+WORKDIR /frontend
+COPY src/Presentation/ClientApp/package.json src/Presentation/ClientApp/package-lock.json ./
+RUN npm ci
+COPY src/Presentation/ClientApp/ ./
+RUN npm run build
+
 # Stable .NET SDK 10.0.401 and ASP.NET runtime 10.0.12, verified 2026-10-12.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
 WORKDIR /src
@@ -13,6 +21,7 @@ COPY src/Worker/Worker.csproj src/Worker/packages.lock.json src/Worker/
 RUN dotnet tool restore && dotnet restore src/Presentation/Presentation.csproj --locked-mode && dotnet restore src/Worker/Worker.csproj --locked-mode
 COPY src/ src/
 RUN dotnet publish src/Presentation/Presentation.csproj -c Release --no-restore -o /out/web /p:UseAppHost=false && dotnet publish src/Worker/Worker.csproj -c Release --no-restore -o /out/worker /p:UseAppHost=false
+COPY --from=frontend /frontend/dist/ /out/web/wwwroot/
 
 # Explicit local migration runner. Runtime images contain no SDK.
 FROM build AS tools

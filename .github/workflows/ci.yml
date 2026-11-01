@@ -101,3 +101,7 @@ jobs:
           persist-credentials: false
       - name: Build and verify disposable local stack
         run: python3 scripts/checks/phase9_compose.py --build
+      - name: Test release artifact checks
+        run: python3 -m unittest discover -s scripts/checks -p 'test_production_artifact.py'
+      - name: Verify complete image from tracked inputs
+        run: python3 scripts/checks/production_artifact.py --build

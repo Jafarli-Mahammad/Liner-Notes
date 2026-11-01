@@ -22,6 +22,7 @@ def main():
     args=parser.parse_args()
     site=Site(ops.Operations(json.loads(args.configuration.read_text())))
     context=ssl.create_default_context(cafile=site.ca)
+    context.minimum_version=ssl.TLSVersion.TLSv1_2
     with socket.create_connection(('127.0.0.1',site.port),timeout=15) as connection:
         with context.wrap_socket(connection,server_hostname='liner.test') as secure:
             certificate=secure.getpeercert(binary_form=True)

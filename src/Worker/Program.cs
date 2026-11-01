@@ -14,6 +14,24 @@ using Npgsql;
 try
 {
     var builder=Host.CreateApplicationBuilder(args);
+if (builder.Configuration["Production:ConfigurationFile"] is { } configurationFile)
+{
+    if (!Path.IsPathFullyQualified(configurationFile)) throw new ArgumentException("absolute_operator_configuration_required");
+    builder.Configuration.AddJsonFile(configurationFile,optional:false,reloadOnChange:false);
+}
+if (builder.Configuration["action"] is "verify-storage" or "establish-storage" or "change-storage-policy" or "restore-storage")
+{
+    var action = builder.Configuration["action"]!;
+    builder.Logging.ClearProviders();
+    builder.Configuration["DiscoveryRuntime:RunJobs"] = "false";
+    builder.Configuration["DiscoveryRuntime:EnforceStorageAdmission"] = "true";
+    builder.Services.AddApplication().AddDataAccess(builder.Configuration).AddInfrastructure(builder.Configuration);
+    using var operatorHost = builder.Build();
+    await using var operatorScope = operatorHost.Services.CreateAsyncScope();
+    var verification = await StorageOperator.ExecuteAsync(operatorScope.ServiceProvider,action,builder.Configuration);
+    Console.WriteLine(JsonSerializer.Serialize(verification));
+    return 0;
+}
     bool scheduled=builder.Configuration["action"]=="schedule";
     var options=scheduled?null:LocalWorkerOptions.Parse(builder.Configuration);
     var scheduleOptions=scheduled?LocalScheduleOptions.Parse(builder.Configuration,args):null;

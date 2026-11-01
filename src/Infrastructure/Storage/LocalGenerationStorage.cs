@@ -9,11 +9,28 @@ namespace LinerNotes.Infrastructure.Storage;
 
 public sealed class GenerationStorageOptions
 {
+    public long StopBytes { get; set; } = LocalGenerationStorage.StopBytes;
+    public long CapacityBytes => StopBytes is >= 1_048_576 and <= 1_099_511_627_776
+        ? StopBytes : throw new GenerationStoppedException("storage_capacity_invalid");
     public string? InventoryPath { get; set; }
     public string? LeasePath { get; set; }
     public long? DatabaseOverheadBytesPerPick { get; set; }
     public bool EnableKernelReadLeases { get; set; } = true;
     public Dictionary<string, string[]> ArtifactRoots { get; set; } = new(StringComparer.Ordinal);
+
+    public string PolicyFingerprint(bool legacy = false)
+    {
+        _ = CapacityBytes;
+        if (ArtifactRoots.Count != LocalGenerationStorage.Categories.Count ||
+            LocalGenerationStorage.Categories.Any(c => !ArtifactRoots.ContainsKey(c)))
+            throw new GenerationStoppedException("storage_unconfigured");
+        var roots = LocalGenerationStorage.Categories.Select(category => new
+            { Category = category, Roots = ArtifactRoots[category].Order(StringComparer.Ordinal).ToArray() }).ToArray();
+        // The legacy hash is available only to explicit upgrade verification; runtime never accepts it.
+        return Convert.ToHexStringLower(SHA256.HashData(legacy ? JsonSerializer.SerializeToUtf8Bytes(roots) :
+            JsonSerializer.SerializeToUtf8Bytes(new { Version = 2, StopBytes = CapacityBytes, DatabaseOverheadBytesPerPick,
+                InventoryPath = Path.GetFullPath(InventoryPath!), LeasePath = Path.GetFullPath(LeasePath!), Roots = roots })));
+    }
 }
 
 public sealed record ArtifactMeasurement(long Bytes, string Revision);
@@ -26,6 +43,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
     private DateTimeOffset UtcNow => clock.GetUtcNow();
     private long OverheadBytesPerPick => options.DatabaseOverheadBytesPerPick!.Value;
     public const long StopBytes = 1_000_000_000;
+    private long CapacityBytes => options.CapacityBytes;
     public static IReadOnlyList<string> Categories { get; } = ["recordings", "cache", "reports", "copies", "backups", "partials"];
 
     public async Task<IGenerationStorageLease> AcquireAsync(GenerationStorageState database, CancellationToken cancellationToken = default)
@@ -54,7 +72,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
             if (bytes <= 0 || ownedPaths.Count != 4 || ownedPaths.Distinct(StringComparer.Ordinal).Count() != 4 || ownedPaths.Any(File.Exists))
                 throw new GenerationStoppedException("email_reservation_invalid");
             long allowance = checked(bytes * 3); // Three attempted partials; rename adds no bytes.
-            if (checked(Total(inventory) + allowance) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+            if (checked(Total(inventory) + allowance) >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
             var excluded = ownedPaths.ToHashSet(StringComparer.Ordinal);
             var baseline = await MeasureArtifactsAsync(ct, excluded, verification).ConfigureAwait(false);
             return new EmailLease(this, file, inventory, baseline, excluded, allowance, verification);
@@ -82,11 +100,13 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
             measurements.Any(pair => !expectedArtifacts.TryGetValue(pair.Key, out var expected) || expected != pair.Value)))
             throw new GenerationStoppedException("artifact_inventory_changed");
         var inventory = new GenerationInventory(clock.GetUtcNow(), true, database.DatabaseBytes, database.Revision, measurements);
+        if (Total(inventory) >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
         if (commits is not null)
         {
             var id = Guid.NewGuid();
             database = await commits.EstablishAsync(id, new(JsonSerializer.Serialize(inventory), JsonSerializer.Serialize(measurements),
-                "[]", RootFingerprint(), clock.GetUtcNow()), cancellationToken);
+                "[]", RootFingerprint(), clock.GetUtcNow()), cancellationToken,
+                checked(CapacityBytes - measurements.Values.Sum(c => c.Bytes)));
             inventory = inventory with { DatabaseBytes = database.DatabaseBytes, ReservedArtifactBytes = database.ReservedArtifactBytes, DatabaseRevision = database.Revision, CommitId = id };
         }
         await ValidateAsync(inventory, database, cancellationToken).ConfigureAwait(false);
@@ -146,8 +166,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
         DurableInventoryFile.WriteAsync(options.InventoryPath!, inventory, ct, commits is null ? null :
             async token => (await commits.ReadAsync(token))?.CommitId == inventory.CommitId);
 
-    private string RootFingerprint() => Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(
-        Categories.Select(category => new { Category = category, Roots = options.ArtifactRoots[category].Order(StringComparer.Ordinal).ToArray() }))));
+    private string RootFingerprint() => options.PolicyFingerprint();
 
     private StoragePublicationPlan PublicationPlan(GenerationInventory inventory) => new(JsonSerializer.Serialize(inventory),
         JsonSerializer.Serialize(inventory.Categories), "[]", RootFingerprint(), clock.GetUtcNow());
@@ -157,7 +176,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
         if (commits is null) return await ReadInventoryAsync(ct).ConfigureAwait(false);
         var witness = await commits.ReadAsync(ct).ConfigureAwait(false)
             ?? throw new GenerationStoppedException("storage_commit_witness_uninitialized");
-        if (witness.Plan.RootFingerprint != RootFingerprint()) throw new GenerationStoppedException("storage_roots_changed");
+        if (witness.Plan.RootFingerprint != RootFingerprint()) throw new GenerationStoppedException("storage_policy_changed");
         Dictionary<string, ArtifactMeasurement> categories;
         try { categories = JsonSerializer.Deserialize<Dictionary<string, ArtifactMeasurement>>(witness.Plan.ArtifactCategoriesJson)
                 ?? throw new GenerationStoppedException("storage_commit_artifacts_invalid"); }
@@ -191,7 +210,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
         if (database.DatabaseBytes < 0 || database.DatabaseBytes > inventory.DatabaseBytes || (!LegacyRevisionEquals(database.Revision, inventory.DatabaseRevision) || (coordinatedMode && database.Revision != inventory.DatabaseRevision)))
             throw new GenerationStoppedException("database_inventory_changed");
         await ValidateArtifactsAsync(inventory, ct, verification).ConfigureAwait(false);
-        if (Total(inventory) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+        if (Total(inventory) >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
     }
 
     private async Task ValidateArtifactsAsync(GenerationInventory inventory, CancellationToken ct, ArtifactVerificationSession? verification = null)
@@ -258,7 +277,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
                             if (++fileCount > 100_000) throw new GenerationStoppedException("storage_file_limit");
                             long length = new FileInfo(child).Length;
                             sharedBytes = checked(sharedBytes + length); total = checked(total + length);
-                            if (sharedBytes >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+                            if (sharedBytes >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
                             batch.Add((child, length, null));
                             if (batch.Count == Math.Min(2, Environment.ProcessorCount)) await FlushAsync();
                         }
@@ -335,7 +354,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
                 if (await RevisionAsync(path, ct) != ownRevisions.GetValueOrDefault(path, "absent"))
                     throw new GenerationStoppedException("email_owned_artifact_changed");
             long ownedBytes = ownedPaths!.Where(File.Exists).Sum(path => new FileInfo(path).Length);
-            if (ownedBytes > allowance || checked(Total(inventory) + ownedBytes) >= StopBytes)
+            if (ownedBytes > allowance || checked(Total(inventory) + ownedBytes) >= owner.CapacityBytes)
                 throw new GenerationStoppedException("storage_headroom");
         }
         public ValueTask DisposeAsync() { verification.Dispose(); return file.DisposeAsync(); }
@@ -404,7 +423,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
             if (serializedBytes < 0 || pickCount is < 0 or > 5) throw new GenerationStoppedException("invalid_storage_reservation");
             long allowance = checked(serializedBytes + owner.OverheadBytesPerPick * Math.Max(pickCount, 1));
             if (coordinatedMode) owner.coordinated!.RequireHeadroom(checked(allowance + inventory.ReservedArtifactBytes), owner.filesystemProbe);
-            if (checked(Total(inventory) + allowance) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+            if (checked(Total(inventory) + allowance) >= owner.CapacityBytes) throw new GenerationStoppedException("storage_headroom");
             return new Reservation(owner, inventory, allowance, coordinatedMode, verification);
         }
         public Task PublishCommittedInventoryAsync(GenerationStorageState committed, CancellationToken ct)
@@ -439,7 +458,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
                 database.DatabaseBytes > inventory.DatabaseBytes)
             {
                 inventory = inventory with { DatabaseBytes = database.DatabaseBytes };
-                if (checked(Total(inventory) + allowance) >= StopBytes)
+                if (checked(Total(inventory) + allowance) >= owner.CapacityBytes)
                     throw new GenerationStoppedException("storage_headroom");
             }
             if (coordinatedMode) owner.coordinated!.RequireHeadroom(checked(allowance + inventory.ReservedArtifactBytes), owner.filesystemProbe);
@@ -451,7 +470,7 @@ public sealed partial class LocalGenerationStorage(GenerationStorageOptions opti
             if (coordinatedMode) owner.coordinated!.RequireHeadroom(0, owner.filesystemProbe);
             long growth = Math.Max(0, checked(database.DatabaseBytes + database.ReservedArtifactBytes) - checked(inventory.DatabaseBytes + inventory.ReservedArtifactBytes));
             if (actualColumnBytes < 0 || actualColumnBytes > allowance || growth > allowance ||
-                checked(Total(inventory) + Math.Max(growth, actualColumnBytes)) >= StopBytes)
+                checked(Total(inventory) + Math.Max(growth, actualColumnBytes)) >= owner.CapacityBytes)
                 throw new GenerationStoppedException("stored_bytes_exceed_reservation");
         }
     }

@@ -20,7 +20,9 @@ if (args is not ["--establish", "--writers-stopped", "--configuration", var path
 try
 {
     // An explicitly selected private configuration must win over an unrelated shell's settings.
-    var configuration = new ConfigurationBuilder().AddEnvironmentVariables().AddJsonFile(path, optional: false).Build();
+    var configuration = new ConfigurationBuilder().AddEnvironmentVariables().AddJsonFile(path, optional: false)
+        .AddInMemoryCollection(new Dictionary<string,string?>
+        { ["DiscoveryRuntime:RunJobs"]="false", ["DiscoveryRuntime:EnforceStorageAdmission"]="true" }).Build();
     await using var services = new ServiceCollection().AddLogging().AddApplication().AddDataAccess(configuration)
         .AddInfrastructure(configuration).BuildServiceProvider();
     await using var scope = services.CreateAsyncScope();
@@ -28,6 +30,8 @@ try
     if ((await db.Database.GetPendingMigrationsAsync()).Any())
         throw new GenerationStoppedException("storage_migrations_pending");
     var store = scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>();
+    if (await scope.ServiceProvider.GetRequiredService<IManagedStorageCommitStore>().ReadAsync(default) is not null)
+        throw new GenerationStoppedException("storage_existing_witness_requires_verified_transition");
     await using var admission = await store.AcquireBatchAsync();
     var publications = await scope.ServiceProvider.GetRequiredService<IArtifactPublicationStore>().ReadActiveAsync(default);
     if (publications.Count != 0)

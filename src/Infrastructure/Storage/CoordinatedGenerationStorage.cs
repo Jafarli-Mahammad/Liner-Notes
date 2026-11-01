@@ -227,7 +227,7 @@ public sealed partial class LocalGenerationStorage
             // Ledger/schema unchanged: charge current observed relation size, including background page growth.
             // Never silently accept an unaccounted row mutation or a changed schema/trigger inventory.
             inventory = inventory with { DatabaseBytes = database.DatabaseBytes, ReservedArtifactBytes = database.ReservedArtifactBytes };
-            if (Total(inventory) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+            if (Total(inventory) >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
             return new Lease(this, file, inventory, coordinatedMode: true, verification: verification);
         }
         catch { verification.Dispose(); await file.DisposeAsync(); throw; }
@@ -258,7 +258,7 @@ public sealed partial class LocalGenerationStorage
         coordinated.RequireHeadroom(0, filesystemProbe);
         await ValidateArtifactsAsync(previous, ct, verification);
         var current = previous with { DatabaseBytes = committed.DatabaseBytes, ReservedArtifactBytes = committed.ReservedArtifactBytes, DatabaseRevision = committed.Revision, MeasuredAtUtc = clock.GetUtcNow() };
-        if (!allowAtCutoff && Total(current) >= StopBytes) throw new GenerationStoppedException("storage_headroom");
+        if (!allowAtCutoff && Total(current) >= CapacityBytes) throw new GenerationStoppedException("storage_headroom");
         await WriteKnownInventoryAsync(current, ct);
     }
 }

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Configure managed-storage capacity through a writer-agreed policy; add non-adopting verification and explicit verified policy/restore commands. Existing storage witnesses require a stopped-writer policy transition.
 - Add guarded Production configuration, persistent authentication keys and a private, resource-bounded VPS topology with separate application and migration database roles.
 - Build the React frontend and bundled license notices inside the release image; verify release assets from tracked Git inputs in CI.
 - Refine page, search, feedback and artwork loading with delayed placeholders,

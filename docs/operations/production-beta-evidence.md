@@ -25,3 +25,11 @@ Production topology, recovery and live-provider acceptance remain separate plan 
 - Production routing-only WebApplicationFactory fixtures explicitly replace storage startup; real startup, witness and role coverage remain separate PostgreSQL tests. No runtime fixture/synthetic bypass was added.
 - Caddy 2.11.7 and restic 0.19.1 were verified against their official GitHub latest-release metadata on 2026-11-01. Caddy's official Alpine image is pinned by manifest digest. Actual TLS and final-image browser checks are later acceptance tasks.
 - The pinned Caddy container accepted `deploy/Caddyfile` with `caddy validate`. No public certificate was requested and no public service was started.
+
+## Storage policy and operator verification
+
+Capacity now defaults to the existing 1,000,000,000 bytes but is configurable. The versioned witness fingerprint includes capacity, reservation overhead, artifact roots and inventory/lease paths. Ordinary writers refuse legacy or mismatched fingerprints. A verified explicit stopped-writer transition is required; startup never adopts unexplained changes.
+
+`verify-storage` verifies ledger/table coverage and the trusted artifact baseline without publishing a new witness. `establish-storage` refuses an existing witness; `change-storage-policy` requires the previous policy and matching artifacts; `restore-storage` also requires the expected snapshot inventory. The old establishment script no longer silently re-establishes an existing witness.
+
+Local verification: 29 targeted Infrastructure storage checks and 60 PostgreSQL coordination/accounting/publication/security checks passed. The legacy-policy upgrade test retains the existing guest profile. Tests cover mismatched writer capacity, unchanged witness during verification, unexplained artifacts, invalid restore manifests, explicit quota transitions and transactional rollback when witness establishment exceeds quota. Another 27 host/startup/security checks passed, and the file-based establishment helper built successfully with its supported CLI invocation. These are disposable local fixtures; complete backup/restore and final-image checks remain later tasks.

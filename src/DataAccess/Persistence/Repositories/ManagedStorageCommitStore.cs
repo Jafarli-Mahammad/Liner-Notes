@@ -78,7 +78,7 @@ public sealed class ManagedStorageCommitStore(DataContext db, IUnitOfWork unit, 
         return witness;
     }
 
-    public Task<GenerationStorageState> EstablishAsync(Guid commitId, StoragePublicationPlan plan, CancellationToken ct) =>
+    public Task<GenerationStorageState> EstablishAsync(Guid commitId, StoragePublicationPlan plan, CancellationToken ct, long? maximumDatabaseBytes = null) =>
         unit.ExecuteInTransactionAsync(async token =>
         {
             await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(1280200758)", token);
@@ -86,7 +86,10 @@ public sealed class ManagedStorageCommitStore(DataContext db, IUnitOfWork unit, 
             await db.Database.ExecuteSqlRawAsync("SELECT 1 FROM \"ManagedStorageLedger\" WHERE \"Id\"=1 FOR UPDATE", token);
             var current = await inventory.ReadStorageAsync(token);
             await RecordAsync(commitId, plan, current.Revision.Split(':')[^1], token);
-            return await inventory.ReadStorageAsync(token);
+            var established = await inventory.ReadStorageAsync(token);
+            if (maximumDatabaseBytes is { } limit && established.DatabaseBytes >= limit)
+                throw new GenerationStoppedException("storage_headroom");
+            return established;
         }, ct);
 
     private static string PadJson(string value, int bucket)

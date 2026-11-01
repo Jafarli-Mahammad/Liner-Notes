@@ -36,6 +36,15 @@ if [ -n "$UNPUSHED_DIFF" ]; then
     fi
 fi
 
+# Run the same offline controls as CI before the more expensive .NET checks.
+if ! python3 -m unittest discover -s "$REPO_ROOT/scripts" -p 'test_phase*.py' ||
+   ! python3 -m unittest discover -s "$REPO_ROOT/scripts/checks" -p 'test_phase9*.py' ||
+   ! python3 "$REPO_ROOT/scripts/checks/secret_defaults.py" ||
+   ! python3 "$REPO_ROOT/scripts/checks/renewal_docs.py"; then
+    echo "PUSH BLOCKED: offline repository controls failed."
+    exit 1
+fi
+
 # 2. Build Verification
 echo -ne "⚙️  Building solution... "
 BUILD_OUT=$(dotnet build "$REPO_ROOT/Liner Notes.sln" '/clp:NoSummary;ErrorsOnly' 2>&1)

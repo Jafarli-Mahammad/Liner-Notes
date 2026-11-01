@@ -49,7 +49,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         _discoveryProfileReader = discoveryProfileReader;
     }
 
-    /// <summary>Returns version 2.5 account, discovery, taste and digest history with explicit security exclusions.</summary>
+    /// <summary>Returns version 2.6 account, discovery, taste and digest history with explicit security exclusions.</summary>
     /// <remarks>Repository and archive exceptions, including cancellation, propagate; an archive result marked incomplete is retained in the export.</remarks>
     /// <exception cref="NotFoundException">The subscriber or active Identity profile cannot be found.</exception>
     /// <exception cref="InvalidOperationException">A full digest page repeats the preceding cursor.</exception>

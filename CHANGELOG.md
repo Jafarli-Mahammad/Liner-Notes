@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Restore local email inspection and unsubscribe-link recovery after export locking changes; align CI documentation and export checks with the current contracts.
 - Remove completed investigation reports, design review captures, obsolete plans and the unused root console project; keep current operational documentation and reusable diagnostics.
 - Update the .NET 10 SDK, runtime and matching Microsoft framework/tool pins to the verified stable security patch release.
 - Keep managed account-file erasure available when mail delivery is disabled, retaining private-path, accounting, ownership and integrity checks.

@@ -13,6 +13,7 @@ from urllib import error, parse, request
 import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
+EXPECTED_EXPORT_VERSION = "2.6"
 
 
 def field(obj, name):
@@ -102,7 +103,9 @@ class Check:
         captured = self.worker(user, week, "capture")
         assert field(captured, "status") == "local_captured", "encrypted capture failed"
         status, export = self.http("GET", "/api/export/my-data", token=token)
-        assert status == 200 and field(export, "exportVersion") == "2.5", "export contract changed"
+        assert status == 200 and field(export, "exportVersion") == EXPECTED_EXPORT_VERSION, (
+            f"export contract changed (HTTP {status}, expected version {EXPECTED_EXPORT_VERSION}, "
+            f"received {field(export, 'exportVersion')!r})")
         digest = field(export, "digests")[0]
         assert field(digest, "status") == "LocalCaptured" and field(digest, "sentAt") is None
         assert 0 < len(field(digest, "recommendations")) <= 5, "fixture picks missing"

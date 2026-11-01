@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Restore account sessions after refresh and application restart using a protected,
+  persistent HttpOnly cookie and the existing revocable refresh-token flow.
+- Show signed-in listeners their own latest persisted recommendations on Home,
+  with links to discovery history; retain the anonymous public feed.
+- Correct development launch paths and redirect duplicate-slash root requests.
+- Preserve canonical identities in saved taste responses and show licensed artist
+  photos from canonical MusicBrainz/Wikimedia sources, with readable initials
+  when no reliable photo is available.
 - Restore local email inspection and unsubscribe-link recovery after export locking changes; align CI documentation and export checks with the current contracts.
 - Remove completed investigation reports, design review captures, obsolete plans and the unused root console project; keep current operational documentation and reusable diagnostics.
 - Update the .NET 10 SDK, runtime and matching Microsoft framework/tool pins to the verified stable security patch release.

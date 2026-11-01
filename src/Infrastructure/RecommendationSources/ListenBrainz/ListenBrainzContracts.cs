@@ -7,7 +7,7 @@ using LinerNotes.Application.Common.Models.Recommendation;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public enum ListenBrainzClientMode { FixtureOnly, Recorded, LiveOnly }
-public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch, AlbumMetadata, RecordingSearch, SimilarRecordings, ArtworkMetadata }
+public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch, AlbumMetadata, RecordingSearch, SimilarRecordings, ArtworkMetadata, ArtistArtworkMetadata }
 
 public sealed class ListenBrainzOptions
 {
@@ -33,7 +33,7 @@ public sealed class ListenBrainzOptions
 
 public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Identity, int Limit = 10)
 {
-    public string Provider => Kind is ListenBrainzRequestKind.ArtistSearch or ListenBrainzRequestKind.AlbumSearch or ListenBrainzRequestKind.RecordingSearch ? "MusicBrainz" : "ListenBrainz";
+    public string Provider => Kind is ListenBrainzRequestKind.ArtistSearch or ListenBrainzRequestKind.AlbumSearch or ListenBrainzRequestKind.RecordingSearch or ListenBrainzRequestKind.ArtistArtworkMetadata ? "MusicBrainz" : "ListenBrainz";
     public string Method => Kind switch
     {
         ListenBrainzRequestKind.RecordingSearch => "recording.search",
@@ -46,6 +46,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         ListenBrainzRequestKind.AlbumMetadata => "metadata.release_group",
         ListenBrainzRequestKind.RecordingMetadata => "metadata.recording",
         ListenBrainzRequestKind.ArtworkMetadata => "metadata.artwork",
+        ListenBrainzRequestKind.ArtistArtworkMetadata => "artist.artwork",
         _ => throw new ArgumentException("listenbrainz_request_invalid")
     };
     public string Key => $"{Kind}:{Limit}:{Identity}";
@@ -55,10 +56,10 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         if (!Enum.IsDefined(Kind) || Limit is < 1 or > 100 || string.IsNullOrWhiteSpace(Identity) || Identity.Length > 4000 ||
             Identity.Any(char.IsControl) || Identity != Identity.Trim())
             throw new ArgumentException("listenbrainz_request_invalid");
-        if (Kind is ListenBrainzRequestKind.SimilarRecordings or ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata or ListenBrainzRequestKind.AlbumMetadata or ListenBrainzRequestKind.ArtworkMetadata)
+        if (Kind is ListenBrainzRequestKind.SimilarRecordings or ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata or ListenBrainzRequestKind.AlbumMetadata or ListenBrainzRequestKind.ArtworkMetadata or ListenBrainzRequestKind.ArtistArtworkMetadata)
         {
             var ids = Identity.Split(',');
-            if (ids.Length > 100 || (Kind == ListenBrainzRequestKind.ArtistRadio && ids.Length != 1) ||
+            if (ids.Length > 100 || (Kind is ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistArtworkMetadata && ids.Length != 1) ||
                 ids.Any(id => !Guid.TryParseExact(id, "D", out var parsed) || parsed == Guid.Empty))
                 throw new ArgumentException("listenbrainz_identifier_invalid");
         }
@@ -73,6 +74,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         // Full popularity range: no application popularity filter. Upstream sampling is retained as provenance.
         return Kind switch
         {
+            ListenBrainzRequestKind.ArtistArtworkMetadata => $"ws/2/artist/{id}?fmt=json&inc=url-rels",
             ListenBrainzRequestKind.SimilarRecordings => $"similar-recordings/json?recording_mbids={id}&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
             ListenBrainzRequestKind.RecordingSearch => "ws/2/recording/?fmt=json&limit=" + count + "&query=" +
                 Uri.EscapeDataString("recording:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),

@@ -74,7 +74,9 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             await selectionScope.ServiceProvider.GetRequiredService<SaveTasteOnboarding>().SaveAsync(profile.Id,
                 new(0, new(Step: "complete"), new([recordId], [])), default);
             var page = await selectionScope.ServiceProvider.GetRequiredService<IDiscoveryReader>().ReadAsync(profile.Id, DateTimeOffset.UtcNow, TimeSpan.Zero, default);
-            Assert.Equal("Track", Assert.Single(page!.Favorites).Kind);
+            var favorite = Assert.Single(page!.Favorites);
+            Assert.Equal("Track", favorite.Kind);
+            Assert.Equal(recording, favorite.CanonicalId);
         }
         var job = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().EnqueueAsync(profile.Id,
             "feed-fixture", new string('f', 64), DiscoveryJobKind.Generation, 1, "{}", DateTimeOffset.UtcNow, 10, TimeSpan.Zero, ct));

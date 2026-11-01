@@ -74,6 +74,7 @@ if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
     builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
+    builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtistArtworkService>();
 }
 
 // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
@@ -169,6 +170,18 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Canonicalize only malformed root GETs, never API paths or mutation requests.
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value;
+    if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
+        path is { Length: > 1 } && path.All(character => character == '/'))
+    {
+        context.Response.Redirect(context.Request.PathBase + "/" + context.Request.QueryString, permanent: false);
+        return;
+    }
+    await next();
+});
 app.UseDefaultFiles();
 var staticFileOptions = new StaticFileOptions
 {

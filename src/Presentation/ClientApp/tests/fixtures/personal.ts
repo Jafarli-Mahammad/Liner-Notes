@@ -19,6 +19,8 @@ export const overview: Overview = { page: { revision: 1,
 export async function personalFixture(page: Page, options: { empty?: boolean } = {}) {
   const saved = structuredClone(overview), picks = structuredClone(batch);
   if (options.empty && saved.page) { saved.page.batches = []; saved.page.favorites = []; saved.page.tags = []; }
+  await page.route('**/api/auth/session', route => route.fulfill({ status: 204 }));
+  await page.route('**/api/auth/logout', route => route.fulfill({ status: 204 }));
   await page.route('**/api/discovery/session', route => route.fulfill({ json: session }));
   await page.route('**/api/discovery', route => route.fulfill({ json: saved }));
   await page.route('**/api/discovery/batches/*', route => route.fulfill({ json: picks }));

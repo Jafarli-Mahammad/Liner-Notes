@@ -109,6 +109,11 @@ public static class DependencyInjection
         services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkQueue>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>());
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkPublicRevalidation, LinerNotes.Infrastructure.Artwork.ArtworkPublicRevalidation>();
+        services.AddSingleton<LinerNotes.Infrastructure.Artwork.ArtistArtworkCache>();
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtistArtwork>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.ArtistArtworkCache>());
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtistArtworkAcquirer, LinerNotes.Infrastructure.Artwork.MusicBrainzArtistArtwork>();
+        services.AddHttpClient("ArtistArtwork", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         // Live tag radio can exceed 15s; the existing pool/job deadlines still bound acquisition.

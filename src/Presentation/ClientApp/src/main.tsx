@@ -6,6 +6,7 @@ import { Home } from './features/home/Home';
 import { PersonalLayout } from './app/Personal';
 import { Loading } from './components/Loading';
 import './styles.css';
+import { restoreSession, errorText } from './api/client';
 
 function NotFound() { return <main id="main-content" className="page-container home-main" tabIndex={-1}><h1>Page not found</h1><p><Link to="/">Return Home</Link></p></main>; }
 
@@ -38,4 +39,10 @@ const router = createBrowserRouter([{ element: <Shell />, hydrateFallbackElement
   ] },
   { path: '*', element: <NotFound /> },
 ] }]);
-createRoot(document.getElementById('root')!).render(<RouterProvider router={router} />);
+const root = createRoot(document.getElementById('root')!);
+async function start() {
+  root.render(<main id="main-content" className="page-container personal-main"><Loading label="Opening Liner Notes…" /></main>);
+  try { await restoreSession(); root.render(<RouterProvider router={router} />); }
+  catch (error) { root.render(<main id="main-content" className="page-container personal-main"><h1>Your session could not be checked</h1><p role="alert">{errorText(error)}</p><button className="button button-secondary" onClick={() => void start()}>Try again</button></main>); }
+}
+void start();

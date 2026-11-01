@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
-import { api, apiResponse, identityEpoch, isAbort, signOut, useIdentity } from '../../api/client';
+import { api, logout, apiResponse, identityEpoch, isAbort, signOut, useIdentity } from '../../api/client';
 import type { Answers, Subscriber } from '../../api/models';
 import { usePersonal } from '../../app/Personal';
 import { Notice } from '../../components/Notice';
@@ -50,7 +50,7 @@ export default function Account() {
     <header className="account-heading"><p className="editorial-meta coral-meta">Your corner of Liner Notes</p><h1>Your account</h1><p>Keep your discoveries, understand your taste, and stay in control of your data.</p></header>
     {!!stateMessage && <Notice>{stateMessage}</Notice>}
     {!identity.user ? <div className={`auth-layout${search.get('mode') === 'register' ? ' registration-first' : ''}`}><AuthForm returnTo={returnTo} /><AuthForm register returnTo={returnTo} /></div>
-      : <section className="editor-panel account-profile" aria-label="Account details"><div><h2>Good to have you here.</h2><p>{profile?.email ?? identity.user.email}</p></div><button className="text-button" type="button" onClick={() => { signOut(); navigate('/account'); }}>Sign out</button>
+      : <section className="editor-panel account-profile" aria-label="Account details"><div><h2>Good to have you here.</h2><p>{profile?.email ?? identity.user.email}</p></div><button className="text-button" type="button" onClick={() => void run(async () => { await logout(); navigate('/account'); })}>Sign out</button>
         <dl><div><dt>Time zone</dt><dd>{profile?.timeZone ?? 'Not available'}</dd></div><div><dt>Weekly email preference</dt><dd>{profile?.weeklyEmailOptIn ? 'Opted in' : 'Not opted in'}</dd></div></dl>
         <Link className="text-link" to="/taste">Review your taste →</Link>
       </section>}

@@ -1,5 +1,8 @@
 export interface RecentMusic {
-  sequence: number;
+  sequence: number | string;
+  batchId?: string;
+  spotifyUrl?: string | null;
+  youtubeUrl?: string | null;
   recordingId: string;
   title: string;
   artistName: string;

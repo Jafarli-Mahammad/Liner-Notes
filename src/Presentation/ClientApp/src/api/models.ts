@@ -3,7 +3,7 @@ export interface AuthResponse { accessToken: string; refreshToken: string; expir
 export interface Session { csrfToken: string; profile: null | { id: string; userId: string | null; revision: number; isGuest: boolean; expiresAtUtc: string | null }; guestImportAvailable: boolean; }
 export interface Answers { version: 'taste-onboarding-v1'; step: string; goal: string | null; exploration: string | null; vocals: string | null; allStyles: boolean; }
 export const emptyAnswers: Answers = { version: 'taste-onboarding-v1', step: 'questions', goal: null, exploration: null, vocals: null, allStyles: false };
-export interface Favorite { catalogRecordId: string | null; signalId?: string | null; canonicalId?: string; name: string; artistName?: string | null; kind: string; disambiguation?: string | null; releases?: { canonicalId: string; title: string; date: string | null }[] | null; }
+export interface Favorite { catalogRecordId: string | null; signalId?: string | null; canonicalId?: string | null; name: string; artistName?: string | null; kind: string; disambiguation?: string | null; releases?: { canonicalId: string; title: string; date: string | null }[] | null; }
 export interface Job { id: string; state: string; progressCode: string; errorCode?: string | null; batchId?: string | null; nextAttemptAtUtc?: string; }
 export interface BatchSummary { id: string; kind: string; createdAtUtc: string; completedAtUtc: string | null; }
 export interface DiscoveryPage { revision: number; favorites: Favorite[]; tags: string[]; batches: BatchSummary[]; currentJob: Job | null; nextRequestAtUtc: string | null; onboarding: Answers | null; }

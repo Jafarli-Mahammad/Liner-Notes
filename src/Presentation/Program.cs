@@ -212,7 +212,7 @@ app.Run();
 catch (GenerationStoppedException error)
 {
     Console.Error.WriteLine($"Managed storage startup stopped: {error.Message}.");
-    Console.Error.WriteLine("Keep writers stopped. Back up the database and managed files, apply pending migrations, and verify/establish the storage inventory before restarting. See STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md.");
+    Console.Error.WriteLine("Keep writers stopped. Back up the database and managed files, apply pending migrations, and verify/establish the storage inventory before restarting. See docs/renewal/guest-discovery-storage.md.");
     Environment.ExitCode = 2;
 }
 catch (InvalidOperationException error) when (error.Message.StartsWith("production_", StringComparison.Ordinal))

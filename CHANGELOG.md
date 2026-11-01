@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Remove completed investigation reports, design review captures, obsolete plans and the unused root console project; keep current operational documentation and reusable diagnostics.
 - Update the .NET 10 SDK, runtime and matching Microsoft framework/tool pins to the verified stable security patch release.
 - Keep managed account-file erasure available when mail delivery is disabled, retaining private-path, accounting, ownership and integrity checks.
 - Add serialized, verified encrypted backup/recovery and compatible-release upgrade tooling, with explicit maintenance state and matching database, managed files, keys and release images.

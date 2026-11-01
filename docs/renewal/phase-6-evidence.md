@@ -34,7 +34,7 @@
   cutoff is not a validated capacity limit.
 - **Production capacity and recommendation quality:** not verified; no catalog conclusions.
 - **Other approved Phase 6 implementation items:** no further omissions identified in the
-  approved Phase 6 scope recorded in [the design review](phase-6-review.md). Status for each
+  approved Phase 6 scope recorded in the design review (historical record in Git). Status for each
   item in that scope is listed above.
 
 The developer approved the written design and explicitly requested implementation on

@@ -12,8 +12,8 @@ evidence bypass. Its concrete persistence/API/policy design was approved and imp
 explicitly requested on 2026-10-10; local verification is recorded in [Phase 6 evidence](phase-6-evidence.md). Quality remains
 unverified and real evaluation remains open. The developer requested Phase 7 local work on
 2026-10-11 and selected working local unsubscribe with one opt-out column and matching
-API/export changes. The developer then approved its [written design](phase-7-review.md);
-its [implementation plan](phase-7-plan.md) and sequential execution were subsequently
+API/export changes. The developer then approved its written design (historical record in Git);
+its implementation plan (historical record in Git) and sequential execution were subsequently
 approved. Local implementation is verified with developer confirmation pending; see
 [Phase 7 evidence](phase-7-evidence.md). Phases 5/8–9 and live run manifests remain separately
 gated. On 2026-10-06, the developer explicitly
@@ -89,7 +89,7 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    Provisional baseline A was explicitly approved under an evidence bypass on 2026-10-09;
    quality remains unverified and evaluation remains open. The concrete JSON/API, ordinal selection,
    feedback, no-automatic-deletion and local storage policy is approved. See
-   [design](phase-6-review.md) and [implementation evidence](phase-6-evidence.md).
+   design (historical record in Git) and [implementation evidence](phase-6-evidence.md).
    Application orchestrates signals →
    materialization → discovery → hydration → pure ranking → persistence; provider details stay in
    Infrastructure. Use the formula chosen in Phase 5, or A on explicit evidence bypass. Resolve the
@@ -100,8 +100,8 @@ old 4 -> new 5, old 5 -> new 8, old 6 -> new 9.
    unknown-field preservation, formula/configuration versions and replay from stored evidence.
 7. **Worker-to-local-email slice — design and plan approved; implementation verified locally,
    developer confirmation pending.**
-   See [approved source reassessment and contracts](phase-7-review.md) and
-   [implementation plan](phase-7-plan.md). The developer selected
+   See approved source reassessment and contracts (historical record in Git) and
+   implementation plan (historical record in Git). The developer selected
    working local unsubscribe, one opt-out column and matching API/export changes. Implemented
    Worker → offline generation → persisted digest → HTML/plaintext → local sink, including
    explanations, unsubscribe, short/empty lists, retries and recovery. Export 2.1 exposes the

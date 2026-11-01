@@ -1,7 +1,7 @@
 # Phase 7 implementation evidence and reassessment
 
 Verified locally on 2026-10-11 on `Prism`, after approval of the
-[design](phase-7-review.md), [implementation plan](phase-7-plan.md) and sequential
+design (historical record in Git), implementation plan (historical record in Git) and sequential
 execution. Developer confirmation remains pending. **Mechanics only, no catalog conclusions.**
 
 ## Per-approval implementation status
@@ -166,7 +166,7 @@ checks the capability query is absent. No external proxy/client logging guarante
 
 ## Terms, evidence quality, cost and complexity reassessment
 
-The [authoritative references refreshed for the approved review](phase-7-review.md#authoritative-references-refreshed-2026-10-11)
+The authoritative references refreshed for the approved review (historical record in Git)
 cover Last.fm endpoints/terms, Generic Host, Data Protection and MIME alternatives.
 Last.fm artist tags describe artists, not track-specific musical characteristics; the
 pipeline retains that evidence scope. Its upstream candidate ordering/coverage can bias

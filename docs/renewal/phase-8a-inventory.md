@@ -8,7 +8,7 @@ upstream account data is added. The default provider and ingestion/live policy
 are included in the stored configuration policy. Runtime tokens remain excluded
 from snapshots and exports.
 
-Review boundary: approved design in [phase-8a-review.md](phase-8a-review.md).
+Review boundary: approved design in phase-8a-review.md (historical record in Git).
 Export 2.2 and the reviewed value/deletion boundaries are locally verified;
 see [the per-approval evidence and remaining limits](phase-8a-evidence.md).
 

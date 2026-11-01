@@ -1,7 +1,7 @@
 # Phase 8a implementation evidence
 
 Verified locally on 2026-10-12. Developer confirmation remains pending.
-Approved [design](phase-8a-review.md), [plan](phase-8a-plan.md), and
+Approved design (historical record in Git), plan (historical record in Git), and
 complete [column inventory and boundaries](phase-8a-inventory.md).
 
 ## Per-approval accounting
@@ -144,7 +144,7 @@ permission files/copies, real logs/backups, protection-key access/wrapping, back
 expiry/restore procedure, concurrent point-in-time export, production capacity and
 recommendation quality are not established by these fixtures.
 
-Next: review the [bounded local UTC 8b design](phase-8b-review.md), then its written
+Next: review the bounded local UTC 8b design (historical record in Git), then its written
 implementation plan. Implement and verify 8b separately and finally run the
 combined privacy/delivery scenario and full solution as requested. No new live
 acquisition, external email transport or production readiness is inferred.

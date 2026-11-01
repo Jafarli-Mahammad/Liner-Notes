@@ -1,6 +1,11 @@
-# Liner Notes renewal progress
+# Project status
 
-## Current status
+## Current implementation
+
+Liner Notes has guest and account discovery, taste editing, catalog search,
+recommendation history and feedback, data export and deletion, and a React UI.
+ListenBrainz is the default provider; Last.fm remains available through the
+provider abstraction. Recommendations persist deterministic score breakdowns.
 
 ### Production beta engineering — 2026-11-01
 
@@ -23,240 +28,20 @@ No production deployment, push or release publication has occurred. See
 [the engineering evidence](docs/operations/production-beta-evidence.md) and
 [the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).
 
-### Frontend refinement — 2026-11-01
+## Current documentation
 
-Shared service buttons now cover all four platforms on featured, compact and Home
-cards. Loading feedback, decoded artwork reveals, stalled-request recovery,
-sign-in details and history states follow the existing design. Local verification
-passed the frontend build and 65 browser checks. A real-provider disposable-account
-journey passed; separate host restarts retained five owned picks and four public
-feed entries. Playwright used installed Chromium because MCP's configured Chrome
-is missing. The existing local-email cleanup warning remains. See the
-[refinement review](design/frontend-refinement/REVIEW.md) for evidence and limits.
-Developer acceptance and production deployment remain outstanding.
+- [Developer setup](README-Developer.md) and [contributing](CONTRIBUTING.md)
+- [Architecture](docs/architecture/README.md)
+- [Live local operation](docs/renewal/local-live-run.md)
+- [Storage and recovery](docs/renewal/guest-discovery-storage.md)
+- [Production operation](docs/operations/production-beta.md)
+- [Production engineering evidence](docs/operations/production-beta-evidence.md)
+- [Provider operation and release gates](docs/renewal/listenbrainz-provider-runbook.md)
 
-### Original-account discovery recovery — 2026-10-31
-
-The unchanged revision-21 profile now has locally verified new recommendation
-batches. Controlled comparisons ruled out a direct Jakuzi/Lin Pesto data failure;
-tracing found intermittent feedback-artist name-search failures and a separate
-post-scoring receipt-size rejection. Validated recording credits now preserve
-artist identity, and oversized complete receipts use bounded, checksummed lossless
-storage within the existing 100 KB record limit. Scoring, source validation and
-preferences are unchanged. The actual signed-in Playwright click generated five
-new persisted picks; a full page reload and host restart retained that batch and
-verified four covers plus one genuine unavailable fallback. All 17 persisted taste
-signals remained unchanged. See [the final investigation](FINAL_DISCOVERY_RELIABILITY.md).
-Developer confirmation and production deployment remain outstanding.
-
-### Discovery operation and artwork investigation — 2026-10-31
-
-Confirmed and corrected terminal treatment of shared provider backoff, artwork
-revalidation losing reclaimed public catalog identities, metadata timeout
-classification and visibility-triggered retries of unavailable covers. Expired
-public feed metadata is cleared while bounded identity proofs remain for fresh
-revalidation. Three exact Playwright MCP submissions produced separate persisted
-five-pick batches and replaced the displayed results. The original-input
-diagnostic request still failed after three attempts with a temporary upstream
-source error; the original operation's generic error does not identify its lost
-underlying exception. See [the investigation](DISCOVERY_RUNTIME_INVESTIGATION.md).
-Original-profile source recovery and developer confirmation remain outstanding.
-
-### Local storage startup upgrade — 2026-10-30
-
-Fixed the missing-migration abort and verified clean process exits for schema/inventory prerequisites. The local development database was backed up, upgraded and checked to preserve rows in 28 existing tables; `/health` returned HTTP 200 with provider jobs disabled. Affected suites passed 544 checks. See [the startup follow-up](STARTUP_CRASH_FIX.md). Production remains undeployed.
-
-### Discovery/performance remediation — 2026-10-29
-
-Safe discovery, artwork, cache, recovery and diagnostic corrections are implemented;
-local verification and measured limits are recorded in
-[the remediation report](DISCOVERY_PERFORMANCE_REMEDIATION.md). Exact fixed-fixture
-recommendation serialization remains unchanged. Synthetic cold/warm discovery
-timings do not demonstrate an overall speedup; a controlled saturated artwork
-queue does show lower requested-cover latency. These results are not production
-capacity or recommendation-quality validation.
-
-The developer conditionally approved bounded revalidation of previously public
-recordings and rejected non-cacheable image forwarding and recommendation
-shortcuts. The [unified storage/authentication proposal](STORAGE_INTEGRITY_DESIGN_PROPOSAL.md)
-includes measurements, alternatives, invariants, recovery, migration/rollback
-and acceptance tests. The developer subsequently approved storage/authentication implementation. The redesign is locally verified with 839 backend checks, 55 browser regression checks, real disposable account journeys and matched 900 MB measurements; see [the implementation record](STORAGE_AUTH_REDESIGN_IMPLEMENTATION.md). Production deployment and developer confirmation remain outstanding.
-Full histories/exports/archive processing and multi-host/provider limits remain
-explicit in the remediation report. Developer confirmation remains pending.
-
-Phases 1–4 and 6–9 have locally verified implementations. Phase 5 real-data recommendation evaluation is not authorized. Local implementation evidence does not establish recommendation quality, external provider approval, production readiness, or developer confirmation.
-
-Phase 9 includes pinned build inputs, non-root web and Worker images, local Compose topology, and PostgreSQL-backed CI. Recorded local verification passed 478 .NET checks, 32 offline Python tests, four helper test methods, and all eight container lifecycle groups. GitHub Actions execution and remote scanning have not been verified. See [Phase 9 evidence](docs/renewal/phase-9-evidence.md) and the [local runbook](docs/renewal/phase-9-local-run.md).
-
-### Recommendation-quality concern — 2026-10-26
-
-The developer reports that recent recommendations from the ListenBrainz-default
-path feel less personally tied to named seed artists, including Jakuzi and Lin
-Pesto, despite choosing to stay close to their taste. Recent examples: Depeche
-Mode's "Zenstation (Halbermensch edit)" (51% displayed tag overlap; marked "not
-for me"), The Cure's "Closedown" (44%; rated 7/10), and Gary Numan's "Airlane"
-(rated 7/10). This is subjective feedback and a product-quality concern, not
-evidence that the provider switch caused a regression. The responses are mixed:
-two tracks were liked and one was rejected. Displayed tag-overlap percentages are
-not a validated measure of perceived musical closeness. Compare stored
-recommendation evidence and, if authorized, a controlled provider evaluation
-before changing scoring or provider configuration. Recommendation quality
-remains unverified; Phase 5 real-data evaluation remains unauthorized.
-
-## React frontend review — 2026-10-26
-
-The developer approved Home and authorized the remaining frontend. Discover,
-Your Taste, History and supported account controls now use the existing APIs.
-Home's temporary sample-feed mode is removed. The local ASP.NET host serves the
-built React application at `http://localhost:5080/`.
-
-Local verification passed 45 browser checks, a real provider-backed guest/account
-journey and 13 targeted host/artwork tests. Responsive screenshots and comparison
-notes are in [the frontend review](design/superdesign/frontend-review/REVIEW.md).
-The live account-deletion response reported incomplete local email-copy cleanup;
-the UI reports that warning. No backend fix, performance-audit change, CI/Docker
-change, commit, push or deployment was made. Final developer approval remains open.
-
-## Guest discovery
-### Discovery and artwork reliability — 2026-10-27
-
-Local fixes add ten-minute job expiry, bounded acquisition/pool overlap, independent
-completed-result recovery, prioritized public-artwork scheduling and a separately
-bounded persistent cover cache. Candidate selection, score weights and supporting
-evidence requirements are preserved. Quality-affecting shortcuts are deferred in
-[the fix report](DISCOVERY_AND_ARTWORK_FIXES.md), with verification and remaining
-provider/storage limits. Developer confirmation and production acceptance remain pending.
-
-### Album artwork — 2026-10-26
-ListenBrainz recording metadata now resolves release and release-group covers
-through Cover Art Archive. A separate background lane warms public recommendations;
-discovery cards read a bounded image cache and show placeholders while unavailable.
-Local verification: 54 targeted .NET tests and two offline JavaScript checks passed.
-Real-data Chromium review showed three cached JPEG covers among five recent picks,
-with placeholders for the others, no page errors, no browser upstream requests,
-and no horizontal overflow at 390px. Images are cached in memory and warm again
-after restart. Developer confirmation and deployment remain pending.
-
-
-### Efficiency audit continuation — 2026-10-25
-
-The developer approved architectural directions for P01, P06/P13, P09/P12,
-P05/P15 and P16, **without implementation authorization**. Complete the remaining
-CPU, memory, SQL, contention, network and deployment investigations and review
-the prioritized plan before implementation. See `Performance_Network_Audit.md`.
-
-P01 remains an outstanding architectural optimization: retain SHA-256 and the
-existing five-pass implementation while designing immutable artifacts, independently
-integrity-protected versioned manifests and incremental verification. Define the
-external-change detection window and privileged-administrator threat-model limits;
-preserve fail-closed integrity, cross-process coordination, atomicity, accounting
-and recovery. A replacement needs design approval, benchmarks and verification.
-
-### Efficiency audit evidence — 2026-10-25
-
-The remaining available investigations are recorded in the root audit: usable
-CPU/allocation traces, three managed heap graphs, SQL plans and trigger costs,
-actual login/write contention, 25-owner reads, two successful ten-job bursts,
-HTTP/cache/pacing controls, two paced public metadata samples, browser revalidation
-and mobile throttling, storage growth, and local resource-limit comparisons.
-P18 compression, P19 ledger-trigger cost and P20 scheduled-capture inventory
-publication/recovery are recorded alongside all original partial/open findings.
-The actual scheduled CLI stops safely for 1/10/100 new recipients; successful
-unattended throughput is unverified and must not be inferred from stop timings.
-
-No VPS exists yet. The practical initial estimate is 2 vCPU / 2 GiB / 25 GiB SSD;
-4 GiB provides a more defensible budget for concurrent large exports before the
-approved staged-streaming design. Actual VPS and representative live-discovery
-acceptance remain separate. No optimization implementation, schema/dependency
-change, purchase, deployment or push was performed. Review the prioritized plan
-and design contracts before explicitly authorizing implementation.
-
-### Performance remediation — 2026-10-24
-
-Bounded fixes from the root [performance audit](Performance_Network_Audit.md) now
-honor polling retry delays, reuse metadata after pacing, remove one body copy,
-prepare invariant scoring inputs once, index candidate aliases, batch catalog
-reads and combine account eligibility checks. All 702 Release tests passed with
-zero failures/skips against disposable PostgreSQL; both offline Node checks passed.
-Isolated allocation comparisons preserve serialized output hashes. Larger storage,
-export, authentication coordination and evidence-policy decisions remain deferred
-in the report. No migrations, dependency changes, live-provider measurements or
-deployment were performed; developer confirmation remains pending.
-
-### Actual local live website — 2026-10-23
-
-The normal `Liner Notes` IDE profile now selects live ListenBrainz/MusicBrainz
-configuration. `bash scripts/run_live.sh` starts the real site at
-`http://localhost:5080/`, using the persistent `liner_notes_live` database and
-private `.linernotes/live/` state. It selects the installed pinned SDK and never
-substitutes fixture generation when live configuration fails.
-
-Playwright MCP verified actual artist, album and recording lookup, real
-recommendation generation, stored live evidence, feedback persistence and real
-recipient-free Recent recommendations. Live metadata acquisition now imports
-eligible public core recording metadata into the catalog before scoring. The
-provider client honors upstream `s-maxage` for shared freshness while retaining
-no-store/no-cache/private restrictions.
-
-The final regression run passed 695 .NET checks with no failures or skips.
-These targeted live journeys establish local integration, not recommendation
-quality or public deployment readiness. The developer explicitly selected running
-on this machine with real provider data. See [operation](docs/renewal/local-live-run.md)
-and [live verification](docs/renewal/2026-10-23-local-live-verification.md).
-
-### Earlier synthetic implementation evidence
-
-The guest-first discovery design and sequential implementation were approved. The first onsite flow now supports artist, album, and style-tag selection; immediate synthetic recommendations with persisted explanations; explicit catalog lookup; feedback; export; registration with guest data preservation; explicit import into an existing account; and guest data deletion.
-
-The implementation passed 648 .NET checks with zero failures/skips and 12 synthetic browser checks. Seven catalog integration checks also passed after strengthening private-evidence retention assertions. The browser covered search, artist/album selection, explicit lookup, generation, return visits, feedback, export, registration/import, cooldown, sparse results and deletion.
-
-Provider selection uses registered polymorphic bundles. Application workflows do not depend on provider implementations or EF Core types. Persistence contracts live in Application; database-specific SQL and mappings remain in DataAccess. A database change still needs schema/data migration, but should not rewrite product workflows.
-
-Bounded public cleanup now preserves the active catalog, fresh lookups, staged imports, canonical identities and private favorite snapshots. Weekly saves, scheduler activity and unsubscribe updates use discovery admission when its runtime is enabled; PostgreSQL verification confirmed a subsequent guest write still succeeds.
-
-The constrained Release runtime passed the 50-profile load scenario with five generating visitors and 5/20/50 concurrent search clients. The final warm search p95 values were 28/123/323 ms; five synthetic batches completed in 2.11–2.27 seconds. A separate run recovered five unfinished requests across a forced website restart. Earlier burst runs were slower; the provisional 100 ms burst target is not met. This is local synthetic evidence, not a production capacity guarantee. See [resource measurements and limits](docs/renewal/guest-discovery-capacity.md).
-
-Remaining confirmation and deployment gates:
-
-- Developer review of the concrete onsite flow remains pending.
-- A real catalog acquisition manifest is not approved or imported. Coverage, recommendation quality and live-provider latency remain unverified.
-- Optional local email capture is excluded from concurrent guest-runtime operation in both hosts. It needs separate file/key write coordination before that combination is enabled. No external email transport is configured.
-- Production hosting, full-disk operating limits, backups, real-catalog load and broader saturation behavior need deployment-specific verification. There is no configured total-user ceiling.
-
-See the [evidence](docs/renewal/guest-discovery-evidence.md), [storage notes](docs/renewal/guest-discovery-storage.md), [design](docs/superpowers/specs/2026-10-16-guest-discovery-design.md), [execution plan](docs/superpowers/plans/2026-10-16-guest-discovery.md), and [synthetic runbook](docs/renewal/guest-discovery-local-run.md).
-
-## Optional taste onboarding
-
-Implementation of the approved 2026-10-19 design passed local verification: 669
-.NET tests with zero failures/skips, 21 browser checks and the EF model/migration
-consistency check. The 271-tag synthetic generation/export journey passed within
-the existing snapshot budget.
-Guests and accounts share resumable optional questions, searchable tags without a
-selection count cap, broad taste, artist/album/recording favorites and explicit
-review. Skipping taste opens a separate recipient-free Recent recommendations
-feed. Saved selections are separate from bounded generation windows and replay
-snapshots. Export, attachment, explicit import, ownership and deletion include the
-new state. Existing name seeds, custom tags and queued request retries remain compatible.
-
-See [implementation evidence](docs/renewal/optional-taste-onboarding-evidence.md)
-and the [execution plan](docs/superpowers/plans/2026-10-19-optional-taste-onboarding.md).
-Developer confirmation, live recording/vocal coverage and recommendation quality
-remain open. Last.fm stays available; unsupported direct recording capability is
-reported as a coverage gap. Deployment and real catalog acquisition remain separate gates.
-
-## Provider status
-
-ListenBrainz is the configured default; Last.fm remains available behind the provider abstraction. Live use is explicitly gated. Per-user provider choice and listening-history imports are deferred. Developer confirmation, deployment-specific usage and license review, and recommendation-quality evaluation remain open. See the [provider evidence](docs/renewal/listenbrainz-provider-evidence.md) and [operations guide](docs/renewal/listenbrainz-provider-runbook.md).
-
-## Performance audit decisions — 2026-10-25
-
-The following are developer-selected design directions, not implementation or deployment verification:
-
-- **P01 — Artifact validation:** Retain existing full-content SHA-256 integrity passes for now. **Open for further design review:** five full-root passes scale poorly (audit: approximately 3.85 seconds for 900 MB on warm tmpfs). Investigate a durable exclusive-writer/versioned-artifact protocol that reduces repeated full scans without weakening tamper detection, quota enforcement, cross-process safety, or crash recovery. Do not remove existing passes until the integrity contract and adversarial/crash tests are approved.
-- **P06/P13 — Data export and archive:** Design bounded staged streaming: read history in pages, write to private temporary storage, publish only after successful completion, and preserve complete failure-atomic exports. Design per-owner archive lookup/storage with authorization and a safe compatibility/migration path for existing shared archive copies.
-- **P09/P12 — Counters:** Design transactionally maintained feedback revision and evidence quota counters instead of repeatedly deriving all totals from rows. Specify all mutation paths, retries, concurrency, repair/reconciliation, and migration consistency before implementation; establish measurement baselines.
-- **P05/P15 — Concurrency:** Measure acquisition-stripe and login/write-admission contention first; selectively move toward more precise coordination where justified. Preserve password hashing, lockout/session atomicity, provider pacing, and managed-write accounting.
-- **P16 — Recording-tag evidence:** Permit direct recording tags to be sufficient without an additional artist metadata request when they support an honest explanation. Persist explicit “artist evidence not requested” provenance rather than misrepresenting it as missing; verify receipt/score behavior.
+Completed investigation reports, execution plans and design captures were
+removed during repository cleanup. Their original records remain in Git history.
+Retained evidence documents distinguish local verification from production and
+recommendation-quality claims.
 
 ## Remaining renewal work
 

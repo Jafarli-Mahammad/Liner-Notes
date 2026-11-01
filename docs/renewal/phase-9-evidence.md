@@ -1,7 +1,7 @@
 # Phase 9 implementation evidence
 
-Locally implemented and verified, 2026-10-12. [Approved design](phase-9-review.md),
-[sequential plan](phase-9-plan.md), [verified version snapshot](phase-9-versions.json).
+Locally implemented and verified, 2026-10-12. Approved design (historical record in Git),
+sequential plan (historical record in Git), [verified version snapshot](phase-9-versions.json).
 Developer confirmation remains pending; local verification does not authorize release.
 
 Focused local implementation commits: `04f26da` (dependency compatibility) and

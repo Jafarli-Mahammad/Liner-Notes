@@ -333,6 +333,17 @@ class Operations:
         return {'status':'verified','snapshot':snapshot,'offHost':not bool(self.config.get('local_repository'))}
 
     def upgrade(self,images):
+        maintenance_existed=(self.state/'maintenance.json').exists()
+        try:
+            return self._upgrade(images)
+        except (OperationStopped,OSError,ValueError,KeyError,TypeError,AttributeError):
+            # This method runs only after lifecycle() has acquired its lock.
+            if not maintenance_existed and (self.state/'maintenance.json').exists():
+                try: self.command('stop','--timeout','90','web')
+                except OperationStopped: pass
+            raise
+
+    def _upgrade(self,images):
         variables={'web':'LINER_WEB_IMAGE','worker':'LINER_WORKER_IMAGE','migrate':'LINER_TOOLS_IMAGE','volume-init':'LINER_VOLUME_IMAGE'}
         if set(images)!=set(variables) or any(not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9:./_@-]*',v) for v in images.values()):
             raise OperationStopped('complete_verified_image_set_required')
@@ -382,8 +393,20 @@ class Operations:
         if volumes.strip(): raise OperationStopped('restore_target_volumes_not_empty')
         if (self.state/'maintenance.json').exists(): raise OperationStopped('restore_already_in_progress')
         self.marker('restore','restoring',safe_to_resume=False)
+        # Bound retained failed restores by age and count. The lifecycle lock
+        # ensures no other restore is currently using one of these directories.
+        cutoff=time.time()-7*24*60*60
+        old=sorted((p for p in self.staging.glob('restore-*') if p.is_dir() and not p.is_symlink()),key=lambda p:p.stat().st_mtime)
+        for path in old:
+            if path.stat().st_mtime < cutoff: shutil.rmtree(path)
+        retained=sorted((p for p in self.staging.glob('restore-*') if p.is_dir() and not p.is_symlink()),key=lambda p:p.stat().st_mtime)
+        for path in retained[:-4]: shutil.rmtree(path)
         work=self.staging/('restore-'+uuid.uuid4().hex); work.mkdir(mode=0o700)
         self.restic('restore',snapshot,'--target','/restore',restore=work)
+        # The restic container restores source numeric ownership. Give the
+        # extracted tree to this operator before reading the manifest/files.
+        for path in (work,*work.rglob('*')):
+            os.chown(path,os.getuid(),os.getgid(),follow_symlinks=False)
         restored=work/'snapshot'
         manifest=verify_manifest(restored)
         with (restored/'images.tar').open('rb') as source: self.run(['docker','image','load'],source=source)
@@ -419,6 +442,7 @@ class Operations:
         atomic_json(self.state/'last-backup.json',{'completedAt':manifest['createdAt'],'snapshot':snapshot,'verified':True,
             'offHost':not bool(self.config.get('local_repository'))})
         atomic_json(self.state/'last-attempt.json',{'at':now(),'action':'restore','status':'passed','seconds':time.monotonic()-started})
+        shutil.rmtree(work)
         return {'status':'restored_verified','sourceImages':manifest['sourceImages']}
 
 
@@ -452,9 +476,6 @@ def main():
     except (OperationStopped,OSError,ValueError,KeyError,TypeError,AttributeError) as error:
         reason=str(error) if isinstance(error,OperationStopped) else 'operator_configuration_or_io'
         if 'operations' in locals():
-            if args.action=='upgrade' and (operations.state/'maintenance.json').exists():
-                try: operations.command('stop','--timeout','90','web')
-                except OperationStopped: pass
             atomic_json(operations.state/'last-attempt.json',{'at':now(),'action':args.action,'status':'failed','reason':reason,
                 'step':getattr(operations,'last_step','configuration')})
         print(json.dumps({'status':'stopped','reason':reason})); return 2

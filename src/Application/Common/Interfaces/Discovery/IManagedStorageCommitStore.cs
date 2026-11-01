@@ -15,5 +15,5 @@ public interface IManagedStorageCommitStore
     // Must be the last managed mutation in the caller's transaction.
     Task<ManagedStorageCommit> RecordAsync(Guid commitId, StoragePublicationPlan plan, string schemaFingerprint, CancellationToken ct);
     // Explicit operator establishment only, while writers are stopped and filesystem ownership is held.
-    Task<GenerationStorageState> EstablishAsync(Guid commitId, StoragePublicationPlan plan, CancellationToken ct);
+    Task<GenerationStorageState> EstablishAsync(Guid commitId, StoragePublicationPlan plan, CancellationToken ct, long? maximumDatabaseBytes = null);
 }

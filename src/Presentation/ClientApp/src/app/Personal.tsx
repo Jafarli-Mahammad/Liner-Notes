@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { api, ApiError, identityEpoch, isAbort, useIdentity } from '../api/client';
 import type { Answers, Batch, Favorite, Feedback, Job, Overview, Pick, Session } from '../api/models';
+import { Loading } from '../components/Loading';
 import { Notice } from '../components/Notice';
 
 interface PersonalData { session: Session; overview: Overview; epoch: number; }
@@ -20,7 +21,7 @@ const Context = createContext<PersonalContext | null>(null);
 export function usePersonal() { const value = useContext(Context); if (!value) throw new Error('Personal context missing'); return value; }
 
 export function PersonalLayout() {
-  const identity = useIdentity();
+  const identity = useIdentity(), { pathname } = useLocation();
   const [data, setData] = useState<PersonalData | null>(null), [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null), [busy, setBusy] = useState(false);
   const current = useRef<PersonalData | null>(null), locked = useRef(false), mounted = useRef(true);
@@ -113,7 +114,7 @@ export function PersonalLayout() {
       return result;
     },
   };
-  return <Context.Provider value={value}>{loading || (data !== null && data.epoch !== identity.epoch) ? <main id="main-content" className="page-container personal-main"><p role="status">Loading your discoveries…</p></main>
+  return <Context.Provider value={value}>{loading || (data !== null && data.epoch !== identity.epoch) ? <main id="main-content" className="page-container personal-main"><Loading shape={pathname === '/history' ? 'list' : ['/account', '/taste'].includes(pathname) ? 'form' : 'cards'} /></main>
     : error ? <main id="main-content" className="page-container personal-main"><Notice error={error} onRetry={() => { setLoading(true); reload().catch(setError).finally(() => setLoading(false)); }} /></main>
     : <Outlet />}</Context.Provider>;
 }

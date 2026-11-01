@@ -101,3 +101,29 @@ jobs:
           persist-credentials: false
       - name: Build and verify disposable local stack
         run: python3 scripts/checks/phase9_compose.py --build
+      - name: Test release artifact checks
+        run: |
+          python3 -m unittest discover -s scripts/checks -p 'test_production*.py'
+          python3 -m unittest discover -s scripts/ops -p 'test_*.py'
+      - name: Verify complete image from tracked inputs
+        run: python3 scripts/ops/build_release.py --output /tmp/liner-release-images.json
+      - name: Scan the exact production runtime image
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          images=json.loads(Path('/tmp/liner-release-images.json').read_text())['images']
+          for name in ['WEB','WORKER','TOOLS']:
+              subprocess.run(['python3','scripts/checks/production_security.py','--image',images['LINER_'+name+'_IMAGE'],
+                  '--directory','/tmp/liner-image-security-'+name.lower(),'--cache-directory','/tmp/liner-security-cache'],check=True)
+          PY
+      - name: Rehearse encrypted recovery with the exact release images
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          images=json.loads(Path('/tmp/liner-release-images.json').read_text())['images']
+          keys={'web':'WEB','worker':'WORKER','migrate':'TOOLS','volume-init':'VOLUME'}
+          Path('/tmp/liner-service-images.json').write_text(json.dumps({k:images['LINER_'+v+'_IMAGE'] for k,v in keys.items()}))
+          PY
+          python3 scripts/checks/production_recovery.py --disposable --images /tmp/liner-service-images.json

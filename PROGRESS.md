@@ -2,6 +2,39 @@
 
 ## Current status
 
+### Production beta engineering — 2026-11-01
+
+The approved beta design is implemented: clean-tree React images, guarded
+Production configuration, private/resource-bounded Compose, separate database
+roles, persistent keys, writer-agreed storage policy, serialized backup/restore
+and compatible upgrades, bounded live weekly generation and operational probes.
+The patched backend passed 909 tests with zero failures/skips. Local recovery
+compared 29 tables and preserved authentication, protected tokens and export;
+a separate recovery retained five real-provider picks and their score breakdowns.
+The final real-provider browser journey passed without a cleanup warning. Scanning
+caught framework and SDK-library advisories; the patched final web, Worker and
+migration-tool images have zero high/critical findings. Final HTTPS/proxy,
+compatible-upgrade and recovery acceptance passed; the real-history recovery
+retained ten weekly picks and ten stored breakdowns across two weeks.
+Mail delivery and automatic all-account scheduling
+are excluded. VPS/domain selection, public TLS/firewall, off-host recovery, key
+custody, delivered alerts and developer acceptance remain outstanding.
+No production deployment, push or release publication has occurred. See
+[the engineering evidence](docs/operations/production-beta-evidence.md) and
+[the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).
+
+### Frontend refinement — 2026-11-01
+
+Shared service buttons now cover all four platforms on featured, compact and Home
+cards. Loading feedback, decoded artwork reveals, stalled-request recovery,
+sign-in details and history states follow the existing design. Local verification
+passed the frontend build and 65 browser checks. A real-provider disposable-account
+journey passed; separate host restarts retained five owned picks and four public
+feed entries. Playwright used installed Chromium because MCP's configured Chrome
+is missing. The existing local-email cleanup warning remains. See the
+[refinement review](design/frontend-refinement/REVIEW.md) for evidence and limits.
+Developer acceptance and production deployment remain outstanding.
+
 ### Original-account discovery recovery — 2026-10-31
 
 The unchanged revision-21 profile now has locally verified new recommendation

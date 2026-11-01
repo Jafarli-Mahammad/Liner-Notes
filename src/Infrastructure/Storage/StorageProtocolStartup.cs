@@ -8,7 +8,7 @@ namespace LinerNotes.Infrastructure.Storage;
 
 /// <summary>Refuse protocol downgrades and replay only a database-anchored inventory before consumers start.</summary>
 internal sealed class StorageProtocolStartup(IServiceScopeFactory scopes, DiscoveryRuntimeOptions runtime,
-    GenerationStorageOptions options) : IHostedService
+    GenerationStorageOptions options, LinerNotes.Application.Common.Diagnostics.OperationalStatus? status = null) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -27,6 +27,7 @@ internal sealed class StorageProtocolStartup(IServiceScopeFactory scopes, Discov
         await scope.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>()
             .ReclaimAsync(_ => Task.FromResult(true), cancellationToken);
         await scope.ServiceProvider.GetRequiredService<IRecoverableArtifactPublisher>().RecoverAsync(cancellationToken);
+        status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Storage,true);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

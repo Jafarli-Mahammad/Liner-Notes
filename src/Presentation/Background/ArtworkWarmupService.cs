@@ -4,7 +4,8 @@ using LinerNotes.Application.Features.Discovery;
 namespace LinerNotes.Presentation.Background;
 
 public sealed class ArtworkWarmupService(IServiceScopeFactory scopes, DiscoveryRuntimeOptions options,
-    TimeProvider clock, ILogger<ArtworkWarmupService> logger, IArtworkQueue queue) : BackgroundService
+    TimeProvider clock, ILogger<ArtworkWarmupService> logger, IArtworkQueue queue,
+    LinerNotes.Application.Common.Diagnostics.OperationalStatus? status = null) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken) => !options.RunJobs ? Task.CompletedTask
         : Task.WhenAll(ScanAsync(stoppingToken), PrepareAsync(stoppingToken), PrepareAsync(stoppingToken),
@@ -21,9 +22,11 @@ public sealed class ArtworkWarmupService(IServiceScopeFactory scopes, DiscoveryR
                 var recent = await scope.ServiceProvider.GetRequiredService<IRecentRecommendations>().ReadAsync(cursor, 50, clock.GetUtcNow(), ct);
                 queue.Enqueue(recent.Items.Where(item => item.Origin == "Public").Select(item => item.RecordingId).ToArray());
                 cursor = recent.NextCursor;
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Artwork,true);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex) { logger.LogWarning("Artwork scan deferred after {FailureType}.", ex.GetType().Name); }
+            catch (Exception ex) { logger.LogWarning("Artwork scan deferred after {FailureType}.", ex.GetType().Name);
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Artwork,false,"artwork_scan_unavailable"); }
             await Task.Delay(TimeSpan.FromSeconds(15), clock, ct);
         }
     }
@@ -57,7 +60,8 @@ public sealed class ArtworkWarmupService(IServiceScopeFactory scopes, DiscoveryR
                 transferred = plans.Select(plan => plan.RecordingId).ToArray();
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-            catch (Exception ex) { retryable = true; logger.LogWarning("Artwork preparation deferred after {FailureType}.", ex.GetType().Name); }
+            catch (Exception ex) { retryable = true; logger.LogWarning("Artwork preparation deferred after {FailureType}.", ex.GetType().Name);
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Artwork,false,"artwork_preparation_unavailable"); }
             finally { queue.Complete(ids.Except(transferred).ToArray(), retryable); }
         }
     }
@@ -85,7 +89,8 @@ public sealed class ArtworkWarmupService(IServiceScopeFactory scopes, DiscoveryR
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-            catch (Exception ex) { retryable = true; logger.LogWarning("Artwork acquisition deferred after {FailureType}.", ex.GetType().Name); }
+            catch (Exception ex) { retryable = true; logger.LogWarning("Artwork acquisition deferred after {FailureType}.", ex.GetType().Name);
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Artwork,false,"artwork_acquisition_unavailable"); }
             finally { queue.Complete([plan.RecordingId], retryable); }
         }
     }

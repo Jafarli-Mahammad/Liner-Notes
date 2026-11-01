@@ -9,7 +9,7 @@ for (const width of [390, 768, 1440]) {
     await page.goto('/discover');
     await expect(page.getByRole('heading', { name: 'Meet your next obsession.' })).toBeVisible();
     await expect(page.locator('.personal-pick')).toHaveCount(4);
-    for (const image of await page.locator('.personal-pick img').all()) await image.scrollIntoViewIfNeeded();
+    for (const image of await page.locator('.personal-pick .artwork-frame').all()) await image.scrollIntoViewIfNeeded();
     await expect(page.locator('.artwork-ready')).toHaveCount(4);
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => scrollTo(0, 0)); await page.mouse.move(0, 0); await page.waitForTimeout(450);

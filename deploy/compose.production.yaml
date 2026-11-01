@@ -1,0 +1,161 @@
+name: linernotes-production
+
+x-runtime: &runtime
+  ASPNETCORE_ENVIRONMENT: Production
+  DOTNET_ENVIRONMENT: Production
+  Production__ConfigurationFile: /run/secrets/runtime-settings.json
+  GuestDiscovery__Enabled: "true"
+  GuestDiscovery__PublicOrigin: https://${LINER_SITE:?Set the public hostname}
+  AllowedHosts: ${LINER_SITE:?Set the public hostname}
+  ForwardedHeaders__KnownProxies__0: ${LINER_PROXY_IP:-172.30.85.2}
+  Generation__Provider: listenbrainz
+  Generation__Origin: Live
+  Generation__LiveEnabled: "true"
+  ListenBrainz__Mode: LiveOnly
+  ListenBrainz__LiveUseApproved: ${LINER_PROVIDER_USE_APPROVED:?Record provider usage review}
+  ListenBrainz__RateLimitDirectory: /app/local-state/upstream-pacing
+  LocalEmail__Enabled: "false"
+  DiscoveryRuntime__RunJobs: ${LINER_RUN_JOBS:-true}
+  DiscoveryRuntime__EnforceStorageAdmission: "true"
+  GenerationStorage__InventoryPath: /app/local-state/inventory.json
+  GenerationStorage__LeasePath: /app/local-state/lease.lock
+  GenerationStorage__DatabaseOverheadBytesPerPick: "1000000"
+  GenerationStorage__ArtifactRoots__recordings__0: /app/local-state/recordings
+  GenerationStorage__ArtifactRoots__cache__0: /app/local-state/cache
+  GenerationStorage__ArtifactRoots__reports__0: /app/local-state/reports
+  GenerationStorage__ArtifactRoots__copies__0: /app/local-state/copies
+  GenerationStorage__ArtifactRoots__backups__0: /app/local-state/backups
+  GenerationStorage__ArtifactRoots__partials__0: /app/local-state/partials
+  DiscoveryStorage__FilesystemPaths__0: /app/local-state
+  DiscoveryStorage__FilesystemPaths__1: /app/keys
+  DiscoveryStorage__MinimumFreeBytes: "2147483648"
+  DataProtection__KeyPath: /app/keys
+
+x-logging: &logging
+  driver: local
+  options: {max-size: "10m", max-file: "3"}
+
+services:
+  proxy:
+    image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    environment:
+      LINER_SITE: ${LINER_SITE:?Set the public hostname}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy-data:/data
+      - proxy-config:/config
+    networks:
+      frontend: {ipv4_address: "${LINER_PROXY_IP:-172.30.85.2}"}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    logging: *logging
+    security_opt: [no-new-privileges:true]
+
+  db:
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_DB: liner_notes
+      POSTGRES_USER: liner_operator
+      POSTGRES_PASSWORD_FILE: /run/secrets/operator-password
+    secrets: [operator-password, application-password]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./init-database.sh:/docker-entrypoint-initdb.d/10-liner.sh:ro
+      - ./init-database.sql:/opt/liner/init-database.sql:ro
+    networks: [backend]
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1
+    command: [postgres, -c, shared_buffers=64MB, -c, work_mem=4MB, -c, max_connections=30]
+    healthcheck:
+      test: [CMD-SHELL, 'PGPASSWORD="$$(cat /run/secrets/application-password)" psql -X -h 127.0.0.1 -U liner_app -d liner_notes -Atqc "SELECT 1" >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+
+  volume-init:
+    image: ${LINER_VOLUME_IMAGE:?Set the matching volume-init image}
+    profiles: [operator]
+    volumes: [local-state:/app/local-state, keys:/app/keys]
+    network_mode: none
+    restart: "no"
+    mem_limit: 64m
+    cpus: 0.5
+    logging: *logging
+
+  web:
+    image: ${LINER_WEB_IMAGE:?Set the verified release image}
+    environment: *runtime
+    secrets: [runtime-settings.json]
+    volumes: [local-state:/app/local-state, keys:/app/keys]
+    networks:
+      frontend: {ipv4_address: "${LINER_WEB_IP:-172.30.85.3}"}
+      backend: {}
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  worker:
+    image: ${LINER_WORKER_IMAGE:?Set the matching Worker image}
+    profiles: [operator]
+    environment: *runtime
+    secrets: [runtime-settings.json]
+    volumes: [local-state:/app/local-state, keys:/app/keys]
+    networks: [backend]
+    restart: "no"
+    mem_limit: 768m
+    cpus: 1
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  migrate:
+    image: ${LINER_TOOLS_IMAGE:?Set the matching migration tools image}
+    profiles: [operator]
+    environment:
+      <<: *runtime
+      Production__ConfigurationFile: /run/secrets/operator-settings.json
+      DiscoveryRuntime__RunJobs: "false"
+    secrets: [operator-settings.json]
+    volumes: [local-state:/app/local-state, keys:/app/keys]
+    networks: [backend]
+    command: [database, update, --project, src/DataAccess/DataAccess.csproj, --startup-project, src/Presentation/Presentation.csproj, --context, AppDbContext, --configuration, Release, --no-build]
+    restart: "no"
+    mem_limit: 768m
+    cpus: 1
+    logging: *logging
+
+networks:
+  frontend:
+    ipam:
+      config: [{subnet: "${LINER_FRONTEND_SUBNET:-172.30.85.0/28}"}]
+  backend: {}
+
+volumes:
+  postgres-data: {}
+  local-state: {}
+  keys: {}
+  proxy-data: {}
+  proxy-config: {}
+
+secrets:
+  operator-password:
+    file: ${LINER_PRIVATE_DIR:?Set the private operator directory}/operator-password
+  application-password:
+    file: ${LINER_PRIVATE_DIR:?Set the private operator directory}/application-password
+  runtime-settings.json:
+    file: ${LINER_PRIVATE_DIR:?Set the private operator directory}/runtime-settings.json
+  operator-settings.json:
+    file: ${LINER_PRIVATE_DIR:?Set the private operator directory}/operator-settings.json

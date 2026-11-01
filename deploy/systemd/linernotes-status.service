@@ -1,0 +1,13 @@
+[Unit]
+Description=Liner Notes private operational checks
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=linernotes
+WorkingDirectory=/opt/linernotes
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/linernotes/scripts/ops/production.py --configuration /srv/linernotes/operations.json status
+TimeoutStartSec=30s
+MemoryMax=128M

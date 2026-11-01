@@ -8,7 +8,8 @@ namespace LinerNotes.Infrastructure.Storage;
 
 /// <summary>Bounded recovery continues when consumers are paused, including privacy cleanup interrupted after SQL commit.</summary>
 internal sealed class StorageRecoveryService(IServiceScopeFactory scopes, DiscoveryRuntimeOptions runtime,
-    GenerationStorageOptions options, ILogger<StorageRecoveryService> logger) : BackgroundService
+    GenerationStorageOptions options, ILogger<StorageRecoveryService> logger,
+    LinerNotes.Application.Common.Diagnostics.OperationalStatus? status = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,12 +23,14 @@ internal sealed class StorageRecoveryService(IServiceScopeFactory scopes, Discov
             {
                 await using var scope = scopes.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<IRecoverableArtifactPublisher>().RecoverAsync(budget.Token);
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Recovery,true);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
             catch (Exception)
             {
                 // A failed sweep retains its durable ownership and charges; never log private paths or identities.
                 logger.LogWarning("Managed storage recovery is incomplete; retained operations will be retried.");
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Recovery,false,"recovery_incomplete");
             }
         }
     }

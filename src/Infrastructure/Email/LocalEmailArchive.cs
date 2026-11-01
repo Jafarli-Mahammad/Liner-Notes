@@ -67,7 +67,7 @@ public sealed partial class LocalEmailArchive(LocalEmailOptions options, Generat
     }
 
     /// <summary>Deletes authenticated encrypted or legacy copies and partials owned by the user while holding the artifact lease.</summary>
-    /// <remarks>Unverifiable files are retained. Integrity, file access, and configuration failures become cleanup issues; cancellation propagates. Disabled cleanup returns an incomplete result.</remarks>
+    /// <remarks>Unverifiable files are retained. Integrity, file access, and configuration failures become cleanup issues; cancellation propagates. Managed erasure does not require delivery to be enabled.</remarks>
     public async Task<LocalEmailCleanupResult> DeleteAsync(Guid userId, CancellationToken ct)
     {
         if (runtime?.ManagedWritesEnabled == true) return await DeleteManagedAsync(userId, ct);

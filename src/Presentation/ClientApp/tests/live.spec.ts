@@ -10,7 +10,7 @@ test('actual provider-backed guest and account journey', async ({ page }) => {
     await page.evaluate(() => { (document.activeElement as HTMLElement | null)?.blur(); scrollTo(0, 0); });
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(150);
-    await page.screenshot({ path: `../../../design/superdesign/frontend-review/${name}.png`, fullPage: true });
+    await page.screenshot({ path: `${process.env.LINER_LIVE_EVIDENCE_DIR ?? "../../../design/superdesign/frontend-review"}/${name}.png`, fullPage: true });
   }
   page.on('pageerror', e => errors.push(e.message));
   const email = `frontend-qa-${Date.now()}@example.test`, username = `frontendqa${Date.now()}`;
@@ -72,6 +72,6 @@ test('actual provider-backed guest and account journey', async ({ page }) => {
   } finally {
     results.checks = checks; results.pageExceptions = errors; results.accountCleanupNeeded = accountCreated;
     results.lastRoute = new URL(page.url()).pathname;
-    await writeFile('../../../design/superdesign/frontend-review/live-journey.json', JSON.stringify(results, null, 2) + '\n');
+    await writeFile(`${process.env.LINER_LIVE_EVIDENCE_DIR ?? '../../../design/superdesign/frontend-review'}/live-journey.json`, JSON.stringify(results, null, 2) + '\n');
   }
 });

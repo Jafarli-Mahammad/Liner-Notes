@@ -7,13 +7,12 @@ public sealed partial class LocalEmailArchive
 {
     private async Task<LocalEmailCleanupResult> DeleteManagedAsync(Guid userId, CancellationToken ct)
     {
-        if (!options.Enabled) return new(false, ["archive_unavailable"]);
         if (publisher is null || publications is null || coordinator is null)
             return new(false, ["copy_cleanup_unavailable"]);
         var issues = new List<string>();
         try
         {
-            string root = LocalEmailPaths.Root(options, storage);
+            var roots = LocalEmailPaths.CleanupRoots(options, storage);
             Guid? after = null;
             while (true)
             {
@@ -33,6 +32,7 @@ public sealed partial class LocalEmailArchive
             }
             // Retain the old authenticated scan for legacy and unlinked copies. A legacy file
             // must already belong to the trusted inventory before a deletion intent is admitted.
+            foreach (string root in roots)
             foreach (string file in Files(root, includePartials: true))
             {
                 ct.ThrowIfCancellationRequested();

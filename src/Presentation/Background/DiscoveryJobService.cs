@@ -7,7 +7,8 @@ using LinerNotes.Domain.Discovery;
 namespace LinerNotes.Presentation.Background;
 
 public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRuntimeOptions options,
-    TimeProvider clock, ILogger<DiscoveryJobService> logger) : BackgroundService
+    TimeProvider clock, ILogger<DiscoveryJobService> logger,
+    LinerNotes.Application.Common.Diagnostics.OperationalStatus? status = null) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -36,6 +37,8 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
                         token => jobs.LeaseNextAsync(kind, clock.GetUtcNow(), TimeSpan.FromSeconds(options.LeaseSeconds), options.MaximumAttempts, token, lane), ct);
                     if (job is not null) break;
                 }
+                status?.Report(acquisition ? LinerNotes.Application.Common.Diagnostics.OperationalComponent.Acquisition :
+                    LinerNotes.Application.Common.Diagnostics.OperationalComponent.Prepared,true);
                 if (job is null) { await Task.Delay(TimeSpan.FromSeconds(1), clock, ct); continue; }
                 if (acquisition) preferLookup = !preferLookup;
                 await ProcessAsync(job, acquisition, ct);
@@ -44,6 +47,8 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
             catch (Exception)
             {
                 logger.LogWarning("Discovery runner is waiting for writable storage or valid configuration.");
+                status?.Report(acquisition ? LinerNotes.Application.Common.Diagnostics.OperationalComponent.Acquisition :
+                    LinerNotes.Application.Common.Diagnostics.OperationalComponent.Prepared,false,"runner_unavailable");
                 await Task.Delay(TimeSpan.FromSeconds(5), clock, ct);
             }
         }
@@ -64,7 +69,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         if (remaining <= TimeSpan.Zero) remaining = TimeSpan.FromMilliseconds(1);
         work.CancelAfter(remaining < TimeSpan.FromSeconds(options.MaximumWorkSeconds) ? remaining : TimeSpan.FromSeconds(options.MaximumWorkSeconds));
         using var heartbeatStop = CancellationTokenSource.CreateLinkedTokenSource(work.Token);
-        var heartbeat = HeartbeatAsync(job, work, heartbeatStop.Token);
+        var heartbeat = HeartbeatAsync(job, work, heartbeatStop.Token,acquisition);
         string? error = null;
         bool retry = false, defer = false;
         var deferDelay = TimeSpan.FromSeconds(1);
@@ -103,14 +108,16 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
             try { await heartbeat; } catch (OperationCanceledException) { }
         }
         if (stoppingToken.IsCancellationRequested) return;
+        if(error is not null) status?.Report(acquisition ? LinerNotes.Application.Common.Diagnostics.OperationalComponent.Acquisition :
+            LinerNotes.Application.Common.Diagnostics.OperationalComponent.Prepared,false,error);
         if (!defer && error is null)
         {
             logger.LogInformation("Discovery operation {JobId} attempt {Attempt} completed.", job.Id, job.Attempts);
             return;
         }
-        await using var status = scopes.CreateAsyncScope();
-        var jobs = status.ServiceProvider.GetRequiredService<IDiscoveryJobStore>();
-        await status.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384, async token => {
+        await using var statusScope = scopes.CreateAsyncScope();
+        var jobs = statusScope.ServiceProvider.GetRequiredService<IDiscoveryJobStore>();
+        await statusScope.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(16_384, async token => {
             if (defer) await jobs.DeferAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), deferDelay, "waiting_for_music", token);
             else if (error is not null) await jobs.FailAsync(job.Id, job.LeaseToken!.Value, clock.GetUtcNow(), error, retry,
                 TimeSpan.FromSeconds(Math.Clamp(Math.Max(job.Attempts * 5, retryAfter?.TotalSeconds ?? 0), 1, 600)), options.MaximumAttempts, token);
@@ -121,7 +128,7 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
             defer ? deferDelay.TotalSeconds : Math.Clamp(Math.Max(job.Attempts * 5, retryAfter?.TotalSeconds ?? 0), 1, 600));
     }
 
-    private async Task HeartbeatAsync(DiscoveryJob job, CancellationTokenSource work, CancellationToken ct)
+    private async Task HeartbeatAsync(DiscoveryJob job, CancellationTokenSource work, CancellationToken ct,bool acquisition)
     {
         try
         {
@@ -134,9 +141,16 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
                         clock.GetUtcNow(), TimeSpan.FromSeconds(options.LeaseSeconds), "preparing", token);
                     return true;
                 }, ct);
+                status?.Report(acquisition ? LinerNotes.Application.Common.Diagnostics.OperationalComponent.Acquisition
+                    : LinerNotes.Application.Common.Diagnostics.OperationalComponent.Prepared, true);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-        catch (Exception) { await work.CancelAsync(); }
+        catch (Exception)
+        {
+            status?.Report(acquisition ? LinerNotes.Application.Common.Diagnostics.OperationalComponent.Acquisition
+                : LinerNotes.Application.Common.Diagnostics.OperationalComponent.Prepared, false, "job_heartbeat_failed");
+            await work.CancelAsync();
+        }
     }
 }

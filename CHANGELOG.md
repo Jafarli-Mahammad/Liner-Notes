@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased — renewal
+- Update the .NET 10 SDK, runtime and matching Microsoft framework/tool pins to the verified stable security patch release.
+- Keep managed account-file erasure available when mail delivery is disabled, retaining private-path, accounting, ownership and integrity checks.
+- Add serialized, verified encrypted backup/recovery and compatible-release upgrade tooling, with explicit maintenance state and matching database, managed files, keys and release images.
+- Expose bounded operational health, queue and failure diagnostics; add systemd backup/status templates and a production operating procedure.
+- Allow explicit bounded live weekly generation in Production without requiring development mail capture. Email delivery remains excluded.
+- Configure managed-storage capacity through a writer-agreed policy; add non-adopting verification and explicit verified policy/restore commands. Existing storage witnesses require a stopped-writer policy transition.
+- Add guarded Production configuration, persistent authentication keys and a private, resource-bounded VPS topology with separate application and migration database roles.
+- Build the React frontend and bundled license notices inside the release image; verify release assets from tracked Git inputs in CI.
+- Refine page, search, feedback and artwork loading with delayed placeholders,
+  decoded-cover reveals, bounded stalled-request recovery and reduced-motion support.
+- Offer all four music services on every recommendation card with outlined logos;
+  polish sign-in fields, password visibility and submission feedback, and make
+  history ordering and failed-loading captions explicit.
 - Add a contributor guide, bug and feature request forms, and a pull request checklist.
 - Add an Actions workflow that publishes an interactive Codebase Memory graph to Pages and refreshes its snapshot from `main` on each successful deployment.
 - Add the Superdesign-based React Home, Discover, Your Taste and History pages,

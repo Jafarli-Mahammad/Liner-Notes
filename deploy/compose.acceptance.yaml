@@ -1,0 +1,8 @@
+services:
+  proxy:
+    ports: !override ["127.0.0.1:${LINER_ACCEPTANCE_PORT:-8443}:443"]
+    environment:
+      LINER_TLS_CONFIG: tls internal
+  web:
+    environment:
+      GuestDiscovery__PublicOrigin: https://${LINER_SITE}:${LINER_ACCEPTANCE_PORT:-8443}

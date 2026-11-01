@@ -22,7 +22,7 @@ export class FeedError extends Error {
 
 export async function readRecent(signal: AbortSignal): Promise<RecentMusicPage> {
   const response = await fetch('/api/discovery/recent?limit=4', {
-    signal, credentials: 'omit', cache: 'no-store', headers: { Accept: 'application/json' },
+    signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]), credentials: 'omit', cache: 'no-store', headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
     const retry = response.headers.get('Retry-After')?.trim();

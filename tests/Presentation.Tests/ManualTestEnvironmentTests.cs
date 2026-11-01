@@ -126,6 +126,7 @@ public sealed class ManualTestEnvironmentTests
             // Real initialized-witness startup and downgrade checks have PostgreSQL coverage.
             builder.ConfigureServices(services => services.Replace(
             ServiceDescriptor.Scoped<IManagedStorageCommitStore, UninitializedCommitStore>()));
+            if (environment == "Production") ProductionRoutingFixture.Configure(builder);
         }
     }
     private sealed class UninitializedCommitStore : IManagedStorageCommitStore
@@ -133,7 +134,7 @@ public sealed class ManualTestEnvironmentTests
         public Task<ManagedStorageCommit?> ReadAsync(CancellationToken ct) => Task.FromResult<ManagedStorageCommit?>(null);
         public Task<ManagedStorageCommit> RecordAsync(Guid id, StoragePublicationPlan plan, string fingerprint, CancellationToken ct)
         => throw new InvalidOperationException("HTTP fixture must not mutate managed storage.");
-        public Task<GenerationStorageState> EstablishAsync(Guid id, StoragePublicationPlan plan, CancellationToken ct)
+        public Task<GenerationStorageState> EstablishAsync(Guid id, StoragePublicationPlan plan, CancellationToken ct, long? maximumDatabaseBytes = null)
         => throw new InvalidOperationException("HTTP fixture must not establish managed storage.");
     }
 }

@@ -8,6 +8,43 @@ namespace LinerNotes.DataAccess.Persistence.Accounting;
 
 public sealed class ManagedStorageIntegrity(DataContext db, IUnitOfWork unit, IDigestGenerationStore inventory) : IManagedStorageIntegrity
 {
+    public async Task<string> ReadPortableSchemaFingerprintAsync(CancellationToken ct)
+    {
+        var connection=db.Database.GetDbConnection();
+        var opened=connection.State!=System.Data.ConnectionState.Open;
+        if(opened) await db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            await using var command=connection.CreateCommand();
+            command.Transaction=db.Database.CurrentTransaction?.GetDbTransaction();
+            // Portable definitions supplement, never replace, runtime OID/file-node checks.
+            command.CommandText="""
+                SELECT encode(sha256(convert_to(COALESCE(string_agg(definition,E'\n' ORDER BY definition),''),'UTF8')),'hex')
+                FROM (
+                  SELECT n.nspname||'.'||c.relname||':'||c.relkind::text||':'||
+                    COALESCE((SELECT string_agg(a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text||':'||
+                      a.attidentity::text||':'||a.attgenerated::text||':'||COALESCE(pg_get_expr(d.adbin,d.adrelid),'')||':'||
+                      COALESCE(coll.collname,''),',' ORDER BY a.attnum)
+                      FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+                      LEFT JOIN pg_collation coll ON coll.oid=a.attcollation
+                      WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),'')||':'||
+                    COALESCE((SELECT string_agg(g.conname||':'||pg_get_constraintdef(g.oid),',' ORDER BY g.conname)
+                      FROM pg_constraint g WHERE g.conrelid=c.oid),'')||':'||
+                    COALESCE((SELECT string_agg(t.tgname||':'||t.tgenabled::text||':'||pg_get_triggerdef(t.oid),',' ORDER BY t.tgname)
+                      FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal),'')||':'||
+                    CASE WHEN c.relkind='i' THEN pg_get_indexdef(c.oid) WHEN c.relkind='v' THEN pg_get_viewdef(c.oid) ELSE '' END AS definition
+                  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                  WHERE c.relkind IN ('r','i','S','v') AND n.nspname IN ('public','identity')
+                  UNION ALL
+                  SELECT pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+                  WHERE n.nspname IN ('public','identity') AND p.prokind='f'
+                ) definitions
+                """;
+            return (string)(await command.ExecuteScalarAsync(ct) ?? throw new GenerationStoppedException("storage_schema_unavailable"));
+        }
+        finally { if(opened) await db.Database.CloseConnectionAsync(); }
+    }
+
     private static readonly HashSet<string> Core = new(StringComparer.Ordinal) {
         "public.Tracks", "public.TasteSignals", "public.WeeklyDigests", "public.WeeklyRecommendations",
         "public.ListenerProfiles", "public.DiscoveryBatches", "public.DiscoveryJobs", "public.GuestSessions" };

@@ -11,6 +11,25 @@ namespace LinerNotes.DataAccess.Tests;
 
 public sealed partial class Phase8ScheduledWorkerPostgresTests
 {
+    [LocalPostgresMigrationFact]
+    public async Task DisabledDeliveryCleanupStillRejectsSharedCopyRootPermissions()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        await EnableManagedCaptureAsync();
+        Assert.Equal("advanced", Assert.Single((await TickAsync()).Jobs).Status);
+        string root = _email.SinkRoot!;
+        _email.Enabled = false;
+        _email.ApplicationOrigin = null;
+        _email.SinkRoot = null;
+        File.SetUnixFileMode(root, UnixFileMode.UserRead | UnixFileMode.UserWrite |
+            UnixFileMode.UserExecute | UnixFileMode.GroupRead);
+        await using var scope = _services.CreateAsyncScope();
+        var cleanup = await scope.ServiceProvider.GetRequiredService<ILocalEmailArchive>().DeleteAsync(_user, default);
+        Assert.False(cleanup.Complete);
+        Assert.Single(Directory.GetFiles(root));
+        Assert.Single(await scope.ServiceProvider.GetRequiredService<IArtifactPublicationStore>().GetOwnerPageAsync(_user, null, 100, default));
+    }
+
     private async Task DeleteManagedAccountDatabaseAsync()
     {
         await using var scope = _services.CreateAsyncScope();
@@ -42,18 +61,27 @@ public sealed partial class Phase8ScheduledWorkerPostgresTests
         await scope.ServiceProvider.GetRequiredService<IManagedStorageIntegrity>().VerifyAsync(default);
     }
 
-    [LocalPostgresMigrationFact]
-    public async Task ManagedPrivacyCleanupAfterAccountCommitErasesFilesAndOwnedJournalRows()
+    [ScheduledPostgresTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ManagedPrivacyCleanupAfterAccountCommitErasesFilesAndOwnedJournalRows(bool deliveryEnabled)
     {
         await EnableManagedCaptureAsync();
         Assert.Equal("advanced", Assert.Single((await TickAsync()).Jobs).Status);
+        string copyRoot = _email.SinkRoot!;
+        if (!deliveryEnabled)
+        {
+            _email.Enabled = false;
+            _email.ApplicationOrigin = null;
+            _email.SinkRoot = null;
+        }
         await using var scope = _services.CreateAsyncScope();
         var provider = scope.ServiceProvider;
         await using var ownership = await provider.GetRequiredService<IAccountEmailLease>().AcquireAsync(_user, default);
         await DeleteManagedAccountDatabaseAsync();
         var cleanup = await provider.GetRequiredService<ILocalEmailArchive>().DeleteAsync(_user, default);
         Assert.True(cleanup.Complete, string.Join(",", cleanup.Issues));
-        Assert.Empty(Directory.GetFiles(_email.SinkRoot!));
+        Assert.Empty(Directory.GetFiles(copyRoot));
         Assert.Empty(await provider.GetRequiredService<IArtifactPublicationStore>().GetOwnerPageAsync(_user, null, 100, default));
         Assert.True(await provider.GetRequiredService<DataContext>().ApplicationUsers.AnyAsync(user => user.Id == _other));
         await provider.GetRequiredService<IManagedStorageIntegrity>().VerifyAsync(default);

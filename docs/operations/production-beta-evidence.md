@@ -1,35 +1,153 @@
 # Production beta engineering evidence
 
-This record distinguishes local implementation checks from production acceptance.
-The approved scope and execution order are in the [design](../superpowers/specs/2026-11-01-production-beta-design.md) and [plan](../superpowers/plans/2026-11-01-production-beta.md).
+Local checks on 2026-11-01. No infrastructure was purchased, public service
+deployed, changes pushed or release published. Developer acceptance remains
+separate. See the [approved design](../superpowers/specs/2026-11-01-production-beta-design.md),
+[plan](../superpowers/plans/2026-11-01-production-beta.md) and
+[operating procedure](production-beta.md).
 
-## Release packaging
+## Implemented scope
 
-The original tracked tree at `972d536` failed the new artifact check with `missing_release_asset`: tracked HTML referenced ignored React outputs. The new validator's four tests cover complete output, missing/empty assets/licenses, unsafe references and HTML returned instead of JavaScript.
+The original tracked tree at `972d536` failed the asset check with
+`missing_release_asset`: HTML referenced ignored React outputs. Docker now builds
+React and license notices from locked, tracked inputs. The checker follows
+referenced scripts, styles, images and fonts. Byte-identical builds have not been
+established.
 
-The Docker frontend stage uses Node 26.13.0, verified against the [official release index](https://nodejs.org/dist/index.json), and the official `node:26.13.0-bookworm-slim` manifest digest `sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9`. It runs locked npm installation, TypeScript checking, Vite build and the existing runtime-license collector. Generated host assets are excluded from build input.
+Production rejects development/synthetic settings, unsafe host/origin/proxy
+configuration and absent storage admission. Only Caddy publishes ports. Runtime
+services are non-root with read-only roots, bounded tmpfs, resource limits and
+rotating logs. Authentication keys persist separately. The runtime database role
+has guarded DML privileges; schema administration uses the operator role.
 
-Local checks on 2026-11-01:
+Capacity defaults to 1,000,000,000 bytes and is configurable through a writer-agreed
+policy. Verification, first establishment, policy transition and restore are
+separate operator actions. Existing hashes, accounting, leases, ownership,
+publication recovery and external-change detection remain enforced. Ordinary
+startup never adopts unexplained content.
 
-- `python3 -m unittest discover -s scripts/checks -p test_production_artifact.py`: four passing tests.
-- `python3 scripts/checks/production_artifact.py --build --tree 4e098def02fa9318db545d21418941df1fc0a950 --tag linernotes-production-beta:packaging`: clean Git-tree image build and complete asset/license verification passed. The staged tree contains the reviewed packaging changes; it has no ignored developer outputs.
-- The same image ran in a disposable loopback container with provider jobs disabled and no database use. `production_artifact.py --image ... --url ...` fetched HTML and both assets and compared their SHA-256 hashes to the image contents; all passed. This was packaging verification under Development, not Production acceptance.
+Backup serializes lifecycle operations, stops writers, verifies integrity and
+captures PostgreSQL, managed files, keys, reconstruction settings and exact images.
+Restic encrypts and verifies the repository. Independent repository credentials
+are excluded; retention and scratch cleanup are bounded. Restore requires empty
+target volumes and validates the complete payload manifest.
 
-Production topology, recovery and live-provider acceptance remain separate plan tasks; packaging alone does not establish readiness.
+Logical restore changes physical database identities and can rewrite equivalent
+schema representations. Runtime OID/file-node checks remain strict. Backup derives
+the portable restore proof by restoring the captured dump's schema into a temporary
+database. Explicit restore verifies that proof, logical counters, the original
+witness and artifact hashes before establishing a new physical witness. No regex
+normalization or automatic schema adoption was introduced.
 
-## Production host and topology
+Weekly Production generation is an explicit bounded live-provider command. Automatic
+all-account scheduling and mail delivery are excluded. Operational probes report
+readiness, queue age, expired leases, paused jobs, recent background failures and
+backup state. Systemd templates invoke backup/status; delivered notifications
+still need infrastructure configuration.
 
-- 45 targeted Presentation tests passed with a disposable PostgreSQL fixture, including Production settings, transport/authentication/CSRF, hidden development routes and file-backed key decryption after service-provider restart.
-- The restricted-role PostgreSQL test passed: guarded guest creation and full managed-accounting verification succeed with DML privileges; schema creation is rejected. This reuses the existing DataAccess coordination fixture rather than duplicating database setup in Presentation tests.
-- Three topology tests passed against resolved Compose JSON: only proxy ports are public, acceptance is loopback-only, runtime containers are hardened, and services have resource/log limits. The configuration is not a provisioning or host-firewall test.
-- Production routing-only WebApplicationFactory fixtures explicitly replace storage startup; real startup, witness and role coverage remain separate PostgreSQL tests. No runtime fixture/synthetic bypass was added.
-- Caddy 2.11.7 and restic 0.19.1 were verified against their official GitHub latest-release metadata on 2026-11-01. Caddy's official Alpine image is pinned by manifest digest. Actual TLS and final-image browser checks are later acceptance tasks.
-- The pinned Caddy container accepted `deploy/Caddyfile` with `caddy validate`. No public certificate was requested and no public service was started.
+## Verification
 
-## Storage policy and operator verification
+| Check | Local evidence |
+|---|---|
+| Backend | Five projects, **909 passed**, zero failures/skips; disposable PostgreSQL and checked TRX results |
+| Operator/checkers | **14 operator tests**, **11 production-check tests**, resolved production/acceptance topology passed |
+| Framework/model | SDK **10.0.403**, matching Microsoft **10.0.14** packages/tool, locked restore; EF reports no pending model changes |
+| NuGet | Eleven projects including transitive dependencies: zero reported advisories |
+| HTTPS/proxy | Exact asset bytes compared through local-CA HTTPS; private routes, probes, forwarding, Host and Origin tested |
+| Live browser | Five picks, explanations, feedback/history, exports, registration preserving taste, login and disposable account deletion; no page exceptions |
+| Weekly | Five live-provider picks; repeat returned the same digest ID |
+| Recovery | **29 tables** compared; password login, three taste signals, pre-backup protected token, export and restart integrity passed |
+| Real-pick recovery | Five weekly recommendations and five stored breakdowns retained in a separate matched restore |
+| Compatible upgrade | Verified pre-upgrade recovery set, no pending migrations, storage verification and new-image readiness passed |
 
-Capacity now defaults to the existing 1,000,000,000 bytes but is configurable. The versioned witness fingerprint includes capacity, reservation overhead, artifact roots and inventory/lease paths. Ordinary writers refuse legacy or mismatched fingerprints. A verified explicit stopped-writer transition is required; startup never adopts unexplained changes.
+These include checks performed in stages; the final artifact record below identifies
+the candidate covered by final acceptance. HTTP-only test factories stub storage
+startup explicitly; real startup, database roles and recovery are tested separately
+with PostgreSQL and Docker. No release-image fixture bypass was added.
 
-`verify-storage` verifies ledger/table coverage and the trusted artifact baseline without publishing a new witness. `establish-storage` refuses an existing witness; `change-storage-policy` requires the previous policy and matching artifacts; `restore-storage` also requires the expected snapshot inventory. The old establishment script no longer silently re-establishes an existing witness.
+## Findings caught during verification
 
-Local verification: 29 targeted Infrastructure storage checks and 60 PostgreSQL coordination/accounting/publication/security checks passed. The legacy-policy upgrade test retains the existing guest profile. Tests cover mismatched writer capacity, unchanged witness during verification, unexplained artifacts, invalid restore manifests, explicit quota transitions and transactional rollback when witness establishment exceeds quota. Another 27 host/startup/security checks passed, and the file-based establishment helper built successfully with its supported CLI invocation. These are disposable local fixtures; complete backup/restore and final-image checks remain later tasks.
+NuGet-only auditing missed the bundled framework. Trivy **0.76.1** found **two
+critical and ten high** advisories in the 10.0.12 web image. The new security gate
+reproduced that rejection. Official Microsoft metadata and NuGet indexes verified
+stable runtime/framework **10.0.14** and SDK **10.0.403**; pins and locks were updated.
+The patched web and Worker images had zero high/critical findings.
+
+The SDK image also contained Ubuntu `libbrotli1` **1.1.0-2build2**, affected by
+**CVE-2026-111497**. The fixed **1.1.0-2ubuntu0.1** package is installed from the
+signed Ubuntu **20261101T000000Z** snapshot. HTTPS and by-hash fetching address an
+inconsistent HTTP mirror index without disabling verification. No public exploit
+path was established; the library was upgraded rather than removed. Sources:
+[Microsoft releases](https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json),
+[Ubuntu advisory](https://ubuntu.com/security/CVE-2026-111497),
+[Ubuntu snapshots](https://snapshot.ubuntu.com/).
+
+Managed erasure previously returned incomplete whenever delivery was disabled.
+It now validates copy roots independently of delivery settings. Tests cover owned
+file deletion, the other account's retention, idempotency and rejection of shared
+root permissions. Unverifiable files and unmanaged legacy cleanup still fail closed.
+
+## Deployment-dependent and unverified
+
+- Off-host upload/recovery and independent credential custody; rehearsals used local repositories.
+- Actual VPS capacity, disk/WAL headroom and recovery speed. Fixture timings are not capacity or production latency claims.
+- DNS, public certificate issuance/renewal, IPv6/firewall exposure, installed timers and delivered failure notifications.
+- Schema-changing upgrades: these require a separately reviewed migration/witness transition and recovery rehearsal; automation refuses them.
+- Provider permission and metadata/artwork rights. A live response or approval flag is not blanket permission. Last.fm obligations apply if its adapter is enabled. MediatR 12.5.0 retains its approved licensing exception.
+- Remote GitHub Actions execution and developer acceptance. No push was authorized.
+
+The host reboot cleared earlier `/tmp` fixtures/logs; persistent private fixtures
+were recreated and checks repeated. Docker network changes caused host Chromium
+`ERR_NETWORK_CHANGED`; browser acceptance runs after lifecycle operations finish.
+Existing pruning and Microsoft.StringTools framework warnings remain visible;
+tests, model consistency and actual migrations passed. No unrelated dependency
+removal was performed.
+
+## Final exact-image acceptance
+
+Tested source tree: `03c0e4c65ebc4e2caf397942f99897ce616ad33b`.
+This is the exact tree of local implementation commit `8851dcb`.
+All four images carry that revision and `0.5.0-beta` labels. The image set was
+built from an exported Git tree, without ignored developer assets or private input.
+
+| Image | Immutable local image ID |
+|---|---|
+| Web | `sha256:840978bc6c652e4b18d58bc8697caf3b1e88c13fe1579b4039860ac5705b4271` |
+| Worker | `sha256:a30d32c1f639649c212a48af569ffedc45616721c1fe847a2a73d361dfe81b05` |
+| Migration tools | `sha256:04149c72e9a2b4740337ff800ab343df54f49f027261eaa14b1fc190b8295270` |
+| Volume initializer | `sha256:8c443b8bcc961ce3bdfb8adf703c876ad4e6da05ff243de9963ce432f9779475` |
+
+- Trivy scanned the exact web, Worker and migration-tool archives: **zero high
+  and zero critical findings** in each. The initializer shares the runtime base;
+  it was exercised by provisioning/recovery rather than separately scanned.
+- The exact web image served all seven compared HTML/assets byte-for-byte through
+  HTTPS. Four private routes were denied; health, forwarding, Host and Origin
+  checks passed. The real-provider journey and Production browser smoke both passed.
+  The real journey produced five picks, no page exceptions, successful account
+  deletion and **no operator-cleanup warning**.
+- Production weekly generation for a second week produced another five picks;
+  repeating the command returned the same digest ID. A matched backup/restore
+  compared 29 tables and retained **ten recommendations and ten stored breakdowns**.
+  Authentication, pre-backup protected token, export and restart integrity passed.
+  A second restore into the nonempty target was refused without changing data.
+- The automated clean fixture recorded 13.1 seconds of backup capture, 25.6 seconds
+  through verified repository completion, and 28.6 seconds for restore acceptance.
+  Live-history recovery/acceptance took 36.2 seconds. These small local fixtures
+  establish recovery mechanics, not production capacity or recovery-time guarantees.
+- The compatible-upgrade command took a verified backup, checked migrations and
+  integrity, and reached readiness with this exact image set.
+
+Sanitized reports, TRX files, private disposable configuration and encrypted local
+repositories are under `~/.local/state/liner-production-beta-20261101/`. They are
+not source inputs, public artifacts or an off-host backup. Credentials are not
+included in this document.
+
+To rebuild the tested source:
+
+```sh
+python3 scripts/ops/build_release.py --tree 8851dcb --output release-images.json
+```
+
+Repeat artifact/security/recovery acceptance for the new image identities. The
+following documentation commit does not alter the tested application, deployment
+or operator code.

@@ -1,5 +1,14 @@
 # Release preparation checklist
 
+For v0.5.0, use the current [production operating procedure](../operations/production-beta.md)
+and [engineering evidence](../operations/production-beta-evidence.md). The table
+below records the earlier Phase 9 assessment. Mail delivery is excluded from
+this beta. Last.fm approval is conditional on enabling its adapter; the Live
+catalog uses ListenBrainz and MusicBrainz. Explicit bounded Production generation
+and locally rehearsed backup/recovery are now implemented. Automatic all-account
+weekly scheduling remains excluded. Actual VPS capacity, public TLS, off-host
+recovery, notification delivery and developer acceptance still need verification.
+
 **Public release is blocked.** Local container/test results do not supply
 third-party permission, developer confirmation or production operations.
 

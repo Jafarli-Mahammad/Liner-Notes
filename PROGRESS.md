@@ -4,13 +4,21 @@
 
 ### Production beta engineering — 2026-11-01
 
-The production design and sequential implementation plan are approved. Clean-tree
-React image packaging is committed and locally verified. Production configuration
-guards, persistent default key storage, private/resource-bounded Compose topology
-and separate database-role coverage are implemented: 45 targeted host/security
-tests, one restricted-role PostgreSQL test and three topology tests passed; the
-pinned Caddy configuration validated. Storage-policy/operator work, consistent
-backup/restore automation and integrated final-image acceptance remain in progress.
+The approved beta design is implemented: clean-tree React images, guarded
+Production configuration, private/resource-bounded Compose, separate database
+roles, persistent keys, writer-agreed storage policy, serialized backup/restore
+and compatible upgrades, bounded live weekly generation and operational probes.
+The patched backend passed 909 tests with zero failures/skips. Local recovery
+compared 29 tables and preserved authentication, protected tokens and export;
+a separate recovery retained five real-provider picks and their score breakdowns.
+The final real-provider browser journey passed without a cleanup warning. Scanning
+caught framework and SDK-library advisories; the patched final web, Worker and
+migration-tool images have zero high/critical findings. Final HTTPS/proxy,
+compatible-upgrade and recovery acceptance passed; the real-history recovery
+retained ten weekly picks and ten stored breakdowns across two weeks.
+Mail delivery and automatic all-account scheduling
+are excluded. VPS/domain selection, public TLS/firewall, off-host recovery, key
+custody, delivered alerts and developer acceptance remain outstanding.
 No production deployment, push or release publication has occurred. See
 [the engineering evidence](docs/operations/production-beta-evidence.md) and
 [the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).

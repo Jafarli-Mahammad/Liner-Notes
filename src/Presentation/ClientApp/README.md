@@ -27,7 +27,7 @@ npm run dev
 ```
 
 Vite serves the app locally and proxies `/api` requests to the host. See the
-[local website runbook](../../../docs/renewal/local-live-run.md) for backend,
+[local website runbook](../../../docs/plans/local-live-run.md) for backend,
 database and provider setup.
 
 ## How the app uses the API

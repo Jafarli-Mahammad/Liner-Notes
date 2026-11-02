@@ -183,7 +183,7 @@ Each authorized implementation stage ends with relevant verification and a focus
 
 ## 12. Review and remaining decisions
 
-The developer approved the design, guest lifetime, cooldown and written execution plan (historical record in Git), selecting sequential execution. Actual progress belongs in the [evidence ledger](../../renewal/guest-discovery-evidence.md). This approval does not bypass source-specific live acquisition gates.
+The developer approved the design, guest lifetime, cooldown and written execution plan (historical record in Git), selecting sequential execution. Actual progress belongs in the [evidence ledger](../../plans/guest-discovery-evidence.md). This approval does not bypass source-specific live acquisition gates.
 
 Engineering questions to resolve in stage 1 rather than guessing now:
 
@@ -198,8 +198,8 @@ The detailed execution checklist is approved and execution has started. The inst
 
 - [Current project progress](../../../PROGRESS.md)
 - [Project conventions and preferences](../../../MEMORY.md)
-- [Renewal evidence and acquisition contracts](../../renewal/contracts.md)
-- [ListenBrainz operations and existing limits](../../renewal/listenbrainz-provider-runbook.md)
+- [Renewal evidence and acquisition contracts](../../plans/contracts.md)
+- [ListenBrainz operations and existing limits](../../plans/listenbrainz-provider-runbook.md)
 - [MusicBrainz core and supplementary data licensing](https://musicbrainz.org/doc/MusicBrainz_Database#License): names/identities and supplementary tag assignments have different licensing conditions; open-source application licensing does not settle data permissions.
 - [MusicBrainz release groups](https://musicbrainz.org/doc/Release_Group): the album concept across editions.
 - [MusicBrainz API pacing](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting) and [ListenBrainz API pacing](https://listenbrainz.readthedocs.io/en/latest/users/api/#rate-limiting): limits must be observed independently of local job concurrency.

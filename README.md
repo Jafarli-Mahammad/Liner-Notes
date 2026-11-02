@@ -128,8 +128,8 @@ explain its scope and limits.
 Useful project documents:
 
 - [Current progress and open work](PROGRESS.md)
-- [Product contracts](docs/renewal/contracts.md)
-- [Local configuration](docs/renewal/local-configuration.md)
+- [Product contracts](docs/plans/contracts.md)
+- [Local configuration](docs/plans/local-configuration.md)
 - [Production beta operation](docs/operations/production-beta.md)
 - [Production beta verification and remaining gates](docs/operations/production-beta-evidence.md)
 - [Changelog](CHANGELOG.md)

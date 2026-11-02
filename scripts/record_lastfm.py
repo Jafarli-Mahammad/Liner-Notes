@@ -1,6 +1,6 @@
 """Manifest-gated evaluation recorder. Phase 2 writes this tool but makes no live run.
 
-Use JSON for the manifest; fields follow docs/renewal/contracts.md. An approved
+Use JSON for the manifest; fields follow docs/plans/contracts.md. An approved
 manifest digest hashes canonical JSON with approval.approved_manifest_sha256=null.
 The external --approved-sha256 must match too. Credentials are read only after
 all preflight gates pass, and never appear in artifacts or exception messages.

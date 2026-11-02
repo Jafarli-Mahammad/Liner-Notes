@@ -5,7 +5,7 @@ Thanks for taking a look at Liner Notes. The guides below cover the project setu
 ## Get oriented
 
 - Read [AGENTS.md](AGENTS.md) for project rules and [README-Developer.md](README-Developer.md) for the first local run, repository map, and request paths.
-- Use [local configuration](docs/renewal/local-configuration.md) for settings and database setup. The [ListenBrainz provider runbook](docs/renewal/listenbrainz-provider-runbook.md) covers provider-specific work.
+- Use [local configuration](docs/plans/local-configuration.md) for settings and database setup. The [ListenBrainz provider runbook](docs/plans/listenbrainz-provider-runbook.md) covers provider-specific work.
 - Browse the [architecture diagrams and Nebula](docs/architecture/README.md) before changing code across layers.
 
 ## Make a focused change

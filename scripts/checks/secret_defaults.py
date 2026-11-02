@@ -37,7 +37,7 @@ ignore = (root / ".gitignore").read_text()
 for rule in (".env.*", "appsettings.Local.json", "recordings/"):
     assert rule in ignore, f"Missing local secret/recording ignore rule: {rule}"
 
-local_config = (root / "docs/renewal/local-configuration.md").read_text()
+local_config = (root / "docs/plans/local-configuration.md").read_text()
 assert "dotnet user-secrets" in local_config, (
     "Local setup must document private user-secrets configuration"
 )

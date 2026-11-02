@@ -132,7 +132,7 @@ python3 scripts/phase4_pilot.py prepare \
   --run-id phase4-pilot-20261007-r1 \
   --expires-at 2026-11-06T18:00:00Z \
   --terms-date 2026-10-07 \
-  --endpoint-reference docs/renewal/phase-4-evidence.md
+  --endpoint-reference docs/plans/phase-4-evidence.md
 ```
 
 Proposed recording directory:

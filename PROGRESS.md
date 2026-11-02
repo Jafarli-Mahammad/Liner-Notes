@@ -32,11 +32,11 @@ No production deployment, push or release publication has occurred. See
 
 - [Developer setup](README-Developer.md) and [contributing](CONTRIBUTING.md)
 - [Architecture](docs/architecture/README.md)
-- [Live local operation](docs/renewal/local-live-run.md)
-- [Storage and recovery](docs/renewal/guest-discovery-storage.md)
+- [Live local operation](docs/plans/local-live-run.md)
+- [Storage and recovery](docs/plans/guest-discovery-storage.md)
 - [Production operation](docs/operations/production-beta.md)
 - [Production engineering evidence](docs/operations/production-beta-evidence.md)
-- [Provider operation and release gates](docs/renewal/listenbrainz-provider-runbook.md)
+- [Provider operation and release gates](docs/plans/listenbrainz-provider-runbook.md)
 
 Completed investigation reports, execution plans and design captures were
 removed during repository cleanup. Their original records remain in Git history.
@@ -46,26 +46,26 @@ recommendation-quality claims.
 ## Remaining renewal work
 
 1. **Developer confirmation:** review locally verified phase evidence and confirm the implementation.
-2. **Phase 4 live pilot:** approve a concrete run manifest, reconcile shared-storage inventory, freeze inputs, and complete data-shape checks and blind ratings. No live pilot has been run; fixtures establish mechanics only. See [Phase 4 evidence and run procedure](docs/renewal/phase-4-evidence.md).
-3. **Phase 5 decision:** real-data evaluation needs separate authorization, an approved development and held-out manifest, frozen scoring configuration, and documented comparison steps. Recommendation quality remains unverified. See [renewal contracts](docs/renewal/contracts.md).
-4. **Provider release gates:** obtain written Last.fm public-page approval and verify applicable territorial, consent, recording, attribution, and hosting requirements. The request remains a draft; confirm the repository URL before sending it. See [Phase 3 references](docs/renewal/phase-3-evidence.md#authoritative-documentation) and the [release checklist](docs/renewal/phase-9-release-checklist.md).
-5. **Production operations:** choose hosting and delivery arrangements, validate storage limits against the chosen host, and complete the [Phase 9 release checklist](docs/renewal/phase-9-release-checklist.md). Production deployment and external email delivery have not been performed.
-6. **Phase 7 deployment checks:** inspect or convert any existing captured-email files and confirm persistent key-store access and backup protection before relying on encrypted capture. See [Phase 7 evidence](docs/renewal/phase-7-evidence.md).
-7. **External CI:** The Qodana scan workflow and configuration have been removed. GitHub Actions CI has reported failures; a successful rerun and GitGuardian incident classification remain pending. See [PR review evidence](docs/renewal/2026-10-19-pr-review-fixes.md) for the historical Qodana setup and findings.
+2. **Phase 4 live pilot:** approve a concrete run manifest, reconcile shared-storage inventory, freeze inputs, and complete data-shape checks and blind ratings. No live pilot has been run; fixtures establish mechanics only. See [Phase 4 evidence and run procedure](docs/plans/phase-4-evidence.md).
+3. **Phase 5 decision:** real-data evaluation needs separate authorization, an approved development and held-out manifest, frozen scoring configuration, and documented comparison steps. Recommendation quality remains unverified. See [renewal contracts](docs/plans/contracts.md).
+4. **Provider release gates:** obtain written Last.fm public-page approval and verify applicable territorial, consent, recording, attribution, and hosting requirements. The request remains a draft; confirm the repository URL before sending it. See [Phase 3 references](docs/plans/phase-3-evidence.md#authoritative-documentation) and the [release checklist](docs/plans/phase-9-release-checklist.md).
+5. **Production operations:** choose hosting and delivery arrangements, validate storage limits against the chosen host, and complete the [Phase 9 release checklist](docs/plans/phase-9-release-checklist.md). Production deployment and external email delivery have not been performed.
+6. **Phase 7 deployment checks:** inspect or convert any existing captured-email files and confirm persistent key-store access and backup protection before relying on encrypted capture. See [Phase 7 evidence](docs/plans/phase-7-evidence.md).
+7. **External CI:** The Qodana scan workflow and configuration have been removed. GitHub Actions CI has reported failures; a successful rerun and GitGuardian incident classification remain pending. See [PR review evidence](docs/plans/2026-10-19-pr-review-fixes.md) for the historical Qodana setup and findings.
 
 ## Phase implementation status
 
 | Phase | Current status | Evidence |
 |---|---|---|
-| 1. Baseline and security | Implemented and locally verified; developer confirmation pending | [Phase 1](docs/renewal/phase-1-evidence.md) |
-| 2. Harness mechanics | Implemented and locally verified; mechanics only | [Phase 2](docs/renewal/phase-2-evidence.md) |
-| 3. Honest ingestion | Implemented and locally verified; provider gates remain | [Phase 3](docs/renewal/phase-3-evidence.md) |
-| 4. Pilot tooling | Implemented and locally verified; live pilot remains open | [Phase 4](docs/renewal/phase-4-evidence.md) |
-| 5. Real-data evaluation | Not authorized; recommendation quality unverified | [Renewal contracts](docs/renewal/contracts.md) |
-| 6. Recommendation generation and feedback | Implemented and locally verified; quality and capacity unverified | [Phase 6](docs/renewal/phase-6-evidence.md) |
-| 7. Worker and local email capture | Implemented and locally verified; deployment-specific checks remain open | [Phase 7](docs/renewal/phase-7-evidence.md) |
-| 8. Privacy and scheduling | Implemented and locally verified; developer confirmation and external delivery remain open | [Phase 8a](docs/renewal/phase-8a-evidence.md), [Phase 8b](docs/renewal/phase-8b-evidence.md) |
-| 9. Reproducibility and release preparation | Implemented and locally verified; external CI and release gates remain open | [Phase 9](docs/renewal/phase-9-evidence.md) |
+| 1. Baseline and security | Implemented and locally verified; developer confirmation pending | [Phase 1](docs/plans/phase-1-evidence.md) |
+| 2. Harness mechanics | Implemented and locally verified; mechanics only | [Phase 2](docs/plans/phase-2-evidence.md) |
+| 3. Honest ingestion | Implemented and locally verified; provider gates remain | [Phase 3](docs/plans/phase-3-evidence.md) |
+| 4. Pilot tooling | Implemented and locally verified; live pilot remains open | [Phase 4](docs/plans/phase-4-evidence.md) |
+| 5. Real-data evaluation | Not authorized; recommendation quality unverified | [Renewal contracts](docs/plans/contracts.md) |
+| 6. Recommendation generation and feedback | Implemented and locally verified; quality and capacity unverified | [Phase 6](docs/plans/phase-6-evidence.md) |
+| 7. Worker and local email capture | Implemented and locally verified; deployment-specific checks remain open | [Phase 7](docs/plans/phase-7-evidence.md) |
+| 8. Privacy and scheduling | Implemented and locally verified; developer confirmation and external delivery remain open | [Phase 8a](docs/plans/phase-8a-evidence.md), [Phase 8b](docs/plans/phase-8b-evidence.md) |
+| 9. Reproducibility and release preparation | Implemented and locally verified; external CI and release gates remain open | [Phase 9](docs/plans/phase-9-evidence.md) |
 
 ## Product and evidence constraints
 

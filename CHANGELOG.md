@@ -1,3 +1,4 @@
+- Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.
 # Changelog
 
 ## Unreleased — renewal

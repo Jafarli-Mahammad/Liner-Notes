@@ -6,7 +6,7 @@ public static class Phase2ProfileMembership
     public const string ReviewReference = "Developer approved both Phase 2 proposals on 2026-10-07";
     public static ProfileLock Locked() => new(Proposed(), ApprovedHash, ReviewReference);
 
-    // Matches the developer-approved metadata in docs/renewal/phase-2-design.md.
+    // Matches the developer-approved metadata in docs/plans/phase-2-design.md.
     public static IReadOnlyList<EvaluationProfile> Proposed()
     {
         string[][] development = [

@@ -150,6 +150,70 @@ public sealed class SharedDiscoveryPreparationTests
             .AddSingleton(new ImportCatalog(Substitute.For<ICatalogImportStore>(),
                 new LinerNotes.Infrastructure.Catalog.CatalogArtifactReader(), new CatalogAdmission(), clock))
             .AddScoped<IRecommendationProviderResolver>(_ => new Resolver(new ListenBrainzRecommendationProvider(new Client(calls, clock, live, cacheable)))).BuildServiceProvider();
+    [Fact]
+    public async Task ListenerChangesAndConcurrentRankingDoNotPersonalizeSharedPublicPools()
+    {
+        var clock = new Clock();
+        var calls = new ConcurrentBag<ListenBrainzRequestKind>();
+        using var services = Services(calls, clock, live: false, cacheable: true);
+        using var caches = new DiscoveryMemoryCaches(new());
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic, MaximumPicks = 3 };
+        using var preparation = new SharedDiscoveryPreparation(services.GetRequiredService<IServiceScopeFactory>(), caches, configuration, clock);
+        using var scope = services.CreateScope();
+        var resolver = scope.ServiceProvider.GetRequiredService<IRecommendationProviderResolver>();
+        var store = Substitute.For<IDiscoveryBatchStore>();
+        store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()));
+        var runner = new LinerNotes.Application.Features.Discovery.PrepareDiscoveryBatch(
+            new(resolver, configuration, new(), clock), preparation, store, configuration, new());
+        var a = LinerNotes.Domain.Discovery.ListenerProfile.Guest(clock.GetUtcNow(), TimeSpan.FromDays(7));
+        var b = LinerNotes.Domain.Discovery.ListenerProfile.Guest(clock.GetUtcNow(), TimeSpan.FromDays(7));
+        var c = LinerNotes.Domain.Discovery.ListenerProfile.Guest(clock.GetUtcNow(), TimeSpan.FromDays(7));
+        LinerNotes.Domain.Taste.TasteSignal Signal(Guid owner, string tag) => LinerNotes.Domain.Taste.TasteSignal.ForProfile(
+            owner, null, LinerNotes.Domain.Enums.TasteTargetType.Tag, tag, 1,
+            LinerNotes.Domain.Enums.TasteSignalSource.InitialSeedManual, "Isolation fixture");
+        var aSignals = new[] { Signal(a.Id, "electronic"), Signal(a.Id, "ambient") };
+        var bSignals = new[] { Signal(b.Id, "electronic") };
+        var cSignals = new[] { Signal(c.Id, "electronic"), Signal(c.Id, "instrumental") };
+        var batch = Guid.NewGuid();
+        var before = await runner.PrepareAsync(new(b, bSignals, []), batch, true, default);
+        Assert.NotEmpty(before.Picks);
+        var request = new DiscoveryPoolRequest(null, "electronic", true);
+        var publicBefore = System.Text.Json.JsonSerializer.Serialize(preparation.TryGet(request));
+        var foreign = LinerNotes.Domain.Digest.WeeklyRecommendation.ForDiscovery(a.Id, Guid.NewGuid(), null,
+            before.Picks[0].Track, 1, before.Picks[0].Breakdown);
+        foreign.RecordFeedback(LinerNotes.Domain.Enums.UserFeedback.Disliked);
+        a.SetOnboarding(System.Text.Json.JsonSerializer.Serialize(new LinerNotes.Domain.Discovery.TasteOnboarding(
+            Goal: "different-styles", Exploration: "surprise", Vocals: "instrumental")));
+        // Deliberately include foreign rows at the Application boundary, as well as exercising public cache reuse.
+        var poisonedB = new DiscoveryInputs(b, bSignals.Concat(aSignals).ToArray(), [foreign]);
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int started = 0;
+        Task<LinerNotes.Application.Features.Discovery.PreparedDiscoveryBatch> Together(DiscoveryInputs inputs, Guid id)
+            => Task.Run(async () =>
+            {
+                if (Interlocked.Increment(ref started) == 3) ready.TrySetResult();
+                await ready.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                return await runner.PrepareAsync(inputs, id, true, default);
+            });
+        var runs = await Task.WhenAll(
+            Together(new(a, aSignals, [foreign]), Guid.NewGuid()),
+            Together(poisonedB, batch),
+            Together(new(c, cSignals, []), Guid.NewGuid()));
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(before.Picks), System.Text.Json.JsonSerializer.Serialize(runs[1].Picks));
+        var after = await runner.PrepareAsync(new(b, bSignals, []), batch, false, default);
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(before.Picks), System.Text.Json.JsonSerializer.Serialize(after.Picks));
+        Assert.Equal(publicBefore, System.Text.Json.JsonSerializer.Serialize(preparation.TryGet(request)));
+        Assert.DoesNotContain(runs[0].Picks, p => p.Track.TrackKey == foreign.Track.TrackKey);
+        Assert.Contains(after.Picks, p => p.Track.TrackKey == foreign.Track.TrackKey);
+        foreach (var pick in after.Picks)
+        {
+            Assert.DoesNotContain(pick.Breakdown.Snapshot!.Evidence.Signals, s => aSignals.Any(aSignal => aSignal.Id == s.Id));
+            Assert.Null(pick.Breakdown.Snapshot.Evidence.SelectionAnswers);
+        }
+        Assert.Equal(3, calls.Count(k => k == ListenBrainzRequestKind.TagRadio));
+    }
+
     private sealed class CatalogAdmission : IDiscoveryWriteCoordinator
     {
         public Task<T> ExecuteAsync<T>(long estimatedBytes, Func<CancellationToken, Task<T>> write, CancellationToken ct) => write(ct);

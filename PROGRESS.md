@@ -28,6 +28,15 @@ No production deployment, push or release publication has occurred. See
 [the engineering evidence](docs/operations/production-beta-evidence.md) and
 [the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).
 
+### Residue quality Phase 1 — 2026-11-02
+
+Phase 1 is approved. Technical baseline capture, numerical replay, multi-profile
+isolation checks, and bounded real-provider browser journeys are locally verified;
+private listening ratings and developer acceptance remain pending. No production
+recommendation behavior changed. The next phases are a conditional backlog, not
+an approved implementation sequence. See [the Phase 1 evidence](docs/plans/residue/2026-11-02-phase-1-baseline-evidence.md)
+and [the revised plan](docs/plans/residue/2026-11-02-recommendation-quality-renewal-plan.md).
+
 ## Current documentation
 
 - [Developer setup](README-Developer.md) and [contributing](CONTRIBUTING.md)
@@ -46,7 +55,7 @@ recommendation-quality claims.
 ## Remaining renewal work
 
 1. **Developer confirmation:** review locally verified phase evidence and confirm the implementation.
-2. **Phase 4 live pilot:** approve a concrete run manifest, reconcile shared-storage inventory, freeze inputs, and complete data-shape checks and blind ratings. No live pilot has been run; fixtures establish mechanics only. See [Phase 4 evidence and run procedure](docs/plans/phase-4-evidence.md).
+2. **Historical Phase 4 pilot:** commit `f26d14e` records completed live acquisition and A–D analysis on 2026-10-08; complete blind ratings, formula adoption, and developer confirmation were not established. New acquisition still requires its applicable approvals. See [Phase 4 evidence and run procedure](docs/plans/phase-4-evidence.md).
 3. **Phase 5 decision:** real-data evaluation needs separate authorization, an approved development and held-out manifest, frozen scoring configuration, and documented comparison steps. Recommendation quality remains unverified. See [renewal contracts](docs/plans/contracts.md).
 4. **Provider release gates:** obtain written Last.fm public-page approval and verify applicable territorial, consent, recording, attribution, and hosting requirements. The request remains a draft; confirm the repository URL before sending it. See [Phase 3 references](docs/plans/phase-3-evidence.md#authoritative-documentation) and the [release checklist](docs/plans/phase-9-release-checklist.md).
 5. **Production operations:** choose hosting and delivery arrangements, validate storage limits against the chosen host, and complete the [Phase 9 release checklist](docs/plans/phase-9-release-checklist.md). Production deployment and external email delivery have not been performed.
@@ -60,7 +69,7 @@ recommendation-quality claims.
 | 1. Baseline and security | Implemented and locally verified; developer confirmation pending | [Phase 1](docs/plans/phase-1-evidence.md) |
 | 2. Harness mechanics | Implemented and locally verified; mechanics only | [Phase 2](docs/plans/phase-2-evidence.md) |
 | 3. Honest ingestion | Implemented and locally verified; provider gates remain | [Phase 3](docs/plans/phase-3-evidence.md) |
-| 4. Pilot tooling | Implemented and locally verified; live pilot remains open | [Phase 4](docs/plans/phase-4-evidence.md) |
+| 4. Pilot tooling | Tooling locally verified; historical acquisition/analysis recorded, complete listening evaluation unverified | [Phase 4](docs/plans/phase-4-evidence.md) |
 | 5. Real-data evaluation | Not authorized; recommendation quality unverified | [Renewal contracts](docs/plans/contracts.md) |
 | 6. Recommendation generation and feedback | Implemented and locally verified; quality and capacity unverified | [Phase 6](docs/plans/phase-6-evidence.md) |
 | 7. Worker and local email capture | Implemented and locally verified; deployment-specific checks remain open | [Phase 7](docs/plans/phase-7-evidence.md) |

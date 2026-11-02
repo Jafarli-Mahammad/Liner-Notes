@@ -1,7 +1,12 @@
-- Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.
 # Changelog
 
 ## Unreleased — renewal
+
+- Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.
+
+- Add private Residue baseline capture/listening-review and receipt-replay tools,
+  listener-isolation regressions, and an evidence report; recommendation behavior
+  remains unchanged and subjective listening evaluation is pending.
 
 - Restore account sessions after refresh and application restart using a protected,
   persistent HttpOnly cookie and the existing revocable refresh-token flow.

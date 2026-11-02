@@ -1,7 +1,7 @@
 # Residue recommendation quality renewal
 
-Date: 2026-11-02  
-Status: Proposed; awaiting approval of Phase 1. No implementation phase is authorized.  
+Date: 2026-11-02
+Status: Phase 1 approved; technical evidence collected, listening ratings and developer acceptance pending. Later phases remain unapproved.
 Revision: 2026-11-02 — quality baseline, evidence-led scope, complexity gates, and strict listener isolation.
 
 Investigation baseline: branch `Prism`, local commit `5a31db7`.
@@ -45,7 +45,7 @@ These are source-verified behaviors, not measured subjective quality conclusions
 
 ### Historical Phase 4 findings
 
-Current progress documentation says the Phase 4 live pilot was not run, but historical commit `f26d14e` records a completed acquisition: 96 eligible tracks, 48 artists, and 35 blind-review slots. Its A–D comparisons covered aggregate taste similarity, best individual seed similarity, best-seed similarity plus Last.fm similarity evidence, and IDF-adjusted similarity. No winning formula or completed blind evaluation was established in the inspected evidence.
+At planning time, progress documentation said the Phase 4 live pilot was not run, but historical commit `f26d14e` records a completed acquisition: 96 eligible tracks, 48 artists, and 35 blind-review slots. Its A–D comparisons covered aggregate taste similarity, best individual seed similarity, best-seed similarity plus Last.fm similarity evidence, and IDF-adjusted similarity. No winning formula or completed blind evaluation was established in the inspected evidence.
 
 Strong seed alignment, candidate coverage, best-seed matching, and provider differences are hypotheses for the developer's good experiences. Investigate each separately. Do not assume Last.fm was objectively superior or transfer its numerical match semantics into ListenBrainz. Keep informal personal listening notes outside benchmark labels, formula tuning, and taste profiles. Reconcile conflicting status documents in Phase 1 using commit evidence and permitted surviving artifacts.
 
@@ -139,13 +139,13 @@ Every phase adding stored information must cover export, deletion, ownership, re
 
 ## Implementation phases
 
-The six phases below are a conditional backlog, not a commitment to execute six phases or spend the originally estimated 19–30 engineering days. Only Phase 1 is the next approval candidate. After its results, re-rank, split, combine, defer, or remove later work. Preserve all agreed recommendation behavior while choosing the smallest changes with credible benefits. Estimates below describe the original candidate scope and must be replaced after the baseline decision.
+The six phases below are a conditional backlog, not a commitment to execute six phases or spend the originally estimated 19–30 engineering days. Only Phase 1 is currently approved. After its results, re-rank, split, combine, defer, or remove later work. Preserve all agreed recommendation behavior while choosing the smallest changes with credible benefits. Estimates below describe the original candidate scope and must be replaced after the baseline decision.
 
 Before persisted taste summaries, providers, integrations, or new abstractions are proposed for implementation, demonstrate an existing-mechanism limitation using reproducible evidence. Compare a simpler change using existing queries, feedback state, caches, and provider capabilities. Require a concrete expected benefit, measured coverage where relevant, acceptable latency/request/storage costs, privacy implications, and rollback. If meaningful benefit cannot be established, defer the added mechanism. Additional infrastructure spend remains $0.
 
 ### Phase 1 — Actual recommendation baseline, isolation audit, and priority decision
 
-Proposed scope only; explicit approval is still required. Initial timebox: 2–3 engineering days, reassessed if evidence access or browser setup prevents completion. Report incomplete work rather than silently expanding scope. No production scoring, acquisition policy, learning behavior, schema, provider integration, or defaults change belongs in this phase. Targeted regression tests and minimal evaluation-only capture/replay support may be added after approval where existing tools are insufficient.
+Approved scope. See [Phase 1 evidence and remaining gaps](2026-11-02-phase-1-baseline-evidence.md). Initial timebox: 2–3 engineering days, reassessed if evidence access or browser setup prevents completion. Report incomplete work rather than silently expanding scope. No production scoring, acquisition policy, learning behavior, schema, provider integration, or defaults change belongs in this phase. Targeted regression tests and minimal evaluation-only capture/replay support may be added after approval where existing tools are insufficient.
 
 1. **Preserve the current beta's actual output before modifying Residue.** Record the running revision and effective non-secret configuration, profile revision, generation ordinal, batch/pick IDs, displayed order, explanations, saved score/selection evidence, and available candidate provenance. Preserve existing recommendations before any controlled new generation. Use bounded, permitted current-provider acquisition through the beta when needed; retain raw responses only where permitted and necessary. Keep personal artifacts local, private, ignored, and covered by existing storage/retention rules. Do not publish tastes, listening notes, or account identifiers.
 2. **Establish musical-quality evidence where practical.** Prepare a small concealed listening review of actual current-beta picks: hide score, rank, formula/provider labels, and explanations during rating; randomize presentation and retain a private key. Record enjoyment/relevance, already-known status, and potential favorite status separately; unanswered items are missing. Use matched comparisons only when legitimate comparable outputs exist. Freeze current results for a later baseline-versus-change review; do not fabricate an alternative or alter production merely to create a comparison. If only baseline ratings are feasible now, label them baseline ratings rather than comparative proof. Report the developer's ratings as directional evidence for that listener only. Preserve prior restrictions on informal historical notes; new ratings must have an explicit evaluation purpose.
@@ -262,9 +262,6 @@ Synthetic tests establish correctness and regression resistance, not subjective 
 
 Incomplete recording metadata, provider sampling bias, stale optional datasets, request fan-out, negative-feedback overgeneralization, and oversized receipts are the principal risks. Stronger relevance requirements may underfill sparse profiles or favor well-documented music; measure and disclose those effects. Keep latency and total request budgets bounded across the entire job, not merely within individual provider clients. Avoid invented facts, padding, silent preference precedence, unrelated cleanup, and unsupported recommendation-quality claims.
 
-## Next approval
+## Approval and current stopping point
 
-The three requested adjustments and strict founder/multi-user isolation safeguards are included. Previously agreed favorite handling, exploration, durable taste, cautious negatives, short high-quality batches, explainability, privacy, and performance objectives remain requirements.
-
-
-Phase 1 is the recommended next step. This document records the proposal; its creation and the documentation-directory move do not authorize implementation. After each separately approved phase, report evidence and limitations, create the focused verified local commit, and stop for instruction.
+Phase 1 was explicitly approved after the three adjustments and founder/multi-user isolation safeguards were incorporated. [Technical results and limitations](2026-11-02-phase-1-baseline-evidence.md) are recorded; private listening feedback and developer acceptance remain pending. No later phase is authorized. The original candidate phases remain subject to evidence-led reprioritization and separate approval.

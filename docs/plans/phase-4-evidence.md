@@ -1,5 +1,14 @@
 # Phase 4 tooling: verification and pilot run procedure
 
+> Historical correction (2026-11-02): this document's original mechanics/procedure
+> text omits a later live run. Commit `f26d14e` records 2026-10-08 acquisition and
+> A–D analysis (96 eligible tracks, 48 artists, 35 concealed review slots), with
+> complete listening ratings and formula adoption still pending. See the
+> [Residue baseline investigation](residue/2026-11-02-phase-1-baseline-evidence.md#historical-phase-4-reconciliation).
+> Statements below that no live run occurred describe the earlier tooling stage,
+> not the complete historical record. No renewed acquisition is authorized here.
+
+
 Verified locally on 2026-10-07 on `Prism`, starting at `236dbc6`. The developer requested
 Phase 4 implementation and repeated the instruction after reviewing the proposed scope.
 Scoring/replay mechanics are committed in `e004f1d`; the operator/docs form the second focused

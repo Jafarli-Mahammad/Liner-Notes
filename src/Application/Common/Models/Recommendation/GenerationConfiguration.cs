@@ -11,6 +11,7 @@ public sealed class GenerationConfiguration
     public string ConfigurationVersion { get; set; } = "phase6-config-v1";
     public double TagWeight { get; set; } = 1;
     public double NoveltyWeight { get; set; } = 0.2;
+    public int MinimumNegativeFeedbackRecordings { get; set; } = 3;
     public double FeedbackTagWeight { get; set; } = 0.5;
     public double MinimumPositiveFeedbackWeight { get; set; } = 0.4;
     public int MaximumArtistSeeds { get; set; } = 20;
@@ -33,12 +34,14 @@ public sealed class GenerationConfiguration
             MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
             (Origin is not (EvidenceOrigin.Recorded or EvidenceOrigin.Synthetic) &&
                 !(Origin == EvidenceOrigin.Live && LiveEnabled)) ||
-            !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
+            MinimumNegativeFeedbackRecordings < 2 || !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
             !double.IsFinite(MinimumPositiveFeedbackWeight) || MinimumPositiveFeedbackWeight is < 0 or > 1)
             throw new ArgumentException("Invalid generation configuration, origin approval or mechanical limits.");
         var policy = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             [nameof(Provider)] = Provider,
+            ["FeedbackPolicy"] = LinerNotes.Domain.Taste.EffectiveTasteInputs.FeedbackPolicy,
+            [nameof(MinimumNegativeFeedbackRecordings)] = MinimumNegativeFeedbackRecordings.ToString(CultureInfo.InvariantCulture),
             ["TastePreparation"] = LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste.Version,
             [nameof(LiveEnabled)] = LiveEnabled.ToString(CultureInfo.InvariantCulture),
             ["IngestionPolicy"] = $"{Provider}-{IngestionPolicyVersion}",

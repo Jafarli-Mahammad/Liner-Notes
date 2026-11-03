@@ -88,7 +88,7 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         Assert.Equal(before.Profile.Revision, surviving.Profile.Revision);
     }
     [LocalPostgresMigrationFact]
-    public async Task BaselineRecentNoteOnlyRowsCanDisplaceDurablePositiveFeedback()
+    public async Task NoteOnlyRowsCannotDisplaceDurablePositiveFeedback()
     {
         var profile = await GuestAsync('a');
         await WriteAsync(async (services, ct) =>
@@ -113,12 +113,12 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         await using var scope = services.CreateAsyncScope();
         var inputs = (await scope.ServiceProvider.GetRequiredService<IDiscoveryBatchStore>()
             .ReadInputsAsync(profile.Id, DateTimeOffset.UtcNow, 20, default))!;
-        Assert.Equal(20, inputs.Feedback.Count);
-        Assert.All(inputs.Feedback, p => Assert.Equal(UserFeedback.None, p.Feedback));
-        Assert.Empty(EffectiveTasteInputs.FromProfile(profile.Id, inputs.Signals, inputs.Feedback, new()).PositiveSignals);
+        Assert.Single(inputs.Feedback);
+        Assert.All(inputs.Feedback, p => Assert.Equal(UserFeedback.Liked, p.Feedback));
+        Assert.NotEmpty(EffectiveTasteInputs.FromProfile(profile.Id, inputs.Signals, inputs.Feedback, new(), inputs.FeedbackHistory).PositiveSignals);
         Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<DataContext>().WeeklyRecommendations
             .CountAsync(p => p.ProfileId == profile.Id && p.Feedback == UserFeedback.Liked));
-        // Characterization of the pre-renewal defect, not the desired future behavior.
+        // Regression for the Phase 1 characterization; original behavior remains reproducible at 5a91411.
     }
 
 }

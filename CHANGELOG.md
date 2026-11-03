@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Retain learned artist preferences beyond recent feedback, keep notes separate from musical recency, and make feedback reversal and cautious repeated-dislike learning visible in private receipts.
+
 - Keep fresh favorite evidence active across acquisition windows, rotate entity seeds fairly, and include per-input evidence coverage in private receipts and export.
 
 - Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.

@@ -1,7 +1,7 @@
 # Residue recommendation quality renewal
 
 Date: 2026-11-02
-Status: Phase 2 implemented and locally verified; confirmation pending. Phase 1 is technically completed, not personally validated or formally accepted; listening deferred until after Phase 5. Phase 3 and later are unapproved.
+Status: Phases 2 and 3 implemented and locally verified; confirmation pending. Phase 1 technically completed, not personally validated or formally accepted; listening deferred until after Phase 5. Phase 4 and later require separate authorization.
 Revision: 2026-11-02 — quality baseline, evidence-led scope, complexity gates, and strict listener isolation.
 
 Investigation baseline: branch `Prism`, local commit `5a31db7`.

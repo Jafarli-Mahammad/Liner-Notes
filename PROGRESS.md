@@ -40,7 +40,14 @@ fair, and owner-bound receipts/export include evidence coverage. 151 targeted
 .NET cases and Playwright MCP application checks passed. Subjective quality is
 unverified. See [Phase 2 evidence](docs/plans/residue/2026-11-03-phase-2-favorite-evidence.md)
 and [the plan](docs/plans/residue/2026-11-02-recommendation-quality-renewal-plan.md).
-Phase 3 has not begun and requires separate authorization.
+Phase 3 (durable and reversible feedback) is implemented and locally verified:
+compact lifetime votes retain learned artists, recent receipts supply context,
+notes preserve musical recency, and repeated dislikes cautiously soften learned
+preferences. 304 automated cases and 30 Playwright MCP checks passed; all 65
+original receipts still replay exactly. No new persistence or provider was added.
+See [Phase 3 evidence](docs/plans/residue/2026-11-03-phase-3-feedback-memory.md).
+Subjective quality and developer confirmation remain outstanding. Phase 4 has
+not begun and requires separate authorization.
 
 ## Current documentation
 

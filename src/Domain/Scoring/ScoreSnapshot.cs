@@ -65,6 +65,10 @@ public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     public string? TasteEvidenceSha256 { get; init; }
     public int TasteEvidenceCount { get; init; }
     public IReadOnlyList<FavoriteEvidenceState> FavoriteEvidence { get; init; } = [];
+    public string? FeedbackPolicy { get; init; }
+    public string? FeedbackSupportSha256 { get; init; }
+    public int FeedbackSupportCount { get; init; }
+    public IReadOnlyList<LinerNotes.Domain.Taste.FeedbackArtistSupport> FeedbackSupport { get; init; } = [];
     public string? FullInputSha256 { get; init; }
     public int FullInputCount { get; init; }
     public IReadOnlyList<string> AcquisitionWindow { get; init; } = [];

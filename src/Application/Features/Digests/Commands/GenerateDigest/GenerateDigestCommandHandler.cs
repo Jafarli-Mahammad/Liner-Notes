@@ -67,7 +67,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             else
             {
                 var effective = EffectiveTasteInputs.FromProfile(inputs.ProfileId ?? request.UserId, inputs.Signals, inputs.Feedback,
-                    new(config.FeedbackTagWeight, config.MinimumPositiveFeedbackWeight));
+                    new(config.FeedbackTagWeight, config.MinimumPositiveFeedbackWeight, config.MinimumNegativeFeedbackRecordings), inputs.FeedbackHistory);
                 var artists = effective.PositiveSignals.Where(s => s.TargetType == TasteTargetType.Artist)
                     .Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
                 var tags = effective.PositiveSignals.Where(s => s.TargetType == TasteTargetType.Tag)

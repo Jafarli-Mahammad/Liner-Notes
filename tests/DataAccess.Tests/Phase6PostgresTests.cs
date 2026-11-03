@@ -173,7 +173,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         var profile = await db.ListenerProfiles.SingleAsync(p => p.UserId == userId);
         var inputs = await scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadInputsAsync(userId);
-        // Compatibility oracle: the original revision algorithm materialized these exact JSON bytes.
+        // Revision covers compact lifetime votes and bounded recent musical evidence, excluding note audit edits.
         var original = JsonSerializer.SerializeToUtf8Bytes(new
         {
             Exists = inputs.UserExists,
@@ -181,9 +181,10 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
             ProfileRevision = (long?)profile.Revision,
             Onboarding = profile.OnboardingJson,
             Signals = inputs.Signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
+            History = inputs.FeedbackHistory!.OrderBy(r => r.Id),
             Feedback = inputs.Feedback.Select(r => new
             {
-                r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt, r.LastModifiedAt,
+                r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt,
                 r.Track.TrackKey, r.Track.NormalizedArtistName, r.Track.NormalizedTitle, r.ScoreBreakdown.MatchedTags
             })
         });

@@ -20,9 +20,8 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         var scoring = configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         var effective = EffectiveTasteInputs.FromProfile(inputs.Profile.Id, inputs.Signals, inputs.Feedback,
-            new(configuration.FeedbackTagWeight, configuration.MinimumPositiveFeedbackWeight));
-        var feedbackRecordings = inputs.Feedback.Where(r => Guid.TryParse(r.Track.Mbid, out var id) && id != Guid.Empty)
-            .ToDictionary(r => r.Id, r => Guid.Parse(r.Track.Mbid!));
+            new(configuration.FeedbackTagWeight, configuration.MinimumPositiveFeedbackWeight, configuration.MinimumNegativeFeedbackRecordings), inputs.FeedbackHistory);
+        var feedbackRecordings = effective.FeedbackRecordings;
         var taste = await materializer.BuildAsync(effective.PositiveSignals, allowAcquisition, ct, inputs.GenerationOrdinal, feedbackRecordings);
         var answers = OnboardingState.Read(inputs.Profile.OnboardingJson);
         var artistRequests = taste.Artists.Select(a => new DiscoveryPoolRequest(a.Id, a.Name, false))
@@ -64,6 +63,9 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         string evidenceHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(taste.Seeds)));
         var materializedSignalIds = taste.Seeds.Where(s => s.SignalId.HasValue).Select(s => s.SignalId!.Value).ToHashSet();
         var receiptSeeds = taste.Seeds.Take(80).ToArray();
+        var feedbackSupport = effective.FeedbackSupport.Take(80).ToArray();
+        string? feedbackSupportHash = effective.FeedbackSupport.Count == 0 ? null : Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.FeedbackSupport)));
         IReadOnlyList<BaselineAPick> picks;
         using (LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.evidence_ranking"))
         {
@@ -79,6 +81,10 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                     TasteEvidenceSha256 = evidenceHash,
                     TasteEvidenceCount = taste.Seeds.Count,
                     FavoriteEvidence = taste.FavoriteEvidence,
+                    FeedbackPolicy = EffectiveTasteInputs.FeedbackPolicy,
+                    FeedbackSupport = feedbackSupport,
+                    FeedbackSupportCount = effective.FeedbackSupport.Count,
+                    FeedbackSupportSha256 = feedbackSupportHash,
                     FullInputSha256 = inputHash,
                     FullInputCount = effective.PositiveSignals.Count,
                     SelectionPolicy = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Version,
@@ -115,8 +121,12 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             RequestedPicks = configuration.MaximumPicks,
             CandidateCount = hydrated.Count,
             SuppressedCandidates = hydrated.Count(c => TrackIdentity.Aliases(c.Track).Any(excluded.Contains)),
-            FeedbackConsidered = inputs.Feedback.Count,
+            FeedbackConsidered = inputs.FeedbackHistory?.Count ?? inputs.Feedback.Count,
             FavoriteEvidence = taste.FavoriteEvidence,
+            FeedbackPolicy = EffectiveTasteInputs.FeedbackPolicy,
+            FeedbackSupport = feedbackSupport,
+            FeedbackSupportCount = effective.FeedbackSupport.Count,
+            FeedbackSupportSha256 = feedbackSupportHash,
             Gaps = gaps.Select(g => new { g.Method, g.Reason }).Distinct().Take(40).ToArray(),
             Origin = configuration.Origin.ToString()
         });

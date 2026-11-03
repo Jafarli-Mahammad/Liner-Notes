@@ -43,8 +43,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         Guid? profileId = profile?.Id;
         bool exists = profile is not null;
         var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
-        var feedback = await db.WeeklyRecommendations.Include(r => r.Track)
-            .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId) && r.FeedbackGivenAt != null).OrderBy(r => r.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+        var (feedback, history) = await FeedbackHistoryQuery.ReadAsync(db.WeeklyRecommendations.AsNoTracking()
+            .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId)), 20, cancellationToken);
         using var revisionHash = SHA256.Create();
         await using var revisionStream = new CryptoStream(Stream.Null, revisionHash, CryptoStreamMode.Write, leaveOpen: true);
         await JsonSerializer.SerializeAsync(revisionStream, new
@@ -54,13 +54,13 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             ProfileRevision = profile?.Revision,
             Onboarding = profile?.OnboardingJson,
             Signals = signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
+            History = history.OrderBy(r => r.Id),
             Feedback = feedback.Select(r => new
             {
                 r.Id,
                 r.Feedback,
                 r.Rating,
                 r.FeedbackGivenAt,
-                r.LastModifiedAt,
                 r.Track.TrackKey,
                 r.Track.NormalizedArtistName,
                 r.Track.NormalizedTitle,
@@ -69,7 +69,7 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         }, cancellationToken: cancellationToken).ConfigureAwait(false);
         await revisionStream.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
         var revision = Convert.ToHexStringLower(revisionHash.Hash!);
-        return new(exists, signals, feedback, revision, profileId);
+        return new(exists, signals, feedback, revision, profileId, history);
     }
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)

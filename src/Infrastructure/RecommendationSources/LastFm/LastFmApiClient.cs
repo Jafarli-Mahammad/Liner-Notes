@@ -20,11 +20,13 @@ public sealed class LastFmApiClient : ILastFmApiClient
     private readonly IMemoryCache cache;
     private readonly LastFmRateLimiter limiter;
     private readonly ILogger<LastFmApiClient> logger;
+    private readonly LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget? budget;
     private const int MaximumResponseBytes = 100_000;
 
     public LastFmApiClient(HttpClient httpClient, IOptions<LastFmOptions> options,
-        IMemoryCache cache, LastFmRateLimiter rateLimiter, ILogger<LastFmApiClient> logger, DiscoveryMemoryCaches? memoryCaches = null)
+        IMemoryCache cache, LastFmRateLimiter rateLimiter, ILogger<LastFmApiClient> logger, DiscoveryMemoryCaches? memoryCaches = null, LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget? budget = null)
     {
+        this.budget = budget;
         http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         this.options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         this.cache = memoryCaches?.LastFm ?? cache ?? throw new ArgumentNullException(nameof(cache));
@@ -56,7 +58,7 @@ public sealed class LastFmApiClient : ILastFmApiClient
             var list = fixture(identity).Take(limit).ToArray();
             // Hash the exact synthetic JSON payload, with an explicitly synthetic fixed timestamp.
             var bytes = JsonSerializer.SerializeToUtf8Bytes(new Dictionary<string, object>
-                { [container] = new Dictionary<string, object> { [item] = list } });
+            { [container] = new Dictionary<string, object> { [item] = list } });
             var reference = new ResponseReference("Last.fm", method, identity, EvidenceOrigin.Synthetic,
                 Convert.ToHexStringLower(SHA256.HashData(bytes)), DateTimeOffset.UnixEpoch);
             return new(list, reference, list.Length == 0 ? [new(identity, method, "unknown_fixture_seed", reference)] : []);
@@ -68,14 +70,20 @@ public sealed class LastFmApiClient : ILastFmApiClient
         string cacheKey = $"lastfm-evidence-v1:{options.Mode}:{http.BaseAddress}:{Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(options.ApiKey)))}:{method}:{identity.ToLowerInvariant()}:{limit}";
         if (cache.TryGetValue(cacheKey, out LastFmResponse<T>? hit) && hit is not null) return hit;
         await limiter.AcquireAsync(cancellationToken).ConfigureAwait(false);
-        var query = new Dictionary<string, string> { ["method"] = method, [parameter] = identity,
-            ["api_key"] = options.ApiKey, ["format"] = "json" };
+        var query = new Dictionary<string, string>
+        {
+            ["method"] = method,
+            [parameter] = identity,
+            ["api_key"] = options.ApiKey,
+            ["format"] = "json"
+        };
         if (parameter == "artist") query["autocorrect"] = "0";
         if (method != "artist.gettoptags") query["limit"] = limit.ToString(CultureInfo.InvariantCulture);
         string url = "?" + string.Join("&", query.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            budget?.Spend();
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             await using var content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var memory = new MemoryStream();

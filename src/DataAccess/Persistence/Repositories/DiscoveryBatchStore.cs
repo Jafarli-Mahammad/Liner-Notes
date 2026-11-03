@@ -66,7 +66,8 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
             .OrderBy(s => s.Id).ToArrayAsync(ct);
         var (feedback, history) = await FeedbackHistoryQuery.ReadAsync(
             db.WeeklyRecommendations.AsNoTracking().Where(r => r.ProfileId == profileId), feedbackWindow, ct);
-        return new(profile, signals, feedback, await db.DiscoveryBatches.LongCountAsync(b => b.ProfileId == profileId && b.CompletedAtUtc != null, ct), history);
+        var recentArtists = await RecentArtistHistoryQuery.ReadAsync(db.WeeklyRecommendations.AsNoTracking().Where(r => r.ProfileId == profileId), ct);
+        return new(profile, signals, feedback, await db.DiscoveryBatches.LongCountAsync(b => b.ProfileId == profileId && b.CompletedAtUtc != null, ct), history, recentArtists);
     }
 
     public async Task<IReadOnlySet<string>> FindExcludedAsync(Guid profileId, IReadOnlyList<string> aliases, CancellationToken ct)

@@ -91,16 +91,6 @@ public sealed class OptionalTastePolicyTests
     }
 
     [Fact]
-    public void GoalsAndExplorationChangeSelectionWithoutChangingStoredScores()
-    {
-        var close = Pick("Close", 1, false); var far = Pick("Far", .1, true);
-        Assert.Equal("Close", DiscoverySelectionPolicy.Rank([far, close], new(Goal: "favorites"), 1)[0].Track.Title);
-        Assert.Equal("Far", DiscoverySelectionPolicy.Rank([far, close], new(Goal: "new-artists"), 1)[0].Track.Title);
-        Assert.Equal("Far", DiscoverySelectionPolicy.Rank([close, far], new(Exploration: "surprise"), 1)[0].Track.Title);
-        Assert.Equal("Close", DiscoverySelectionPolicy.Rank([far, close], new(Goal: "favorites", Exploration: "surprise", AllStyles: true), 1)[0].Track.Title);
-    }
-
-    [Fact]
     public void VocalPreferenceUsesOnlyExplicitRecordingEvidenceAndConflictsStayUnknown()
     {
         var response = new StoredResponse("Fixture", "recording.tags", "fixture", "Synthetic", null, null);
@@ -113,6 +103,4 @@ public sealed class OptionalTastePolicyTests
         Assert.Equal(0, DiscoverySelectionPolicy.VocalMatch(ScoreEvidence.Empty, "instrumental"));
     }
 
-    private static BaselineAPick Pick(string name, double overlap, bool novel) => new(Track.Create(name, name),
-        new() { FinalScore = overlap, TagSimilarityRaw = overlap, NoveltyRaw = novel ? 1 : 0 });
 }

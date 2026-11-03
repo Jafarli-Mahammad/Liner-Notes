@@ -127,7 +127,7 @@ public sealed class DiscoveryJobServiceTests
                 if (!c.ArgAt<bool>(1)) throw new DiscoveryPreparationRequiredException();
                 acquiring.TrySetResult(); await release.Task.WaitAsync(c.ArgAt<CancellationToken>(2));
             }
-            return Pool();
+            return Pool(c.ArgAt<DiscoveryPoolRequest>(0).Seed);
         });
         var resolver = Substitute.For<IRecommendationProviderResolver>();
         resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
@@ -153,11 +153,11 @@ public sealed class DiscoveryJobServiceTests
         finally { release.TrySetResult(); await runner.StopAsync(default); }
     }
 
-    private static PreparedDiscoveryPool Pool()
+    private static PreparedDiscoveryPool Pool(string tag = "jazz")
     {
-        var response = new ResponseReference("listenbrainz", "fixture", "jazz", EvidenceOrigin.Synthetic, new string('a', 64), DateTimeOffset.UnixEpoch);
-        var path = new DiscoveryPath("jazz", new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
-        var candidate = new HydratedCandidateTrack(new Track("Song", "Artist"), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
+        var response = new ResponseReference("listenbrainz", "fixture", tag, EvidenceOrigin.Synthetic, new string('a', 64), DateTimeOffset.UnixEpoch);
+        var path = new DiscoveryPath(tag, new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
+        var candidate = new HydratedCandidateTrack(new Track("Song", "Artist"), WeightedTagVector.FromDictionary(new Dictionary<string, double> { [tag] = 1 }),
             new("Song", "Artist", null, [path]), [], response, null);
         return new(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5),
             CatalogText.Version, [candidate], [], 1000, new string('b', 64));

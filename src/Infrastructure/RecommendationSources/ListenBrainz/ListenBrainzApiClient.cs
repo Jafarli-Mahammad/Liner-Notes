@@ -11,7 +11,7 @@ namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 /// <summary>Only fixed, allowlisted public metadata endpoints. Tokens never reach MusicBrainz.</summary>
 public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions options,
-    IMetaBrainzRequestGate gate, IMemoryCache cache, TimeProvider clock, DiscoveryMemoryCaches? memoryCaches = null) : IListenBrainzApiClient
+    IMetaBrainzRequestGate gate, IMemoryCache cache, TimeProvider clock, DiscoveryMemoryCaches? memoryCaches = null, LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget? budget = null) : IListenBrainzApiClient
 {
     private int sentRequests;
     private readonly IMemoryCache responseCache = memoryCaches?.Metadata ?? cache;
@@ -57,6 +57,7 @@ public sealed class ListenBrainzApiClient(HttpClient http, ListenBrainzOptions o
             if (request.Provider == "ListenBrainz" && request.Kind != ListenBrainzRequestKind.SimilarRecordings && !string.IsNullOrEmpty(options.Token))
                 message.Headers.Authorization = new AuthenticationHeaderValue("Token", options.Token);
             using var upstreamMeasurement = DiscoveryDiagnostics.Measure("provider.dispatch_body_parse");
+            budget?.Spend();
             using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             TimeSpan backoff = response.Headers.RetryAfter?.Delta ??
                 (response.Headers.RetryAfter?.Date is { } date ? date - clock.GetUtcNow() : TimeSpan.Zero);

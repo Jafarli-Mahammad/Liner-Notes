@@ -12,8 +12,31 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 namespace LinerNotes.Infrastructure.Tests.Caching;
+
 public sealed class SharedDiscoveryPreparationTests
 {
+    [Fact]
+    public async Task ExplorationLimitsHaveDistinctPublicKeysAndBoundCandidateYield()
+    {
+        var calls = new ConcurrentBag<ListenBrainzRequestKind>();
+        var clock = new Clock();
+        using var services = Services(calls, clock, live: false, cacheable: true);
+        using var caches = new DiscoveryMemoryCaches(new());
+        using var preparation = new SharedDiscoveryPreparation(services.GetRequiredService<IServiceScopeFactory>(), caches,
+            new() { Origin = EvidenceOrigin.Synthetic }, clock);
+        var close = new DiscoveryPoolRequest(null, "electronic", true, Limit: 3);
+        var broad = close with { Limit = 10 };
+        Assert.NotEqual(preparation.KeyFor(close), preparation.KeyFor(broad));
+        var first = await preparation.GetAsync(close, default);
+        var second = await preparation.GetAsync(broad, default);
+        Assert.Equal(3, first.Candidates.Count);
+        Assert.Equal(5, second.Candidates.Count);
+        Assert.All(first.Candidates, candidate => Assert.NotEmpty(candidate.CreditedArtistIds));
+        var restored = PublicEvidenceCodec.DecodePool(PublicEvidenceCodec.Encode(first));
+        Assert.Equal(first.Candidates[0].CreditedArtistIds, restored.Candidates[0].CreditedArtistIds);
+        await Assert.ThrowsAsync<ArgumentException>(() => preparation.GetAsync(close with { Limit = 11 }, default));
+    }
+
     [Fact]
     public async Task IndependentPoolKeysHaveBoundedGatesAndCancelledWaitersReleaseTheirReferences()
     {
@@ -178,7 +201,7 @@ public sealed class SharedDiscoveryPreparationTests
         var batch = Guid.NewGuid();
         var before = await runner.PrepareAsync(new(b, bSignals, []), batch, true, default);
         Assert.NotEmpty(before.Picks);
-        var request = new DiscoveryPoolRequest(null, "electronic", true);
+        var request = new DiscoveryPoolRequest(null, "electronic", true, Limit: 6);
         var publicBefore = System.Text.Json.JsonSerializer.Serialize(preparation.TryGet(request));
         var foreign = LinerNotes.Domain.Digest.WeeklyRecommendation.ForDiscovery(a.Id, Guid.NewGuid(), null,
             before.Picks[0].Track, 1, before.Picks[0].Breakdown);
@@ -211,7 +234,7 @@ public sealed class SharedDiscoveryPreparationTests
             Assert.DoesNotContain(pick.Breakdown.Snapshot!.Evidence.Signals, s => aSignals.Any(aSignal => aSignal.Id == s.Id));
             Assert.Null(pick.Breakdown.Snapshot.Evidence.SelectionAnswers);
         }
-        Assert.Equal(3, calls.Count(k => k == ListenBrainzRequestKind.TagRadio));
+        Assert.Equal(4, calls.Count(k => k == ListenBrainzRequestKind.TagRadio));
     }
 
     private sealed class CatalogAdmission : IDiscoveryWriteCoordinator
@@ -228,8 +251,11 @@ public sealed class SharedDiscoveryPreparationTests
         {
             calls.Add(request.Kind);
             var result = await fixture.SendAsync(request, ct);
-            return result with { Reference = result.Reference with { Origin = live ? EvidenceOrigin.Live : EvidenceOrigin.Synthetic },
-                SharedCacheUntilUtc = cacheable ? clock.GetUtcNow().AddSeconds(10) : null };
+            return result with
+            {
+                Reference = result.Reference with { Origin = live ? EvidenceOrigin.Live : EvidenceOrigin.Synthetic },
+                SharedCacheUntilUtc = cacheable ? clock.GetUtcNow().AddSeconds(10) : null
+            };
         }
     }
     private sealed class Clock : TimeProvider

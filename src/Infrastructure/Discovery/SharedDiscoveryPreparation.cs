@@ -19,7 +19,7 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
         configuration.Scoring();
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         if (string.IsNullOrWhiteSpace(request.Seed) || request.Seed.Length > 256 || request.Seed.Any(char.IsControl) ||
-            request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue) || (request.IsRecording && (request.ArtistId is null || request.IsTag))) throw new ArgumentException("invalid_pool_seed");
+            request.Limit is < 1 || request.Limit > configuration.DiscoveryLimit || request.ArtistId == Guid.Empty || (request.IsTag && request.ArtistId.HasValue) || (request.IsRecording && (request.ArtistId is null || request.IsTag))) throw new ArgumentException("invalid_pool_seed");
         return Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
             Version = PublicEvidenceCodec.PoolVersion,
@@ -27,7 +27,8 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             request.ArtistId,
             Seed = request.ArtistId.HasValue ? null : request.Seed.Trim().ToLowerInvariant(),
             request.IsTag,
-            request.IsRecording
+            request.IsRecording,
+            Limit = request.Limit ?? configuration.DiscoveryLimit
         })));
     }
     public PreparedDiscoveryPool? TryGet(DiscoveryPoolRequest request)
@@ -64,18 +65,18 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
             if (request.IsRecording && request.ArtistId is { } recording)
             {
                 raw = provider.Source is IRecordingRecommendationSource source
-                    ? await source.GetCandidatesByRecordingsAsync([recording], configuration.DiscoveryLimit, deadline.Token)
+                    ? await source.GetCandidatesByRecordingsAsync([recording], request.Limit ?? configuration.DiscoveryLimit, deadline.Token)
                     : new([], [new(recording.ToString("D"), "recording.similar", "direct_recording_similarity_not_supported")]);
             }
-            else if (request.IsTag) raw = await provider.Source.GetCandidatesByTagsAsync([request.Seed], configuration.DiscoveryLimit, deadline.Token);
+            else if (request.IsTag) raw = await provider.Source.GetCandidatesByTagsAsync([request.Seed], request.Limit ?? configuration.DiscoveryLimit, deadline.Token);
             else if (request.ArtistId is { } id)
             {
                 if (provider.Source is not ICanonicalRecommendationSource canonical)
                     return new(hash, provider.Id, configuration.Origin, clock.GetUtcNow(), null, CatalogText.Version, [],
                         [new(id.ToString("D"), "discovery", "canonical_artist_not_supported")], 0, "");
-                raw = await canonical.GetCandidatesByCanonicalArtistsAsync([id], configuration.DiscoveryLimit, deadline.Token);
+                raw = await canonical.GetCandidatesByCanonicalArtistsAsync([id], request.Limit ?? configuration.DiscoveryLimit, deadline.Token);
             }
-            else raw = await provider.Source.GetCandidatesByArtistsAsync([request.Seed], configuration.DiscoveryLimit, deadline.Token);
+            else raw = await provider.Source.GetCandidatesByArtistsAsync([request.Seed], request.Limit ?? configuration.DiscoveryLimit, deadline.Token);
             if (raw.Count > configuration.MaximumCandidates || raw.Any(r => r.Origin != configuration.Origin))
                 throw new GenerationStoppedException("prepared_evidence_origin_or_size_mismatch");
             var hydrated = await provider.Hydrator.HydrateCandidatesBatchAsync(raw.Items, deadline.Token);
@@ -101,6 +102,7 @@ public sealed class SharedDiscoveryPreparation(IServiceScopeFactory scopes, Disc
                     c.Tags,
                     c.TagResponse,
                     c.TagScope,
+                    c.CreditedArtistIds,
                     c.TagNormalizationVersion,
                     c.SupportingResponses,
                     c.TagMissingReason,

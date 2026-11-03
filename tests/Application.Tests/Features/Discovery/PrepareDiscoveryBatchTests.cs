@@ -97,7 +97,7 @@ public sealed class PrepareDiscoveryBatchTests
         var duplicate = Candidate("First", "Artist", "ambient");
         var known = Candidate("Known", "Known artist", "jazz");
         foreach (string style in new[] { "jazz", "ambient" })
-            preparation.GetAsync(new(null, style, true), false, Arg.Any<CancellationToken>()).Returns(
+            preparation.GetAsync(new(null, style, true, Limit: 6), false, Arg.Any<CancellationToken>()).Returns(
                 new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, now, now.AddMinutes(5),
                     CatalogText.Version, style == "jazz" ? [first, known] : [duplicate], [], 1000, new string('b', 64)));
         store.FindExcludedAsync(profile.Id, Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
@@ -125,7 +125,8 @@ public sealed class PrepareDiscoveryBatchTests
             new string('a', 64), DateTimeOffset.UnixEpoch);
         var path = new DiscoveryPath(seed, new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
         return new(new Track(title, artist, mbid: mbid), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
-            new(title, artist, mbid, [path]), [], response, null) { TagScope = scope };
+            new(title, artist, mbid, [path]), [], response, null)
+        { TagScope = scope };
     }
 
     [Theory]
@@ -143,7 +144,7 @@ public sealed class PrepareDiscoveryBatchTests
         var bridge = Candidate("B", "Artist B", "bridge", "shared");
         // Stable ordering for equal canonical keys is part of the existing preference policy.
         HydratedCandidateTrack[] candidates = reverse ? [text, mbid, bridge] : [mbid, text, bridge];
-        preparation.GetAsync(new(null, "jazz", true), false, Arg.Any<CancellationToken>()).Returns(
+        preparation.GetAsync(new(null, "jazz", true, Limit: 6), false, Arg.Any<CancellationToken>()).Returns(
             new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, null,
                 CatalogText.Version, candidates, [], 1000, new string('b', 64)));
         var profile = ListenerProfile.Guest(DateTimeOffset.UtcNow, TimeSpan.FromDays(7));

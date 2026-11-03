@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased — renewal
+- Require supported relevance for discovery picks, coordinate exploration with acquisition and ranking, combine soft preferences, diversify artists, and explain shortfalls with replayable private selection receipts. Keep generation available for short and empty batches.
 - Preserve provider recording connections when descriptive tags are missing, explain their limits, avoid unnecessary artist-tag requests, and tolerate malformed recording tags.
 
 - Retain learned artist preferences beyond recent feedback, keep notes separate from musical recency, and make feedback reversal and cautious repeated-dislike learning visible in private receipts.

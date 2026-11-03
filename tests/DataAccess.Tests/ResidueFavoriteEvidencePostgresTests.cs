@@ -54,7 +54,9 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             await WriteAsync(async (s, ct) =>
             {
                 await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(lease!.Id, lease.LeaseToken!.Value,
-                    batchId, DiscoveryBatchKind.Initial, prepared.Picks, prepared.CoverageJson, prepared.EvidenceExpiry, DateTimeOffset.UtcNow, ct);
+                    batchId, DiscoveryBatchKind.Initial, prepared.Picks.Select((pick, index) => index == 0
+                        ? pick with { Breakdown = pick.Breakdown with { UnknownFields = new() { ["codec-stress-fixture"] = JsonSerializer.SerializeToElement(new string('z', 120_000)) } } }
+                        : pick).ToArray(), prepared.CoverageJson, prepared.EvidenceExpiry, DateTimeOffset.UtcNow, ct);
                 return true;
             });
         }
@@ -63,11 +65,17 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             var data = await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().ExportAsync(profile.Id, default);
             Assert.All(data.Recommendations!, pick =>
             {
-                Assert.Equal(50, pick.ScoreBreakdown.Snapshot!.Evidence.FavoriteEvidence.Count);
+                Assert.NotNull(pick.ScoreBreakdown.Snapshot!.Evidence.Selection);
+                ConnectedSelection.Replay(pick.ScoreBreakdown.Snapshot.Evidence.Selection!);
+                Assert.Equal(50, pick.ScoreBreakdown.Snapshot.Evidence.FavoriteEvidence.Count);
                 Assert.Equal(50, pick.ScoreBreakdown.Snapshot.Evidence.TasteEvidenceCount);
                 Assert.Equal(64, pick.ScoreBreakdown.Snapshot.Evidence.TasteEvidenceSha256!.Length);
             });
+            Assert.Contains(data.Recommendations!, pick => pick.ScoreBreakdown.UnknownFields?.TryGetValue("codec-stress-fixture", out var field) == true && field.GetString()!.Length == 120_000);
             Assert.Contains("FavoriteEvidence", data.Batches.Single().CoverageJson!.Value.GetRawText());
+            var recent = (await scope.ServiceProvider.GetRequiredService<IDiscoveryBatchStore>().ReadInputsAsync(profile.Id, DateTimeOffset.UtcNow, 20, default))!;
+            Assert.NotEmpty(recent.RecentArtists!);
+            Assert.All(recent.RecentArtists!, pair => Assert.InRange(pair.Value, 1, 5));
         }
         var other = await GuestAsync('b');
         await using (var scope = services.CreateAsyncScope())
@@ -75,6 +83,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             Assert.Null(await scope.ServiceProvider.GetRequiredService<IDiscoveryReader>().ReadBatchAsync(other.Id, batchId, DateTimeOffset.UtcNow, default));
             var exported = await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().ExportAsync(other.Id, default);
             Assert.Empty(exported.Recommendations!);
+            var foreignInputs = (await scope.ServiceProvider.GetRequiredService<IDiscoveryBatchStore>().ReadInputsAsync(other.Id, DateTimeOffset.UtcNow, 20, default))!;
+            Assert.Empty(foreignInputs.RecentArtists!);
             await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().ClearAsync(new string('a', 64), default);
         }
         await using var check = services.CreateAsyncScope();

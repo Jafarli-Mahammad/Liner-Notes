@@ -22,13 +22,15 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         var track = new LinerNotes.Domain.Catalog.Track("Uncommon track", "Uncommon artist");
         var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
         var score = new LinerNotes.Domain.Scoring.BaselineAScorer().ScoreForBatch(
-            new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batch, new()) with {
+            new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batch, new()) with
+        {
             UnknownFields = Enumerable.Range(0, 400).ToDictionary(i => "retained-evidence-" + i,
                 i => System.Text.Json.JsonSerializer.SerializeToElement(new { source = "public-provider", identity = i, data = new string('x', 300) }))
         };
         var canonical = System.Text.Json.JsonSerializer.Serialize(score);
         Assert.True(System.Text.Encoding.UTF8.GetByteCount(canonical) > 100_000);
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(leased!.Id, leased.LeaseToken!.Value,
                 batch, DiscoveryBatchKind.OnDemand, [new(track, score)], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
             return true;
@@ -39,7 +41,7 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         Assert.Equal(canonical, System.Text.Json.JsonSerializer.Serialize(loaded.ScoreBreakdown));
         Assert.Equal(loaded.ScoreBreakdown.FinalScore, new LinerNotes.Domain.Scoring.BaselineAScorer().Replay(loaded.ScoreBreakdown.Snapshot!).FinalScore);
         var stored = await db.Database.SqlQuery<string>($"SELECT \"ScoreBreakdown\"::text AS \"Value\" FROM \"WeeklyRecommendations\" WHERE \"BatchId\"={batch}").SingleAsync();
-        Assert.Contains("linernotes-score-json-gzip-v1", stored);
+        Assert.Contains("linernotes-score-json-brotli-v1", stored);
         Assert.True(System.Text.Encoding.UTF8.GetByteCount(stored) < 100_000);
     }
 
@@ -48,7 +50,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
     {
         var now = DateTimeOffset.UtcNow;
         var publicId = Guid.NewGuid(); var syntheticId = Guid.NewGuid();
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             var db = s.GetRequiredService<DataContext>();
             db.Set<RecentRecommendation>().AddRange(Enumerable.Range(0, 1000).Select(_ =>
                 new RecentRecommendation(Guid.NewGuid(), "expired", "expired", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0", now.AddHours(-1))));
@@ -63,7 +66,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             "proof-cleanup", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", now, 10, TimeSpan.Zero, ct));
         var leased = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
             DiscoveryJobKind.Generation, DateTimeOffset.UtcNow, TimeSpan.FromSeconds(60), 3, ct));
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(job.Id, leased!.LeaseToken!.Value, Guid.NewGuid(),
                 DiscoveryBatchKind.OnDemand, [], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
             return true;
@@ -80,7 +84,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             .PreviouslyPublicAsync([publicId, syntheticId], default));
 
         var sequence = retained.Single(row => row.RecordingId == publicId).Sequence;
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             var database = s.GetRequiredService<DataContext>();
             var publication = new LinerNotes.Domain.Catalog.CatalogPublication(Guid.NewGuid(), "test", "refreshed",
                 "https://musicbrainz.org/", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0-1.0", null, "fresh attribution",
@@ -100,7 +105,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
         var vector = LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 });
         var breakdown = new LinerNotes.Domain.Scoring.BaselineAScorer().ScoreForBatch(
             new(track, vector, LinerNotes.Domain.Scoring.ScoreEvidence.Empty), vector, false, batchId, new());
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             await s.GetRequiredService<IDiscoveryBatchStore>().CompleteAsync(refreshedLease!.Id, refreshedLease.LeaseToken!.Value,
                 batchId, DiscoveryBatchKind.OnDemand, [new(track, breakdown)], "{}", now.AddMinutes(5), DateTimeOffset.UtcNow, ct);
             return true;
@@ -117,7 +123,8 @@ public sealed partial class DiscoveryCoordinationPostgresTests
     {
         var publicId = Guid.NewGuid(); var syntheticId = Guid.NewGuid(); var unknown = Guid.NewGuid();
         var expired = DateTimeOffset.UtcNow.AddHours(-1);
-        await WriteAsync(async (s, ct) => {
+        await WriteAsync(async (s, ct) =>
+        {
             var db = s.GetRequiredService<DataContext>();
             db.Set<RecentRecommendation>().AddRange(
                 new RecentRecommendation(publicId, "public track", "public artist", LinerNotes.Domain.Catalog.CatalogOrigin.Public, "CC0", expired),
@@ -171,8 +178,11 @@ public sealed partial class DiscoveryCoordinationPostgresTests
             "deadline", new string('a', 64), DiscoveryJobKind.Generation, 0, "{}", now, 10, TimeSpan.Zero, ct));
         var lease = await WriteAsync((s, ct) => s.GetRequiredService<IDiscoveryJobStore>().LeaseNextAsync(
             DiscoveryJobKind.Generation, now.AddSeconds(1), TimeSpan.FromSeconds(60), 3, ct));
-        await WriteAsync(async (s, ct) => { await s.GetRequiredService<IDiscoveryJobStore>().DeferAsync(job.Id,
-            lease!.LeaseToken!.Value, now.AddSeconds(2), TimeSpan.FromSeconds(1), "waiting_for_music", ct); return true; });
+        await WriteAsync(async (s, ct) =>
+        {
+            await s.GetRequiredService<IDiscoveryJobStore>().DeferAsync(job.Id,
+            lease!.LeaseToken!.Value, now.AddSeconds(2), TimeSpan.FromSeconds(1), "waiting_for_music", ct); return true;
+        });
         var expiredAt = now.AddMinutes(11);
         await using (var scope = services.CreateAsyncScope())
             Assert.True(await scope.ServiceProvider.GetRequiredService<IDiscoveryJobStore>().HasReadyAsync(

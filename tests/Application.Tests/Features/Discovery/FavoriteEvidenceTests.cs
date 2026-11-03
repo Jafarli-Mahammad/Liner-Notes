@@ -24,7 +24,7 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
     private static SeedTagSnapshot Snapshot(string name, string tag = "fixture sound") => new(name,
         WeightedTagVector.FromDictionary(new Dictionary<string, double> { [tag] = 1 }), [],
         new("fixture", "seed.tags", name, EvidenceOrigin.Synthetic, new string('a', 64), Now), null, [])
-        { SharedUntilUtc = Now.AddHours(1) };
+    { SharedUntilUtc = Now.AddHours(1) };
     private TasteSignal Favorite(int index, CatalogKind kind = CatalogKind.Artist, bool local = true, Guid? creditedArtist = null, DateTimeOffset? expiry = null)
     {
         var id = Guid.NewGuid();
@@ -33,8 +33,12 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
             "fixture", "Synthetic fixture", Guid.NewGuid(), CatalogOrigin.Synthetic,
             [new(creditedArtist ?? Guid.NewGuid(), "Fixture credit", 0)], "fixture", "fixture",
             local ? [new("dimension " + index % 8, 1, "synthetic-" + scope)] : [], Now, expiry ?? Now.AddHours(1), new string('a', 64));
-        var signal = TasteSignal.ForProfile(owner, null, kind switch { CatalogKind.Artist => TasteTargetType.Artist,
-            CatalogKind.Album => TasteTargetType.Album, _ => TasteTargetType.Track }, item.Name, 1,
+        var signal = TasteSignal.ForProfile(owner, null, kind switch
+        {
+            CatalogKind.Artist => TasteTargetType.Artist,
+            CatalogKind.Album => TasteTargetType.Album,
+            _ => TasteTargetType.Track
+        }, item.Name, 1,
             TasteSignalSource.InitialSeedManual, "Synthetic favorite");
         signal.SetCatalogSelection(item.Id, id, JsonSerializer.Serialize(new CatalogSelectionSnapshot("catalog-selection-v1", item)));
         return signal;
@@ -170,9 +174,10 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
     }
 
     [Theory]
-    [InlineData(102, 25, 7)]
-    [InlineData(1000, 0, 1)]
-    public async Task ArtistRecordingAndLegacyAcquisitionShareOneFairWindowAndReceiptRemainsBounded(int favorites, int legacyCount, int rounds)
+    [InlineData(102, 25, 7, 1)]
+    [InlineData(1000, 0, 1, 1)]
+    [InlineData(1000, 0, 1, 400)]
+    public async Task ArtistRecordingAndLegacyAcquisitionShareOneFairWindowAndReceiptRemainsBounded(int favorites, int legacyCount, int rounds, int candidateCount)
     {
         var profile = ListenerProfile.Guest(Now, TimeSpan.FromDays(7));
         owner = profile.Id;
@@ -188,11 +193,19 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
         var response = new ResponseReference("fixture", "tags", "fixture", EvidenceOrigin.Synthetic, new string('a', 64), Now);
         var candidate = new HydratedCandidateTrack(track, WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["dimension 1"] = 1 }),
             new(track.Title, track.ArtistName, null, [new("fixture", new(null, null, "not_supplied"), null, response, 1, null, null, new(null, null, "not_supplied"))]), [], response, null);
+        var varied = Enumerable.Range(0, candidateCount).Select(i =>
+        {
+            var row = Track.Create("Fixture " + i, "Independent fixture " + i, mbid: Guid.NewGuid().ToString("D"));
+            return new HydratedCandidateTrack(row, candidate.TagVector, new(row.Title, row.ArtistName, row.Mbid, candidate.RawCandidate.Paths), [], response, null)
+            { CreditedArtistIds = [Guid.NewGuid()] };
+        }).ToArray();
+        int poolIndex = 0;
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), false, Arg.Any<CancellationToken>()).Returns(call =>
         {
             var request = call.Arg<DiscoveryPoolRequest>();
             requested.Add(request.ArtistId?.ToString() ?? request.Seed);
-            return new PreparedDiscoveryPool(new string('a', 64), "fixture", EvidenceOrigin.Synthetic, Now, Now.AddMinutes(10), "fixture", [candidate], [], 100, new string('b', 64));
+            var rows = candidateCount == 1 ? [candidate] : varied.Skip(poolIndex++ * 20).Take(20).ToArray();
+            return new PreparedDiscoveryPool(new string('a', 64), "fixture", EvidenceOrigin.Synthetic, Now, Now.AddMinutes(10), "fixture", rows, [], 100, new string('b', 64));
         });
         var store = Substitute.For<IDiscoveryBatchStore>();
         store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
@@ -201,11 +214,21 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
         for (int round = 0; round < rounds; round++)
         {
             var result = await runner.PrepareAsync(new(profile, owned, [], round), Guid.NewGuid(), false, default);
-            var receipt = Assert.Single(result.Picks).Breakdown;
+            var receipt = result.Picks.First().Breakdown;
+            Assert.Equal(candidateCount == 1 ? 1 : 5, result.Picks.Count);
+            if (candidateCount == 400) Assert.Equal(400, receipt.Snapshot!.Evidence.Selection!.Input.Candidates.Count);
             Assert.Equal(favorites + legacyCount, receipt.Snapshot!.Evidence.TasteEvidenceCount);
             Assert.Equal(80, receipt.Snapshot.Evidence.Seeds.Count);
             Assert.Equal(favorites + legacyCount, receipt.Snapshot.Evidence.FavoriteEvidence.Count);
-            Assert.InRange(LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.SerializeToUtf8Bytes(receipt).Length, 1, 100_000);
+            var encoded = LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.SerializeToUtf8Bytes(receipt);
+            Assert.InRange(encoded.Length, 1, 100_000);
+            if (candidateCount == 400)
+            {
+                var restored = LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.Deserialize(System.Text.Encoding.UTF8.GetString(encoded));
+                Assert.True(restored.Snapshot!.Evidence.Selection!.SelectedDecisionsOnly);
+                Assert.Equal(400, LinerNotes.Domain.Discovery.ConnectedSelection.Replay(restored.Snapshot.Evidence.Selection).Decisions.Count);
+                output.WriteLine($"ThousandFavoriteFourHundredCandidateStoredBytes={encoded.Length}");
+            }
             Assert.Equal(receipt.FinalScore, new BaselineAScorer().Replay(receipt.Snapshot).FinalScore, 12);
             Assert.Equal(20, receipt.Snapshot.Evidence.AcquisitionWindow.Count);
         }

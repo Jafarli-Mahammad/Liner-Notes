@@ -59,6 +59,8 @@ public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
     public double SimilarityInfluence { get; init; } = 1;
     public IReadOnlyList<StoredAlbumFallback> AlbumFallbacks { get; init; } = [];
+    public LinerNotes.Domain.Discovery.SelectionReceipt? Selection { get; init; }
+    public IReadOnlyList<Guid> CreditedArtistIds { get; init; } = [];
     public string? SelectionPolicy { get; init; }
     public string? SelectionAnswers { get; init; }
     public IReadOnlyList<string> SelectionReasons { get; init; } = [];

@@ -45,6 +45,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         var signals = await db.TasteSignals.Where(s => db.ListenerProfiles.Any(p => p.Id == s.ProfileId && p.UserId == userId)).OrderBy(s => s.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         var (feedback, history) = await FeedbackHistoryQuery.ReadAsync(db.WeeklyRecommendations.AsNoTracking()
             .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId)), 20, cancellationToken);
+        var recentArtists = await RecentArtistHistoryQuery.ReadAsync(db.WeeklyRecommendations.AsNoTracking()
+            .Where(r => db.ListenerProfiles.Any(p => p.Id == r.ProfileId && p.UserId == userId)), cancellationToken);
         using var revisionHash = SHA256.Create();
         await using var revisionStream = new CryptoStream(Stream.Null, revisionHash, CryptoStreamMode.Write, leaveOpen: true);
         await JsonSerializer.SerializeAsync(revisionStream, new
@@ -55,6 +57,7 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
             Onboarding = profile?.OnboardingJson,
             Signals = signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
             History = history.OrderBy(r => r.Id),
+            RecentArtists = recentArtists,
             Feedback = feedback.Select(r => new
             {
                 r.Id,
@@ -69,7 +72,8 @@ public sealed class DigestGenerationStore(DataContext db, IUnitOfWork unitOfWork
         }, cancellationToken: cancellationToken).ConfigureAwait(false);
         await revisionStream.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
         var revision = Convert.ToHexStringLower(revisionHash.Hash!);
-        return new(exists, signals, feedback, revision, profileId, history);
+        return new(exists, signals, feedback, revision, profileId, history,
+            profile?.OnboardingJson is { } onboarding ? JsonSerializer.Deserialize<LinerNotes.Domain.Discovery.TasteOnboarding>(onboarding) : null, recentArtists);
     }
 
     public async Task<GenerationStorageState> ReadStorageAsync(CancellationToken cancellationToken = default)

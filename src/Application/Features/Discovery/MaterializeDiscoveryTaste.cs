@@ -23,6 +23,7 @@ public sealed record MaterializedDiscoveryTaste(WeightedTagVector Vector, IReadO
     IReadOnlySet<string> FamiliarArtists, DateTimeOffset? EvidenceExpiresAtUtc = null)
 {
     public IReadOnlyList<CanonicalArtistSeed> Recordings { get; init; } = [];
+    public IReadOnlySet<Guid> FamiliarArtistIds { get; init; } = new HashSet<Guid>();
     public IReadOnlyList<string> LegacyArtists { get; init; } = [];
     public IReadOnlyList<StoredAlbumFallback> AlbumFallbacks { get; init; } = [];
     public IReadOnlyList<FavoriteEvidenceState> FavoriteEvidence { get; init; } = [];
@@ -47,6 +48,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         var recordings = new List<CanonicalArtistSeed>();
         var albumFallbacks = new List<StoredAlbumFallback>();
         var familiar = new HashSet<string>(StringComparer.Ordinal);
+        var familiarIds = new HashSet<Guid>();
         var gaps = new List<CoverageGap>();
         var expiries = new List<DateTimeOffset>();
         var positives = signals.Where(s => s.Weight > 0).ToArray();
@@ -80,7 +82,11 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
                 familiar.Add(signal.NormalizedTargetValue);
                 Guid? recording = signal.Source == TasteSignalSource.RecommendationLike && feedbackRecordings?.TryGetValue(signal.Id, out var id) == true ? id : null;
                 var legacy = await Seed(new(null, signal.TargetValue, false, ArtistRecordingId: recording), scheduled);
-                if (legacy?.CanonicalArtistId is { } artistId) artists.TryAdd(artistId, new(artistId, signal.TargetValue));
+                if (legacy?.CanonicalArtistId is { } artistId)
+                {
+                    artists.TryAdd(artistId, new(artistId, signal.TargetValue));
+                    familiarIds.Add(artistId);
+                }
                 else legacyArtists.TryAdd(signal.NormalizedTargetValue, signal.TargetValue);
                 Record(signal, legacy, legacy?.CanonicalArtistId is { } canonicalId ? "artist:" + canonicalId.ToString("D")
                     : "legacy-artist:" + signal.NormalizedTargetValue, "artist");
@@ -95,6 +101,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             var credits = item.Kind == CatalogKind.Artist ? new[] { new CatalogArtistCreditDto(item.CanonicalId, item.Name, 0) } : item.Artists?.ToArray() ?? [];
             foreach (var credit in credits)
             {
+                familiarIds.Add(credit.CanonicalId);
                 if (item.Kind != CatalogKind.Track) artists.TryAdd(credit.CanonicalId, new(credit.CanonicalId, credit.Name));
                 if (item.Kind == CatalogKind.Album) albumFallbacks.Add(new(item.CanonicalId, item.Name, credit.CanonicalId, credit.Name,
                     options.AlbumArtistFallbackInfluence / Math.Max(1, credits.Length)));
@@ -146,7 +153,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             artists.Values.OrderBy(a => a.Id).ToArray(),
             LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(positives.Where(s => s.TargetType == TasteTargetType.Tag).Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal).ToArray(), configuration.MaximumTagSeeds, round), gaps.Distinct().ToArray(), familiar, expiries.Count == 0 ? null : expiries.Min())
-        { LegacyArtists = legacyArtists.Values.Order(StringComparer.Ordinal).ToArray(), Recordings = recordings.DistinctBy(r => r.Id).ToArray(), AlbumFallbacks = albumFallbacks.Distinct().ToArray(), FavoriteEvidence = coverage.Values.ToArray() };
+        { FamiliarArtistIds = familiarIds, LegacyArtists = legacyArtists.Values.Order(StringComparer.Ordinal).ToArray(), Recordings = recordings.DistinctBy(r => r.Id).ToArray(), AlbumFallbacks = albumFallbacks.Distinct().ToArray(), FavoriteEvidence = coverage.Values.ToArray() };
 
         void Record(TasteSignal signal, SeedTagSnapshot? snapshot, string identity, string scope)
         {

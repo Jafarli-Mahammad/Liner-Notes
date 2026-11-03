@@ -432,3 +432,13 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A title-only result window missed exact artist credits; an optional metadata endpoint could also be requested despite sufficient direct evidence. Counting either situation as absent source coverage would misdiagnose the pipeline.
 **Suggested improvement:** Record search resolution, acquisition yield, hydration loss and optional enrichment independently. Prefer existing direct evidence before issuing fallback calls, preserve missing-evidence markers, and test required-source failures at an endpoint still needed by the final code.
 **Principle:** Attribute missing results to the actual failing stage before adding integrations or claiming a coverage improvement.
+
+### Observation 039: Verify combined capacity and request scope before expanding receipts
+**Status:** OPEN
+**Date:** 2026-11-03
+**Skill:** ponytail, ai-slop-cleaner, performance-reviewer
+**Type:** open-source
+**Phase/Area:** Replay evidence and acquisition bounds
+**Issue:** Individually bounded favorite and candidate counts exceeded an existing receipt row cap when combined. Independent client scopes also reset an allowance intended to bound one preparation attempt.
+**Suggested improvement:** Test the cross-product of existing limits. Retain complete normalized decision inputs while reconstructing derivable outputs, verify codec backward readers and expansion limits, and measure the actual stored size. Enforce dispatch budgets across child scopes and state explicitly whether retries share the counter.
+**Principle:** Component limits do not establish a whole-operation storage or request bound.

@@ -24,6 +24,11 @@ var scorer = new BaselineAScorer();
 var comparisons = scores.Select(p =>
 {
     var snapshot = p.Score.Snapshot ?? throw new ArgumentException("Stored pick has no replay snapshot");
+    if (snapshot.Evidence.Selection is { } selection)
+    {
+        var result = LinerNotes.Domain.Discovery.ConnectedSelection.Replay(selection);
+        if (!result.SelectedKeys.Contains(snapshot.TrackKey, StringComparer.Ordinal)) throw new InvalidOperationException("Stored pick is absent from selection replay");
+    }
     var replay = scorer.Replay(snapshot);
     return new { p.Id, Error = Math.Abs(replay.FinalScore - p.Score.FinalScore),
         RawError = Math.Abs(replay.TagSimilarityRaw - p.Score.TagSimilarityRaw), Explanation = p.Score.GenerateExplanation() };
@@ -44,14 +49,15 @@ allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
 samples.Sort();
 var result = new
 {
-    Version = "residue-numeric-replay-v1", Picks = scores.Length, MaxScoreError = comparisons.Max(p => p.Error),
+    Version = "residue-numeric-replay-v1", Picks = scores.Length,
+    SelectionReplayedPicks = scores.Count(p => p.Score.Snapshot!.Evidence.Selection is not null), MaxScoreError = comparisons.Max(p => p.Error),
     MaxRawSimilarityError = comparisons.Max(p => p.RawError),
     TagScopes = scores.GroupBy(p => p.Score.Snapshot!.Evidence.TagScope).ToDictionary(g => g.Key, g => g.Count()),
     ZeroTagOverlapPicks = scores.Count(p => p.Score.TagSimilarityRaw == 0),
     FamiliarArtistPicks = scores.Count(p => p.Score.Snapshot!.Familiarity),
     NumericalReplayBatchMedianMs = samples[15], NumericalReplayBatchP95Ms = samples[28],
     AllocatedBytesForThirtyReplays = allocated,
-    Limit = "Warm pure numerical replay of fixed receipts; not job latency, selection replay or subjective quality.",
+    Limit = "Warm pure numerical replay of fixed receipts; not job latency or subjective quality. Selection replay is checked separately where a receipt is present.",
     Explanations = comparisons
 };
 using (var output = new FileStream(args[1], FileMode.CreateNew))

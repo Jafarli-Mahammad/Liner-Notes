@@ -19,7 +19,9 @@ public sealed class GenerationConfiguration
     public int DiscoveryLimit { get; set; } = 10;
     public int MaximumCandidates { get; set; } = 400;
     public int MaximumSnapshotBytes { get; set; } = 100_000;
+    public int MaximumUpstreamRequests { get; set; } = 80;
     public int MaximumPicks { get; set; } = 5;
+    public LinerNotes.Domain.Discovery.SelectionConfiguration Selection { get; set; } = new();
     public EvidenceOrigin Origin { get; set; } = EvidenceOrigin.Recorded;
     public bool LiveEnabled { get; set; }
     public DateTimeOffset? RecordingExpiresAtUtc { get; set; }
@@ -31,15 +33,19 @@ public sealed class GenerationConfiguration
             Provider.Any(c => !char.IsAsciiLetterLower(c) && !char.IsAsciiDigit(c) && c != '-') ||
             string.IsNullOrWhiteSpace(IngestionPolicyVersion) || IngestionPolicyVersion.Length > 128 ||
             MaximumArtistSeeds is < 1 or > 20 || MaximumTagSeeds is < 1 or > 20 || DiscoveryLimit is < 1 or > 10 ||
-            MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
+            MaximumUpstreamRequests is < 1 or > 200 || MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
             (Origin is not (EvidenceOrigin.Recorded or EvidenceOrigin.Synthetic) &&
                 !(Origin == EvidenceOrigin.Live && LiveEnabled)) ||
             MinimumNegativeFeedbackRecordings < 2 || !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
             !double.IsFinite(MinimumPositiveFeedbackWeight) || MinimumPositiveFeedbackWeight is < 0 or > 1)
             throw new ArgumentException("Invalid generation configuration, origin approval or mechanical limits.");
+        Selection.Validate();
         var policy = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             [nameof(Provider)] = Provider,
+            [nameof(MaximumUpstreamRequests)] = MaximumUpstreamRequests.ToString(CultureInfo.InvariantCulture),
+            ["SelectionConfiguration"] = System.Text.Json.JsonSerializer.Serialize(Selection),
+            ["SelectionPolicy"] = LinerNotes.Domain.Discovery.ConnectedSelection.Version,
             ["FeedbackPolicy"] = LinerNotes.Domain.Taste.EffectiveTasteInputs.FeedbackPolicy,
             [nameof(MinimumNegativeFeedbackRecordings)] = MinimumNegativeFeedbackRecordings.ToString(CultureInfo.InvariantCulture),
             ["TastePreparation"] = LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste.Version,

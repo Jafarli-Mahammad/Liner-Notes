@@ -120,10 +120,13 @@ export default function Discover() {
         {!hasTaste && <Link className="text-link" to="/">Explore recent recommendations</Link>}
       </div>}</div>
     </section>
+    {batch && typeof batch.coverage?.RequestedPicks === 'number' && batch.picks.length < batch.coverage.RequestedPicks &&
+      <Notice>Showing {batch.picks.length} of {batch.coverage.RequestedPicks} requested picks. The remaining candidates did not have enough supported connection or variety for this batch.</Notice>}
     {batch?.coverage?.Gaps?.length ? <Notice>Some selections had limited source evidence. Your saved explanations show the connections available.</Notice> : null}
     {!!batch && batch.picks.length > 1 && <section className="secondary-picks"><div className="more-heading"><h2>More finds for you</h2><span className="editorial-meta">{String(batch.picks.length - 1).padStart(2, '0')} more</span></div>
       <div className="personal-picks-grid">{batch.picks.slice(1).map(pick => <PickContent key={pick.id} pick={pick} onSaved={saved} />)}</div>
-      {!batchId && <div className="discover-more"><button className="button button-secondary" disabled={disabled} onClick={generate} type="button">Find more recommendations <span aria-hidden="true">↻</span></button><p className="field-help">New suggestions may take a moment to generate.</p></div>}
+
     </section>}
+      {!!batch && !batchId && <div className="discover-more"><button className="button button-secondary" disabled={disabled} onClick={generate} type="button">Find more recommendations <span aria-hidden="true">↻</span></button><p className="field-help">New suggestions may take a moment to generate.</p></div>}
   </main>;
 }

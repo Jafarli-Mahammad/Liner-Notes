@@ -120,7 +120,8 @@ public static class DependencyInjection
         services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
-                AllowAutoRedirect = false, UseCookies = false,
+                AllowAutoRedirect = false,
+                UseCookies = false,
                 // The client bounds the decompressed stream before parsing or hashing evidence.
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
             });
@@ -154,6 +155,8 @@ public static class DependencyInjection
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedPublicEvidence>();
         services.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupPreparation, LinerNotes.Infrastructure.Discovery.SharedCatalogLookup>();
         services.AddSingleton<IDiscoverySeedPreparation, LinerNotes.Infrastructure.Discovery.SharedSeedPreparation>();
+        services.AddSingleton<LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget>();
+        services.AddSingleton<IDiscoveryRequestBudget>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget>());
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
         services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.PersistentDiscoveryPreparation>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);

@@ -57,7 +57,19 @@ retained all 30 candidates and demonstrated no tagless yield gain. Optional
 credits and album routes are deferred; AcousticBrainz integration was rejected
 for this phase. See [Phase 4 evidence](docs/plans/residue/2026-11-03-phase-4-recording-connections.md).
 Developer confirmation, subjective quality and broader coverage remain open.
-Phase 5 requires separate authorization.
+Phase 5 (coordinated acquisition and connected selection) is implemented and
+locally verified. Exploration changes bounded public acquisition limits/routes;
+selection rejects novelty-only padding, combines soft controls, diversifies by
+canonical credits and recent exposure, and records replayable decisions and
+shortfalls. The UI handles empty and short batches. 648 automated cases and 32
+Playwright MCP checks passed; all 75 preserved historical receipts still replay
+numerically, and five new browser receipts replay selection exactly. The fixed
+sparse pools now show 16 supported picks instead of 80 padded picks, with unchanged
+paired numerical scores; this is synthetic correctness evidence, not listening
+validation. New large receipts remain within the existing storage cap, with
+backward-compatible readers. See [Phase 5 evidence](docs/plans/residue/2026-11-03-phase-5-connected-selection.md).
+Developer confirmation and subjective quality remain open. Phase 6 requires
+separate authorization.
 
 ## Current documentation
 
@@ -78,13 +90,15 @@ recommendation-quality claims.
 
 1. **Developer confirmation:** review locally verified phase evidence and confirm the implementation.
 2. **Historical Phase 4 pilot:** commit `f26d14e` records completed live acquisition and A–D analysis on 2026-10-08; complete blind ratings, formula adoption, and developer confirmation were not established. New acquisition still requires its applicable approvals. See [Phase 4 evidence and run procedure](docs/plans/phase-4-evidence.md).
-3. **Phase 5 decision:** real-data evaluation needs separate authorization, an approved development and held-out manifest, frozen scoring configuration, and documented comparison steps. Recommendation quality remains unverified. See [renewal contracts](docs/plans/contracts.md).
+3. **Historical pilot evaluation decision:** the original delivery plan's real-data evaluation needs separate authorization, an approved development and held-out manifest, frozen scoring configuration, and documented comparison steps. Recommendation quality remains unverified. See [renewal contracts](docs/plans/contracts.md).
 4. **Provider release gates:** obtain written Last.fm public-page approval and verify applicable territorial, consent, recording, attribution, and hosting requirements. The request remains a draft; confirm the repository URL before sending it. See [Phase 3 references](docs/plans/phase-3-evidence.md#authoritative-documentation) and the [release checklist](docs/plans/phase-9-release-checklist.md).
 5. **Production operations:** choose hosting and delivery arrangements, validate storage limits against the chosen host, and complete the [Phase 9 release checklist](docs/plans/phase-9-release-checklist.md). Production deployment and external email delivery have not been performed.
 6. **Phase 7 deployment checks:** inspect or convert any existing captured-email files and confirm persistent key-store access and backup protection before relying on encrypted capture. See [Phase 7 evidence](docs/plans/phase-7-evidence.md).
 7. **External CI:** The Qodana scan workflow and configuration have been removed. GitHub Actions CI has reported failures; a successful rerun and GitGuardian incident classification remain pending. See [PR review evidence](docs/plans/2026-10-19-pr-review-fixes.md) for the historical Qodana setup and findings.
 
 ## Phase implementation status
+
+This table tracks the original delivery plan; Residue renewal phase statuses are above.
 
 | Phase | Current status | Evidence |
 |---|---|---|

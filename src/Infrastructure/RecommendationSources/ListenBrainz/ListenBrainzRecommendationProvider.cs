@@ -162,6 +162,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
                 tags.Response, tags.MissingReason, candidateGaps)
             {
                 TagScope = scope,
+                CreditedArtistIds = entry.Metadata.ArtistMbids.Select(Guid.Parse).ToArray(),
                 TagNormalizationVersion = ListenBrainzEvidenceParser.NormalizationVersion,
                 SupportingResponses = supporting.Distinct().ToArray()
             });

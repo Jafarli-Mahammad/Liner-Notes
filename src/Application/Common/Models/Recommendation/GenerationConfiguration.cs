@@ -39,6 +39,7 @@ public sealed class GenerationConfiguration
         var policy = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             [nameof(Provider)] = Provider,
+            ["TastePreparation"] = LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste.Version,
             [nameof(LiveEnabled)] = LiveEnabled.ToString(CultureInfo.InvariantCulture),
             ["IngestionPolicy"] = $"{Provider}-{IngestionPolicyVersion}",
             [nameof(MaximumArtistSeeds)] = MaximumArtistSeeds.ToString(CultureInfo.InvariantCulture),

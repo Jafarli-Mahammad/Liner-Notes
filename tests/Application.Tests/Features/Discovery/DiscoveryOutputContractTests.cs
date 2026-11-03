@@ -63,8 +63,10 @@ public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
         output.WriteLine("CONTRACT_JSON=" + json);
         output.WriteLine("CONTRACT_SHA256=" + hash);
-        // Captured from the frozen 623f29a Application/Domain assemblies, not the changed implementation.
-        Assert.Equal("6b8e6dd62d50a4ce6060a333ef7a2867879bd09f7077b29bd017fc596135faef", hash);
+        // Phase 2 adds favorite-evidence/configuration metadata and its byte reservation.
+        // Compared with 5a91411: all 16 normalized genre/acquisition outputs remain identical.
+        // Exact before/after payloads and allowed differences are recorded in Phase 2 evidence.
+        Assert.Equal("7b1861f521d3a9258496d26dfa6e8a8298099307f4e24e350f84555aaa89ba7a", hash);
     }
 
     private static void SetId(LinerNotes.Domain.Common.BaseEntity entity, string key) =>

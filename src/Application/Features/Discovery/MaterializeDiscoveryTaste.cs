@@ -23,12 +23,15 @@ public sealed record MaterializedDiscoveryTaste(WeightedTagVector Vector, IReadO
     IReadOnlySet<string> FamiliarArtists, DateTimeOffset? EvidenceExpiresAtUtc = null)
 {
     public IReadOnlyList<CanonicalArtistSeed> Recordings { get; init; } = [];
+    public IReadOnlyList<string> LegacyArtists { get; init; } = [];
     public IReadOnlyList<StoredAlbumFallback> AlbumFallbacks { get; init; } = [];
+    public IReadOnlyList<FavoriteEvidenceState> FavoriteEvidence { get; init; } = [];
 }
 
 public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver resolver, GenerationConfiguration configuration,
     DiscoveryTasteOptions options, TimeProvider clock, IDiscoverySeedPreparation? preparation = null)
 {
+    public const string Version = "cached-favorites-v1";
     public Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, CancellationToken ct)
         => BuildAsync(signals, true, ct);
     public async Task<MaterializedDiscoveryTaste> BuildAsync(IReadOnlyList<TasteSignal> signals, bool allowAcquisition, CancellationToken ct, long round = 0,
@@ -40,6 +43,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         var evidence = new List<EntityTasteEvidence>();
         var stored = new List<StoredSeed>();
         var artists = new Dictionary<Guid, CanonicalArtistSeed>();
+        var legacyArtists = new Dictionary<string, string>(StringComparer.Ordinal);
         var recordings = new List<CanonicalArtistSeed>();
         var albumFallbacks = new List<StoredAlbumFallback>();
         var familiar = new HashSet<string>(StringComparer.Ordinal);
@@ -47,23 +51,39 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
         var expiries = new List<DateTimeOffset>();
         var positives = signals.Where(s => s.Weight > 0).ToArray();
 
-        foreach (var signal in LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(positives.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track).OrderBy(s => s.Source != TasteSignalSource.InitialSeedManual).ThenBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).ToArray(), configuration.MaximumArtistSeeds, round))
+        var entities = positives.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track)
+            .OrderBy(s => s.Source != TasteSignalSource.InitialSeedManual)
+            .ThenBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).ThenBy(s => s.Id).ToArray();
+        string Key(TasteSignal s)
+        {
+            string? hint = s.Source == TasteSignalSource.RecommendationLike && feedbackRecordings?.TryGetValue(s.Id, out var recordingId) == true
+                ? ":" + recordingId.ToString("D") : null;
+            return s.TargetType + ":" + (s.CanonicalEntityId?.ToString("D") ?? s.NormalizedTargetValue + hint);
+        }
+        var acquisition = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(entities.Select(Key).Distinct(StringComparer.Ordinal).ToArray(),
+            configuration.MaximumArtistSeeds, round).ToHashSet(StringComparer.Ordinal);
+        var seedReads = new Dictionary<string, SeedTagSnapshot>(StringComparer.Ordinal);
+        var coverage = new Dictionary<Guid, FavoriteEvidenceState>();
+        var missingAlbums = new List<(TasteSignal Signal, string Identity, CatalogArtistCreditDto[] Credits, bool DirectAvailable)>();
+        foreach (var signal in entities)
         {
             ct.ThrowIfCancellationRequested();
+            bool scheduled = acquisition.Contains(Key(signal));
             if (signal.SelectionJson is null || signal.CanonicalEntityId is null)
             {
                 if (signal.TargetType == TasteTargetType.Track)
                 {
                     gaps.Add(new(signal.TargetValue, "recording.similar", "direct_recording_identity_missing"));
+                    coverage[signal.Id] = new(signal.Id, Key(signal), "unavailable", "direct_recording_identity_missing");
                     continue;
                 }
-                // Preserve legacy name seeds without pretending they identify a canonical entity.
-                Guid? recording = signal.Source == TasteSignalSource.RecommendationLike && feedbackRecordings?.TryGetValue(signal.Id, out var id) == true ? id : null;
-                var legacy = await Seed(new(null, signal.TargetValue, false, ArtistRecordingId: recording));
-                if (legacy.CanonicalArtistId is { } artistId) artists.TryAdd(artistId, new(artistId, signal.TargetValue));
-                Add(signal, legacy, legacy.CanonicalArtistId is { } canonicalId ? "artist:" + canonicalId.ToString("D")
-                    : "legacy-artist:" + signal.NormalizedTargetValue, "artist", 1, null);
                 familiar.Add(signal.NormalizedTargetValue);
+                Guid? recording = signal.Source == TasteSignalSource.RecommendationLike && feedbackRecordings?.TryGetValue(signal.Id, out var id) == true ? id : null;
+                var legacy = await Seed(new(null, signal.TargetValue, false, ArtistRecordingId: recording), scheduled);
+                if (legacy?.CanonicalArtistId is { } artistId) artists.TryAdd(artistId, new(artistId, signal.TargetValue));
+                else legacyArtists.TryAdd(signal.NormalizedTargetValue, signal.TargetValue);
+                Record(signal, legacy, legacy?.CanonicalArtistId is { } canonicalId ? "artist:" + canonicalId.ToString("D")
+                    : "legacy-artist:" + signal.NormalizedTargetValue, "artist");
                 continue;
             }
             var selected = JsonSerializer.Deserialize<CatalogSelectionSnapshot>(signal.SelectionJson)
@@ -72,12 +92,12 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             if (selected.Version != "catalog-selection-v1" || item.CanonicalId != signal.CanonicalEntityId || item.Id != signal.CatalogRecordId ||
                 item.Kind != (signal.TargetType switch { TasteTargetType.Album => CatalogKind.Album, TasteTargetType.Track => CatalogKind.Track, _ => CatalogKind.Artist }))
                 throw new GenerationStoppedException("selection_identity_mismatch");
-            var credits = item.Kind == CatalogKind.Artist ? new[] { new CatalogArtistCreditDto(item.CanonicalId, item.Name, 0) } :
-                item.Artists?.ToArray() ?? [];
-            foreach (var credit in LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(credits, configuration.MaximumArtistSeeds, round))
+            var credits = item.Kind == CatalogKind.Artist ? new[] { new CatalogArtistCreditDto(item.CanonicalId, item.Name, 0) } : item.Artists?.ToArray() ?? [];
+            foreach (var credit in credits)
             {
                 if (item.Kind != CatalogKind.Track) artists.TryAdd(credit.CanonicalId, new(credit.CanonicalId, credit.Name));
-                if (item.Kind == CatalogKind.Album) albumFallbacks.Add(new(item.CanonicalId, item.Name, credit.CanonicalId, credit.Name, options.AlbumArtistFallbackInfluence / Math.Max(1, credits.Length)));
+                if (item.Kind == CatalogKind.Album) albumFallbacks.Add(new(item.CanonicalId, item.Name, credit.CanonicalId, credit.Name,
+                    options.AlbumArtistFallbackInfluence / Math.Max(1, credits.Length)));
                 familiar.Add(credit.Name.Trim().ToLowerInvariant());
             }
             if (item.Kind == CatalogKind.Track) recordings.Add(new(item.CanonicalId, item.Name));
@@ -85,7 +105,7 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
             string identity = scope + ":" + item.CanonicalId.ToString("D");
             var local = item.ExpiresAtUtc is null || item.ExpiresAtUtc > clock.GetUtcNow()
                 ? (item.TagEvidence ?? []).Where(t => t.Scope == scope || t.Scope == "synthetic-" + scope).ToArray() : [];
-            SeedTagSnapshot snapshot;
+            SeedTagSnapshot? snapshot;
             if (local.Length > 0)
             {
                 if (item.ExpiresAtUtc is { } localExpiry) expiries.Add(localExpiry);
@@ -96,32 +116,67 @@ public sealed class MaterializeDiscoveryTaste(IRecommendationProviderResolver re
                     .ToDictionary(g => g.Key, g => g.Max(t => t.Weight), StringComparer.Ordinal)), [], response, null, []);
             }
             else if (preparation is not null || provider.SeedTags is ICanonicalSeedTagSource || provider.SeedTags is IRecordingSeedTagSource)
-                snapshot = await Seed(new(item.CanonicalId, item.Name, item.Kind == CatalogKind.Album, item.Kind == CatalogKind.Track));
+                snapshot = await Seed(new(item.CanonicalId, item.Name, item.Kind == CatalogKind.Album, item.Kind == CatalogKind.Track), scheduled);
             else snapshot = new(item.Name, WeightedTagVector.Empty, [],
                 new(provider.Id, "seed.tags", identity, configuration.Origin, null, null), "canonical_seed_tags_not_supported", []);
-            Add(signal, snapshot, identity, scope, 1, null);
-            if (item.Kind == CatalogKind.Album && snapshot.Vector.Weights.Count == 0)
+            Record(signal, snapshot, identity, scope);
+            if (item.Kind == CatalogKind.Album && (snapshot is null || snapshot.Vector.IsEmpty))
+                missingAlbums.Add((signal, identity, credits, snapshot is not null));
+        }
+        var fallbackWindow = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(missingAlbums.Where(a => a.DirectAvailable)
+            .SelectMany(a => a.Credits).Select(c => c.CanonicalId).Distinct().Order().ToArray(), configuration.MaximumArtistSeeds, round).ToHashSet();
+        foreach (var album in missingAlbums)
+        {
+            gaps.Add(new(album.Identity, "album.tags", album.DirectAvailable ? "album_tags_missing_using_credited_artists" : "album_evidence_not_prepared"));
+            string fallbackReason = album.DirectAvailable ? "album_tags_missing_using_credited_artist" : "album_evidence_awaiting_using_cached_credited_artist";
+            bool supported = false, pending = false;
+            foreach (var credit in album.Credits)
             {
-                gaps.Add(new(identity, "album.tags", "album_tags_missing_using_credited_artists", snapshot.Response));
-                foreach (var credit in LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(credits, configuration.MaximumArtistSeeds, round))
-                {
-                    if (evidence.Count >= 80) { gaps.Add(new(identity, "album.tags", "credited_artist_evidence_window_applied")); break; }
-                    if (preparation is null && provider.SeedTags is not ICanonicalSeedTagSource) continue;
-                    var fallback = await Seed(new(credit.CanonicalId, credit.Name, false));
-                    Add(signal, fallback, "artist:" + credit.CanonicalId.ToString("D"), "artist", options.AlbumArtistFallbackInfluence,
-                        "album_tags_missing_using_credited_artist");
-                }
+                if (preparation is null && provider.SeedTags is not ICanonicalSeedTagSource) continue;
+                var fallback = await Seed(new(credit.CanonicalId, credit.Name, false), album.DirectAvailable && fallbackWindow.Contains(credit.CanonicalId));
+                if (fallback is null) { pending = true; continue; }
+                Add(album.Signal, fallback, "artist:" + credit.CanonicalId.ToString("D"), "artist",
+                    options.AlbumArtistFallbackInfluence, fallbackReason);
+                supported |= !fallback.Vector.IsEmpty;
             }
+            if (supported) coverage[album.Signal.Id] = new(album.Signal.Id, album.Identity, "artist-fallback", fallbackReason);
+            else if (pending) coverage[album.Signal.Id] = new(album.Signal.Id, album.Identity, "awaiting", "credited_artist_evidence_not_prepared");
         }
         return new(DiscoveryTasteMaterializer.Build(positives, evidence), stored,
-            artists.Values.Take(configuration.MaximumArtistSeeds).OrderBy(a => a.Id).ToArray(),
+            artists.Values.OrderBy(a => a.Id).ToArray(),
             LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(positives.Where(s => s.TargetType == TasteTargetType.Tag).Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal).ToArray(), configuration.MaximumTagSeeds, round), gaps.Distinct().ToArray(), familiar, expiries.Count == 0 ? null : expiries.Min())
-        { Recordings = recordings, AlbumFallbacks = albumFallbacks };
+        { LegacyArtists = legacyArtists.Values.Order(StringComparer.Ordinal).ToArray(), Recordings = recordings.DistinctBy(r => r.Id).ToArray(), AlbumFallbacks = albumFallbacks.Distinct().ToArray(), FavoriteEvidence = coverage.Values.ToArray() };
 
-        async Task<SeedTagSnapshot> Seed(DiscoverySeedRequest request)
+        void Record(TasteSignal signal, SeedTagSnapshot? snapshot, string identity, string scope)
         {
-            if (preparation is not null) return await preparation.GetAsync(request, allowAcquisition, ct);
+            if (snapshot is null)
+            {
+                coverage[signal.Id] = new(signal.Id, identity, "awaiting", "favorite_evidence_not_prepared");
+                gaps.Add(new(identity, "seed.tags", "favorite_evidence_not_prepared"));
+                return;
+            }
+            Add(signal, snapshot, identity, scope, 1, null);
+            coverage[signal.Id] = new(signal.Id, identity, snapshot.Vector.IsEmpty ? "unavailable" : "supported", snapshot.MissingReason ?? (snapshot.Vector.IsEmpty ? "descriptive_tags_missing" : null));
+        }
+
+        async Task<SeedTagSnapshot?> Seed(DiscoverySeedRequest request, bool scheduled)
+        {
+            string key = request.EntityId is { } entityKey ? $"entity:{entityKey:D}:{request.IsAlbum}:{request.IsRecording}" :
+                $"legacy:{request.Name.Trim().ToLowerInvariant()}:{request.ArtistRecordingId}";
+            if (seedReads.TryGetValue(key, out var cached)) return cached;
+            SeedTagSnapshot? result;
+            if (preparation is not null)
+            {
+                try { result = await preparation.GetAsync(request, false, ct); }
+                catch (LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException) when (!scheduled || allowAcquisition)
+                {
+                    result = scheduled ? await preparation.GetAsync(request, true, ct) : null;
+                }
+                if (result is not null) seedReads[key] = result;
+                return result;
+            }
+            if (!scheduled) return null;
             if (!allowAcquisition) throw new LinerNotes.Application.Common.Interfaces.Discovery.DiscoveryPreparationRequiredException();
             if (request.ArtistRecordingId is { } recordingHint && provider.SeedTags is IRecordingArtistSeedTagSource credited)
                 return await credited.GetArtistFromRecordingAsync(recordingHint, request.Name, ct);

@@ -28,14 +28,19 @@ No production deployment, push or release publication has occurred. See
 [the engineering evidence](docs/operations/production-beta-evidence.md) and
 [the execution plan](docs/superpowers/plans/2026-11-01-production-beta.md).
 
-### Residue quality Phase 1 — 2026-11-02
+### Residue quality renewal — 2026-11-03
 
-Phase 1 is approved. Technical baseline capture, numerical replay, multi-profile
-isolation checks, and bounded real-provider browser journeys are locally verified;
-private listening ratings and developer acceptance remain pending. No production
-recommendation behavior changed. The next phases are a conditional backlog, not
-an approved implementation sequence. See [the Phase 1 evidence](docs/plans/residue/2026-11-02-phase-1-baseline-evidence.md)
-and [the revised plan](docs/plans/residue/2026-11-02-recommendation-quality-renewal-plan.md).
+Phase 1 (`5a91411`) is technically completed but is not personally validated or
+formally accepted. Its baseline, evidence document, and private review are
+preserved unchanged; listening is deferred until after Phase 5.
+
+Phase 2 (consistently usable favorites) is implemented and locally verified:
+fresh evidence is independent of acquisition windows, entity seed rotation is
+fair, and owner-bound receipts/export include evidence coverage. 151 targeted
+.NET cases and Playwright MCP application checks passed. Subjective quality is
+unverified. See [Phase 2 evidence](docs/plans/residue/2026-11-03-phase-2-favorite-evidence.md)
+and [the plan](docs/plans/residue/2026-11-02-recommendation-quality-renewal-plan.md).
+Phase 3 has not begun and requires separate authorization.
 
 ## Current documentation
 

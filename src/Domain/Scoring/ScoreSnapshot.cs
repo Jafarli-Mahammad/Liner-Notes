@@ -47,6 +47,7 @@ public sealed record StoredSeed(string ArtistName, IReadOnlyDictionary<string, d
     public double Influence { get; init; } = 1;
     public IReadOnlyList<StoredResponse> SupportingResponses { get; init; } = [];
 }
+public sealed record FavoriteEvidenceState(Guid SignalId, string EntityIdentity, string State, string? Reason);
 public sealed record StoredAlbumFallback(Guid AlbumId, string AlbumName, Guid ArtistId, string ArtistName, double Influence);
 public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     IReadOnlyList<StoredSeed> Seeds, IReadOnlyList<StoredTag> CandidateTags,
@@ -61,6 +62,9 @@ public sealed record ScoreEvidence(IReadOnlyList<StoredTasteSignal> Signals,
     public string? SelectionPolicy { get; init; }
     public string? SelectionAnswers { get; init; }
     public IReadOnlyList<string> SelectionReasons { get; init; } = [];
+    public string? TasteEvidenceSha256 { get; init; }
+    public int TasteEvidenceCount { get; init; }
+    public IReadOnlyList<FavoriteEvidenceState> FavoriteEvidence { get; init; } = [];
     public string? FullInputSha256 { get; init; }
     public int FullInputCount { get; init; }
     public IReadOnlyList<string> AcquisitionWindow { get; init; } = [];

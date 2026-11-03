@@ -21,6 +21,7 @@ public sealed class DiscoveryTasteTests
             TasteSignalSource.RecommendationLike, "Effective positive feedback");
         DiscoverySeedRequest? requested = null;
         var seeds = Substitute.For<IDiscoverySeedPreparation>();
+        seeds.GetAsync(Arg.Any<DiscoverySeedRequest>(), false, Arg.Any<CancellationToken>()).Returns<SeedTagSnapshot>(_ => throw new DiscoveryPreparationRequiredException());
         seeds.GetAsync(Arg.Any<DiscoverySeedRequest>(), true, Arg.Any<CancellationToken>()).Returns(call => {
             requested = call.Arg<DiscoverySeedRequest>();
             return Task.FromResult(Snapshot(signal.TargetValue, true) with { CanonicalArtistId = artist });

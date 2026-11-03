@@ -26,7 +26,8 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         var taste = await materializer.BuildAsync(effective.PositiveSignals, allowAcquisition, ct, inputs.GenerationOrdinal, feedbackRecordings);
         var answers = OnboardingState.Read(inputs.Profile.OnboardingJson);
         var artistRequests = taste.Artists.Select(a => new DiscoveryPoolRequest(a.Id, a.Name, false))
-            .Concat(taste.Recordings.Select(r => new DiscoveryPoolRequest(r.Id, r.Name, false, true)));
+            .Concat(taste.Recordings.Select(r => new DiscoveryPoolRequest(r.Id, r.Name, false, true)))
+            .Concat(taste.LegacyArtists.Select(name => new DiscoveryPoolRequest(null, name, false)));
         var requests = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(artistRequests.ToArray(), configuration.MaximumArtistSeeds, inputs.GenerationOrdinal)
             .Concat(taste.Tags.Select(t => new DiscoveryPoolRequest(null, t, true))).ToArray();
         // Legacy imported artist seeds have no canonical catalog identity.
@@ -35,10 +36,6 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             var broad = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(TasteVocabulary.Entries.Where(t => t.Category == "genre").Select(t => t.Id).ToArray(), configuration.MaximumTagSeeds, inputs.GenerationOrdinal);
             requests = requests.Where(r => !r.IsTag).Concat(broad.Select(t => new DiscoveryPoolRequest(null, t, true))).ToArray();
         }
-        var legacy = taste.Seeds.Where(s => s.EntityIdentity?.StartsWith("legacy-artist:", StringComparison.Ordinal) == true)
-            .Select(s => new DiscoveryPoolRequest(null, s.ArtistName, false)).Distinct().ToArray();
-        int artistSlots = Math.Max(0, configuration.MaximumArtistSeeds - requests.Count(r => !r.IsTag));
-        requests = requests.Concat(legacy.Take(artistSlots)).ToArray();
         if (requests.Length > configuration.MaximumArtistSeeds + configuration.MaximumTagSeeds)
             throw new GenerationStoppedException("seed_limit");
         var pools = new List<PreparedDiscoveryPool>();
@@ -56,9 +53,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         }
         else foreach (var request in requests) pools.Add(await preparation.GetAsync(request, false, ct));
         if (pools.Any(p => p.Origin != configuration.Origin)) throw new GenerationStoppedException("origin_mismatch");
-        var gaps = taste.Gaps.Concat(pools.SelectMany(p => p.Gaps))
-            .Concat(legacy.Length > artistSlots ? new[] { new CoverageGap("profile", "discovery", "artist_seed_window_applied") } : [])
-            .Distinct().ToArray();
+        var gaps = taste.Gaps.Concat(pools.SelectMany(p => p.Gaps)).Distinct().ToArray();
         if (pools.Sum(p => p.Candidates.Count) > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var hydrated = Merge(pools.SelectMany(p => p.Candidates));
         DiscoverySourceValidation.ThrowIfFailed(gaps.Concat(hydrated.SelectMany(candidate => candidate.Gaps)));
@@ -66,11 +61,14 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         var aliases = hydrated.SelectMany(c => TrackIdentity.Aliases(c.Track)).Distinct(StringComparer.Ordinal).ToArray();
         var excluded = (await store.FindExcludedAsync(inputs.Profile.Id, aliases, ct)).Concat(effective.ExcludedAliases).ToHashSet(StringComparer.Ordinal);
         string inputHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.PositiveSignals.OrderBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).Select(s => new { s.TargetType, s.NormalizedTargetValue, s.Weight, s.CanonicalEntityId }))));
+        string evidenceHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(taste.Seeds)));
+        var materializedSignalIds = taste.Seeds.Where(s => s.SignalId.HasValue).Select(s => s.SignalId!.Value).ToHashSet();
+        var receiptSeeds = taste.Seeds.Take(80).ToArray();
         IReadOnlyList<BaselineAPick> picks;
         using (LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.evidence_ranking"))
         {
             var candidates = hydrated.Select(c => new BaselineACandidate(c.Track, c.TagVector,
-                new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? taste.Seeds.Any(seed => seed.SignalId == s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), taste.Seeds,
+                new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? materializedSignalIds.Contains(s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), receiptSeeds,
                     c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
                     c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
                     c.TagScope, c.PopularityMissingReason)
@@ -78,6 +76,9 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                     MaterializationVersion = DiscoveryTasteMaterializer.Version,
                     TagNormalizationVersion = c.TagNormalizationVersion,
                     SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray(),
+                    TasteEvidenceSha256 = evidenceHash,
+                    TasteEvidenceCount = taste.Seeds.Count,
+                    FavoriteEvidence = taste.FavoriteEvidence,
                     FullInputSha256 = inputHash,
                     FullInputCount = effective.PositiveSignals.Count,
                     SelectionPolicy = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Version,
@@ -115,6 +116,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             CandidateCount = hydrated.Count,
             SuppressedCandidates = hydrated.Count(c => TrackIdentity.Aliases(c.Track).Any(excluded.Contains)),
             FeedbackConsidered = inputs.Feedback.Count,
+            FavoriteEvidence = taste.FavoriteEvidence,
             Gaps = gaps.Select(g => new { g.Method, g.Reason }).Distinct().Take(40).ToArray(),
             Origin = configuration.Origin.ToString()
         });

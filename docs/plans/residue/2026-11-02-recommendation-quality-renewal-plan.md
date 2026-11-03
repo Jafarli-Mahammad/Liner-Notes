@@ -1,7 +1,7 @@
 # Residue recommendation quality renewal
 
 Date: 2026-11-02
-Status: Phase 1 approved; technical evidence collected, listening ratings and developer acceptance pending. Later phases remain unapproved.
+Status: Phase 2 implemented and locally verified; confirmation pending. Phase 1 is technically completed, not personally validated or formally accepted; listening deferred until after Phase 5. Phase 3 and later are unapproved.
 Revision: 2026-11-02 — quality baseline, evidence-led scope, complexity gates, and strict listener isolation.
 
 Investigation baseline: branch `Prism`, local commit `5a31db7`.
@@ -139,7 +139,7 @@ Every phase adding stored information must cover export, deletion, ownership, re
 
 ## Implementation phases
 
-The six phases below are a conditional backlog, not a commitment to execute six phases or spend the originally estimated 19–30 engineering days. Only Phase 1 is currently approved. After its results, re-rank, split, combine, defer, or remove later work. Preserve all agreed recommendation behavior while choosing the smallest changes with credible benefits. Estimates below describe the original candidate scope and must be replaced after the baseline decision.
+The six phases below are a conditional backlog, not a commitment to execute six phases or spend the originally estimated 19–30 engineering days. Phase 2 is approved; Phase 3 and later require separate authorization. After its results, re-rank, split, combine, defer, or remove later work. Preserve all agreed recommendation behavior while choosing the smallest changes with credible benefits. Estimates below describe the original candidate scope and must be replaced after the baseline decision.
 
 Before persisted taste summaries, providers, integrations, or new abstractions are proposed for implementation, demonstrate an existing-mechanism limitation using reproducible evidence. Compare a simpler change using existing queries, feedback state, caches, and provider capabilities. Require a concrete expected benefit, measured coverage where relevant, acceptable latency/request/storage costs, privacy implications, and rollback. If meaningful benefit cannot be established, defer the added mechanism. Additional infrastructure spend remains $0.
 
@@ -159,6 +159,8 @@ Exit artifacts: a private reproducible beta baseline; concealed review protocol/
 Planning-time environment observation: Playwright MCP failed to initialize because `/opt/google/chrome/chrome` was missing. Localhost:5080 returned HTTP 200, which is not recommendation verification. Recheck browser availability in Phase 1 and restore working MCP execution before claiming end-to-end verification.
 
 ### Phase 2 — Consistently usable favorites
+
+Approved 2026-11-03; implementation and verification are recorded in [Phase 2 evidence](2026-11-03-phase-2-favorite-evidence.md).
 
 Estimated effort: 3–5 days.
 
@@ -264,4 +266,4 @@ Incomplete recording metadata, provider sampling bias, stale optional datasets, 
 
 ## Approval and current stopping point
 
-Phase 1 was explicitly approved after the three adjustments and founder/multi-user isolation safeguards were incorporated. [Technical results and limitations](2026-11-02-phase-1-baseline-evidence.md) are recorded; private listening feedback and developer acceptance remain pending. No later phase is authorized. The original candidate phases remain subject to evidence-led reprioritization and separate approval.
+Phase 2 was explicitly authorized after Phase 1's technical completion. Phase 1 is not personally validated or formally accepted; its original evidence and private review remain unchanged, and listening is deferred until after Phase 5. [Phase 2 results and limits](2026-11-03-phase-2-favorite-evidence.md) are separate and locally verified. Phase 3 has not begun and requires explicit authorization. Deferring the review does not establish subjective recommendation quality.

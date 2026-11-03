@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Keep fresh favorite evidence active across acquisition windows, rotate entity seeds fairly, and include per-input evidence coverage in private receipts and export.
+
 - Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.
 
 - Add private Residue baseline capture/listening-review and receipt-replay tools,

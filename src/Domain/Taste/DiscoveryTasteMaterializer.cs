@@ -11,7 +11,6 @@ public static class DiscoveryTasteMaterializer
     public const string Version = "canonical-entity-max-v2";
     public static WeightedTagVector Build(IReadOnlyList<TasteSignal> signals, IReadOnlyList<EntityTasteEvidence> evidence)
     {
-        if (evidence.Count > 200) throw new ArgumentException("taste_evidence_limit");
         if (signals.Any(s => !double.IsFinite(s.Weight) || s.Weight < 0)) throw new ArgumentException("invalid_signal_weight");
         // Derived artist and tag signals can share recommendation provenance; only entities index tag evidence.
         var weights = signals.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track)

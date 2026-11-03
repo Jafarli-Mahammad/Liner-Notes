@@ -18,13 +18,14 @@ public sealed class PersistentDiscoveryPreparationTests
     [InlineData(true)]
     public async Task TemporaryFailuresAreNotPublishedOrReusedByTheNextAcquisition(bool seed)
     {
-        int artistCalls = 0;
+        int metadataCalls = 0;
         var client = Substitute.For<IListenBrainzApiClient>();
         var data = new FixtureListenBrainzApiClient();
         client.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(async call =>
         {
             var request = call.Arg<ListenBrainzRequest>();
-            if (request.Kind == ListenBrainzRequestKind.ArtistMetadata && Interlocked.Increment(ref artistCalls) == 1)
+            var requiredMetadata = seed ? ListenBrainzRequestKind.ArtistMetadata : ListenBrainzRequestKind.RecordingMetadata;
+            if (request.Kind == requiredMetadata && Interlocked.Increment(ref metadataCalls) == 1)
                 return ListenBrainzResponse.Gap(request, EvidenceOrigin.Synthetic, "rate_limit");
             return await data.SendAsync(request, call.Arg<CancellationToken>());
         });
@@ -43,7 +44,7 @@ public sealed class PersistentDiscoveryPreparationTests
         Assert.Empty(fixture.Store.Documents);
         Assert.Empty(fixture.Store.Leases);
         await Acquire(); await Acquire();
-        Assert.Equal(2, artistCalls);
+        Assert.Equal(2, metadataCalls);
         Assert.Single(fixture.Store.Documents);
     }
 

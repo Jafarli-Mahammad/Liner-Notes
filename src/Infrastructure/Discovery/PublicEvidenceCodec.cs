@@ -18,7 +18,7 @@ public static class PublicEvidenceCodec
         long SerializedBytes, string ContentSha256);
     private sealed record Seed(string ArtistName, IReadOnlyDictionary<string, double> Weights, TagObservation[] Tags,
         ResponseReference Response, string? MissingReason, CoverageGap[] Gaps, ResponseReference[] Supporting, Guid? CanonicalArtistId);
-    public const string PoolVersion = "prepared-pool-v3", SeedVersion = "prepared-seed-v3";
+    public const string PoolVersion = "prepared-pool-v4", SeedVersion = "prepared-seed-v3";
     public static PublicEvidenceDocument Encode(PreparedDiscoveryPool pool)
     {
         if (pool.Origin == EvidenceOrigin.Recorded || pool.Candidates.Any(c => c.Origin != pool.Origin ||

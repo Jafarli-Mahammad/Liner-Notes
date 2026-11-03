@@ -1,7 +1,7 @@
 # Residue recommendation quality renewal
 
 Date: 2026-11-02
-Status: Phases 2 and 3 implemented and locally verified; confirmation pending. Phase 1 technically completed, not personally validated or formally accepted; listening deferred until after Phase 5. Phase 4 and later require separate authorization.
+Status: Phases 2, 3 and 4 implemented and locally verified; confirmation pending. Phase 4 live coverage is limited and optional enrichment is deferred or rejected; see its evidence report. Phase 1 technically completed, not personally validated or formally accepted; listening deferred until Phase 5. Phase 5 and later require separate authorization.
 Revision: 2026-11-02 — quality baseline, evidence-led scope, complexity gates, and strict listener isolation.
 
 Investigation baseline: branch `Prism`, local commit `5a31db7`.
@@ -266,4 +266,4 @@ Incomplete recording metadata, provider sampling bias, stale optional datasets, 
 
 ## Approval and current stopping point
 
-Phase 2 was explicitly authorized after Phase 1's technical completion. Phase 1 is not personally validated or formally accepted; its original evidence and private review remain unchanged, and listening is deferred until after Phase 5. [Phase 2 results and limits](2026-11-03-phase-2-favorite-evidence.md) are separate and locally verified. Phase 3 has not begun and requires explicit authorization. Deferring the review does not establish subjective recommendation quality.
+Phase 2 was explicitly authorized after Phase 1's technical completion. Phase 1 is not personally validated or formally accepted; its original evidence and private review remain unchanged, and listening is deferred until after Phase 5. [Phase 2 results and limits](2026-11-03-phase-2-favorite-evidence.md) and [Phase 3 results](2026-11-03-phase-3-feedback-memory.md) are separate and locally verified. Phase 4 was explicitly authorized on 2026-11-03 and is implemented and locally verified with limited live coverage; see [Phase 4 evidence](2026-11-03-phase-4-recording-connections.md). Phase 5 requires separate authorization. Deferring the review does not establish subjective recommendation quality.

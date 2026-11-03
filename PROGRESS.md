@@ -46,8 +46,18 @@ notes preserve musical recency, and repeated dislikes cautiously soften learned
 preferences. 304 automated cases and 30 Playwright MCP checks passed; all 65
 original receipts still replay exactly. No new persistence or provider was added.
 See [Phase 3 evidence](docs/plans/residue/2026-11-03-phase-3-feedback-memory.md).
-Subjective quality and developer confirmation remain outstanding. Phase 4 has
-not begun and requires separate authorization.
+Subjective quality and developer confirmation remain outstanding.
+
+Phase 4 (recording evidence and connections) is implemented and locally verified:
+recording relationships survive missing tags with explicit limitations, direct
+recording tags avoid unnecessary artist requests, and malformed recording tags
+remain missing evidence. 497 automated cases passed; the frozen genre contract
+is unchanged and 65 original receipts replay exactly. The limited live sample
+retained all 30 candidates and demonstrated no tagless yield gain. Optional
+credits and album routes are deferred; AcousticBrainz integration was rejected
+for this phase. See [Phase 4 evidence](docs/plans/residue/2026-11-03-phase-4-recording-connections.md).
+Developer confirmation, subjective quality and broader coverage remain open.
+Phase 5 requires separate authorization.
 
 ## Current documentation
 

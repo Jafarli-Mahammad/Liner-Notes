@@ -20,6 +20,49 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
 {
     [Fact]
+    public async Task TaglessRecordingConnectionKeepsReceiptAndReplaysWithoutInventingAffinityAcrossListeners()
+    {
+        var now = DateTimeOffset.Parse("2026-11-03T12:00:00Z");
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("fixture", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var response = new ResponseReference("ListenBrainz", "metadata.recording", "fixture-recording", EvidenceOrigin.Synthetic, new string('a', 64), now);
+        var relation = response with { Method = "similar-recordings", RequestIdentity = Guid.NewGuid().ToString("D") };
+        var missing = new CoverageGap("fixture", "metadata.recording", "recording_relationship_without_tags", response);
+        var candidate = new HydratedCandidateTrack(Track.Create("Fixture recording", "Fixture credit"), WeightedTagVector.Empty,
+            new("Fixture recording", "Fixture credit", null, [new(relation.RequestIdentity, ObservedValue<double>.Missing("not_supplied_by_endpoint"),
+                relation, response, 1, null, null, ObservedValue<long>.Missing("not_supplied"))]), [], response, missing.Reason, [missing]) { TagScope = "none" };
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(
+            new PreparedDiscoveryPool(new string('b', 64), "fixture", EvidenceOrigin.Synthetic, now, now.AddMinutes(5), CatalogText.Version,
+                [candidate], [missing], 1000, new string('c', 64)));
+        var store = Substitute.For<IDiscoveryBatchStore>();
+        store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), new FixedClock(now)), preparation, store, configuration, new());
+        var first = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        var second = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        foreach (var (profile, tag) in new[] { (first, "electronic"), (second, "jazz"), (first, "electronic") })
+        {
+            var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, tag, 1, TasteSignalSource.InitialSeedManual, "Fixture");
+            var result = await runner.PrepareAsync(new(profile, [signal], []), Guid.NewGuid(), true, default);
+            var pick = Assert.Single(result.Picks);
+            var stored = LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.Deserialize(
+                LinerNotes.Application.Common.Mappings.ScoreBreakdownJson.Serialize(pick.Breakdown));
+            Assert.Equal(0, stored.TagSimilarityScore);
+            Assert.Equal(0, stored.TagSimilarityRaw);
+            Assert.Equal(stored.FinalScore, new BaselineAScorer().Replay(stored.Snapshot!).FinalScore);
+            Assert.Equal("none", stored.Snapshot!.Evidence.TagScope);
+            Assert.Equal(tag, Assert.Single(stored.Snapshot.TasteWeights).Key);
+            Assert.Equal(relation.Store(), Assert.Single(stored.Snapshot.Evidence.DiscoveryPaths).SimilarityResponse);
+            Assert.Contains(stored.Snapshot.Evidence.Gaps, gap => gap.Reason == missing.Reason);
+            Assert.Contains("descriptive tags are missing", stored.GenerateExplanation());
+            Assert.DoesNotContain(profile.Id.ToString(), JsonSerializer.Serialize(candidate));
+        }
+        Assert.True(candidate.TagVector.IsEmpty);
+    }
+
+    [Fact]
     public async Task EntirePreparedResultsMatchFrozenEightGenreContract()
     {
         var now = DateTimeOffset.Parse("2026-10-27T12:00:00Z");

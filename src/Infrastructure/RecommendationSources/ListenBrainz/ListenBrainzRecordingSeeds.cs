@@ -32,15 +32,15 @@ public sealed partial class ListenBrainzRecommendationProvider
     {
         var observations = new List<TagObservation>();
         if (response.Data is { ValueKind: JsonValueKind.Object } root && root.TryGetProperty(id.ToString("D"), out var recording) &&
-            recording.TryGetProperty("tag", out var scope) && scope.TryGetProperty("recording", out var tags) && tags.ValueKind == JsonValueKind.Array)
+            recording.ValueKind == JsonValueKind.Object && recording.TryGetProperty("tag", out var scope) && scope.ValueKind == JsonValueKind.Object && scope.TryGetProperty("recording", out var tags) && tags.ValueKind == JsonValueKind.Array)
         {
             int position = 0;
             foreach (var tag in tags.EnumerateArray().Take(100))
             {
                 position++;
-                if (!tag.TryGetProperty("tag", out var label) || label.ValueKind != JsonValueKind.String ||
+                if (tag.ValueKind != JsonValueKind.Object || !tag.TryGetProperty("tag", out var label) || label.ValueKind != JsonValueKind.String ||
                     label.GetString() is not { Length: > 0 and <= 100 } text || text.Any(char.IsControl) ||
-                    !tag.TryGetProperty("count", out var count) || !count.TryGetInt64(out var votes) || votes <= 0) continue;
+                    !tag.TryGetProperty("count", out var count) || count.ValueKind != JsonValueKind.Number || !count.TryGetInt64(out var votes) || votes <= 0) continue;
                 observations.Add(new(text.Trim().ToLowerInvariant(), new ObservedValue<long>(votes, votes.ToString(System.Globalization.CultureInfo.InvariantCulture), null),
                     null, response.Reference, null, position)
                 { EntityIdentity = "recording:" + id.ToString("D") });

@@ -137,6 +137,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         IReadOnlyList<string> PreferenceReasons(HydratedCandidateTrack c)
         {
             var reasons = new List<string>();
+            if (c.TagScope == "none") reasons.Add("A provider recording connection is available, but descriptive tags are missing; no tag affinity was inferred.");
             if (answers?.Goal is "new-artists") reasons.Add("Your discovery goal gives unfamiliar artists priority.");
             if (answers?.Goal is "favorites") reasons.Add("Your discovery goal gives stronger supported taste overlap priority.");
             if (answers?.Goal is "different-styles") reasons.Add("Your discovery goal gives less overlapping styles priority among supported candidates.");

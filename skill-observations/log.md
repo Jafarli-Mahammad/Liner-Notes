@@ -422,3 +422,13 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Type:** open-source
 **Issue:** Historical design captures can still be referenced by screenshot tests and one-off comparison scripts.
 **Suggested improvement:** Check both consumers and output producers before deleting artifacts; direct maintained tests to ignored output directories and remove completed comparison scripts with their inputs.
+
+### Observation 038: Distinguish discovery coverage from search and enrichment failures
+**Status:** OPEN
+**Date:** 2026-11-03
+**Skill:** ponytail, ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Provider evidence and bounded probes
+**Issue:** A title-only result window missed exact artist credits; an optional metadata endpoint could also be requested despite sufficient direct evidence. Counting either situation as absent source coverage would misdiagnose the pipeline.
+**Suggested improvement:** Record search resolution, acquisition yield, hydration loss and optional enrichment independently. Prefer existing direct evidence before issuing fallback calls, preserve missing-evidence markers, and test required-source failures at an endpoint still needed by the final code.
+**Principle:** Attribute missing results to the actual failing stage before adding integrations or claiming a coverage improvement.

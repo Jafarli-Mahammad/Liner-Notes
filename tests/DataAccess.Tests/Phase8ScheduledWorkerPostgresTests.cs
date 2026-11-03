@@ -75,7 +75,8 @@ public sealed partial class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
             db.ApplicationUsers.Add(new ApplicationUser { Id = id, UserName = "fixture-" + id.ToString("N"), Email = "schedule@example.test", EmailConfirmed = true });
             var user = new User(id == _user ? "schedule@example.test" : "other@example.test", "Asia/Baku", (DigestDeliveryDay)_due.DayOfWeek, _due.Hour, id, weeklyEmailOptIn: true);
             user.SetNextDigestAt(_due); db.Users.Add(user);
-            db.TasteSignals.Add(TasteSignal.CreateSeedTag(id, "darkwave", 1, "synthetic schedule fixture"));
+            // Match the recording-level fixture tags so this lifecycle test has relevant picks.
+            db.TasteSignals.Add(TasteSignal.CreateSeedTag(id, "electronic", 1, "synthetic schedule fixture"));
             db.UserTokens.Add(new() { UserId = id, LoginProvider = "fixture", Name = "fixture", Value = "fixture-only-not-a-real-credential" });
         }
         await db.SaveChangesAsync();

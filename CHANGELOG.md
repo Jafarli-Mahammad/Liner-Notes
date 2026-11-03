@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Add a frozen integrated evaluation protocol, actual-baseline comparison tools and controlled-account verification. Retain current recommendation settings; listening quality remains unverified.
 - Require supported relevance for discovery picks, coordinate exploration with acquisition and ranking, combine soft preferences, diversify artists, and explain shortfalls with replayable private selection receipts. Keep generation available for short and empty batches.
 - Preserve provider recording connections when descriptive tags are missing, explain their limits, avoid unnecessary artist-tag requests, and tolerate malformed recording tags.
 

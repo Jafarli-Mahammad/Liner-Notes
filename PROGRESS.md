@@ -68,8 +68,18 @@ sparse pools now show 16 supported picks instead of 80 padded picks, with unchan
 paired numerical scores; this is synthetic correctness evidence, not listening
 validation. New large receipts remain within the existing storage cap, with
 backward-compatible readers. See [Phase 5 evidence](docs/plans/residue/2026-11-03-phase-5-connected-selection.md).
-Developer confirmation and subjective quality remain open. Phase 6 requires
-separate authorization.
+Developer confirmation and subjective quality remain open.
+
+Phase 6 was authorized and its integrated evaluation is implemented and locally
+verified (2026-11-04). Frozen development/held-out public profiles used 54/80
+allowed HTTP dispatches; all 83 same-pool numerical scores matched the actual
+Phase 1 Domain binary. Integrated selection showed 34/40 slots versus 35/40,
+without treating shorter batches as quality proof. All 980 tests and 61
+Playwright MCP assertions passed, including account claim, feedback, isolation,
+restart, export and deletion. Historical receipts and new selection receipts
+replay exactly. No policy coefficients changed; zero completed listening ratings
+means subjective quality remains unverified. See [Phase 6 evidence](docs/plans/residue/2026-11-04-phase-6-integrated-evaluation.md).
+Developer confirmation, representative live capacity and release gates remain open.
 
 ## Current documentation
 

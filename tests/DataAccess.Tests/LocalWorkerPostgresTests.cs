@@ -52,7 +52,8 @@ public sealed class LocalWorkerPostgresTests(ITestOutputHelper output) : IAsyncL
         services=Build();
         await using var scope=services.CreateAsyncScope();var context=scope.ServiceProvider.GetRequiredService<DataContext>();await scope.ServiceProvider.GetRequiredService<LinerNotes.DataAccess.Persistence.AppDbContext>().Database.MigrateAsync();
         context.ApplicationUsers.Add(new ApplicationUser{Id=userId,UserName="local",Email="local@example.test"});context.Users.Add(new User("local@example.test",id:userId));
-        context.TasteSignals.Add(TasteSignal.CreateSeedTag(userId,"rock",1,"synthetic QA"));await context.SaveChangesAsync();
+        // Match the recording-level fixture tags so this lifecycle test has relevant picks.
+        context.TasteSignals.Add(TasteSignal.CreateSeedTag(userId,"electronic",1,"synthetic QA"));await context.SaveChangesAsync();
     }
     private ServiceProvider Build()
     {

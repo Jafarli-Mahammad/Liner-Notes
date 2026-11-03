@@ -442,3 +442,14 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Individually bounded favorite and candidate counts exceeded an existing receipt row cap when combined. Independent client scopes also reset an allowance intended to bound one preparation attempt.
 **Suggested improvement:** Test the cross-product of existing limits. Retain complete normalized decision inputs while reconstructing derivable outputs, verify codec backward readers and expansion limits, and measure the actual stored size. Enforce dispatch budgets across child scopes and state explicitly whether retries share the counter.
 **Principle:** Component limits do not establish a whole-operation storage or request bound.
+
+
+### Observation 040: Keep evaluation controls comparable and cleanup assertions strict
+**Status:** OPEN
+**Date:** 2026-11-04
+**Skill:** performance-reviewer, ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Integrated recommendation evaluation
+**Issue:** Scoring timings with full provider evidence in one arm and empty evidence in the other do not isolate ranking cost. Disposable archive directories with shared permissions also cause truthful incomplete-cleanup responses.
+**Suggested improvement:** Match input preparation and evidence construction before comparing pure ranking measurements. Secure controlled storage roots and rerun deletion rather than accepting incomplete cleanup. Freeze policy and evaluation folds before reading held-out outcomes, and keep missing listening ratings explicit.
+**Principle:** Comparable measurements and complete cleanup require verified setup, not permissive assertions.

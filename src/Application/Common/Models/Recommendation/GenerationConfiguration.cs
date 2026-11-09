@@ -19,7 +19,10 @@ public sealed class GenerationConfiguration
     public int DiscoveryLimit { get; set; } = 10;
     public int MaximumCandidates { get; set; } = 400;
     public int MaximumSnapshotBytes { get; set; } = 100_000;
-    public int MaximumUpstreamRequests { get; set; } = 80;
+    // Up to 40 pools need discovery, recording metadata and artist-tag metadata,
+    // in addition to materializing up to 20 favorite seeds. Keep this bounded
+    // budget large enough to finish that supported cold acquisition window.
+    public int MaximumUpstreamRequests { get; set; } = 200;
     public int MaximumPicks { get; set; } = 5;
     public LinerNotes.Domain.Discovery.SelectionConfiguration Selection { get; set; } = new();
     public EvidenceOrigin Origin { get; set; } = EvidenceOrigin.Recorded;

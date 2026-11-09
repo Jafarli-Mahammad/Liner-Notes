@@ -89,7 +89,9 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         {
             // Completed public pools and retainable metadata survive this attempt.
             // Resume within the existing attempt/age limits with a fresh request budget.
-            retry = ex.Message == "upstream_request_limit";
+            // Evidence can also expire while other pools are acquired; reacquire it,
+            // preserving the final transaction's strict freshness check.
+            retry = ex.Message is "upstream_request_limit" or "prepared_evidence_expired";
             error = ex.Message.Length is > 0 and <= 64 && ex.Message.All(c => c is >= 'a' and <= 'z' or '_')
                 ? ex.Message : "generation_unavailable";
             var frame = new System.Diagnostics.StackTrace(ex, false).GetFrame(0)?.GetMethod();

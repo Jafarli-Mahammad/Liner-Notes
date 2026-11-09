@@ -154,6 +154,9 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             Gaps = gaps.Select(g => new { g.Method, g.Reason }).Distinct().Take(40).ToArray(),
             Origin = configuration.Origin.ToString()
         });
+        int coverageBytes = System.Text.Encoding.UTF8.GetByteCount(coverage);
+        if (coverageBytes > DiscoveryBatch.MaximumCoverageBytes) throw new GenerationStoppedException("coverage_limit");
+        bytes = checked(bytes + coverageBytes * 4L);
         DateTimeOffset? expiry = pools.Where(p => p.ExpiresAtUtc > p.PreparedAtUtc).Select(p => p.ExpiresAtUtc)
             .Append(taste.EvidenceExpiresAtUtc).Min();
         return new(batchId, picks, coverage, expiry, bytes, gaps);

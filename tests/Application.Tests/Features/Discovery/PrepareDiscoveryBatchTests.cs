@@ -115,7 +115,7 @@ public sealed class PrepareDiscoveryBatchTests
         Assert.Equal(now.AddMinutes(5), result.EvidenceExpiry);
         using var coverage = JsonDocument.Parse(result.CoverageJson);
         Assert.Equal(1, coverage.RootElement.GetProperty("SuppressedCandidates").GetInt32());
-        Assert.True(result.ReservationBytes > 65_536);
+        Assert.True(result.ReservationBytes >= 65_536 + System.Text.Encoding.UTF8.GetByteCount(result.CoverageJson) * 4L);
         await preparation.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
     }
 

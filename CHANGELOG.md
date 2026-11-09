@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Fix discovery persistence for larger taste profiles: budget cold acquisition at up to 200 requests per attempt, retry expired public evidence, and retain full coverage audits within a 256 KB bound with matching storage reservations.
+
 - Resume discovery after a provider request budget is exhausted, reusing cached public evidence within the existing retry and age limits; fix discovery crashes when liked picks contribute both artist and tag evidence.
 - Fix title-and-artist catalog searches and prioritize exact artist names; remove duplicate search messages and release labels.
 - Correct artist and recording artwork freshness calculations, honor retry windows, and center unavailable-photo initials.

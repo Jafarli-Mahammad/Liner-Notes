@@ -7,6 +7,7 @@ public enum DiscoveryBatchKind { Initial, OnDemand, Weekly }
 /// <summary>One explicit recommendation request; independent of calendar delivery identity.</summary>
 public sealed class DiscoveryBatch : BaseEntity
 {
+    public const int MaximumCoverageBytes = 262_144;
     public Guid ProfileId { get; private set; }
     public string RequestId { get; private set; } = "";
     public DiscoveryBatchKind Kind { get; private set; }
@@ -19,7 +20,7 @@ public sealed class DiscoveryBatch : BaseEntity
     public void RecordEvidence(string? catalogVersion, string evidenceVersion, string coverageJson)
     {
         if (catalogVersion?.Length > 128 || string.IsNullOrWhiteSpace(evidenceVersion) || evidenceVersion.Length > 128 ||
-            string.IsNullOrWhiteSpace(coverageJson) || System.Text.Encoding.UTF8.GetByteCount(coverageJson) > 32768)
+            string.IsNullOrWhiteSpace(coverageJson) || System.Text.Encoding.UTF8.GetByteCount(coverageJson) > MaximumCoverageBytes)
             throw new ArgumentException("batch_evidence_invalid");
         CatalogVersion = catalogVersion; EvidenceVersion = evidenceVersion; CoverageJson = coverageJson;
     }

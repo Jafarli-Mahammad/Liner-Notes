@@ -485,3 +485,12 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Successful browser polling concealed a durable worker failure; a generic UI error did not identify the failed stage. An earlier matching log alone was insufficient until its job was correlated to the account and the same inputs reproduced it.
 **Suggested improvement:** Read account-scoped job state, identify the execution stage and test resumability from retained public evidence before changing acquisition limits. Keep account identifiers and taste contents out of committed reports.
 **Principle:** Diagnose the user's actual asynchronous operation and verify the recovery path, not merely the submission HTTP status.
+
+
+### Observation 044: Verify asynchronous work through persistence in the running host
+**Status:** OPEN
+**Date:** 2026-11-10
+**Session context:** Follow-up to a failed live discovery recovery.
+**Issue:** A direct preparation success did not exercise final transaction freshness checks, and a pre-fix local host kept serving old code. Full job submission exposed evidence expiry at completion after a request-budget retry.
+**Suggested improvement:** Confirm the running host loaded the changes, submit through normal admission, wait for the actual worker's terminal state, and verify persisted rows plus the read projection. Model final-save expiry in regression tests and keep strict freshness checks intact.
+**Principle:** Preparation success is insufficient evidence for a durable user operation.

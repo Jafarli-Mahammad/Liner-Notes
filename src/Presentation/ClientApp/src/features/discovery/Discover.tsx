@@ -104,10 +104,11 @@ export default function Discover() {
         <p className="intro-copy">A few genuinely good finds, tuned to your taste — thoughtful connections between what you already love and sounds worth hearing next.</p>
         {hasTaste ? <button className="button button-primary discovery-cta" type="button" disabled={disabled} onClick={generate}>{personal.busy ? 'Requesting discoveries…' : active ? 'Finding your next favorites…' : next > now ? `Ready in ${Math.ceil((next - now) / 1000)}s` : 'Find my next favorites'}</button>
           : <Link className="button button-primary discovery-cta" to="/taste">Find my next favorites</Link>}
-        <div className="taste-summary"><span className="editorial-meta">Based on your taste</span>
+        <div className="taste-summary"><span className="editorial-meta">{batch ? 'Your taste for the next discovery' : 'Based on your taste'}</span>
           {hasTaste ? <div className="taste-strip">{page?.favorites.slice(0, 4).map(f => <span className="taste-chip" key={f.catalogRecordId ?? f.signalId}>{f.name}</span>)}{page?.tags.slice(0, 4).map(tag => <span className="taste-chip" key={tag}>{tag}</span>)}{page?.onboarding?.allStyles && <span className="taste-chip">All styles welcome</span>}</div>
             : <p className="field-help">Start with artists, albums, tracks or styles you love. Every preference is optional.</p>}
           <Link className="text-link" to="/taste">Tune your taste</Link>
+          {batch && <p className="field-help">These saved picks reflect your taste when they were requested. Taste changes apply to your next discovery.</p>}
         </div>
         {active && <Notice>{progress[job!.progressCode] ?? 'Finding music for your taste…'}</Notice>}
         {!!error && <Notice error={error} onRetry={refreshSaved} />}

@@ -79,15 +79,17 @@ export function CatalogPicker({ onChoose }: { onChoose: (favorite: Favorite) => 
       }} />
     <label className="sr-only" htmlFor={`${id}-kind`}>Music type</label><select id={`${id}-kind`} value={kind} onChange={e => setKind(e.target.value)}><option value="Artist">Artists</option><option value="Album">Albums</option><option value="Track">Tracks</option></select>
   </div>
-    <p id={`${id}-status`} className="sr-only" role="status">{message}</p>
-    {open && <div className="catalog-popover"><ul id={`${id}-results`} role="listbox" aria-label="Music search results">
+    {kind !== 'Artist' && <p className="field-help">Include the artist’s name to narrow down albums or tracks.</p>}
+    <div className={open ? 'catalog-popover' : undefined}>
+    <p id={`${id}-status`} className={open ? 'field-help' : 'sr-only'} role="status">{message}</p>
+    {open && <><ul id={`${id}-results`} role="listbox" aria-label="Music search results">
       {hits.map((item, index) => <li role="option" aria-selected={index === active} key={item.id} id={`${id}-option-${index}`} onClick={() => choose(item)} onMouseMove={() => setActive(index)}>
         <strong>{item.name}</strong><span>{[item.artistName, item.disambiguation, item.firstReleaseDate].filter(Boolean).join(' · ') || item.kind}</span><small>{item.attribution}</small>
       </li>)}
-    </ul><p className="field-help">{message}</p><div className="action-row">
+    </ul><div className="action-row">
       {hasMore && <button type="button" className="text-button" onClick={() => search(offset + 10, controller.current!.signal, version.current)}>More local matches</button>}
       <button type="button" className="text-button" disabled={lookupBusy || personal.busy} onClick={lookup}>{lookupBusy ? 'Searching music source…' : 'Search music source'}</button>
       <button type="button" className="text-button" onClick={() => setOpen(false)}>Close results</button>
-    </div></div>}
+    </div></>}</div>
   </div>;
 }

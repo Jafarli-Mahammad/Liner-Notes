@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "width": 250,
+      "src": "/api/artwork/artists/a74b1b7f-71a5-4011-9441-d0b5e4122711/image"
+    },
+    {
+      "width": 500,
+      "src": "/api/artwork/recordings/9f9cf187-d6f9-437f-9d98-d59cdbd52757"
+    }
+  ],
+  "currentTaste": "YOUR TASTE FOR THE NEXT DISCOVERY\nParanoid Android\nRadiohead\njazz\nTune your taste\n\nThese saved picks reflect your taste when they were requested. Taste changes apply to your next discovery.",
+  "picks": 5,
+  "disliked": "true"
+}

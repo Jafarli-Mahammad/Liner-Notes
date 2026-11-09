@@ -19,16 +19,16 @@ public sealed class SharedCatalogLookup(IServiceScopeFactory scopes, SharedPubli
             throw new ArgumentException("catalog_lookup_query_invalid");
         string normalized = query.Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant();
         string key = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {
-            Version = "public-catalog-lookup-v1", Configuration = generation, Kind = kind, Query = normalized
+            Version = "public-catalog-lookup-v2", Configuration = generation, Kind = kind, Query = normalized
         })));
-        var document = await evidence.GetAsync(key, PublicEvidenceKind.Lookup, "catalog-lookup-v1", true, async token => {
+        var document = await evidence.GetAsync(key, PublicEvidenceKind.Lookup, "catalog-lookup-v2", true, async token => {
             await using var scope = scopes.CreateAsyncScope();
             var result = await scope.ServiceProvider.GetRequiredService<ICatalogLookupSource>().SearchAsync(query.Trim(), kind, token);
             if (result.Records.Count > 250 || result.MatchedCanonicalIds.Count > 10)
                 throw new GenerationStoppedException("catalog_lookup_size_limit");
             return PublicEvidenceCodec.Document(key, PublicEvidenceKind.Lookup, generation.Provider,
                 result.Origin == CatalogOrigin.Synthetic ? EvidenceOrigin.Synthetic : EvidenceOrigin.Live,
-                "catalog-lookup-v1", result, result.AcquiredAtUtc, result.CacheUntilUtc ?? result.AcquiredAtUtc);
+                "catalog-lookup-v2", result, result.AcquiredAtUtc, result.CacheUntilUtc ?? result.AcquiredAtUtc);
         }, ct);
         return JsonSerializer.Deserialize<CatalogLookupResult>(document.PayloadJson)
             ?? throw new GenerationStoppedException("catalog_lookup_evidence_invalid");

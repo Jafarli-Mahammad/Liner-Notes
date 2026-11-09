@@ -49,7 +49,7 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         ListenBrainzRequestKind.ArtistArtworkMetadata => "artist.artwork",
         _ => throw new ArgumentException("listenbrainz_request_invalid")
     };
-    public string Key => $"{Kind}:{Limit}:{Identity}";
+    public string Key => $"{Kind}:{Limit}:{Identity}" + (Kind is ListenBrainzRequestKind.RecordingSearch or ListenBrainzRequestKind.AlbumSearch ? ":title-artist-v2" : "");
 
     public void Validate()
     {
@@ -66,6 +66,10 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         else if (Identity.Length > 200) throw new ArgumentException("listenbrainz_seed_limit");
     }
 
+    private string TitleArtistQuery(string field) => string.Join(" AND ", Identity.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+        .Select(term => { var literal = term.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+            return $"({field}:\"{literal}\" OR artist:\"{literal}\")"; }));
+
     public string RelativeUri()
     {
         Validate();
@@ -77,11 +81,11 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
             ListenBrainzRequestKind.ArtistArtworkMetadata => $"ws/2/artist/{id}?fmt=json&inc=url-rels",
             ListenBrainzRequestKind.SimilarRecordings => $"similar-recordings/json?recording_mbids={id}&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
             ListenBrainzRequestKind.RecordingSearch => "ws/2/recording/?fmt=json&limit=" + count + "&query=" +
-                Uri.EscapeDataString("recording:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
+                Uri.EscapeDataString(TitleArtistQuery("recording")),
             ListenBrainzRequestKind.ArtistSearch => "ws/2/artist/?fmt=json&limit=25&query=" +
                 Uri.EscapeDataString("artist:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
             ListenBrainzRequestKind.AlbumSearch => "ws/2/release-group/?fmt=json&limit=" + count + "&query=" +
-                Uri.EscapeDataString("releasegroup:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
+                Uri.EscapeDataString(TitleArtistQuery("releasegroup")),
             ListenBrainzRequestKind.ArtistRadio => $"1/lb-radio/artist/{id}?mode=medium&max_similar_artists={count}&max_recordings_per_artist=2&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.TagRadio => $"1/lb-radio/tags?tag={id}&operator=OR&count={count}&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.ArtistMetadata => $"1/metadata/artist/?artist_mbids={id}&inc=tag",

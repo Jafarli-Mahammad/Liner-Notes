@@ -465,3 +465,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Default MCP services blocked local networks or assumed an unavailable browser. A lightweight renderer also produced different CSS output from Chromium. Short fixed feedback waits initially suggested a failed transition; waiting for save completion disproved it.
 **Suggested improvement:** Start temporary service instances with explicit local-network access and an installed browser, without changing persistent settings. Separate tool failures from app failures, use save confirmations, capture before/after reload evidence, and label renderer-specific observations. Exercise export, ownership, and cleanup with disposable accounts; exclude credentials and private exports from committed reports.
 **Principle:** Reproducible user-state evidence and a declared browser engine matter more than a long list of attempted clicks.
+
+
+### Observation 042: Reproduce stored feedback combinations and artwork expiry calculations
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Fixing findings from a normal-user browser audit.
+**Skill:** ponytail, ui-ux-pro-max
+**Type:** open-source
+**Phase/Area:** Root-cause debugging and shared lifecycle fixes
+**Issue:** A slower feedback retry without the original rating could not disprove a failed rated transition. The server correctly rejected a contradictory 8/10 and negative choice. Separately, artwork downloaded successfully but an Age subtraction from a local headerless-media lifetime made its expiry precede acquisition; the same arithmetic existed in both portrait and cover paths.
+**Suggested improvement:** Preserve rating/note state during reproduction; reconcile conflicting inputs according to the user's latest action and explain the change. Measure acquisition time and effective expiry, not just HTTP success. Share freshness arithmetic across artwork paths, cap retention after subtracting origin age, and test stale, headerless, shared-cache-precedence and remount/retry states. Verify decoded canonical images in the live browser.
+**Principle:** A changed reproduction state can hide a real bug, and successful transport does not establish usable retained data.

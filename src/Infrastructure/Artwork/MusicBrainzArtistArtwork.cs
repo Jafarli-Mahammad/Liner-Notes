@@ -64,8 +64,9 @@ public sealed class MusicBrainzArtistArtwork(IListenBrainzApiClient metadata, IH
             var bytes = await ReadBoundedAsync(result, ct);
             if (!(type == "image/jpeg" && bytes.AsSpan().StartsWith(new byte[] { 0xff, 0xd8, 0xff })) &&
                 !(type == "image/png" && bytes.AsSpan().StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }))) return null;
-            return new(bytes, type!, source!, credit, license, licenseUrl,
-                new[] { expiry, metadataExpiry, clock.GetUtcNow().AddHours(1), CacheExpiry(result) }.Min());
+            var retainUntil = new[] { expiry, metadataExpiry, clock.GetUtcNow().AddHours(1), CacheExpiry(result) }.Min();
+            if (retainUntil <= clock.GetUtcNow()) return null;
+            return new(bytes, type!, source!, credit, license, licenseUrl, retainUntil);
         }
         return null;
     }
@@ -83,9 +84,7 @@ public sealed class MusicBrainzArtistArtwork(IListenBrainzApiClient metadata, IH
     private static bool Cacheable(HttpResponseMessage response) => response.Headers.CacheControl is { NoStore: false, NoCache: false, Private: false } cache &&
         (cache.SharedMaxAge ?? cache.MaxAge) is { } age && age > TimeSpan.Zero;
     private DateTimeOffset CacheExpiry(HttpResponseMessage response) => clock.GetUtcNow() +
-        (response.Headers.CacheControl?.SharedMaxAge ?? response.Headers.CacheControl?.MaxAge ??
-            (response.Content.Headers.Expires is { } expires ? expires - clock.GetUtcNow() : TimeSpan.FromHours(1))) -
-        (response.Headers.Age ?? TimeSpan.Zero);
+        ArtworkFreshness.Remaining(response, clock.GetUtcNow(), TimeSpan.FromHours(1));
     private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct)
     {
         await gate.WaitAsync("Wikimedia", ct);
@@ -106,6 +105,7 @@ public sealed class MusicBrainzArtistArtwork(IListenBrainzApiClient metadata, IH
         using var response = await SendAsync(url, ct);
         if (!response.IsSuccessStatusCode || !Cacheable(response)) return null;
         metadataExpiry = new[] { metadataExpiry, CacheExpiry(response) }.Min();
+        if (metadataExpiry <= clock.GetUtcNow()) return null;
         return JsonDocument.Parse(await ReadBoundedAsync(response, ct));
     }
     private static async Task<byte[]> ReadBoundedAsync(HttpResponseMessage response, CancellationToken ct)

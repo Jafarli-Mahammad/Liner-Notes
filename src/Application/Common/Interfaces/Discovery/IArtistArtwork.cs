@@ -7,6 +7,7 @@ public interface IArtistArtwork
 {
     ArtistPhoto? GetCached(Guid artistId);
     RecordingArtworkState Request(Guid artistId);
+    TimeSpan? RetryDelay(Guid artistId);
 }
 
 public interface IArtistArtworkAcquirer

@@ -11,6 +11,33 @@ namespace LinerNotes.Infrastructure.Tests;
 public sealed class RecordingArtworkTests
 {
     [Theory]
+    [InlineData("headerless", true)]
+    [InlineData("aged-but-fresh", true)]
+    [InlineData("shared-precedence", true)]
+    [InlineData("stale", false)]
+    public async Task ArtworkFreshnessHonorsOriginExpiryAndBoundsHeaderlessMedia(string mode, bool available)
+    {
+        using var cache = new RecordingArtworkCache();
+        using var http = new HttpClient(new Handler(_ => {
+            var response = Image();
+            response.Headers.Age = TimeSpan.FromDays(2);
+            if (mode == "aged-but-fresh") response.Headers.CacheControl = new() { MaxAge = TimeSpan.FromDays(30) };
+            if (mode == "stale") response.Headers.CacheControl = new() { MaxAge = TimeSpan.FromHours(1) };
+            if (mode == "shared-precedence")
+            {
+                response.Headers.CacheControl = new() { MaxAge = TimeSpan.Zero, SharedMaxAge = TimeSpan.FromHours(1) };
+                response.Headers.Age = TimeSpan.Zero;
+            }
+            return response;
+        }));
+        var (service, _, _) = Create(cache, http);
+        await service.WarmAsync([Recording], default);
+        Assert.Equal(available, service.GetCached(Recording) is not null);
+        if (service.GetCached(Recording) is { } cover)
+            Assert.InRange(cover.ExpiresAtUtc!.Value, DateTimeOffset.UtcNow.AddMinutes(1), DateTimeOffset.UtcNow.AddHours(1));
+    }
+
+    [Theory]
     [InlineData("request_timeout")]
     [InlineData("rate_limit")]
     [InlineData("transport_error")]

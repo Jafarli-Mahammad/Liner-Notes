@@ -196,15 +196,8 @@ public sealed class RecordingArtwork(RecordingArtworkCache cache, IListenBrainzA
                 var bytes = output.ToArray();
                 if (!ValidImage(bytes, type))
                 { retryable = false; lifetime = TimeSpan.FromHours(6); break; }
-                lifetime = TimeSpan.FromDays(1);
+                lifetime = ArtworkFreshness.Remaining(response, clock.GetUtcNow(), TimeSpan.FromDays(1));
                 var control = response.Headers.CacheControl;
-                if (control?.SharedMaxAge is { } shared && shared < lifetime) lifetime = shared;
-                else if (control?.MaxAge is { } age && age < lifetime) lifetime = age;
-                var apparentAge = clock.GetUtcNow() - (response.Headers.Date ?? clock.GetUtcNow());
-                if (apparentAge < TimeSpan.Zero) apparentAge = TimeSpan.Zero;
-                lifetime -= response.Headers.Age is { } suppliedAge && suppliedAge > apparentAge ? suppliedAge : apparentAge;
-                if (control?.SharedMaxAge is null && control?.MaxAge is null && response.Content.Headers.Expires is { } suppliedExpiry && suppliedExpiry - clock.GetUtcNow() < lifetime)
-                    lifetime = suppliedExpiry - clock.GetUtcNow();
                 bool reusable = control is not ({ NoStore: true } or { NoCache: true } or { Private: true }) && lifetime > TimeSpan.Zero;
                 if (!reusable)
                 { retryable = false; lifetime = TimeSpan.FromMinutes(1); break; }

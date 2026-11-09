@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased — renewal
+- Fix title-and-artist catalog searches and prioritize exact artist names; remove duplicate search messages and release labels.
+- Correct artist and recording artwork freshness calculations, honor retry windows, and center unavailable-photo initials.
+- Reconcile conflicting ratings and feedback choices while preserving notes, and distinguish current taste from the taste used for saved discoveries.
+- Add a branded favicon to the published frontend assets.
 
 - Add a frozen integrated evaluation protocol, actual-baseline comparison tools and controlled-account verification. Retain current recommendation settings; listening quality remains unverified.
 - Require supported relevance for discovery picks, coordinate exploration with acquisition and ranking, combine soft preferences, diversify artists, and explain shortfalls with replayable private selection receipts. Keep generation available for short and empty batches.

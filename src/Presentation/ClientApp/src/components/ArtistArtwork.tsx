@@ -9,7 +9,7 @@ export function ArtistArtwork({ id, name }: { id?: string | null; name: string }
     if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
     const controller = new AbortController();
     const deadline = Date.now() + 90_000;
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout>, attempts = 0;
     async function load() {
       try {
         const response = await fetch(`/api/artwork/artists/${id}`, { credentials: 'omit', cache: 'no-store',
@@ -21,7 +21,7 @@ export function ArtistArtwork({ id, name }: { id?: string | null; name: string }
           return;
         }
         if (response.status !== 503 && response.status !== 429) return;
-        const delay = Math.max(3000, (retryDeadline(response.headers.get('Retry-After')) ?? 0) - Date.now());
+        const delay = Math.max(Math.min(3000 * 2 ** attempts++, 30_000), (retryDeadline(response.headers.get('Retry-After')) ?? 0) - Date.now());
         if (!controller.signal.aborted && Date.now() + delay < deadline) timer = setTimeout(load, delay);
       } catch { /* A photo failure never blocks editing or saving taste. */ }
     }

@@ -28,14 +28,15 @@ public sealed class CatalogReader(DataContext db) : ICatalogReader
                 await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
                 await db.Database.ExecuteSqlRawAsync("SET LOCAL statement_timeout = '250ms'", ct);
                 var parameters = new object[] { new NpgsqlParameter("query", normalized), new NpgsqlParameter("prefix", normalized.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%"),
-                    new NpgsqlParameter("kind", kind.ToString()), new NpgsqlParameter("now", now) };
+                    new NpgsqlParameter("kind", kind.ToString()), new NpgsqlParameter("now", now),
+                    new NpgsqlParameter("displayQuery", query.Trim().Normalize(System.Text.NormalizationForm.FormKC).ToLowerInvariant()) };
                 const string eligibility = """
                     p."State"='Published' AND (p."ExpiresAtUtc" IS NULL OR p."ExpiresAtUtc">@now)
                     AND (p."IsLookup" OR EXISTS (SELECT 1 FROM "CatalogHead" h WHERE h."PublicationId"=p."Id"))
                     """;
                 var prefix = await db.Database.SqlQueryRaw<Hit>("""
                     SELECT candidate."RecordId", min(candidate."Distance") AS "Distance" FROM (
-                        SELECT t."RecordId", CASE WHEN t."NormalizedTerm"=@query THEN 0.0 ELSE 0.05 END::float8 AS "Distance"
+                        SELECT t."RecordId", CASE WHEN lower(r."DisplayName")=@displayQuery THEN 0.0 WHEN t."NormalizedTerm"=@query THEN 0.02 ELSE 0.05 END::float8 AS "Distance"
                         FROM "CatalogSearchTerms" t JOIN "CatalogRecords" r ON r."Id"=t."RecordId"
                         JOIN "CatalogPublications" p ON p."Id"=r."PublicationId"
                         WHERE t."Kind"=@kind AND t."NormalizedTerm" LIKE @prefix ESCAPE E'\\' AND

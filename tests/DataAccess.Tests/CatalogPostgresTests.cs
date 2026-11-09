@@ -63,6 +63,20 @@ public sealed partial class CatalogPostgresTests : IAsyncLifetime
     }
 
     [LocalPostgresMigrationFact]
+    public async Task ExactArtistNamePrecedesMatchingTokensInLongerNames()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var exact = Guid.NewGuid();
+        await ImportAsync(scope.ServiceProvider, [
+            new CatalogArtifactRow(Guid.NewGuid(), CatalogKind.Artist, "Radiohead 3", [], [], []),
+            new CatalogArtifactRow(exact, CatalogKind.Artist, "Radiohead", [], [], [])]);
+        var reader = scope.ServiceProvider.GetRequiredService<ICatalogReader>();
+        var result = await reader.SearchAsync("Radiohead", CatalogKind.Artist, 10, 0, DateTimeOffset.UtcNow, default);
+        Assert.Equal(exact, result.Items[0].CanonicalId);
+        Assert.Equal(2, result.Items.Count);
+    }
+
+    [LocalPostgresMigrationFact]
     public async Task SearchFindsAliasesAccentsNonLatinAndMultiArtistAlbumsWithoutProviderCalls()
     {
         await using var scope = _services.CreateAsyncScope();

@@ -17,7 +17,8 @@ public sealed class ArtistArtworkController(IArtistArtwork artwork) : Controller
                 photo.Credit, photo.License, photo.LicenseUrl });
         var state = artwork.Request(id);
         Response.Headers.CacheControl = "no-store";
-        if (state == RecordingArtworkState.Pending) Response.Headers.RetryAfter = "3";
+        if (state == RecordingArtworkState.Pending) Response.Headers.RetryAfter = Math.Clamp((int)Math.Ceiling((artwork.RetryDelay(id) ?? TimeSpan.FromSeconds(3)).TotalSeconds), 1, 86400)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture);
         return StatusCode(state == RecordingArtworkState.Pending ? 503 : 404);
     }
 

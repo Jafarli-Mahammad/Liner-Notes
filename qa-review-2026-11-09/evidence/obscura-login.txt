@@ -1,0 +1,10 @@
+{'content': [{'type': 'text', 'text': 'Filled \'[data-obscura-ref="e11-14"]\' with value'}]}
+{'content': [{'type': 'text', 'text': 'Filled \'[data-obscura-ref="e11-15"]\' with value'}]}
+{'content': [{'type': 'text', 'text': 'Clicked \'[data-obscura-ref="e11-17"]\''}]}
+{'content': [{'type': 'text', 'text': '[\n  "The email or password was not accepted. Please try again.",\n  ""\n]'}]}
+{'content': [{'type': 'text', 'text': 'Error: Element not found: form[aria-label="Sign in"] input[type=password]'}], 'isError': True}
+{'content': [{'type': 'text', 'text': 'Error: Element not found: form[aria-label="Sign in"] button[type=submit]'}], 'isError': True}
+{'content': [{'type': 'text', 'text': '{\n  "signedIn": false,\n  "text": " and a symbol. Password managers and paste are welcome.\\n\\nOpt in to weekly emails when delivery becomes available\\nCreate account\\nYour data\\n\\nNo guest taste or discoveries are stored for this browser yet. You can explore Home without creating a profile."\n}'}]}
+{'content': [{'type': 'text', 'text': 'Filled \'[data-obscura-ref="e12-15"]\' with value'}]}
+{'content': [{'type': 'text', 'text': 'Clicked \'[data-obscura-ref="e12-17"]\''}]}
+{'content': [{'type': 'text', 'text': '{\n  "url": "/discover",\n  "accountLink": true\n}'}]}

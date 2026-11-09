@@ -453,3 +453,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Scoring timings with full provider evidence in one arm and empty evidence in the other do not isolate ranking cost. Disposable archive directories with shared permissions also cause truthful incomplete-cleanup responses.
 **Suggested improvement:** Match input preparation and evidence construction before comparing pure ranking measurements. Secure controlled storage roots and rerun deletion rather than accepting incomplete cleanup. Freeze policy and evaluation folds before reading held-out outcomes, and keep missing listening ratings explicit.
 **Principle:** Comparable measurements and complete cleanup require verified setup, not permissive assertions.
+
+
+### Observation 041: Separate browser setup and renderer differences from product failures
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Broad normal-user browser audit with two MCP browser services.
+**Skill:** New skill candidate: browser audit evidence
+**Type:** open-source
+**Phase/Area:** Browser setup, interaction waits, and reporting
+**Issue:** Default MCP services blocked local networks or assumed an unavailable browser. A lightweight renderer also produced different CSS output from Chromium. Short fixed feedback waits initially suggested a failed transition; waiting for save completion disproved it.
+**Suggested improvement:** Start temporary service instances with explicit local-network access and an installed browser, without changing persistent settings. Separate tool failures from app failures, use save confirmations, capture before/after reload evidence, and label renderer-specific observations. Exercise export, ownership, and cleanup with disposable accounts; exclude credentials and private exports from committed reports.
+**Principle:** Reproducible user-state evidence and a declared browser engine matter more than a long list of attempted clicks.

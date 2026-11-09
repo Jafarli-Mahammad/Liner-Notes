@@ -1,0 +1,2 @@
+### Result
+{"likePersisted":"true","saved":{"rating":"8","note":"QA review: saved note with café 日本語 🎵"},"known":"true","dislike":"false","cleared":{"rating":"","note":"","pressed":0}}

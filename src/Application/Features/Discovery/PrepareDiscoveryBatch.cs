@@ -74,8 +74,12 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         var feedbackSupport = effective.FeedbackSupport.Take(80).ToArray();
         string? feedbackSupportHash = effective.FeedbackSupport.Count == 0 ? null : Convert.ToHexStringLower(
             System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.FeedbackSupport)));
-        var weights = effective.PositiveSignals.ToDictionary(s => s.Id, s => s.Weight);
-        double maximumWeight = weights.Values.DefaultIfEmpty(1).Max();
+        // Learned tags share their recommendation ID with the learned artist.
+        // Only entity signals produce materialized seeds used for selection interests.
+        var weights = effective.PositiveSignals
+            .Where(s => s.TargetType is LinerNotes.Domain.Enums.TasteTargetType.Artist or LinerNotes.Domain.Enums.TasteTargetType.Album or LinerNotes.Domain.Enums.TasteTargetType.Track)
+            .ToDictionary(s => s.Id, s => s.Weight);
+        double maximumWeight = effective.PositiveSignals.Select(s => s.Weight).DefaultIfEmpty(1).Max();
         var interests = taste.Seeds.Where(s => s.SignalId.HasValue && s.Weights.Count > 0 && weights.ContainsKey(s.SignalId.Value))
             .Select(s => new SelectionInterest(s.EntityIdentity ?? s.ArtistName, LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(s.Weights),
                 s.Influence * Math.Min(1, weights[s.SignalId!.Value] / maximumWeight), s.ArtistName)).ToArray();

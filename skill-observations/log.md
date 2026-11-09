@@ -477,3 +477,11 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A slower feedback retry without the original rating could not disprove a failed rated transition. The server correctly rejected a contradictory 8/10 and negative choice. Separately, artwork downloaded successfully but an Age subtraction from a local headerless-media lifetime made its expiry precede acquisition; the same arithmetic existed in both portrait and cover paths.
 **Suggested improvement:** Preserve rating/note state during reproduction; reconcile conflicting inputs according to the user's latest action and explain the change. Measure acquisition time and effective expiry, not just HTTP success. Share freshness arithmetic across artwork paths, cap retention after subtracting origin age, and test stale, headerless, shared-cache-precedence and remount/retry states. Verify decoded canonical images in the live browser.
 **Principle:** A changed reproduction state can hide a real bug, and successful transport does not establish usable retained data.
+
+### Observation 043: Correlate asynchronous failures to the affected account
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Tracing a discovery failure reported by an existing user.
+**Issue:** Successful browser polling concealed a durable worker failure; a generic UI error did not identify the failed stage. An earlier matching log alone was insufficient until its job was correlated to the account and the same inputs reproduced it.
+**Suggested improvement:** Read account-scoped job state, identify the execution stage and test resumability from retained public evidence before changing acquisition limits. Keep account identifiers and taste contents out of committed reports.
+**Principle:** Diagnose the user's actual asynchronous operation and verify the recovery path, not merely the submission HTTP status.

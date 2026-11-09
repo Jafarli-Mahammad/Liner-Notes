@@ -87,6 +87,9 @@ public sealed class DiscoveryJobService(IServiceScopeFactory scopes, DiscoveryRu
         catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested) { error = "preparation_timeout"; retry = true; }
         catch (GenerationStoppedException ex)
         {
+            // Completed public pools and retainable metadata survive this attempt.
+            // Resume within the existing attempt/age limits with a fresh request budget.
+            retry = ex.Message == "upstream_request_limit";
             error = ex.Message.Length is > 0 and <= 64 && ex.Message.All(c => c is >= 'a' and <= 'z' or '_')
                 ? ex.Message : "generation_unavailable";
             var frame = new System.Diagnostics.StackTrace(ex, false).GetFrame(0)?.GetMethod();

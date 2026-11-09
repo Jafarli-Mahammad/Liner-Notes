@@ -14,8 +14,10 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 
 public sealed class FeedbackEvidenceTests
 {
-    [Fact]
-    public async Task CompleteReceiptExplainsLearnedAttenuationAndReplaysWithoutRecomputingPrivateHistory()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CompleteReceiptExplainsLearnedAttenuationAndReplaysWithoutRecomputingPrivateHistory(bool withRecentTags)
     {
         var now = DateTimeOffset.UtcNow;
         var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
@@ -39,12 +41,17 @@ public sealed class FeedbackEvidenceTests
         var config = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
         var history = Enumerable.Range(0, 4).Select(i => new FeedbackObservation(Guid.NewGuid(), profile.Id, null,
             "Learned artist", "Distinct " + i, null, i == 0 ? UserFeedback.Liked : UserFeedback.Disliked, null, now.UtcDateTime.AddMinutes(i - 10))).ToArray();
+        var receipt = LinerNotes.Domain.Digest.WeeklyRecommendation.ForDiscovery(profile.Id, Guid.NewGuid(), null,
+            new Track("Distinct 0", "Learned artist"), 1,
+            new ScoreBreakdown { MatchedTags = [new MatchedTagContribution("fixture", 1, 1, 1), new MatchedTagContribution("ambient", 1, 1, 1)] });
+        receipt.RecordFeedback(UserFeedback.Liked, now: now.UtcDateTime.AddMinutes(-10));
+        if (withRecentTags) history[0] = FeedbackObservation.From(receipt);
         var manual = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "fixture", 1, TasteSignalSource.InitialSeedManual, "Explicit tag");
         var seedPreparation = Substitute.For<IDiscoverySeedPreparation>();
         seedPreparation.GetAsync(Arg.Any<DiscoverySeedRequest>(), false, Arg.Any<CancellationToken>()).Returns(call => new SeedTagSnapshot(
             call.Arg<DiscoverySeedRequest>().Name, vector, [], reference, null, []) { SharedUntilUtc = now.AddHours(1) });
         var runner = new PrepareDiscoveryBatch(new(resolver, config, new(), TimeProvider.System, seedPreparation), preparation, store, config, new());
-        var result = await runner.PrepareAsync(new(profile, [manual], [], FeedbackHistory: history), Guid.NewGuid(), false, default);
+        var result = await runner.PrepareAsync(new(profile, [manual], withRecentTags ? [receipt] : [], FeedbackHistory: history), Guid.NewGuid(), false, default);
         var score = Assert.Single(result.Picks).Breakdown;
         var snapshot = score.Snapshot!;
         var support = Assert.Single(snapshot.Evidence.FeedbackSupport);

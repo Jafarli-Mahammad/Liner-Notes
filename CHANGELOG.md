@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Resume discovery after a provider request budget is exhausted, reusing cached public evidence within the existing retry and age limits; fix discovery crashes when liked picks contribute both artist and tag evidence.
 - Fix title-and-artist catalog searches and prioritize exact artist names; remove duplicate search messages and release labels.
 - Correct artist and recording artwork freshness calculations, honor retry windows, and center unavailable-photo initials.
 - Reconcile conflicting ratings and feedback choices while preserving notes, and distinguish current taste from the taste used for saved discoveries.

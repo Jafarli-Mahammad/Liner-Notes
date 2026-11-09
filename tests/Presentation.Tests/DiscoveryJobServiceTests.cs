@@ -17,8 +17,10 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class DiscoveryJobServiceTests
 {
-    [Fact]
-    public async Task ProviderBackoffPersistsRetryAtInsteadOfFailingOrRetryingEarly()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProviderBackoffPersistsRetryAtInsteadOfFailingOrRetryingEarly(bool budgetExhausted)
     {
         var now = DateTimeOffset.UtcNow;
         var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
@@ -33,9 +35,9 @@ public sealed class DiscoveryJobServiceTests
         var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         jobs.FailAsync(job.Id, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<TimeSpan>(), 3, Arg.Any<CancellationToken>())
             .Returns(call => {
-                Assert.Equal("source_temporarily_unavailable", call.ArgAt<string>(3));
+                Assert.Equal(budgetExhausted ? "upstream_request_limit" : "source_temporarily_unavailable", call.ArgAt<string>(3));
                 Assert.True(call.ArgAt<bool>(4));
-                Assert.Equal(TimeSpan.FromSeconds(95), call.ArgAt<TimeSpan>(5));
+                Assert.Equal(TimeSpan.FromSeconds(budgetExhausted ? 5 : 95), call.ArgAt<TimeSpan>(5));
                 job.Fail(call.ArgAt<Guid>(1), call.ArgAt<DateTimeOffset>(2), call.ArgAt<string>(3), true, call.ArgAt<TimeSpan>(5), 3);
                 failed.TrySetResult(); return Task.CompletedTask;
             });
@@ -45,7 +47,7 @@ public sealed class DiscoveryJobServiceTests
                 [TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "backoff test")], [], 0)));
         var preparation = Substitute.For<IDiscoveryPreparation>();
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromException<PreparedDiscoveryPool>(new DiscoverySourceException("source_temporarily_unavailable", true, TimeSpan.FromSeconds(95))));
+            .Returns(_ => Task.FromException<PreparedDiscoveryPool>(budgetExhausted ? new GenerationStoppedException("upstream_request_limit") : new DiscoverySourceException("source_temporarily_unavailable", true, TimeSpan.FromSeconds(95))));
         var resolver = Substitute.For<IRecommendationProviderResolver>();
         resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(), Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
         using var services = new ServiceCollection().AddSingleton(jobs).AddSingleton(batches).AddSingleton(preparation).AddSingleton(resolver)
@@ -60,7 +62,7 @@ public sealed class DiscoveryJobServiceTests
         {
             await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(DiscoveryJobState.Retryable, job.State);
-            Assert.True(job.NextAttemptAtUtc >= now.AddSeconds(95));
+            Assert.True(job.NextAttemptAtUtc >= now.AddSeconds(budgetExhausted ? 5 : 95));
             Assert.Null(job.ResultBatchId);
         }
         finally { await runner.StopAsync(default); }

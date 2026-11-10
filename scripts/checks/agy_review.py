@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 
 
 MODEL = "gemini-3.8-flash-high"
@@ -83,18 +84,18 @@ def response(output):
         raise ValueError("Reviewer used tools; the snapshot-only review was not accepted")
     results = [event["result"] for event in events if event.get("event") == "result"]
     if not results or results[-1].get("status") != "SUCCESS":
-        raise ValueError("Antigravity did not return SUCCESS; inspect the workflow diagnostics")
+        raise ValueError("Antigravity did not return SUCCESS; inspect the terminal diagnostics")
     answer = results[-1].get("response", "").strip()
     if not answer:
         raise ValueError("Antigravity returned an empty review")
     return answer
 
 
-def main():
-    output = Path(sys.argv[3]).resolve()
+def review(before, after, output):
+    output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
-        prompt = packet(sys.argv[1], sys.argv[2])
+        prompt = packet(before, after)
         # Keep repository discovery outside the checkout; preserve the user's login.
         with tempfile.TemporaryDirectory(prefix="agy-review-") as work:
             agent = Path(work, ".agents/agents/liner-push-review.md")
@@ -110,12 +111,37 @@ def main():
                 check=True)
         review = response(result.stdout)
         output.write_text(f"# Antigravity push review\n\nModel: `{MODEL}`; thinking: high.\n"
-                          f"Range: `{sys.argv[1]}` → `{sys.argv[2]}`.\n\n{review}\n")
+                          f"Range: `{before}` → `{after}`.\n\n{review}\n")
     except (ValueError, subprocess.SubprocessError, OSError) as error:
         output.write_text(f"# Antigravity review unavailable\n\n{error}\n")
         print(str(error), file=sys.stderr)
         return 1
     return 0
+
+
+def main():
+    if sys.argv[1:] != ["--push"]:
+        return review(*sys.argv[1:])
+    root = Path(git("rev-parse", "--show-toplevel").decode().strip())
+    reports = root / ".linernotes/agy-reviews"
+    status = 0
+    for index, line in enumerate(sys.stdin):
+        fields = line.split()
+        if not fields:
+            continue
+        if len(fields) != 4:
+            print("Invalid pre-push ref input", file=sys.stderr)
+            return 1
+        local_ref, after, remote_ref, before = fields
+        if after == "0" * 40:
+            continue  # Ref deletion introduces no code.
+        reports.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        report = reports / f"{stamp}-{index}.md"
+        print(f"[agy] {local_ref} → {remote_ref}; report: {report}", flush=True)
+        status = max(status, review(before, after, report))
+        print(report.read_text(), flush=True)
+    return status
 
 
 if __name__ == "__main__":

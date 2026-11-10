@@ -1,6 +1,8 @@
 import json
+import io
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -112,6 +114,70 @@ class PushReviewTests(unittest.TestCase):
              patch.object(subprocess, "run", side_effect=fake_run):
             self.assertEqual(agy_review.main(), 0)
         self.assertIn("Advisory findings", output.read_text())
+
+    def test_push_reviews_exact_refs_and_skips_deletions(self):
+        refs = (f"refs/heads/feature {self.after} refs/heads/other {self.before}\n"
+                f"(delete) {'0' * 40} refs/heads/deleted {self.before}\n"
+                f"refs/heads/new {self.after} refs/heads/new {'0' * 40}\n")
+
+        def fake_review(before, after, output):
+            output.write_text("Local findings")
+            return 0
+
+        with patch.object(sys, "argv", ["agy_review.py", "--push"]), \
+             patch.object(sys, "stdin", io.StringIO(refs)), \
+             patch.object(sys, "stdout", io.StringIO()), \
+             patch.object(agy_review, "review", side_effect=fake_review) as reviewer:
+            self.assertEqual(agy_review.main(), 0)
+        self.assertEqual(reviewer.call_count, 2)
+        self.assertEqual(reviewer.call_args_list[0].args[:2], (self.before, self.after))
+        self.assertEqual(reviewer.call_args_list[1].args[:2], ("0" * 40, self.after))
+        self.assertEqual(len(list(Path(".linernotes/agy-reviews").glob("*.md"))), 2)
+
+    def test_push_propagates_review_failure(self):
+        def failure(before, after, output):
+            output.write_text("Login required")
+            return 1
+
+        with patch.object(sys, "argv", ["agy_review.py", "--push"]), \
+             patch.object(sys, "stdin", io.StringIO(
+                 f"refs/heads/main {self.after} refs/heads/main {self.before}\n")), \
+             patch.object(sys, "stdout", io.StringIO()), \
+             patch.object(agy_review, "review", side_effect=failure):
+            self.assertEqual(agy_review.main(), 1)
+
+    def test_actual_hook_passes_push_refs_to_local_cli(self):
+        checks = Path("scripts/checks")
+        checks.mkdir(parents=True)
+        shutil.copy(self.old_cwd / "scripts/checks/agy_review.py", checks)
+        binaries = Path("fake-bin").resolve()
+        binaries.mkdir()
+        stubs = {
+            "dotnet": "#!/bin/sh\nexit 0\n",
+            "python3": (f"#!/bin/sh\ncase \"$1\" in\n"
+                        f"*/agy_review.py) exec '{sys.executable}' \"$@\" ;;\n"
+                        "*) exit 0 ;;\nesac\n"),
+            "agy": (f"#!{sys.executable}\nimport json, sys\n"
+                    "request = json.load(sys.stdin)\n"
+                    "assert '--model' in sys.argv and 'gemini-3.8-flash-high' in sys.argv\n"
+                    "assert '--effort' in sys.argv and 'high' in sys.argv\n"
+                    f"assert '{self.after}' in request['message']['content']\n"
+                    "print(json.dumps({'event': 'result', 'result': "
+                    "{'status': 'SUCCESS', 'response': 'Local hook findings'}}))\n"),
+        }
+        for name, content in stubs.items():
+            executable = binaries / name
+            executable.write_text(content)
+            executable.chmod(0o755)
+        env = {**os.environ, "PATH": f"{binaries}:{os.environ['PATH']}"}
+        for name in ("SKIP_PUSH_GATE", "SKIP_GATE", "SKIP_AGY_REVIEW"):
+            env.pop(name, None)
+        result = subprocess.run(["bash", str(self.old_cwd / ".githooks/pre-push")],
+                                input=f"refs/heads/main {self.after} refs/heads/main {self.before}\n",
+                                env=env, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Local hook findings", result.stdout)
+        self.assertEqual(len(list(Path(".linernotes/agy-reviews").glob("*.md"))), 1)
 
 
 if __name__ == "__main__":

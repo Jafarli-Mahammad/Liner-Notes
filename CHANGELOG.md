@@ -2,7 +2,7 @@
 
 ## Unreleased — renewal
 
-- Add advisory Antigravity reviews of pushed changes for code quality, performance and security in GitHub Actions, using Gemini 3.8 Flash with high thinking and a self-hosted runner's existing Antigravity login.
+- Review pushed changes locally for code quality, performance and security with Antigravity, using the existing login and Gemini 3.8 Flash with high thinking; save reports under `.linernotes/agy-reviews/`.
 
 - Fix discovery persistence for larger taste profiles: budget cold acquisition at up to 200 requests per attempt, retry expired public evidence, and retain full coverage audits within a 256 KB bound with matching storage reservations.
 

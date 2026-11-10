@@ -1,5 +1,14 @@
 # Skill Observation Log
 
+### Observation: Verify packaged CLI entrypoints when configuring CI
+**Status:** OPEN
+**Date:** 2026-11-10
+**Skill:** ponytail
+**Type:** open-source
+**Issue:** The documented CLI command differed from the executable name inside its official release archive. Download and checksum verification alone would have left CI unable to find the command.
+**Suggested improvement:** Inspect the actual pinned archive, verify its digest, and validate extraction and executable naming before committing automation. Test push ranges independently of authenticated model access and report the latter as unverified until a live run.
+**Principle:** A verified download does not establish a runnable integration.
+
 ### Observation 038: Follow recovery past the first failure
 **Status:** OPEN
 **Date:** 2026-10-31

@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Add advisory Antigravity reviews of pushed changes for code quality, performance and security in GitHub Actions, using Gemini 3.8 Flash with high thinking; requires a repository API-key secret.
+
 - Fix discovery persistence for larger taste profiles: budget cold acquisition at up to 200 requests per attempt, retry expired public evidence, and retain full coverage audits within a 256 KB bound with matching storage reservations.
 
 - Resume discovery after a provider request budget is exhausted, reusing cached public evidence within the existing retry and age limits; fix discovery crashes when liked picks contribute both artist and tag evidence.

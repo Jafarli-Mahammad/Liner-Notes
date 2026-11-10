@@ -1,0 +1,85 @@
+name: Antigravity push review
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event.deleted != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout pushed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify configuration
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo 'Add the GEMINI_API_KEY repository Actions secret.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Install pinned Antigravity CLI
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/google-antigravity/antigravity-cli/releases/download/1.5.4/agy_cli_linux_x64.tar.gz \
+            --output "$RUNNER_TEMP/agy.tar.gz"
+          echo "96cccfec6f205db8fa4016531bda1567827f1d056095238735af6b8b55a7f7d6  $RUNNER_TEMP/agy.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/agy-bin"
+          tar -xzf "$RUNNER_TEMP/agy.tar.gz" -C "$RUNNER_TEMP/agy-bin"
+          mv "$RUNNER_TEMP/agy-bin/antigravity" "$RUNNER_TEMP/agy-bin/agy"
+          echo "$RUNNER_TEMP/agy-bin" >> "$GITHUB_PATH"
+
+      - name: Configure API authentication and review permissions
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          settings = Path.home() / '.gemini/antigravity-cli/settings.json'
+          settings.parent.mkdir(parents=True, exist_ok=True)
+          settings.write_text(json.dumps({
+              'modelProvider': 'gemini',
+              'permissions': {'deny': [f'{action}(*)' for action in
+                  ('command', 'read_file', 'write_file', 'read_url', 'mcp')]}
+          }))
+          PY
+
+      - name: Review changed files
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          # A manual run reviews the last commit; push events use the exact range.
+          if [ -z "$BEFORE" ]; then
+            BEFORE=$(git rev-parse "$AFTER^" 2>/dev/null || printf '%040d' 0)
+          elif [ "$BEFORE" != '0000000000000000000000000000000000000000' ]; then
+            # A force-push can leave its old tip unreachable from fetched branches.
+            git cat-file -e "$BEFORE^{commit}" 2>/dev/null || git fetch --no-tags origin "$BEFORE"
+          fi
+          python3 scripts/checks/agy_review.py "$BEFORE" "$AFTER" "$RUNNER_TEMP/agy-review/review.md"
+
+      - name: Publish review summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/agy-review/review.md" ]; then
+            cat "$RUNNER_TEMP/agy-review/review.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Save review artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: antigravity-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/agy-review/review.md
+          if-no-files-found: ignore
+          retention-days: 14

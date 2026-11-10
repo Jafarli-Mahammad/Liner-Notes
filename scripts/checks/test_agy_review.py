@@ -1,5 +1,4 @@
 import json
-import io
 import os
 from pathlib import Path
 import subprocess
@@ -79,6 +78,12 @@ class PushReviewTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 agy_review.response(json.dumps({"event": "result", "result": result}))
 
+    def test_review_with_tool_activity_is_not_accepted(self):
+        events = [{"event": "step_update", "step_update": {"step_type": "tool"}},
+                  {"event": "result", "result": {"status": "SUCCESS", "response": "findings"}}]
+        with self.assertRaisesRegex(ValueError, "used tools"):
+            agy_review.response("\n".join(json.dumps(event) for event in events))
+
     def test_runner_uses_isolated_directory_and_publishes_response(self):
         output = Path("review.md")
         real_run = subprocess.run
@@ -89,6 +94,11 @@ class PushReviewTests(unittest.TestCase):
             work = Path(kwargs["cwd"])
             self.assertNotEqual(work, Path.cwd())
             self.assertNotIn("env", kwargs)
+            agent = (work / ".agents/agents/liner-push-review.md").read_text()
+            self.assertIn("tools: []", agent)
+            self.assertIn("inheritMcp: false", agent)
+            self.assertIn("inheritCustomizations: false", agent)
+            self.assertIn("liner-push-review", args)
             self.assertIn(agy_review.MODEL, args)
             self.assertIn("high", args)
             request = json.loads(kwargs["input"])
@@ -97,18 +107,11 @@ class PushReviewTests(unittest.TestCase):
             return subprocess.CompletedProcess(args, 0, json.dumps({"event": "result", "result": {
                 "status": "SUCCESS", "response": "Advisory findings"}}))
 
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-placeholder"}), \
+        with patch.dict(os.environ, {}, clear=True), \
              patch.object(sys, "argv", ["agy_review.py", self.before, self.after, str(output)]), \
              patch.object(subprocess, "run", side_effect=fake_run):
             self.assertEqual(agy_review.main(), 0)
         self.assertIn("Advisory findings", output.read_text())
-
-    def test_missing_secret_leaves_failure_report(self):
-        with patch.dict(os.environ, {}, clear=True), \
-             patch.object(sys, "argv", ["agy_review.py", self.before, self.after, "review.md"]), \
-             patch.object(sys, "stderr", io.StringIO()):
-            self.assertEqual(agy_review.main(), 1)
-        self.assertIn("GEMINI_API_KEY", Path("review.md").read_text())
 
 
 if __name__ == "__main__":

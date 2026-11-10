@@ -1,5 +1,14 @@
 # Skill Observation Log
 
+### Observation: Match CI authentication to the actual account session
+**Status:** OPEN
+**Date:** 2026-11-10
+**Skill:** ponytail
+**Type:** open-source
+**Issue:** An API-key CI setup did not match the requested CLI's existing interactive login. A custom agent's empty tool list also did not remove tools advertised in its initialization stream.
+**Suggested improvement:** Verify the user's actual authentication method before selecting a runner. For saved local logins, preserve settings and run under the same operating-system/keyring session. Test tool restrictions live and distinguish requested policies, advertised tools, observed calls and enforced isolation.
+**Principle:** Successful authentication and declared restrictions each need evidence from the actual execution environment.
+
 ### Observation: Verify packaged CLI entrypoints when configuring CI
 **Status:** OPEN
 **Date:** 2026-11-10

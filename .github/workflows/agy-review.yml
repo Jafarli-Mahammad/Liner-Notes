@@ -10,7 +10,7 @@ permissions:
 jobs:
   review:
     if: github.event.deleted != true
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, x64, agy-login]
     timeout-minutes: 15
     steps:
       - name: Checkout pushed revision
@@ -19,14 +19,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify configuration
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Verify logged-in runner
         run: |
-          if [ -z "$GEMINI_API_KEY" ]; then
-            echo 'Add the GEMINI_API_KEY repository Actions secret.' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
+          # Reuse this runner user's saved login; never replace their settings.
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          command -v python3
+          command -v git
 
       - name: Install pinned Antigravity CLI
         run: |
@@ -39,23 +37,8 @@ jobs:
           mv "$RUNNER_TEMP/agy-bin/antigravity" "$RUNNER_TEMP/agy-bin/agy"
           echo "$RUNNER_TEMP/agy-bin" >> "$GITHUB_PATH"
 
-      - name: Configure API authentication and review permissions
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          settings = Path.home() / '.gemini/antigravity-cli/settings.json'
-          settings.parent.mkdir(parents=True, exist_ok=True)
-          settings.write_text(json.dumps({
-              'modelProvider': 'gemini',
-              'permissions': {'deny': [f'{action}(*)' for action in
-                  ('command', 'read_file', 'write_file', 'read_url', 'mcp')]}
-          }))
-          PY
-
       - name: Review changed files
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |

@@ -5,6 +5,7 @@ import type { Answers, Subscriber } from '../../api/models';
 import { usePersonal } from '../../app/Personal';
 import { Notice } from '../../components/Notice';
 import { AuthForm } from './AuthForm';
+import { EmailPreferences } from './EmailPreferences';
 
 interface ImportPreview { account: Answers | null; guest: Answers | null; conflicts: boolean; policy: string; }
 export default function Account() {
@@ -51,8 +52,9 @@ export default function Account() {
     {!!stateMessage && <Notice>{stateMessage}</Notice>}
     {!identity.user ? <div className={`auth-layout${search.get('mode') === 'register' ? ' registration-first' : ''}`}><AuthForm returnTo={returnTo} /><AuthForm register returnTo={returnTo} /></div>
       : <section className="editor-panel account-profile" aria-label="Account details"><div><h2>Good to have you here.</h2><p>{profile?.email ?? identity.user.email}</p></div><button className="text-button" type="button" onClick={() => void run(async () => { await logout(); navigate('/account'); })}>Sign out</button>
-        <dl><div><dt>Time zone</dt><dd>{profile?.timeZone ?? 'Not available'}</dd></div><div><dt>Weekly email preference</dt><dd>{profile?.weeklyEmailOptIn ? 'Opted in' : 'Not opted in'}</dd></div></dl>
+        <dl><div><dt>Time zone</dt><dd>{profile?.timeZone ?? 'Not available'}</dd></div></dl>
         <Link className="text-link" to="/taste">Review your taste →</Link>
+        <EmailPreferences email={profile?.email ?? identity.user.email} />
       </section>}
     {identity.user && personal.data?.session.guestImportAvailable && <section className="editor-panel import-panel"><h2>You also have guest discoveries</h2><p>Your current account takes priority. Review the guest answers before importing.</p>
       {!preview ? <button type="button" className="button button-secondary" disabled={working || personal.busy} onClick={() => run(async () => setPreview(await api<ImportPreview>('/api/discovery/session/import-preview')))}>Review guest progress</button>
@@ -61,7 +63,7 @@ export default function Account() {
           <div className="action-row"><button type="button" className="button button-primary" disabled={working || personal.busy} onClick={() => run(async () => { await personal.exclusive(() => personal.write('/api/discovery/session/import')); setPreview(null); await personal.reload(); setMessage('Guest progress imported.'); })}>Import guest progress</button><button type="button" className="text-button" onClick={() => setPreview(null)}>Keep them separate</button></div></>}
     </section>}
     <section className="editor-panel data-panel" aria-labelledby="your-data"><h2 id="your-data">Your data</h2>
-      {identity.user || personal.data?.session.profile ? <><p>{identity.user ? 'Download the account, taste, recommendation and feedback records provided by your JSON export.' : 'Guest taste and history are stored on the server, linked to a credential in this browser. They expire after seven inactive days.'}</p>
+      {identity.user || personal.data?.session.profile ? <><p>{identity.user ? 'Download your account, taste, discoveries, feedback and email delivery records.' : 'Guest taste and history are stored on the server, linked to a credential in this browser. They expire after seven inactive days.'}</p>
         <div className="action-row"><button className="button button-secondary" type="button" disabled={working || personal.busy} onClick={() => run(download)}>Download your data</button><Link className="text-link" to="/history">Review discovery history</Link></div>
         <div className="delete-section"><h3>{identity.user ? 'Delete account' : 'Clear guest session'}</h3><p>{identity.user ? 'Delete your account credentials and stored account data. This cannot be undone.' : 'Remove this guest profile, taste selections and discovery history.'}</p><button className="text-button danger-button" type="button" disabled={working || personal.busy} onClick={remove}>{identity.user ? 'Delete my account' : 'Clear my guest data'}</button></div></>
         : <p>No guest taste or discoveries are stored for this browser yet. You can explore Home without creating a profile.</p>}

@@ -536,3 +536,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Asking for a domain and mail account before explaining their purpose made an activation dependency look like an implementation prerequisite.
 **Suggested improvement:** State that code and provider-contract tests can proceed with configurable values and a local transport. Explain that real sending later needs a verified sender, canonical public link origin and operator contact. Request only information needed for the immediate design decision; never request secrets in chat.
 **Principle:** Distinguish what is required to build a capability from what is required to activate and prove it externally.
+
+
+### Observation 047: Prepare persistent key rings before account storage admission
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Adding durable account email alongside coordinated authentication and storage.
+**Skill:** efcore-patterns, New skill candidate: durable external delivery
+**Type:** open-source
+**Phase/Area:** Transaction boundaries and lifecycle verification
+**Issue:** Initializing a database-backed protection key inside account admission correctly failed with a key-rotation preparation error. Mock-only delivery would have hidden it. A full scheduled-delivery test also exposed local-only renderer validation and a legacy explicit-user selector in the new all-account path.
+**Suggested improvement:** Prepare key rings outside the outer transaction, then freeze/protect the message within admitted account writes. Exercise signup through persistence, two scheduled weeks, retry after restart and final delivery-state projection with real database accounting. Preserve separate local-capture concurrency contracts when adding network-send ownership.
+**Principle:** Reused components must be verified at their complete production lifecycle boundaries, not merely through transport mocks.

@@ -118,4 +118,21 @@ class BackupManifestTests(unittest.TestCase):
             operation.upgrade({s:'fixture:local' for s in ['web','worker','volume-init','migrate']})
 
 
+    def test_mail_status_requires_recent_timer_run_only_when_enabled(self):
+        operation=object.__new__(ops.Operations); operation.state=self.root
+        data={'components':{c:{'healthy':True,'checkedAt':ops.now()} for c in ['Storage','Database','Disk']},'mail':{}}
+        operation.command=lambda *a,**kw:b'HTTP/1.0 200 OK\r\n\r\n'+json.dumps(data).encode()
+        self.assertIn('mail_timer_missing_or_stale',operation.status(include_application=True)['reasons'])
+        ops.atomic_json(self.root/'last-mail.json',{'at':ops.now(),'status':'passed'})
+        self.assertNotIn('mail_timer_missing_or_stale',operation.status(include_application=True)['reasons'])
+        operation.status()  # Read-only file status does not require an application response.
+
+    def test_mail_and_reconciliation_refuse_maintenance_before_worker(self):
+        operation=object.__new__(ops.Operations); operation.state=self.root
+        operation.worker=lambda *a,**kw:self.fail('maintenance must block the worker')
+        ops.atomic_json(self.root/'maintenance.json',{'action':'backup'})
+        with self.assertRaisesRegex(ops.OperationStopped,'mail_blocked_by_maintenance'): operation.mail()
+        with self.assertRaisesRegex(ops.OperationStopped,'mail_blocked_by_maintenance'):
+            operation.reconcile_mail('37e4414c-5e25-4dbc-a071-43552a4bd53b')
+
 if __name__ == '__main__': unittest.main()

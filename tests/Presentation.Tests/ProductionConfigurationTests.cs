@@ -32,6 +32,10 @@ public sealed class ProductionConfigurationTests
 
     internal static Dictionary<string, string?> Valid() => new()
     {
+        ["PublicService:OperatorName"] = "Test operator",
+        ["PublicService:PrivacyContact"] = "mailto:privacy@example.test",
+        ["PublicService:RightsReference"] = "synthetic acceptance fixture, not live authorization",
+        ["PublicService:MusicBrainzUse"] = "noncommercial",
         ["GuestDiscovery:PublicOrigin"] = "https://music.example.test",
         ["AllowedHosts"] = "music.example.test",
         ["ForwardedHeaders:KnownProxies:0"] = "172.30.0.2",

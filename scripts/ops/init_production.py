@@ -8,7 +8,7 @@ import secrets
 import ipaddress
 
 
-def initialize(directory,site,images,*,approved=False,acceptance=False,network='172.30.85.0/28',port=8443):
+def initialize(directory,site,images,*,approved=False,acceptance=False,network='172.30.85.0/28',port=8443,operator_name='',privacy_contact='',rights_reference='',musicbrainz_use=''):
     if not directory.is_absolute() or directory.exists() or directory.absolute()!=directory.resolve():
         raise ValueError('new_absolute_private_directory_required')
     if not re.fullmatch(r'[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?',site) or '..' in site:
@@ -27,7 +27,13 @@ def initialize(directory,site,images,*,approved=False,acceptance=False,network='
     for role,name in [('operator','operator'),('application','runtime')]:
         user='liner_operator' if role=='operator' else 'liner_app'
         settings={'ConnectionStrings':{'DefaultConnection':'Host=db;Database=liner_notes;Username='+user+';Password='+passwords[role]},
-                  'Jwt':{'SecretKey':signing}}
+                  'Jwt':{'SecretKey':signing},
+                  'PublicService':{'OperatorName':operator_name or ('Disposable acceptance fixture' if acceptance else ''),
+                     'PrivacyContact':privacy_contact or ('mailto:privacy@example.test' if acceptance else ''),
+                     'RightsReference':rights_reference or ('Synthetic acceptance fixture only, not live rights approval' if acceptance else ''),
+                     'MusicBrainzUse':musicbrainz_use or ('noncommercial' if acceptance else '')},
+                  'EmailDelivery':{'Enabled':False}}
+
         p=private/(name+'-settings.json'); p.write_text(json.dumps(settings)); p.chmod(0o444)
     # Files are mounted read-only into non-root containers; the 0700 parent restricts host access.
     environment={'LINER_SITE':site,'LINER_PRIVATE_DIR':str(private),'LINER_PROVIDER_USE_APPROVED':str(approved).lower(),
@@ -53,6 +59,10 @@ if __name__=='__main__':
     parser.add_argument('--worker-image',required=True)
     parser.add_argument('--tools-image',required=True)
     parser.add_argument('--volume-image',required=True)
+    parser.add_argument('--operator-name',default='')
+    parser.add_argument('--privacy-contact',default='')
+    parser.add_argument('--rights-reference',default='')
+    parser.add_argument('--musicbrainz-use',choices=['noncommercial','licensed'],default='')
     parser.add_argument('--approve-provider-use',action='store_true')
     parser.add_argument('--acceptance',action='store_true')
     parser.add_argument('--network',default='172.30.85.0/28')
@@ -61,6 +71,7 @@ if __name__=='__main__':
     try:
         initialize(args.directory,args.site,{'LINER_WEB_IMAGE':args.web_image,'LINER_WORKER_IMAGE':args.worker_image,
             'LINER_TOOLS_IMAGE':args.tools_image,'LINER_VOLUME_IMAGE':args.volume_image},approved=args.approve_provider_use,
-            acceptance=args.acceptance,network=args.network,port=args.port)
+            acceptance=args.acceptance,network=args.network,port=args.port,operator_name=args.operator_name,
+            privacy_contact=args.privacy_contact,rights_reference=args.rights_reference,musicbrainz_use=args.musicbrainz_use)
     except (OSError,ValueError): raise SystemExit('Private setup failed; existing directories are never overwritten.')
     print('Private configuration created. Jobs remain paused; the local repository is not an off-host backup.')

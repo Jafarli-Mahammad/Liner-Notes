@@ -19,6 +19,8 @@ public sealed class Phase8PrivacyInventoryTests
         ["public.PublicEvidenceCache"] = Columns("Key,Kind,Provider,Origin,Version,PayloadJson,ContentSha256,StoredBytes,AcquiredAtUtc,ExpiresAtUtc,LeaseToken,LeaseExpiresAtUtc,UpdatedAtUtc"),
         ["public.RecentRecommendations"] = Columns("Sequence,RecordingId,Title,ArtistName,Origin,Attribution,MetadataExpiresAtUtc"),
         ["public.RecommendedIdentities"] = Columns("ProfileId,Alias,FirstRecommendedAtUtc"),
+        ["public.EmailSuppressions"] = Columns("UserId,RecipientHash,Reason,CreatedAt"),
+        ["public.EmailDispatches"] = Columns("Id,UserId,DigestId,Purpose,RequestKey,RecipientHash,Fingerprint,ProtectedPayload,State,CreatedAt,ExpiresAt,NextAttemptAt,FirstAttemptAt,LastAttemptAt,Attempts,ProviderMessageId,AcceptedAt,DeliveredAt,OutcomeAt,Reason"),
         ["public.Albums"] = Columns("ArtistId,ArtistName,Id,Mbid,ReleaseGroupMbid,Title"),
         ["public.Artists"] = Columns("Id,Mbid,Name,NormalizedName"),
         ["public.AlbumCredits"] = Columns("AlbumId,ArtistId,Position"),

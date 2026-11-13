@@ -10,12 +10,12 @@ using LinerNotes.Application.DTOs.Subscribers;
 namespace LinerNotes.Infrastructure.Email;
 
 /// <summary>Presentation of persisted rank and explanations. No acquisition or scoring.</summary>
-public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeTokens tokens) : IDigestEmailRenderer
+public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeTokens tokens, EmailDeliveryOptions? delivery = null) : IDigestEmailRenderer
 {
     public const string Version = "local-digest-v2";
     public RenderedDigestEmail Render(WeeklyDigestDto digest, SubscriberDto subscriber, string? token = null)
     {
-        options.Validate();
+        if (delivery?.Enabled == true) delivery.Validate(); else options.Validate();
         LocalEmailOptions.ValidateAddress(subscriber.Email);
         if (digest.UserId != subscriber.Id || digest.Id == Guid.Empty || digest.Recommendations.Count > 5 ||
             digest.Recommendations.Select(r => r.Rank).Distinct().Count() != digest.Recommendations.Count ||
@@ -23,9 +23,9 @@ public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeT
         token ??= tokens.Create(subscriber.Id);
         if (!tokens.TryRead(token, out var owner) || owner != subscriber.Id) throw new GenerationStoppedException("email_capability_invalid");
         var picks = digest.Recommendations.OrderBy(r => r.Rank).ToArray();
-        string origin = options.Origin().GetLeftPart(UriPartial.Authority);
+        string origin = delivery?.Enabled == true ? delivery.PublicOrigin : options.Origin().GetLeftPart(UriPartial.Authority);
         string unsubscribe = origin + "/api/digests/unsubscribe?token=" + Uri.EscapeDataString(token);
-        string account = origin + "/manual-test";
+        string account = origin + (delivery?.Enabled == true ? "/account" : "/manual-test");
         string title = $"Liner Notes · {digest.Week} · {picks.Length} {(picks.Length == 1 ? "pick" : "picks")}";
         static string H(string value) => WebUtility.HtmlEncode(value);
         var text = new StringBuilder(title).AppendLine().AppendLine();
@@ -45,6 +45,8 @@ public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeT
                 ("Apple Music", "https://music.apple.com/search?term=" + query) };
             string? spotify = ValidateOptionalLink(pick.Track.ExternalSpotifyUrl);
             string? youtube = ValidateOptionalLink(pick.Track.ExternalYoutubeUrl);
+            if (delivery?.Enabled == true && spotify is not null && new Uri(spotify).Host != "open.spotify.com") spotify = null;
+            if (delivery?.Enabled == true && youtube is not null && new Uri(youtube).Host is not ("www.youtube.com" or "youtube.com" or "youtu.be")) youtube = null;
             if (spotify is not null) links[1] = ("Spotify", spotify);
             if (youtube is not null) links[0] = ("YouTube", youtube);
             text.AppendLine($"{pick.Rank}. {pick.Track.Title} — {pick.Track.ArtistName}").AppendLine(pick.WhyThisPick);
@@ -69,9 +71,17 @@ public sealed class DigestEmailRenderer(LocalEmailOptions options, IUnsubscribeT
             throw new GenerationStoppedException("email_alternative_too_large");
         string fingerprint = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            Version, UserId = subscriber.Id, subscriber.Email, DigestId = digest.Id, digest.Week, digest.WeekStartDate, digest.WeekEndDate,
+            Version,
+            UserId = subscriber.Id,
+            subscriber.Email,
+            DigestId = digest.Id,
+            digest.Week,
+            digest.WeekStartDate,
+            digest.WeekEndDate,
             Picks = picks.Select(p => new { p.Id, p.Rank, p.Track, p.ScoreBreakdown, p.WhyThisPick }),
-            Origin = origin, options.FromAddress, options.MessageDomain
+            Origin = origin,
+            options.FromAddress,
+            options.MessageDomain
         })));
         return new(digest.Id, subscriber.Id, digest.Week, subscriber.Email, Version, fingerprint, token, plain, markup);
     }

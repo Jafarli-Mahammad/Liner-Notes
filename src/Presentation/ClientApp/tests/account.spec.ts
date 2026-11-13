@@ -112,3 +112,24 @@ test('temporary refresh failure preserves sign-in and recovers on the next priva
   await expect.poll(() => refreshed).toBe(2);
   await expect(page.getByText(user.email, { exact: true })).toBeVisible();
 });
+
+
+test('Account email preference shows pending choice and restores it after rejection', async ({ page }) => {
+  await accountFixture(page);
+  let optedIn = false, reject = false, release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/account-email/status', route => route.fulfill({ json: { confirmed: false, optedIn, suppressed: false, emailEnabled: false } }));
+  await page.route('**/api/account-email/preference', async route => {
+    await gate;
+    if (reject) { await route.fulfill({ status: 503, json: {} }); return; }
+    optedIn = route.request().postDataJSON().optIn;
+    await route.fulfill({ status: 204 });
+  });
+  await login(page);
+  const checkbox = page.getByRole('checkbox', { name: 'Receive weekly recommendations by email' });
+  await checkbox.check(); await expect(checkbox).toBeChecked(); await expect(checkbox).toBeDisabled();
+  release(); await expect(page.getByRole('status').filter({ hasText: 'Weekly email opt-in saved' })).toBeVisible();
+  reject = true; await checkbox.uncheck();
+  await expect(page.getByRole('alert')).toContainText('temporarily unavailable');
+  await expect(checkbox).toBeChecked(); await expect(checkbox).toBeEnabled();
+});

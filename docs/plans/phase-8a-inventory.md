@@ -234,3 +234,22 @@ verified. A failure/cancellation must not return silently truncated account hist
 An explicitly reported incomplete archive remains an honest successful SQL export.
 The temporary 1 GB stop does not prevent inspection, export or deletion and is not
 a capacity or backup-retention decision. No legal-compliance certification is claimed.
+
+
+## Account email additions — export 2.7 (2026-11-13)
+
+`public.EmailDispatches` is account-owned and cascades on account deletion.
+`emailDispatches[]` exports Id, UserId, DigestId, Purpose, RequestKey, RecipientHash,
+Fingerprint, State, CreatedAt, ExpiresAt, NextAttemptAt, FirstAttemptAt,
+LastAttemptAt, Attempts, ProviderMessageId, AcceptedAt, DeliveredAt, OutcomeAt and
+Reason. `ProtectedPayload` is decrypted only for the owner's retained-message
+projection: recipient, sender, subject and safe text/HTML are included; capability
+links are replaced, capability-bearing unsubscribe headers are omitted and the
+Identity security stamp is excluded as an authentication secret. Cleared bodies
+are represented by null. Provider credentials are configuration, not table fields.
+
+`public.EmailSuppressions` stores UserId, RecipientHash, Reason and CreatedAt;
+all four are in `emailSuppressions[]`. This state survives outcome pruning and
+cascades on account deletion. RecipientHash is a comparison hash, not a claim of
+anonymization. Both tables have the existing statement-level accounting and
+truncate guards. Neither table is a public catalog or public feed.

@@ -19,6 +19,7 @@ namespace LinerNotes.Application.Features.Export.Queries.GetUserDataExport;
 public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataExportQuery, UserDataExportDto>
 {
     private readonly ILocalEmailArchive? _archive;
+    private readonly IEmailDispatchStore? _email;
     private readonly IArtifactPublicationStore? _artifacts;
     private readonly IUnitOfWork? _snapshot;
     private readonly IAccountEmailLease? _ownership;
@@ -36,9 +37,10 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         IWeeklyDigestRepository weeklyDigestRepository, IAccountProfileReader accountProfileReader,
         IDiscoveryProfileReader discoveryProfileReader,
         ILocalEmailArchive? archive = null, IArtifactPublicationStore? artifacts = null,
-        IUnitOfWork? snapshot = null, IAccountEmailLease? ownership = null)
+        IUnitOfWork? snapshot = null, IAccountEmailLease? ownership = null, IEmailDispatchStore? email = null)
     {
         _archive = archive;
+        _email = email;
         _artifacts = artifacts;
         _snapshot = snapshot;
         _ownership = ownership;
@@ -49,7 +51,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         _discoveryProfileReader = discoveryProfileReader;
     }
 
-    /// <summary>Returns version 2.6 account, discovery, taste and digest history with explicit security exclusions.</summary>
+    /// <summary>Returns version 2.7 account, discovery, taste and digest history with explicit security exclusions.</summary>
     /// <remarks>Repository and archive exceptions, including cancellation, propagate; an archive result marked incomplete is retained in the export.</remarks>
     /// <exception cref="NotFoundException">The subscriber or active Identity profile cannot be found.</exception>
     /// <exception cref="InvalidOperationException">A full digest page repeats the preceding cursor.</exception>
@@ -112,7 +114,7 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
         }
 
         return new UserDataExportDto(
-            ExportVersion: "2.6",
+            ExportVersion: "2.7",
             ExportedAtUtc: DateTime.UtcNow,
             Subscriber: subscriberDto,
             Connections: connectionDtos,
@@ -123,6 +125,8 @@ public sealed class GetUserDataExportQueryHandler : IRequestHandler<GetUserDataE
                     digests.Any(d => d.Status == DigestStatus.LocalCaptured) ? ["archive_unavailable"] : []),
             Account: account,
             Discovery: await _discoveryProfileReader.GetForAccountAsync(request.UserId, cancellationToken).ConfigureAwait(false),
-            StorageArtifacts: artifacts);
+            StorageArtifacts: artifacts,
+            EmailDispatches: _email is null ? [] : await _email.ExportAsync(request.UserId, cancellationToken),
+            EmailSuppressions: _email is null ? [] : await _email.SuppressionsAsync(request.UserId, cancellationToken));
     }
 }

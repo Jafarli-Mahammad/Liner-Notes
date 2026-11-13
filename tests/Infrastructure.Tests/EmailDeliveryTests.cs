@@ -12,14 +12,22 @@ public sealed class EmailDeliveryTests
 {
     private sealed class Clock : TimeProvider { public override DateTimeOffset GetUtcNow() => DateTimeOffset.FromUnixTimeSeconds(1731705121); }
     [Fact]
-    public void PublishedSignatureVectorRequiresExactBodyAndFreshTimestamp()
+    public void PingSignatureRequiresExactBodyAndFreshTimestamp()
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["EmailDelivery:WebhookSecret"] = "whsec_plJ3nmyCDGBKInavdOK15jsl" }).Build();
+        var key = Enumerable.Range(1, 32).Select(value => (byte)value).ToArray();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["EmailDelivery:WebhookSecret"] = "whsec_" + Convert.ToBase64String(key)
+        }).Build();
         var verifier = new ResendEventVerifier(config, new Clock());
-        var body = Encoding.UTF8.GetBytes("{\"event_type\":\"ping\",\"data\":{\"success\":true}}");
-        // Published Svix test vector; a ping is verified but ignored by the email event adapter.
-        Assert.Equal("ignored", verifier.Verify(body, "msg_loFOjxBNrRLzqYUf", "1731705121", "v1,rAvfW3dJ/X/qxhsaXPOyyCGmRKsaKWcsNccKXlIktD0=")!.Outcome);
-        Assert.Null(verifier.Verify(body, "msg_loFOjxBNrRLzqYUf", "1731704000", "v1,rAvfW3dJ/X/qxhsaXPOyyCGmRKsaKWcsNccKXlIktD0="));
+        var body = Encoding.UTF8.GetBytes("{\"type\":\"ping\",\"data\":{\"success\":true}}");
+        const string id = "fixture-message";
+        const string timestamp = "1731705121";
+        var signed = Encoding.UTF8.GetBytes($"{id}.{timestamp}.{Encoding.UTF8.GetString(body)}");
+        var signature = "v1," + Convert.ToBase64String(HMACSHA256.HashData(key, signed));
+        Assert.Equal("ignored", verifier.Verify(body, id, timestamp, signature)!.Outcome);
+        Assert.Null(verifier.Verify(Encoding.UTF8.GetBytes("tampered"), id, timestamp, signature));
+        Assert.Null(verifier.Verify(body, id, "1731704000", signature));
     }
     [Fact]
     public void SignedDeliveryEventAndTamperingAreDistinguished()

@@ -241,7 +241,7 @@ a capacity or backup-retention decision. No legal-compliance certification is cl
 `public.EmailDispatches` is account-owned and cascades on account deletion.
 `emailDispatches[]` exports Id, UserId, DigestId, Purpose, RequestKey, RecipientHash,
 Fingerprint, State, CreatedAt, ExpiresAt, NextAttemptAt, FirstAttemptAt,
-LastAttemptAt, Attempts, ProviderMessageId, AcceptedAt, DeliveredAt, OutcomeAt and
+LastAttemptAt, Attempts, AttemptsToday, ProviderMessageId, AcceptedAt, DeliveredAt, OutcomeAt and
 Reason. `ProtectedPayload` is decrypted only for the owner's retained-message
 projection: recipient, sender, subject and safe text/HTML are included; capability
 links are replaced, capability-bearing unsubscribe headers are omitted and the

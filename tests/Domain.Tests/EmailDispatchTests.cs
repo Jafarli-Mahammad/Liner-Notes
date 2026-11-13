@@ -5,7 +5,7 @@ namespace LinerNotes.Domain.Tests;
 public sealed class EmailDispatchTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 13, 10, 0, 0, TimeSpan.Zero);
-    private static EmailDispatch Create() => new(Guid.NewGuid(), null, EmailPurpose.Confirmation, "confirmation:fixture", new('a', 64), new('b', 64), "protected", Now, Now.AddDays(1));
+private static EmailDispatch Create(DateTimeOffset? expiresAt = null) => new(Guid.NewGuid(), null, EmailPurpose.Confirmation, "confirmation:fixture", new('a', 64), new('b', 64), "protected", Now, expiresAt ?? Now.AddDays(1));
     [Fact]
     public void RetryPreservesIdentityAndAmbiguousExpiryCannotResend()
     {
@@ -21,12 +21,13 @@ public sealed class EmailDispatchTests
     [Fact]
     public void DailyAttemptCountResetsAtUtcMidnightWithoutResettingLifetimeRetries()
     {
-        var row = Create();
-        Assert.True(row.BeginAttempt(Now));
-        row.Retry(Now, Now.AddMinutes(1), "retry");
-        Assert.True(row.BeginAttempt(Now.AddMinutes(2)));
-        row.Retry(Now.AddMinutes(2), Now.AddDays(1), "retry");
-        Assert.True(row.BeginAttempt(Now.AddDays(1)));
+var row = Create(Now.AddDays(3));
+var first = Now.AddHours(13);
+Assert.True(row.BeginAttempt(first));
+row.Retry(first, first.AddMinutes(1), "retry");
+Assert.True(row.BeginAttempt(first.AddMinutes(2)));
+row.Retry(first.AddMinutes(2), Now.AddDays(1), "retry");
+Assert.True(row.BeginAttempt(Now.AddDays(1)));
         Assert.Equal(3, row.Attempts);
         Assert.Equal(1, row.AttemptsToday);
     }

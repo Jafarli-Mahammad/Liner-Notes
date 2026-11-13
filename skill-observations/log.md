@@ -524,3 +524,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** Historical checklists can lag working deployment code. Conversely, scheduling logic can exist while ordinary signup cannot satisfy its confirmed-email eligibility condition. Passing tooling tests does not exercise public hosting, delivered mail or independent recovery.
 **Suggested improvement:** Separate source publication, hosted beta and full advertised service. Trace normal-user eligibility through each lifecycle gate. Distinguish missing implementation, operator setup and current acceptance; cite code and provide closure checks. Record unavailable test prerequisites separately from product defects.
 **Principle:** Assess the release offered against complete user and operator journeys at the exact revision.
+
+
+### Observation 046: Separate mail implementation from sender activation
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Designing account email and production delivery without an existing sender domain.
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Clarifying prerequisites
+**Issue:** Asking for a domain and mail account before explaining their purpose made an activation dependency look like an implementation prerequisite.
+**Suggested improvement:** State that code and provider-contract tests can proceed with configurable values and a local transport. Explain that real sending later needs a verified sender, canonical public link origin and operator contact. Request only information needed for the immediate design decision; never request secrets in chat.
+**Principle:** Distinguish what is required to build a capability from what is required to activate and prove it externally.

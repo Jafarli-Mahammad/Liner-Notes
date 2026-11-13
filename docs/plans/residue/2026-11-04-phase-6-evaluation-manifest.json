@@ -1,0 +1,28 @@
+{
+  "version": "residue-phase6-evaluation-v1",
+  "baselineCommit": "5a91411",
+  "integratedCommit": "d49c192",
+  "purpose": "Independent public evaluation examples; never production defaults or founder calibration",
+  "settings": {
+    "Provider": "listenbrainz", "Origin": 0, "LiveEnabled": true,
+    "TagWeight": 1, "NoveltyWeight": 0.2, "MaximumPicks": 5,
+    "MaximumUpstreamRequests": 80,
+    "Selection": {
+      "MinimumAffinity": 0.1, "IndividualInterestWeight": 0.35, "MinimumIndividualSharedTags": 2,
+      "GoalWeight": 0.25, "ExplorationWeight": 0.35, "VocalWeight": 0.15, "RecentArtistWeight": 0.15,
+      "BroadTagSlots": 3, "CloseLimit": 3, "BalancedLimit": 6, "SurpriseLimit": 10
+    }
+  },
+  "globalDispatchCap": 80,
+  "profileDispatchCap": 8,
+  "profiles": [
+    { "id": "development-electronic", "fold": "development", "tags": ["electronic"], "recording": "2a72cd7b-f566-4c91-8e9b-7b33b95dfff7", "goal": "favorites", "exploration": "balance", "vocals": "instrumental" },
+    { "id": "development-jazz", "fold": "development", "tags": ["jazz"], "goal": "new-artists", "exploration": "close", "vocals": "no-preference" },
+    { "id": "development-country", "fold": "development", "tags": ["country"], "goal": "mixture", "exploration": "balance", "vocals": "vocals" },
+    { "id": "development-classical", "fold": "development", "tags": ["classical"], "goal": "different-styles", "exploration": "surprise", "vocals": "instrumental" },
+    { "id": "heldout-pop", "fold": "held-out", "tags": ["synthpop"], "recording": "1a67e215-a19e-40c9-9b12-732de134bf5f", "goal": "favorites", "exploration": "surprise", "vocals": "vocals" },
+    { "id": "heldout-hiphop", "fold": "held-out", "tags": ["hip-hop"], "recording": "898059a0-753c-4943-9604-d3c0e2929d81", "goal": "mixture", "exploration": "balance", "vocals": "no-preference" },
+    { "id": "heldout-chanson", "fold": "held-out", "tags": ["chanson"], "recording": "96050011-3713-4396-a343-0a427f55de5e", "goal": "new-artists", "exploration": "close", "vocals": "vocals" },
+    { "id": "heldout-trip-hop", "fold": "held-out", "tags": ["trip hop"], "recording": "e97f805a-ab48-4c52-855e-07049142113d", "goal": "favorites", "exploration": "surprise", "vocals": "no-preference" }
+  ]
+}

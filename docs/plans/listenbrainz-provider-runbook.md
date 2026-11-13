@@ -29,10 +29,12 @@ Live generation requires every setting below:
 | `ListenBrainz__RateLimitDirectory` | Absolute directory shared across processes on this upstream IP |
 | Storage budget/inventory | Explicit `GenerationStorage__StopBytes` and reconciled inventory, as in the local runbook |
 
-The current Worker requires Development and a loopback database. After storage
+Local fixture/recorded Worker operations require Development and a loopback database.
+Production supports explicit live generation and the separately activated
+[bounded mail/scheduling workflow](../operations/account-email.md). After storage
 reconciliation, use an explicit one-shot `--action generate --user <id>
 --week <YYYY-Www> --origin Live`. Capture remains separate. Scheduled QA remains
-Synthetic; this work adds no production scheduler or external email delivery.
+Synthetic; the newer production mail workflow is separate from synthetic capture.
 
 The default budget is 80 network requests per resolved client (range 1–200).
 Responses are capped at 1 MB. Successful public metadata is cached up to 900

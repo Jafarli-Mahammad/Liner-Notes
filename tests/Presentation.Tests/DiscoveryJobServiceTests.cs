@@ -17,8 +17,11 @@ namespace LinerNotes.Presentation.Tests;
 
 public sealed class DiscoveryJobServiceTests
 {
-    [Fact]
-    public async Task ProviderBackoffPersistsRetryAtInsteadOfFailingOrRetryingEarly()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("upstream_request_limit")]
+    [InlineData("prepared_evidence_expired")]
+    public async Task ProviderBackoffPersistsRetryAtInsteadOfFailingOrRetryingEarly(string? transientStop)
     {
         var now = DateTimeOffset.UtcNow;
         var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
@@ -33,9 +36,9 @@ public sealed class DiscoveryJobServiceTests
         var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         jobs.FailAsync(job.Id, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<TimeSpan>(), 3, Arg.Any<CancellationToken>())
             .Returns(call => {
-                Assert.Equal("source_temporarily_unavailable", call.ArgAt<string>(3));
+                Assert.Equal(transientStop ?? "source_temporarily_unavailable", call.ArgAt<string>(3));
                 Assert.True(call.ArgAt<bool>(4));
-                Assert.Equal(TimeSpan.FromSeconds(95), call.ArgAt<TimeSpan>(5));
+                Assert.Equal(TimeSpan.FromSeconds(transientStop is not null ? 5 : 95), call.ArgAt<TimeSpan>(5));
                 job.Fail(call.ArgAt<Guid>(1), call.ArgAt<DateTimeOffset>(2), call.ArgAt<string>(3), true, call.ArgAt<TimeSpan>(5), 3);
                 failed.TrySetResult(); return Task.CompletedTask;
             });
@@ -45,7 +48,13 @@ public sealed class DiscoveryJobServiceTests
                 [TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1, TasteSignalSource.InitialSeedManual, "backoff test")], [], 0)));
         var preparation = Substitute.For<IDiscoveryPreparation>();
         preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromException<PreparedDiscoveryPool>(new DiscoverySourceException("source_temporarily_unavailable", true, TimeSpan.FromSeconds(95))));
+            .Returns(_ => transientStop == "prepared_evidence_expired" ? Task.FromResult(Pool()) :
+                Task.FromException<PreparedDiscoveryPool>(transientStop is not null ? new GenerationStoppedException(transientStop) : new DiscoverySourceException("source_temporarily_unavailable", true, TimeSpan.FromSeconds(95))));
+        batches.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()));
+        batches.CompleteAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DiscoveryBatchKind>(), Arg.Any<IReadOnlyList<BaselineAPick>>(),
+            Arg.Any<string>(), Arg.Any<DateTimeOffset?>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException(new GenerationStoppedException("prepared_evidence_expired")));
         var resolver = Substitute.For<IRecommendationProviderResolver>();
         resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(), Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
         using var services = new ServiceCollection().AddSingleton(jobs).AddSingleton(batches).AddSingleton(preparation).AddSingleton(resolver)
@@ -60,7 +69,7 @@ public sealed class DiscoveryJobServiceTests
         {
             await failed.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(DiscoveryJobState.Retryable, job.State);
-            Assert.True(job.NextAttemptAtUtc >= now.AddSeconds(95));
+            Assert.True(job.NextAttemptAtUtc >= now.AddSeconds(transientStop is not null ? 5 : 95));
             Assert.Null(job.ResultBatchId);
         }
         finally { await runner.StopAsync(default); }
@@ -127,7 +136,7 @@ public sealed class DiscoveryJobServiceTests
                 if (!c.ArgAt<bool>(1)) throw new DiscoveryPreparationRequiredException();
                 acquiring.TrySetResult(); await release.Task.WaitAsync(c.ArgAt<CancellationToken>(2));
             }
-            return Pool();
+            return Pool(c.ArgAt<DiscoveryPoolRequest>(0).Seed);
         });
         var resolver = Substitute.For<IRecommendationProviderResolver>();
         resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
@@ -153,11 +162,11 @@ public sealed class DiscoveryJobServiceTests
         finally { release.TrySetResult(); await runner.StopAsync(default); }
     }
 
-    private static PreparedDiscoveryPool Pool()
+    private static PreparedDiscoveryPool Pool(string tag = "jazz")
     {
-        var response = new ResponseReference("listenbrainz", "fixture", "jazz", EvidenceOrigin.Synthetic, new string('a', 64), DateTimeOffset.UnixEpoch);
-        var path = new DiscoveryPath("jazz", new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
-        var candidate = new HydratedCandidateTrack(new Track("Song", "Artist"), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
+        var response = new ResponseReference("listenbrainz", "fixture", tag, EvidenceOrigin.Synthetic, new string('a', 64), DateTimeOffset.UnixEpoch);
+        var path = new DiscoveryPath(tag, new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
+        var candidate = new HydratedCandidateTrack(new Track("Song", "Artist"), WeightedTagVector.FromDictionary(new Dictionary<string, double> { [tag] = 1 }),
             new("Song", "Artist", null, [path]), [], response, null);
         return new(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5),
             CatalogText.Version, [candidate], [], 1000, new string('b', 64));

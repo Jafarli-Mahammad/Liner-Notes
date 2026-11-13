@@ -57,6 +57,10 @@ public static class DependencyInjection
             options.AddPolicy("catalog", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
                 { PermitLimit = 1200, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
+            // Valid-session bootstrap/read traffic must not consume password-attempt permits.
+            options.AddPolicy("session", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+                { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
             options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
                 {
@@ -69,8 +73,9 @@ public static class DependencyInjection
 
         // 2. Core Presentation Services
         services.AddHttpContextAccessor();
-        if (string.Equals(configuration["Environment"], "Production", StringComparison.OrdinalIgnoreCase))
-            services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(configuration["DataProtection:KeyPath"]!));
+        var protection = services.AddDataProtection();
+        if (configuration["DataProtection:KeyPath"] is { Length: > 0 } keyPath)
+            protection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
         services.Configure<LinerNotes.Presentation.Discovery.GuestDiscoveryOptions>(configuration.GetSection("GuestDiscovery"));
         services.AddScoped<LinerNotes.Presentation.Discovery.IListenerContext, LinerNotes.Presentation.Discovery.ListenerContext>();
         services.AddAntiforgery(options =>
@@ -84,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<AccountEmailService>();
         services.AddScoped<ApiExceptionFilterAttribute>();
         services.AddScoped<DiscoveryWriteFilter>();
 
@@ -99,10 +105,14 @@ public static class DependencyInjection
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             options.User.RequireUniqueEmail = true;
+            options.Tokens.EmailConfirmationTokenProvider = "LinerNotesConfirmation";
+            options.Tokens.PasswordResetTokenProvider = "LinerNotesRecovery";
         })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<DataContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddTokenProvider<ConfirmationTokenProvider>("LinerNotesConfirmation")
+        .AddTokenProvider<RecoveryTokenProvider>("LinerNotesRecovery");
         services.AddScoped<PasswordHasher<ApplicationUser>>();
         services.AddScoped<PreparedPasswordHasher>();
         services.AddScoped<IPasswordHasher<ApplicationUser>>(sp => sp.GetRequiredService<PreparedPasswordHasher>());

@@ -5,6 +5,7 @@ let credentials: AuthResponse | null = null;
 let identity = { epoch: 0, user: null as Subscriber | null };
 let attempt = 0;
 let refreshing: Promise<void> | null = null;
+let loggingOut = false;
 const listeners = new Set<() => void>();
 export function useIdentity() { return useSyncExternalStore(callback => { listeners.add(callback); return () => { listeners.delete(callback); }; }, () => identity); }
 export function identityEpoch() { return identity.epoch; }
@@ -39,22 +40,36 @@ async function check(response: Response) {
   throw new ApiError(response.status, messages[response.status] ?? 'That request could not finish. Please try again.', retryDeadline(response.headers.get('Retry-After')), problem.errors ?? {});
 }
 
+function hasBrowserSession() { return document.cookie.split(';').some(value => value.trim() === 'liner.signed-in=1'); }
+async function sessionRequest(path: string) {
+  const send = () => fetch(path, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: { 'X-Liner-Session': '1' }, signal: AbortSignal.timeout(30_000) });
+  // Cookie rotation must be serialized across tabs sharing the same session.
+  return navigator.locks ? navigator.locks.request('liner-session', { signal: AbortSignal.timeout(30_000) }, send) : send();
+}
+
 async function refresh(epoch: number) {
   if (refreshing) return refreshing;
   const saved = credentials;
   const operation = (async () => {
     if (!saved) return;
-    const response = await fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(30_000),
+    const response = hasBrowserSession() ? await sessionRequest('/api/auth/session') : await fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(30_000),
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: saved.accessToken, refreshToken: saved.refreshToken }) });
     if (identity.epoch !== epoch) throw new DOMException('Session changed', 'AbortError');
+    if (response.status === 204) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
     if (!response.ok) {
       if ([400, 401, 403].includes(response.status)) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
       await check(response); // Temporary failures retain the session for a later retry.
     }
     const next: AuthResponse = await response.json();
     if (identity.epoch !== epoch) throw new DOMException('Session changed', 'AbortError');
-    if (!next.accessToken || !next.refreshToken) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
+    if (!next.accessToken || !next.refreshToken || !next.user?.id) { signOut(); throw new ApiError(401, 'Please sign in again.'); }
     credentials = next;
+    if (identity.user?.id !== next.user.id) {
+      identity = { epoch: identity.epoch + 1, user: next.user };
+      listeners.forEach(notify => notify());
+      throw new DOMException('Session changed', 'AbortError');
+    }
   })();
   refreshing = operation;
   try { await operation; } finally { if (refreshing === operation) refreshing = null; }
@@ -62,6 +77,7 @@ async function refresh(epoch: number) {
 
 export interface RequestOptions { method?: string; body?: unknown; signal?: AbortSignal; csrf?: string; }
 export async function apiResponse(path: string, options: RequestOptions = {}) {
+  if (loggingOut) throw new DOMException('Signing out', 'AbortError');
   if (!path.startsWith('/api/') || path.includes('://')) throw new Error('Invalid API address.');
   const epoch = identity.epoch, previousToken = credentials?.accessToken;
   const timeout = AbortSignal.timeout(30_000);
@@ -107,4 +123,30 @@ export async function authenticate(path: 'login' | 'register', body: unknown, cs
   refreshing = null;
   identity = { epoch: identity.epoch + 1, user: result.user };
   listeners.forEach(notify => notify());
+}
+
+// Tokens stay in memory; only the server can read the protected session cookie.
+export async function restoreSession() {
+  // The readable marker contains no credentials and only avoids a guest bootstrap request.
+  if (!hasBrowserSession()) return;
+  const epoch = identity.epoch, current = ++attempt;
+  const response = await sessionRequest('/api/auth/session');
+  if (current !== attempt || epoch !== identity.epoch) return;
+  if (response.status === 204 || response.status === 401) return;
+  await check(response);
+  const result: AuthResponse = await response.json();
+  if (current !== attempt || epoch !== identity.epoch) return;
+  if (!result.accessToken || !result.refreshToken || !result.user?.id) throw new ApiError(502, 'The sign-in response was incomplete.');
+  credentials = result;
+  identity = { epoch: identity.epoch + 1, user: result.user };
+  listeners.forEach(notify => notify());
+}
+
+export async function logout() {
+  loggingOut = true;
+  try {
+    try { await refreshing; } catch { /* Logout still clears an invalid session. */ }
+    await check(await sessionRequest('/api/auth/logout'));
+    signOut();
+  } finally { loggingOut = false; }
 }

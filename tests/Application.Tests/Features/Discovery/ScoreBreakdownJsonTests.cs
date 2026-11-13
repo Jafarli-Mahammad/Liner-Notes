@@ -11,6 +11,18 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class ScoreBreakdownJsonTests
 {
     [Fact]
+    public void LegacyGzipEnvelopeRetainsEveryFieldAndStillValidatesItsChecksum()
+    {
+        var original = LargeReceipt();
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(original);
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionLevel.Optimal, true)) gzip.Write(bytes);
+        var envelope = new { Format = "linernotes-score-json-gzip-v1", Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)), Payload = Convert.ToBase64String(output.ToArray()) };
+        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(ScoreBreakdownJson.Deserialize(JsonSerializer.Serialize(envelope))));
+        Assert.Throws<JsonException>(() => ScoreBreakdownJson.Deserialize(JsonSerializer.Serialize(envelope with { Sha256 = new string('0', 64) })));
+    }
+
+    [Fact]
     public void LargeEvidenceFitsExistingStorageBoundWithoutLosingAnyReceiptFields()
     {
         var value = LargeReceipt();
@@ -39,14 +51,20 @@ public sealed class ScoreBreakdownJsonTests
         Assert.Throws<JsonException>(() => ScoreBreakdownJson.Deserialize(envelope.ToJsonString()));
     }
 
-    [Fact]
-    public void PackedReceiptsCannotExpandPastTheReaderBound()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PackedReceiptsCannotExpandPastTheReaderBound(bool brotli)
     {
         var bytes = new byte[4 * 1024 * 1024 + 1];
         using var output = new MemoryStream();
-        using (var gzip = new GZipStream(output, CompressionLevel.Optimal, true)) gzip.Write(bytes);
-        var json = JsonSerializer.Serialize(new { Format = "linernotes-score-json-gzip-v1",
-            Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)), Payload = Convert.ToBase64String(output.ToArray()) });
+        using (Stream compressed = brotli ? new BrotliStream(output, CompressionLevel.Optimal, true) : new GZipStream(output, CompressionLevel.Optimal, true)) compressed.Write(bytes);
+        var json = JsonSerializer.Serialize(new
+        {
+            Format = brotli ? "linernotes-score-json-brotli-v1" : "linernotes-score-json-gzip-v1",
+            Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)),
+            Payload = Convert.ToBase64String(output.ToArray())
+        });
         Assert.Throws<JsonException>(() => ScoreBreakdownJson.Deserialize(json));
     }
 
@@ -68,9 +86,15 @@ public sealed class ScoreBreakdownJsonTests
         Assert.Equal("snapshot_limit", Assert.Throws<LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException>(() => ScoreBreakdownJson.Serialize(incompressible)).Message);
     }
 
-    private static ScoreBreakdown LargeReceipt() => new() {
+    private static ScoreBreakdown LargeReceipt() => new()
+    {
         UnknownFields = Enumerable.Range(0, 300).ToDictionary(i => "full-source-evidence-" + i,
-            i => JsonSerializer.SerializeToElement(new { response = new StoredResponse("ListenBrainz", "metadata.artist", "00000000-0000-4000-8000-000000000001", "Live", new string('a', 64), DateTimeOffset.UnixEpoch),
-                tag = "descriptive-observed-tag-" + i, votes = new StoredObservation("20", "20", null), extra = new string('x', 150) }))
+            i => JsonSerializer.SerializeToElement(new
+            {
+                response = new StoredResponse("ListenBrainz", "metadata.artist", "00000000-0000-4000-8000-000000000001", "Live", new string('a', 64), DateTimeOffset.UnixEpoch),
+                tag = "descriptive-observed-tag-" + i,
+                votes = new StoredObservation("20", "20", null),
+                extra = new string('x', 150)
+            }))
     };
 }

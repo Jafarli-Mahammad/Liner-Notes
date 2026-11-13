@@ -6,7 +6,8 @@ using LinerNotes.Domain.Taste;
 namespace LinerNotes.Application.Common.Interfaces.Recommendation;
 
 public sealed record GenerationInputs(bool UserExists, IReadOnlyList<TasteSignal> Signals,
-    IReadOnlyList<WeeklyRecommendation> Feedback, string Revision, Guid? ProfileId = null);
+    IReadOnlyList<WeeklyRecommendation> Feedback, string Revision, Guid? ProfileId = null, IReadOnlyList<FeedbackObservation>? FeedbackHistory = null,
+    LinerNotes.Domain.Discovery.TasteOnboarding? Answers = null, IReadOnlyDictionary<string, int>? RecentArtists = null);
 public sealed record GenerationStorageState(long DatabaseBytes, string Revision, long ReservedArtifactBytes = 0);
 
 public interface IDigestGenerationStore

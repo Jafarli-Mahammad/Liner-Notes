@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Git pre-push hook: Pure Deterministic Quality & Security Gate
+# Git pre-push hook: deterministic checks followed by a local Antigravity review.
 # Verifies build integrity, runs full automated test suite, and scans for credentials.
-# Zero AI hallucinations; 100% executable truth.
+# AI findings are advisory; build, tests and credential checks remain executable gates.
 
 if [ "$SKIP_PUSH_GATE" = "1" ] || [ "$SKIP_GATE" = "1" ]; then
     echo -e "\033[93m[pre-push] SKIP_PUSH_GATE=1 detected; bypassing gate.\033[0m"
@@ -9,6 +9,7 @@ if [ "$SKIP_PUSH_GATE" = "1" ] || [ "$SKIP_GATE" = "1" ]; then
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+mapfile -t PUSH_REFS
 
 echo -e "\033[96m\033[1m🚀 [Pre-Push Gate] Verifying build integrity and automated test suite...\033[0m"
 
@@ -71,5 +72,13 @@ if [ $TEST_STATUS -ne 0 ]; then
 fi
 echo -e "\033[92mPASSED (All test suites green)\033[0m"
 
-echo -e "\n\033[92m\033[1m✅ All deterministic gates passed! Proceeding with push...\033[0m\n"
+if [ "${SKIP_AGY_REVIEW:-0}" != "1" ]; then
+    echo "[pre-push] Reviewing pushed changes with local agy (Gemini 3.8 Flash High)..."
+    if ! printf '%s\n' "${PUSH_REFS[@]}" | python3 "$REPO_ROOT/scripts/checks/agy_review.py" --push; then
+        echo "PUSH BLOCKED: local Antigravity review could not complete. See the report above."
+        exit 1
+    fi
+fi
+
+echo -e "\n\033[92m\033[1m✅ Push checks completed. Proceeding with push...\033[0m\n"
 exit 0

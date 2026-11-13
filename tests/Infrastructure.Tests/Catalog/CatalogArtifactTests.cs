@@ -15,6 +15,32 @@ namespace LinerNotes.Infrastructure.Tests.Catalog;
 public sealed class CatalogArtifactTests
 {
     [Fact]
+    public async Task ExplicitArtistLookupRanksTheFullNameBeforeLongerTokenMatches()
+    {
+        var exact = Guid.NewGuid();
+        var client = Substitute.For<IListenBrainzApiClient>();
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.ArtistSearch, "Radiohead");
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(new { artists = new[] {
+            new { id = Guid.NewGuid(), name = "Radiohead 3" }, new { id = exact, name = "Radiohead" } } });
+        client.SendAsync(Arg.Any<ListenBrainzRequest>(), Arg.Any<CancellationToken>()).Returns(
+            ListenBrainzResponse.Parse(request, bytes, EvidenceOrigin.Live, DateTimeOffset.UtcNow));
+        var result = await new MusicBrainzCatalogLookupSource(client, TimeProvider.System).SearchAsync("Radiohead", CatalogKind.Artist, default);
+        Assert.Equal(exact, result.MatchedCanonicalIds[0]);
+    }
+
+    [Fact]
+    public void TitleAndArtistWordsAreSearchedTogetherWithoutAcceptingLuceneOperators()
+    {
+        var request = new ListenBrainzRequest(ListenBrainzRequestKind.RecordingSearch, "Paranoid Android Radiohead");
+        var uri = Uri.UnescapeDataString(request.RelativeUri());
+        Assert.Contains("(recording:\"Paranoid\" OR artist:\"Paranoid\") AND", uri);
+        Assert.Contains("(recording:\"Radiohead\" OR artist:\"Radiohead\")", uri);
+        var literal = Uri.UnescapeDataString(new ListenBrainzRequest(ListenBrainzRequestKind.RecordingSearch, "title OR artist:evil").RelativeUri());
+        Assert.Contains("recording:\"OR\"", literal);
+        Assert.Contains("artist:\"artist:evil\"", literal);
+    }
+
+    [Fact]
     public async Task ReaderRejectsOversizedLinesWithoutAllocatingTheWholeArtifact()
     {
         var bytes = Encoding.UTF8.GetBytes(new string('x', 40_000));

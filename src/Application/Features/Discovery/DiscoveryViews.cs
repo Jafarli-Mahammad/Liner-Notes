@@ -11,7 +11,7 @@ public sealed record DiscoveryJobStatus(Guid Id, string State, string ProgressCo
         job.ErrorCode, job.ResultBatchId, job.NextAttemptAtUtc);
 }
 public sealed record DiscoveryFavorite(Guid? CatalogRecordId, string Name, string? ArtistName, string Kind, string? Disambiguation = null,
-    IReadOnlyList<LinerNotes.Application.Common.Interfaces.Catalog.CatalogReleaseDto>? Releases = null, Guid? SignalId = null);
+    IReadOnlyList<LinerNotes.Application.Common.Interfaces.Catalog.CatalogReleaseDto>? Releases = null, Guid? SignalId = null, Guid? CanonicalId = null);
 public sealed record DiscoveryBatchSummary(Guid Id, string Kind, DateTimeOffset CreatedAtUtc, DateTimeOffset? CompletedAtUtc);
 public sealed record DiscoveryPage(long Revision, IReadOnlyList<DiscoveryFavorite> Favorites, IReadOnlyList<string> Tags,
     IReadOnlyList<DiscoveryBatchSummary> Batches, DiscoveryJobStatus? CurrentJob, DateTimeOffset? NextRequestAtUtc, LinerNotes.Domain.Discovery.TasteOnboarding? Onboarding = null);

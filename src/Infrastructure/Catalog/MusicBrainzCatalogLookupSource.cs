@@ -27,7 +27,9 @@ public sealed class MusicBrainzCatalogLookupSource(IListenBrainzApiClient client
         var matched = new List<Guid>();
         string key = kind switch { CatalogKind.Artist => "artists", CatalogKind.Album => "release-groups", _ => "recordings" };
         if (!root.TryGetProperty(key, out var items) || items.ValueKind != JsonValueKind.Array) throw new GenerationStoppedException("catalog_lookup_schema_invalid");
-        foreach (var item in items.EnumerateArray().Take(10))
+        foreach (var item in items.EnumerateArray()
+            .OrderByDescending(item => CatalogText.Normalize(Text(item, kind == CatalogKind.Artist ? "name" : "title", 256)!) == CatalogText.Normalize(query))
+            .Take(10))
         {
             var id = Identity(item);
             if (kind == CatalogKind.Artist) records.Add(Artist(item));

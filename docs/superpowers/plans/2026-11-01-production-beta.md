@@ -155,7 +155,7 @@ Files: create `scripts/checks/production_acceptance.py`, `src/Presentation/Clien
 
 ## Task 11: Security review, evidence and operator handoff
 
-Files: create `docs/operations/production-beta.md`, `docs/operations/production-beta-evidence.md`; update `CHANGELOG.md`, `PROGRESS.md`, `docs/renewal/phase-9-release-checklist.md` and applicable CI/runbook links.
+Files: create `docs/operations/production-beta.md`, `docs/operations/production-beta-evidence.md`; update `CHANGELOG.md`, `PROGRESS.md`, `docs/plans/phase-9-release-checklist.md` and applicable CI/runbook links.
 
 1. Run locked restores, dependency advisory/secret checks and relevant HTTP/security regression tests. Validate findings against exploitable paths. Explain removal-versus-upgrade before any dependency removal; do not weaken failing gates.
 2. Audit active/persisted provider provenance and public attribution/export paths against official ListenBrainz/MusicBrainz/Last.fm documentation. Keep permission decisions separate from technical smoke results. Do not contact providers or assert legal clearance.

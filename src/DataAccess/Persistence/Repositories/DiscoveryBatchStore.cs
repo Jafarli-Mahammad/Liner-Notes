@@ -28,6 +28,12 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
         await db.Entry(pick).ReloadAsync(ct);
         if (pick.Feedback == feedback && pick.Rating == rating && pick.FeedbackComment == comment) return profile.Revision;
         if (profile.Revision != expectedRevision) throw new DiscoveryRequestConflictException("profile_revision_conflict");
+        if (pick.Feedback == feedback && pick.Rating == rating)
+        {
+            pick.RecordFeedback(feedback, comment, rating, now.UtcDateTime);
+            await db.SaveChangesAsync(ct);
+            return profile.Revision;
+        }
         bool retainKnown = !(feedback == UserFeedback.None && rating is null) && (feedback == UserFeedback.AlreadyKnown || pick.Feedback == UserFeedback.AlreadyKnown);
         string prefix = "rec:" + recommendationId;
         var previous = await db.TasteSignals.AsTracking().Where(t => t.ProfileId == profileId && t.Context.StartsWith(prefix) &&
@@ -35,7 +41,7 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
              t.Source == TasteSignalSource.RecommendationAlreadyKnown || t.Source == TasteSignalSource.RecommendationRating)).ToArrayAsync(ct);
         retainKnown |= !(feedback == UserFeedback.None && rating is null) && previous.Any(t => t.Source == TasteSignalSource.RecommendationAlreadyKnown);
         db.TasteSignals.RemoveRange(previous);
-        pick.RecordFeedback(feedback, comment, rating);
+        pick.RecordFeedback(feedback, comment, rating, now.UtcDateTime);
         if (retainKnown)
             db.TasteSignals.Add(LinerNotes.Domain.Taste.TasteSignal.ForProfile(profileId, profile.UserId, TasteTargetType.Track,
                 pick.Track.TrackKey, 0, TasteSignalSource.RecommendationAlreadyKnown, prefix + " - Marked familiar."));
@@ -56,12 +62,12 @@ public sealed class DiscoveryBatchStore(DataContext db, IDiscoveryJobStore jobs,
         var signals = await db.TasteSignals.AsNoTracking().Where(s => s.ProfileId == profileId &&
             (s.TargetType == TasteTargetType.Artist || s.TargetType == TasteTargetType.Tag || s.TargetType == TasteTargetType.Album || s.TargetType == TasteTargetType.Track) &&
             s.Source != TasteSignalSource.RecommendationLike && s.Source != TasteSignalSource.RecommendationDislike &&
-            s.Source != TasteSignalSource.RecommendationAlreadyKnown && s.Source != TasteSignalSource.RecommendationRating)
+            s.Source != TasteSignalSource.RecommendationRating)
             .OrderBy(s => s.Id).ToArrayAsync(ct);
-        var feedback = await db.WeeklyRecommendations.AsNoTracking().Include(r => r.Track)
-            .Where(r => r.ProfileId == profileId && r.FeedbackGivenAt != null)
-            .OrderByDescending(r => r.FeedbackGivenAt).ThenByDescending(r => r.Id).Take(feedbackWindow).ToArrayAsync(ct);
-        return new(profile, signals, feedback, await db.DiscoveryBatches.LongCountAsync(b => b.ProfileId == profileId && b.CompletedAtUtc != null, ct));
+        var (feedback, history) = await FeedbackHistoryQuery.ReadAsync(
+            db.WeeklyRecommendations.AsNoTracking().Where(r => r.ProfileId == profileId), feedbackWindow, ct);
+        var recentArtists = await RecentArtistHistoryQuery.ReadAsync(db.WeeklyRecommendations.AsNoTracking().Where(r => r.ProfileId == profileId), ct);
+        return new(profile, signals, feedback, await db.DiscoveryBatches.LongCountAsync(b => b.ProfileId == profileId && b.CompletedAtUtc != null, ct), history, recentArtists);
     }
 
     public async Task<IReadOnlySet<string>> FindExcludedAsync(Guid profileId, IReadOnlyList<string> aliases, CancellationToken ct)

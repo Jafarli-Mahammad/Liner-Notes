@@ -171,6 +171,12 @@ public sealed class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(userId.ToString())
             ?? throw new InvalidOperationException("Account does not exist.");
         var value = SerializeSession(refreshToken, user.SecurityStamp!);
+        // Identity mutates a detached token under the context's NoTracking default.
+        // Update an existing credential explicitly; use Identity for first-time insertion.
+        var changed = await _context.UserTokens
+            .Where(t => t.UserId == userId && t.LoginProvider == TokenProvider && t.Name == TokenName)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.Value, value));
+        if (changed == 1) return;
         var result = await _userManager.SetAuthenticationTokenAsync(user, TokenProvider, TokenName, value);
         if (!result.Succeeded) throw new InvalidOperationException("Session could not be stored. Sign in again.");
     }

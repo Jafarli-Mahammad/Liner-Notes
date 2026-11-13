@@ -1,0 +1,2 @@
+### Result
+[{"path":"/","violations":[]},{"path":"/taste","violations":[]},{"path":"/discover","violations":[]},{"path":"/history","violations":[]},{"path":"/account","violations":[]}]

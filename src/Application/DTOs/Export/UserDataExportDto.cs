@@ -36,4 +36,6 @@ public record UserDataExportDto(
     LocalEmailArchiveDto? LocalEmail = null,
     AccountExportDto? Account = null,
     DiscoveryExportDto? Discovery = null,
-    IReadOnlyList<ArtifactPublicationExportDto>? StorageArtifacts = null);
+    IReadOnlyList<ArtifactPublicationExportDto>? StorageArtifacts = null,
+    IReadOnlyList<EmailDispatchExport>? EmailDispatches = null,
+    IReadOnlyList<EmailSuppressionExport>? EmailSuppressions = null);

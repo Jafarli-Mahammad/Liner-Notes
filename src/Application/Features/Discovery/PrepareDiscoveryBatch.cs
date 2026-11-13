@@ -4,6 +4,7 @@ using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Common.Mappings;
 using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Domain.Scoring;
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Taste;
 
 namespace LinerNotes.Application.Features.Discovery;
@@ -12,33 +13,36 @@ public sealed record PreparedDiscoveryBatch(Guid Id, IReadOnlyList<BaselineAPick
     DateTimeOffset? EvidenceExpiry, long ReservationBytes, IReadOnlyList<CoverageGap>? Gaps = null);
 
 public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer, IDiscoveryPreparation preparation,
-    IDiscoveryBatchStore store, GenerationConfiguration configuration, BaselineAScorer scorer)
+    IDiscoveryBatchStore store, GenerationConfiguration configuration, BaselineAScorer scorer, IDiscoveryRequestBudget? requestBudget = null)
 {
     public async Task<PreparedDiscoveryBatch> PrepareAsync(DiscoveryInputs inputs, Guid batchId, bool allowAcquisition, CancellationToken ct, LinerNotes.Domain.Digest.IsoWeek? week = null)
     {
         using var measurement = LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.total");
         var scoring = configuration.Scoring();
+        using var acquisitionBudget = requestBudget?.Begin(configuration.MaximumUpstreamRequests);
         if (configuration.Origin == EvidenceOrigin.Recorded) throw new GenerationStoppedException("evaluation_evidence_ineligible");
         var effective = EffectiveTasteInputs.FromProfile(inputs.Profile.Id, inputs.Signals, inputs.Feedback,
-            new(configuration.FeedbackTagWeight, configuration.MinimumPositiveFeedbackWeight));
-        var feedbackRecordings = inputs.Feedback.Where(r => Guid.TryParse(r.Track.Mbid, out var id) && id != Guid.Empty)
-            .ToDictionary(r => r.Id, r => Guid.Parse(r.Track.Mbid!));
+            new(configuration.FeedbackTagWeight, configuration.MinimumPositiveFeedbackWeight, configuration.MinimumNegativeFeedbackRecordings), inputs.FeedbackHistory);
+        var feedbackRecordings = effective.FeedbackRecordings;
         var taste = await materializer.BuildAsync(effective.PositiveSignals, allowAcquisition, ct, inputs.GenerationOrdinal, feedbackRecordings);
         var answers = OnboardingState.Read(inputs.Profile.OnboardingJson);
         var artistRequests = taste.Artists.Select(a => new DiscoveryPoolRequest(a.Id, a.Name, false))
-            .Concat(taste.Recordings.Select(r => new DiscoveryPoolRequest(r.Id, r.Name, false, true)));
+            .Concat(taste.Recordings.Select(r => new DiscoveryPoolRequest(r.Id, r.Name, false, true)))
+            .Concat(taste.LegacyArtists.Select(name => new DiscoveryPoolRequest(null, name, false)));
+        int acquisitionLimit = configuration.Selection.AcquisitionLimit(answers, configuration.DiscoveryLimit);
         var requests = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(artistRequests.ToArray(), configuration.MaximumArtistSeeds, inputs.GenerationOrdinal)
             .Concat(taste.Tags.Select(t => new DiscoveryPoolRequest(null, t, true))).ToArray();
         // Legacy imported artist seeds have no canonical catalog identity.
-        if (answers?.AllStyles == true)
+        if (answers?.AllStyles == true && (answers.Exploration == "surprise" || taste.Tags.Count == 0))
         {
-            var broad = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Window(TasteVocabulary.Entries.Where(t => t.Category == "genre").Select(t => t.Id).ToArray(), configuration.MaximumTagSeeds, inputs.GenerationOrdinal);
-            requests = requests.Where(r => !r.IsTag).Concat(broad.Select(t => new DiscoveryPoolRequest(null, t, true))).ToArray();
+            int slots = Math.Min(configuration.Selection.BroadTagSlots, configuration.MaximumTagSeeds);
+            var broad = slots == 0 ? [] : DiscoverySelectionPolicy.Window(TasteVocabulary.Entries
+                .Where(t => t.Category == "genre" && !taste.Tags.Contains(t.Id)).Select(t => t.Id).ToArray(), slots, inputs.GenerationOrdinal);
+            int remaining = configuration.MaximumTagSeeds - broad.Count;
+            var focused = remaining == 0 ? [] : DiscoverySelectionPolicy.Window(taste.Tags, remaining, inputs.GenerationOrdinal);
+            requests = requests.Where(r => !r.IsTag).Concat(focused.Concat(broad).Select(t => new DiscoveryPoolRequest(null, t, true))).ToArray();
         }
-        var legacy = taste.Seeds.Where(s => s.EntityIdentity?.StartsWith("legacy-artist:", StringComparison.Ordinal) == true)
-            .Select(s => new DiscoveryPoolRequest(null, s.ArtistName, false)).Distinct().ToArray();
-        int artistSlots = Math.Max(0, configuration.MaximumArtistSeeds - requests.Count(r => !r.IsTag));
-        requests = requests.Concat(legacy.Take(artistSlots)).ToArray();
+        requests = requests.Select(r => r with { Limit = acquisitionLimit }).ToArray();
         if (requests.Length > configuration.MaximumArtistSeeds + configuration.MaximumTagSeeds)
             throw new GenerationStoppedException("seed_limit");
         var pools = new List<PreparedDiscoveryPool>();
@@ -56,21 +60,38 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         }
         else foreach (var request in requests) pools.Add(await preparation.GetAsync(request, false, ct));
         if (pools.Any(p => p.Origin != configuration.Origin)) throw new GenerationStoppedException("origin_mismatch");
-        var gaps = taste.Gaps.Concat(pools.SelectMany(p => p.Gaps))
-            .Concat(legacy.Length > artistSlots ? new[] { new CoverageGap("profile", "discovery", "artist_seed_window_applied") } : [])
-            .Distinct().ToArray();
+        var gaps = taste.Gaps.Concat(pools.SelectMany(p => p.Gaps)).Distinct().ToArray();
         if (pools.Sum(p => p.Candidates.Count) > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
         var hydrated = Merge(pools.SelectMany(p => p.Candidates));
         DiscoverySourceValidation.ThrowIfFailed(gaps.Concat(hydrated.SelectMany(candidate => candidate.Gaps)));
         if (hydrated.Count > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
+        int oversizedCollaborationCount = hydrated.Count(candidate => candidate.CreditedArtistIds.Distinct().Count() > 32);
+        if (oversizedCollaborationCount > 0)
+            hydrated = hydrated.Where(candidate => candidate.CreditedArtistIds.Distinct().Count() <= 32).ToArray();
         var aliases = hydrated.SelectMany(c => TrackIdentity.Aliases(c.Track)).Distinct(StringComparer.Ordinal).ToArray();
         var excluded = (await store.FindExcludedAsync(inputs.Profile.Id, aliases, ct)).Concat(effective.ExcludedAliases).ToHashSet(StringComparer.Ordinal);
         string inputHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.PositiveSignals.OrderBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).Select(s => new { s.TargetType, s.NormalizedTargetValue, s.Weight, s.CanonicalEntityId }))));
+        string evidenceHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(taste.Seeds)));
+        var materializedSignalIds = taste.Seeds.Where(s => s.SignalId.HasValue).Select(s => s.SignalId!.Value).ToHashSet();
+        var receiptSeeds = taste.Seeds.Take(80).ToArray();
+        var feedbackSupport = effective.FeedbackSupport.Take(80).ToArray();
+        string? feedbackSupportHash = effective.FeedbackSupport.Count == 0 ? null : Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.FeedbackSupport)));
+        // Learned tags share their recommendation ID with the learned artist.
+        // Only entity signals produce materialized seeds used for selection interests.
+        var weights = effective.PositiveSignals
+            .Where(s => s.TargetType is LinerNotes.Domain.Enums.TasteTargetType.Artist or LinerNotes.Domain.Enums.TasteTargetType.Album or LinerNotes.Domain.Enums.TasteTargetType.Track)
+            .ToDictionary(s => s.Id, s => s.Weight);
+        double maximumWeight = effective.PositiveSignals.Select(s => s.Weight).DefaultIfEmpty(1).Max();
+        var interests = taste.Seeds.Where(s => s.SignalId.HasValue && s.Weights.Count > 0 && weights.ContainsKey(s.SignalId.Value))
+            .Select(s => new SelectionInterest(s.EntityIdentity ?? s.ArtistName, LinerNotes.Domain.Catalog.WeightedTagVector.FromDictionary(s.Weights),
+                s.Influence * Math.Min(1, weights[s.SignalId!.Value] / maximumWeight), s.ArtistName)).ToArray();
         IReadOnlyList<BaselineAPick> picks;
+        SelectionReceipt selection;
         using (LinerNotes.Application.Common.Diagnostics.DiscoveryDiagnostics.Measure("preparation.evidence_ranking"))
         {
             var candidates = hydrated.Select(c => new BaselineACandidate(c.Track, c.TagVector,
-                new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? taste.Seeds.Any(seed => seed.SignalId == s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), taste.Seeds,
+                new ScoreEvidence(effective.PositiveSignals.Where(s => s.CanonicalEntityId != null ? materializedSignalIds.Contains(s.Id) : c.TagVector.Weights.ContainsKey(s.NormalizedTargetValue)).Take(80).Select(s => s.Store()).ToArray(), receiptSeeds,
                     c.Tags.Select(t => t.Store()).ToArray(), c.TagResponse.Store(),
                     c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
                     c.TagScope, c.PopularityMissingReason)
@@ -78,21 +99,32 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                     MaterializationVersion = DiscoveryTasteMaterializer.Version,
                     TagNormalizationVersion = c.TagNormalizationVersion,
                     SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray(),
+                    TasteEvidenceSha256 = evidenceHash,
+                    TasteEvidenceCount = taste.Seeds.Count,
+                    FavoriteEvidence = taste.FavoriteEvidence,
+                    FeedbackPolicy = EffectiveTasteInputs.FeedbackPolicy,
+                    FeedbackSupport = feedbackSupport,
+                    FeedbackSupportCount = effective.FeedbackSupport.Count,
+                    FeedbackSupportSha256 = feedbackSupportHash,
                     FullInputSha256 = inputHash,
                     FullInputCount = effective.PositiveSignals.Count,
-                    SelectionPolicy = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Version,
+                    SelectionPolicy = ConnectedSelection.Version,
+                    CreditedArtistIds = c.CreditedArtistIds,
                     SelectionAnswers = answers is null ? null : JsonSerializer.Serialize(answers),
-                    SelectionReasons = PreferenceReasons(c),
+                    SelectionReasons = [],
                     AcquisitionWindow = requests.Select(r => (r.IsRecording ? "recording:" : r.IsTag ? "tag:" : "artist:") + (r.ArtistId?.ToString("D") ?? r.Seed)).ToArray(),
                     AlbumFallbacks = Fallbacks(c),
                     SimilarityInfluence = Influence(c)
                 })).ToArray();
             var familiar = effective.FamiliarArtists.Concat(taste.FamiliarArtists).ToHashSet(StringComparer.Ordinal);
-            var eligible = candidates.Where(c => !TrackIdentity.Aliases(c.Track).Any(excluded.Contains));
-            var scored = week is null
-                ? scorer.ScoreForBatch(eligible, taste.Vector, familiar, batchId, scoring)
-                : scorer.Score(eligible, taste.Vector, familiar, week, scoring);
-            picks = LinerNotes.Domain.Discovery.DiscoverySelectionPolicy.Rank(scored, answers, configuration.MaximumPicks);
+            foreach (var candidate in hydrated.Where(c => c.CreditedArtistIds.Any(taste.FamiliarArtistIds.Contains)))
+                familiar.Add(candidate.Track.NormalizedArtistName);
+            var scored = (week is null
+                ? scorer.ScoreForBatch(candidates, taste.Vector, familiar, batchId, scoring)
+                : scorer.Score(candidates, taste.Vector, familiar, week, scoring)).ToArray();
+            var recordingSeeds = requests.Where(r => r.IsRecording).Select(r => r.ArtistId!.Value.ToString("D")).ToHashSet(StringComparer.Ordinal);
+            (picks, selection) = SelectDiscoveryResults.Apply(scored, hydrated, interests, recordingSeeds, excluded,
+                configuration.Selection, answers, configuration.MaximumPicks, inputs.RecentArtists);
         }
         long bytes = 65_536;
         foreach (var pick in picks)
@@ -109,30 +141,29 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         }
         string coverage = JsonSerializer.Serialize(new
         {
-            Version = "discovery-coverage-v1",
+            Version = "discovery-coverage-v2",
+            Selection = selection,
+            Acquisition = requests.Select(r => new { r.ArtistId, r.Seed, r.IsTag, r.IsRecording, r.Limit }).ToArray(),
             SupportedPicks = picks.Count,
             RequestedPicks = configuration.MaximumPicks,
             CandidateCount = hydrated.Count,
+            RejectedOversizedCollaborations = oversizedCollaborationCount,
             SuppressedCandidates = hydrated.Count(c => TrackIdentity.Aliases(c.Track).Any(excluded.Contains)),
-            FeedbackConsidered = inputs.Feedback.Count,
+            FeedbackConsidered = inputs.FeedbackHistory?.Count ?? inputs.Feedback.Count,
+            FavoriteEvidence = taste.FavoriteEvidence,
+            FeedbackPolicy = EffectiveTasteInputs.FeedbackPolicy,
+            FeedbackSupport = feedbackSupport,
+            FeedbackSupportCount = effective.FeedbackSupport.Count,
+            FeedbackSupportSha256 = feedbackSupportHash,
             Gaps = gaps.Select(g => new { g.Method, g.Reason }).Distinct().Take(40).ToArray(),
             Origin = configuration.Origin.ToString()
         });
+        int coverageBytes = System.Text.Encoding.UTF8.GetByteCount(coverage);
+        if (coverageBytes > DiscoveryBatch.MaximumCoverageBytes) throw new GenerationStoppedException("coverage_limit");
+        bytes = checked(bytes + coverageBytes * 4L);
         DateTimeOffset? expiry = pools.Where(p => p.ExpiresAtUtc > p.PreparedAtUtc).Select(p => p.ExpiresAtUtc)
             .Append(taste.EvidenceExpiresAtUtc).Min();
         return new(batchId, picks, coverage, expiry, bytes, gaps);
-
-        IReadOnlyList<string> PreferenceReasons(HydratedCandidateTrack c)
-        {
-            var reasons = new List<string>();
-            if (answers?.Goal is "new-artists") reasons.Add("Your discovery goal gives unfamiliar artists priority.");
-            if (answers?.Goal is "favorites") reasons.Add("Your discovery goal gives stronger supported taste overlap priority.");
-            if (answers?.Goal is "different-styles") reasons.Add("Your discovery goal gives less overlapping styles priority among supported candidates.");
-            if (answers?.Exploration is "close" or "surprise") reasons.Add(answers.Exploration == "close" ? "You asked to stay close to your taste." : "You asked to explore beyond your strongest taste overlap.");
-            if (answers?.AllStyles == true) reasons.Add("All musical styles are welcome; selected favorites remain positive examples.");
-            if (answers?.Vocals is "vocals" or "instrumental") reasons.Add(c.TagScope != "recording" ? "Track-level vocal information is unknown; no vocal preference was inferred." : "Vocal preference uses explicit track-level descriptive evidence only.");
-            return reasons;
-        }
 
         IReadOnlyList<StoredAlbumFallback> Fallbacks(HydratedCandidateTrack c) => taste.AlbumFallbacks
             .Where(f => c.RawCandidate.Paths.Any(p => p.Seed == f.ArtistId.ToString("D"))).ToArray();
@@ -172,6 +203,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
                 first.Tags, first.TagResponse, first.TagMissingReason, g.SelectMany(c => c.Gaps).Distinct())
             {
                 TagScope = first.TagScope,
+                CreditedArtistIds = g.SelectMany(c => c.CreditedArtistIds).Distinct().Order().ToArray(),
                 TagNormalizationVersion = first.TagNormalizationVersion,
                 SupportingResponses = first.SupportingResponses
             };

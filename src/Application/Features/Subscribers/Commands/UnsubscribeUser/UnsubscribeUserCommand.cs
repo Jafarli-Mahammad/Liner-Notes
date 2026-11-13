@@ -8,6 +8,8 @@ public sealed record UnsubscribeUserCommand(Guid UserId) : IRequest;
 public sealed class UnsubscribeUserCommandHandler(IUnsubscribeStore store, TimeProvider clock)
     : IRequestHandler<UnsubscribeUserCommand>
 {
-    public Task Handle(UnsubscribeUserCommand request, CancellationToken cancellationToken) =>
-        store.UnsubscribeAsync(request.UserId, clock.GetUtcNow().UtcDateTime, cancellationToken);
+    public async Task Handle(UnsubscribeUserCommand request, CancellationToken cancellationToken)
+    {
+        await store.UnsubscribeAsync(request.UserId, clock.GetUtcNow().UtcDateTime, cancellationToken);
+    }
 }

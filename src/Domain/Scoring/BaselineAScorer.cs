@@ -84,8 +84,11 @@ public sealed class BaselineAScorer
         public BatchInputs(WeightedTagVector taste, BaselineAConfiguration configuration)
         {
             configuration.Validate();
-            Configuration = configuration with { Policy = configuration.Policy is null ? null :
-                new ReadOnlyDictionary<string, string>(configuration.Policy.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal)) };
+            Configuration = configuration with
+            {
+                Policy = configuration.Policy is null ? null :
+                new ReadOnlyDictionary<string, string>(configuration.Policy.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal))
+            };
             TasteWeights = new ReadOnlyDictionary<string, double>(Ordered(taste));
             TasteMagnitude = Math.Sqrt(TasteWeights.Values.Sum(v => v * v));
         }
@@ -181,7 +184,7 @@ public sealed class BaselineAScorer
         if (snapshot.PayloadVersion is not ("phase6-score-v1" or "discovery-score-v2") || snapshot.FormulaVersion is not ("baseline-a-v1" or "baseline-a-v2") ||
             snapshot.MaterializationVersion is not ("positive-signals-v1" or "canonical-entity-max-v1" or "canonical-entity-max-v2") ||
             snapshot.TagNormalizationVersion is not ("max-observed-descriptive-count-v1" or "max-observed-artist-tag-votes-v1") ||
-            snapshot.RankingPolicyVersion is not ("score-ordinal-one-artist-v1" or "optional-taste-selection-v1"))
+            snapshot.RankingPolicyVersion is not ("score-ordinal-one-artist-v1" or "optional-taste-selection-v1" or "connected-selection-v2"))
             throw new NotSupportedException("Unsupported stored scoring version.");
         var configuration = new BaselineAConfiguration(snapshot.ConfigurationVersion, snapshot.Weights.Tag,
             snapshot.Weights.Novelty, snapshot.ConfigurationPolicy, snapshot.FormulaVersion);

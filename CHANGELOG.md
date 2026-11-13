@@ -1,6 +1,48 @@
 # Changelog
 
 ## Unreleased — renewal
+
+- Fix local push test failures: retain complete 1,000-favorite/400-candidate audits within a measured 512 KiB application/database bound and refresh the frozen output contract after verifying unchanged recommendations and scores.
+
+- Add public privacy, music-source and support pages, source/license links, and required operator/rights configuration for public operation. Public recording covers remain unavailable without a recorded use review.
+- Add email confirmation and password recovery, address-specific resend cooldowns, weekly opt-in/out controls, and session invalidation after recovery.
+- Add protected durable mail dispatch, a replaceable Resend adapter, signed delivery events, bounce/complaint suppression, bounded retry/reconciliation, and export/deletion coverage (JSON export 2.8).
+- Add bounded production weekly scheduling and dispatch through the existing operator lock and systemd timers. External delivery is disabled by default and still requires real sender/provider activation.
+- Fix production mail CLI success handling, UTC-day delivery quota accounting, captured-week advancement, oversized-collaboration isolation, and retryable Wikimedia server errors.
+
+
+- Review pushed changes locally for code quality, performance and security with Antigravity, using the existing login and Gemini 3.8 Flash with high thinking; save reports under `.linernotes/agy-reviews/`.
+
+- Fix discovery persistence for larger taste profiles: budget cold acquisition at up to 200 requests per attempt, retry expired public evidence, and retain full coverage audits within a 256 KB bound with matching storage reservations.
+
+- Resume discovery after a provider request budget is exhausted, reusing cached public evidence within the existing retry and age limits; fix discovery crashes when liked picks contribute both artist and tag evidence.
+- Fix title-and-artist catalog searches and prioritize exact artist names; remove duplicate search messages and release labels.
+- Correct artist and recording artwork freshness calculations, honor retry windows, and center unavailable-photo initials.
+- Reconcile conflicting ratings and feedback choices while preserving notes, and distinguish current taste from the taste used for saved discoveries.
+- Add a branded favicon to the published frontend assets.
+
+- Add a frozen integrated evaluation protocol, actual-baseline comparison tools and controlled-account verification. Retain current recommendation settings; listening quality remains unverified.
+- Require supported relevance for discovery picks, coordinate exploration with acquisition and ranking, combine soft preferences, diversify artists, and explain shortfalls with replayable private selection receipts. Keep generation available for short and empty batches.
+- Preserve provider recording connections when descriptive tags are missing, explain their limits, avoid unnecessary artist-tag requests, and tolerate malformed recording tags.
+
+- Retain learned artist preferences beyond recent feedback, keep notes separate from musical recency, and make feedback reversal and cautious repeated-dislike learning visible in private receipts.
+
+- Keep fresh favorite evidence active across acquisition windows, rotate entity seeds fairly, and include per-input evidence coverage in private receipts and export.
+
+- Move planning and evidence documentation to `docs/plans`, update references, and record the proposed Residue recommendation-quality phases.
+
+- Add private Residue baseline capture/listening-review and receipt-replay tools,
+  listener-isolation regressions, and an evidence report; recommendation behavior
+  remains unchanged and subjective listening evaluation is pending.
+
+- Restore account sessions after refresh and application restart using a protected,
+  persistent HttpOnly cookie and the existing revocable refresh-token flow.
+- Show signed-in listeners their own latest persisted recommendations on Home,
+  with links to discovery history; retain the anonymous public feed.
+- Correct development launch paths and redirect duplicate-slash root requests.
+- Preserve canonical identities in saved taste responses and show licensed artist
+  photos from canonical MusicBrainz/Wikimedia sources, with readable initials
+  when no reliable photo is available.
 - Restore local email inspection and unsubscribe-link recovery after export locking changes; align CI documentation and export checks with the current contracts.
 - Remove completed investigation reports, design review captures, obsolete plans and the unused root console project; keep current operational documentation and reusable diagnostics.
 - Update the .NET 10 SDK, runtime and matching Microsoft framework/tool pins to the verified stable security patch release.

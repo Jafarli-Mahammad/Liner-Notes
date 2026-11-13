@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System.Net;
 using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Infrastructure.Email;
@@ -44,7 +45,18 @@ public sealed class UnsubscribeRouteTests
         Assert.NotNull(app.Store.First);
     }
 
-    private sealed class App(string env, bool enabled) : WebApplicationFactory<Program>
+    [Fact]
+    public async Task ExternalProductionMailAllowsReadOnlyGetAndOneClickPost()
+    {
+        await using var app = new App("Production", false, external: true);
+        using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/digests/unsubscribe?token=valid")).StatusCode);
+        Assert.Equal(0, app.Store.Calls);
+        using var response = await client.PostAsync("/api/digests/unsubscribe?token=valid", new FormUrlEncodedContent(new Dictionary<string,string> { ["List-Unsubscribe"] = "One-Click" }));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode); Assert.Equal(1, app.Store.Calls);
+    }
+
+    private sealed class App(string env, bool enabled, bool external = false) : WebApplicationFactory<Program>
     {
         public Store Store { get; } = new();
         public Logs Logs { get; } = new();
@@ -52,6 +64,14 @@ public sealed class UnsubscribeRouteTests
         {
             builder.UseEnvironment(env);
             if (env == "Production") ProductionRoutingFixture.Configure(builder);
+            if (external) builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string,string?>
+            {
+                ["EmailDelivery:Enabled"] = "true", ["EmailDelivery:PublicOrigin"] = "https://localhost",
+                ["EmailDelivery:FromAddress"] = "sender@example.test", ["EmailDelivery:ApiKey"] = "fixture-only-not-a-real-key",
+                ["EmailDelivery:WebhookSecret"] = "whsec_" + Convert.ToBase64String(new byte[32]),
+                ["EmailDelivery:TrackingDisabledConfirmed"] = "true"
+            }));
+
             builder.UseSetting("LocalEmail:Enabled", enabled.ToString());
             builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=127.0.0.1;Database=unused;Username=unused;Password=unused");
             builder.UseSetting("Jwt:SecretKey", "unsubscribe-route-tests-only-12345678901234567890");

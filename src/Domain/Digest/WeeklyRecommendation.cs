@@ -66,7 +66,7 @@ public sealed class WeeklyRecommendation : AuditableEntity
         if (UserId != userId || profileId == Guid.Empty) throw new ArgumentException("Invalid profile binding.");
         ProfileId = profileId;
     }
-    public void RecordFeedback(UserFeedback feedback, string? comment = null, int? rating = null)
+    public void RecordFeedback(UserFeedback feedback, string? comment = null, int? rating = null, DateTime? now = null)
     {
         if (!Enum.IsDefined(feedback))
             throw new ArgumentOutOfRangeException(nameof(feedback), "A defined feedback value is required.");
@@ -78,11 +78,12 @@ public sealed class WeeklyRecommendation : AuditableEntity
             feedback == UserFeedback.Disliked && rating is >= 7)
             throw new ArgumentException("The rating contradicts the selected feedback.", nameof(rating));
 
+        var changedAt = now ?? DateTime.UtcNow;
+        if (Feedback != feedback || Rating != rating) FeedbackGivenAt = changedAt;
         Feedback = feedback;
         Rating = rating;
         FeedbackComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
-        FeedbackGivenAt = DateTime.UtcNow;
-        LastModifiedAt = DateTime.UtcNow;
+        LastModifiedAt = changedAt;
     }
 
     public string WhyThisPick() => ScoreBreakdown.GenerateExplanation();

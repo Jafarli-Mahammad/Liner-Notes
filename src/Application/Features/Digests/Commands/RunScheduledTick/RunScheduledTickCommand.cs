@@ -2,17 +2,18 @@ using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Features.Digests.Commands.CaptureLocalDigest;
 using LinerNotes.Application.Features.Digests.Commands.GenerateDigest;
+using LinerNotes.Application.Services;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
 using MediatR;
 
 namespace LinerNotes.Application.Features.Digests.Commands.RunScheduledTick;
 
-public sealed record RunScheduledTickCommand(IReadOnlyList<Guid> Users, int MaxUsersPerTick) : IRequest<ScheduleTickResult>;
+public sealed record RunScheduledTickCommand(IReadOnlyList<Guid> Users, int MaxUsersPerTick, bool Production = false) : IRequest<ScheduleTickResult>;
 public sealed record ScheduleJobResult(Guid UserId, DateTime? DueUtc, string? Week, string Status, string? Reason = null);
 public sealed record ScheduleTickResult(string Status, IReadOnlyList<ScheduleJobResult> Jobs);
 
-public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, ISender sender, TimeProvider clock)
+public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, ISender sender, TimeProvider clock, LinerNotes.Application.Services.WeeklyEmailQueue? email = null)
     : IRequestHandler<RunScheduledTickCommand, ScheduleTickResult>
 {
     /// <summary>Processes a bounded selection of eligible accounts, initializing missing slots and capturing due digests before advancing each slot seven days.</summary>
@@ -23,13 +24,15 @@ public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, I
     public async Task<ScheduleTickResult> Handle(RunScheduledTickCommand request, CancellationToken ct)
     {
         var users = request.Users.ToArray();
-        if (users.Length is < 1 or > 100 || users.Any(id => id == Guid.Empty) || users.Distinct().Count() != users.Length ||
+        if ((!request.Production && users.Length < 1) || users.Length > 100 || users.Any(id => id == Guid.Empty) || users.Distinct().Count() != users.Length ||
             request.MaxUsersPerTick is < 1 or > 100) throw new ArgumentException("invalid_schedule_request");
         ct.ThrowIfCancellationRequested();
         await using var lease = await store.TryAcquireTickAsync(ct).ConfigureAwait(false);
         if (lease is null) return new("scheduler_busy", []);
         var now = clock.GetUtcNow().UtcDateTime;
-        var candidates = await store.GetCandidatesAsync(users, request.MaxUsersPerTick, now, ct).ConfigureAwait(false);
+        var candidates = request.Production
+            ? await store.GetProductionCandidatesAsync(request.MaxUsersPerTick, now, ct).ConfigureAwait(false)
+            : await store.GetCandidatesAsync(users, request.MaxUsersPerTick, now, ct).ConfigureAwait(false);
         var results = new List<ScheduleJobResult>();
         foreach (var candidate in candidates)
         {
@@ -62,6 +65,26 @@ public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, I
                 var generated = await sender.Send(new GenerateDigestCommand(current.Id, week), ct).ConfigureAwait(false);
                 if (generated.Status is not ("generated" or "existing"))
                 { results.Add(new(current.Id, due, week.Value, "stopped", generated.Reason ?? "generation_not_completed")); continue; }
+                if (request.Production)
+                {
+if (email is null)
+                    { results.Add(new(current.Id, due, week.Value, "stopped", "weekly_email_not_queued")); continue; }
+var queueResult = await email.EnqueueAsync(current.Id, week, ct).ConfigureAwait(false);
+if (queueResult == WeeklyEmailQueueResult.LocalCaptureSkipped)
+{
+    await lease.EnsureHeldAsync(ct).ConfigureAwait(false);
+    bool skipped = await store.AdvanceAsync(current, WeeklySchedulePolicy.Advance(due), now, ct).ConfigureAwait(false);
+    results.Add(new(current.Id, due, week.Value, skipped ? "skipped" : "stopped",
+        skipped ? "local_capture_not_eligible_for_production" : "schedule_changed_or_inactive"));
+    continue;
+}
+if (queueResult is not (WeeklyEmailQueueResult.Queued or WeeklyEmailQueueResult.AlreadySent))
+{ results.Add(new(current.Id, due, week.Value, "stopped", "weekly_email_not_queued")); continue; }
+                    await lease.EnsureHeldAsync(ct).ConfigureAwait(false);
+                    bool queuedSlotAdvanced = await store.AdvanceAsync(current, WeeklySchedulePolicy.Advance(due), now, ct).ConfigureAwait(false);
+                    results.Add(new(current.Id, due, week.Value, queuedSlotAdvanced ? "queued" : "inactive_or_changed"));
+                    continue;
+                }
                 var captured = await sender.Send(new CaptureLocalDigestCommand(current.Id, week), ct).ConfigureAwait(false);
                 if (captured.Status is not ("local_captured" or "already_captured"))
                 { results.Add(new(current.Id, due, week.Value, "stopped", captured.Reason ?? "capture_not_completed")); continue; }

@@ -38,6 +38,15 @@ public static class DependencyInjection
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalEmailOptions>>().Value);
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
         services.AddScoped<IDigestEmailRenderer, DigestEmailRenderer>();
+        services.Configure<EmailDeliveryOptions>(configuration.GetSection("EmailDelivery"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<EmailDeliveryOptions>>().Value);
+        services.AddScoped<IEmailPayloadProtection, EmailPayloadProtection>();
+        services.AddScoped<LinerNotes.Application.Services.EmailQueue>();
+        services.AddScoped<LinerNotes.Application.Services.WeeklyEmailQueue>();
+        services.AddScoped<LinerNotes.Application.Services.EmailDispatcher>();
+        services.AddSingleton<IEmailEventVerifier, ResendEventVerifier>();
+        services.AddHttpClient<IEmailTransport, ResendEmailTransport>(client => client.Timeout = TimeSpan.FromSeconds(30))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<LocalEmailMessageSerializer>();
         services.AddScoped<LocalEmailLegacyConversion>();
         services.AddScoped<ILocalEmailSink, LocalEmailSink>();
@@ -109,13 +118,19 @@ public static class DependencyInjection
         services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkQueue>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.RecordingArtworkCache>());
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IRecordingArtwork, LinerNotes.Infrastructure.Artwork.RecordingArtwork>();
         services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtworkPublicRevalidation, LinerNotes.Infrastructure.Artwork.ArtworkPublicRevalidation>();
+        services.AddSingleton<LinerNotes.Infrastructure.Artwork.ArtistArtworkCache>();
+        services.AddSingleton<LinerNotes.Application.Common.Interfaces.Discovery.IArtistArtwork>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Artwork.ArtistArtworkCache>());
+        services.AddScoped<LinerNotes.Application.Common.Interfaces.Discovery.IArtistArtworkAcquirer, LinerNotes.Infrastructure.Artwork.MusicBrainzArtistArtwork>();
+        services.AddHttpClient("ArtistArtwork", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         services.AddHttpClient("CoverArtArchive", http => http.Timeout = TimeSpan.FromSeconds(15)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         // Live tag radio can exceed 15s; the existing pool/job deadlines still bound acquisition.
         services.AddHttpClient<ListenBrainzApiClient>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
-                AllowAutoRedirect = false, UseCookies = false,
+                AllowAutoRedirect = false,
+                UseCookies = false,
                 // The client bounds the decompressed stream before parsing or hashing evidence.
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
             });
@@ -149,6 +164,8 @@ public static class DependencyInjection
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedPublicEvidence>();
         services.AddSingleton<LinerNotes.Application.Common.Interfaces.Catalog.ICatalogLookupPreparation, LinerNotes.Infrastructure.Discovery.SharedCatalogLookup>();
         services.AddSingleton<IDiscoverySeedPreparation, LinerNotes.Infrastructure.Discovery.SharedSeedPreparation>();
+        services.AddSingleton<LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget>();
+        services.AddSingleton<IDiscoveryRequestBudget>(sp => sp.GetRequiredService<LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget>());
         services.AddSingleton<LinerNotes.Infrastructure.Discovery.SharedDiscoveryPreparation>();
         services.AddSingleton<IDiscoveryPreparation, LinerNotes.Infrastructure.Discovery.PersistentDiscoveryPreparation>();
         services.AddScoped<IRecommendationSource>(sp => sp.GetRequiredService<IRecommendationProviderResolver>().Resolve().Source);

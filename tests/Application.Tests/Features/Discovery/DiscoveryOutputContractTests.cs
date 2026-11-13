@@ -20,6 +20,45 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
 {
     [Fact]
+    public async Task UnownedTaglessRecordingConnectionsCannotSupplyRelevanceAcrossListeners()
+    {
+        var now = DateTimeOffset.Parse("2026-11-03T12:00:00Z");
+        var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+        var resolver = Substitute.For<IRecommendationProviderResolver>();
+        resolver.Resolve().Returns(new RecommendationProvider("fixture", Substitute.For<IRecommendationSource>(),
+            Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+        var response = new ResponseReference("ListenBrainz", "metadata.recording", "fixture-recording", EvidenceOrigin.Synthetic, new string('a', 64), now);
+        var relation = response with { Method = "similar-recordings", RequestIdentity = Guid.NewGuid().ToString("D") };
+        var missing = new CoverageGap("fixture", "metadata.recording", "recording_relationship_without_tags", response);
+        var candidate = new HydratedCandidateTrack(Track.Create("Fixture recording", "Fixture credit"), WeightedTagVector.Empty,
+            new("Fixture recording", "Fixture credit", null, [new(relation.RequestIdentity, ObservedValue<double>.Missing("not_supplied_by_endpoint"),
+                relation, response, 1, null, null, ObservedValue<long>.Missing("not_supplied"))]), [], response, missing.Reason, [missing])
+        { TagScope = "none" };
+        var preparation = Substitute.For<IDiscoveryPreparation>();
+        preparation.GetAsync(Arg.Any<DiscoveryPoolRequest>(), true, Arg.Any<CancellationToken>()).Returns(
+            new PreparedDiscoveryPool(new string('b', 64), "fixture", EvidenceOrigin.Synthetic, now, now.AddMinutes(5), CatalogText.Version,
+                [candidate], [missing], 1000, new string('c', 64)));
+        var store = Substitute.For<IDiscoveryBatchStore>();
+        store.FindExcludedAsync(Arg.Any<Guid>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
+        var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), new FixedClock(now)), preparation, store, configuration, new());
+        var first = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        var second = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+        foreach (var (profile, tag) in new[] { (first, "electronic"), (second, "jazz"), (first, "electronic") })
+        {
+            var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, tag, 1, TasteSignalSource.InitialSeedManual, "Fixture");
+            var result = await runner.PrepareAsync(new(profile, [signal], []), Guid.NewGuid(), true, default);
+            Assert.Empty(result.Picks);
+            using var coverage = JsonDocument.Parse(result.CoverageJson);
+            var selection = coverage.RootElement.GetProperty("Selection").Deserialize<SelectionReceipt>()!;
+            Assert.Equal("insufficient_connection", Assert.Single(selection.Decisions).Reason);
+            Assert.Null(Assert.Single(selection.Input.Candidates).RecordingSeed);
+            ConnectedSelection.Replay(selection);
+            Assert.DoesNotContain(profile.Id.ToString(), JsonSerializer.Serialize(candidate));
+        }
+        Assert.True(candidate.TagVector.IsEmpty);
+    }
+
+    [Fact]
     public async Task EntirePreparedResultsMatchFrozenEightGenreContract()
     {
         var now = DateTimeOffset.Parse("2026-10-27T12:00:00Z");
@@ -36,7 +75,8 @@ public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
             return new HydratedCandidateTrack(track, candidate.TagVector,
                 new(track.Title, track.ArtistName, track.Mbid, [new("fixture", new(1, "1", null), reference, reference, index + 1,
                     null, null, new(null, null, "not_supplied"))]), [], reference, null,
-                [new("fixture", "metadata", "fixture_missing_observation", reference)]) { TagScope = "recording" };
+                [new("fixture", "metadata", "fixture_missing_observation", reference)])
+            { TagScope = "recording" };
         }).ToArray();
         var preparation = Substitute.For<IDiscoveryPreparation>();
         var pool = new PreparedDiscoveryPool(new string('b', 64), "fixture-contract", EvidenceOrigin.Synthetic, now,
@@ -63,8 +103,11 @@ public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
         output.WriteLine("CONTRACT_JSON=" + json);
         output.WriteLine("CONTRACT_SHA256=" + hash);
-        // Captured from the frozen 623f29a Application/Domain assemblies, not the changed implementation.
-        Assert.Equal("6b8e6dd62d50a4ce6060a333ef7a2867879bd09f7077b29bd017fc596135faef", hash);
+        // Phase 5 freezes relevance-filtered ordering and complete selection inputs.
+        // Historical numerical replay is checked independently.
+        // Reviewed against d49c192: picks, ordering, scores and selection inputs are identical.
+        // Only the 80 -> 200 request budget/hash, coverage rejection count and byte reservation changed.
+        Assert.Equal("9cabd1e059775656865b59ad75d17577ee6df2265ca577fe4ad0b06fba3633e7", hash);
     }
 
     private static void SetId(LinerNotes.Domain.Common.BaseEntity entity, string key) =>

@@ -20,6 +20,7 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
     private const string Eligible = """
         NOT u."IsDeleted" AND u."WeeklyEmailOptIn" AND u."EmailUnsubscribedAtUtc" IS NULL
         AND EXISTS (SELECT 1 FROM identity."Users" i WHERE i."Id" = u."Id" AND NOT i."IsDeleted" AND i."EmailConfirmed")
+        AND NOT EXISTS (SELECT 1 FROM "EmailSuppressions" s WHERE s."UserId" = u."Id")
         """;
 
     public async Task<IScheduledTickLease?> TryAcquireTickAsync(CancellationToken ct)
@@ -40,18 +41,25 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
 
     // Persist selection as scheduling activity in the existing audit fields. A strictly newer
     // stamp keeps stopped accounts behind unattempted peers, even across process restarts.
-    public Task<IReadOnlyList<ScheduledUser>> GetCandidatesAsync(IReadOnlyList<Guid> users, int limit, DateTime nowUtc, CancellationToken ct) =>
+    public Task<IReadOnlyList<ScheduledUser>> GetCandidatesAsync(IReadOnlyList<Guid> users, int limit, DateTime nowUtc, CancellationToken ct)
+    {
+        if (users.Count < 1) throw new ArgumentException("invalid_schedule_request");
+        return GetCandidatesCoreAsync(users, limit, nowUtc, ct);
+    }
+    public Task<IReadOnlyList<ScheduledUser>> GetProductionCandidatesAsync(int limit, DateTime nowUtc, CancellationToken ct)
+        => GetCandidatesCoreAsync([], limit, nowUtc, ct);
+    private Task<IReadOnlyList<ScheduledUser>> GetCandidatesCoreAsync(IReadOnlyList<Guid> users, int limit, DateTime nowUtc, CancellationToken ct) =>
         ExecuteWriteAsync<IReadOnlyList<ScheduledUser>>(async (connection, transaction) =>
     {
-        if (users.Count is < 1 or > 100 || limit is < 1 or > 100) throw new ArgumentException("invalid_schedule_request");
+        if (users.Count > 100 || limit is < 1 or > 100) throw new ArgumentException("invalid_schedule_request");
         await using var command = new NpgsqlCommand($"""
             WITH candidates AS (
-                SELECT u."Id" FROM "Users" u WHERE {Eligible} AND u."Id" = ANY(@users)
+                SELECT u."Id" FROM "Users" u WHERE {Eligible} AND (cardinality(@users)=0 OR u."Id" = ANY(@users))
                 AND (u."NextDigestAt" IS NULL OR u."NextDigestAt" <= @now)
                 ORDER BY u."LastModifiedAt" NULLS FIRST, u."NextDigestAt" NULLS FIRST, u."Id" LIMIT @limit
             ), attempt AS (
                 SELECT GREATEST(clock_timestamp(), MAX(u."LastModifiedAt") + interval '1 microsecond') AS stamp
-                FROM "Users" u WHERE u."Id" = ANY(@users)
+                FROM "Users" u WHERE (cardinality(@users)=0 OR u."Id" = ANY(@users))
             )
             UPDATE "Users" u SET "LastModifiedAt" = attempt.stamp, "LastModifiedBy" = NULL
             FROM candidates, attempt WHERE u."Id" = candidates."Id"
@@ -64,7 +72,7 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
         var result = new List<ScheduledUser>();
         while (await reader.ReadAsync(ct).ConfigureAwait(false)) result.Add(Read(reader));
         return result;
-        }, ct);
+    }, ct);
 
     public async Task<ScheduledUser?> GetAsync(Guid id, CancellationToken ct)
     {
@@ -109,7 +117,7 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
         command.Parameters.AddWithValue("next", replacementUtc);
         command.Parameters.AddWithValue("now", nowUtc);
         return await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false) == 1;
-        }, ct);
+    }, ct);
 
     private static ScheduledUser Read(NpgsqlDataReader reader) => new(reader.GetGuid(0), reader.GetString(1),
         reader.GetInt32(2), reader.IsDBNull(3) ? null : reader.GetDateTime(3));
@@ -136,7 +144,7 @@ public sealed class WeeklyScheduleStore(string connectionString, DataContext? db
         command.Parameters.AddWithValue("now", nowUtc);
         if (!initialize) command.Parameters.AddWithValue("due", observed.NextDigestAt ?? throw new ArgumentException("due_slot_required"));
         return await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false) == 1;
-        }, ct);
+    }, ct);
 
     private async Task<T> ExecuteWriteAsync<T>(Func<NpgsqlConnection, NpgsqlTransaction?, Task<T>> write, CancellationToken ct)
     {

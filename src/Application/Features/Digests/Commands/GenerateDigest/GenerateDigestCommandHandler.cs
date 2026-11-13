@@ -5,6 +5,7 @@ using LinerNotes.Application.Common.Models.Recommendation;
 using LinerNotes.Domain.Catalog;
 using LinerNotes.Domain.Enums;
 using LinerNotes.Domain.Scoring;
+using LinerNotes.Domain.Discovery;
 using LinerNotes.Domain.Taste;
 using MediatR;
 using LinerNotes.Application.Features.Discovery;
@@ -16,7 +17,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
     ICandidateHydrator hydrator, ISeedTagSource seedTags, IGenerationStorage storage, GenerationConfiguration config,
     BaselineAScorer scorer, TimeProvider? timeProvider = null, PrepareDiscoveryBatch? sharedPreparation = null,
     IDiscoveryBatchStore? discoveryStore = null, DiscoveryRuntimeOptions? runtime = null,
-    IDiscoveryWriteCoordinator? admission = null) : IRequestHandler<GenerateDigestCommand, GenerateDigestResult>
+    IDiscoveryWriteCoordinator? admission = null, IDiscoveryRequestBudget? requestBudget = null) : IRequestHandler<GenerateDigestCommand, GenerateDigestResult>
 {
     public async Task<GenerateDigestResult> Handle(GenerateDigestCommand request, CancellationToken cancellationToken)
     {
@@ -26,6 +27,7 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             cancellationToken.ThrowIfCancellationRequested();
             if (request.UserId == Guid.Empty || request.Week is null) throw new GenerationStoppedException("invalid_user_or_week");
             var scoring = config.Scoring();
+            using var acquisitionBudget = requestBudget?.Begin(config.MaximumUpstreamRequests);
             if (request.Week.WeekNumber > System.Globalization.ISOWeek.GetWeeksInYear(request.Week.Year))
                 throw new GenerationStoppedException("invalid_iso_week");
             var existing = await store.GetExistingAsync(request.UserId, request.Week, cancellationToken).ConfigureAwait(false);
@@ -38,17 +40,17 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             var inputs = await store.ReadInputsAsync(request.UserId, cancellationToken).ConfigureAwait(false);
             if (!inputs.UserExists) return new("stopped", null, [], "user_not_found");
             if (runtime?.ManagedWritesEnabled == true)
-        {
-            if (admission is null) throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
-            await admission.ExecuteAsync(0, _ => Task.FromResult(true), cancellationToken);
-        }
-        else
-        {
-            await using var preflight = await store.AcquireBatchAsync(cancellationToken).ConfigureAwait(false);
-            var measured = await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false);
-            await using var check = await storage.AcquireAsync(measured, cancellationToken).ConfigureAwait(false);
-        }
-        IReadOnlyList<BaselineAPick> picks;
+            {
+                if (admission is null) throw new GenerationStoppedException("weekly_discovery_runtime_unconfigured");
+                await admission.ExecuteAsync(0, _ => Task.FromResult(true), cancellationToken);
+            }
+            else
+            {
+                await using var preflight = await store.AcquireBatchAsync(cancellationToken).ConfigureAwait(false);
+                var measured = await store.ReadStorageAsync(cancellationToken).ConfigureAwait(false);
+                await using var check = await storage.AcquireAsync(measured, cancellationToken).ConfigureAwait(false);
+            }
+            IReadOnlyList<BaselineAPick> picks;
             DateTimeOffset? preparedExpiry = null;
             long preparedReservationBytes = 0;
             bool useShared = runtime?.RunJobs == true;
@@ -67,13 +69,15 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
             else
             {
                 var effective = EffectiveTasteInputs.FromProfile(inputs.ProfileId ?? request.UserId, inputs.Signals, inputs.Feedback,
-                    new(config.FeedbackTagWeight, config.MinimumPositiveFeedbackWeight));
+                    new(config.FeedbackTagWeight, config.MinimumPositiveFeedbackWeight, config.MinimumNegativeFeedbackRecordings), inputs.FeedbackHistory);
                 var artists = effective.PositiveSignals.Where(s => s.TargetType == TasteTargetType.Artist)
                     .Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
                 var tags = effective.PositiveSignals.Where(s => s.TargetType == TasteTargetType.Tag)
                     .Select(s => s.NormalizedTargetValue).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
                 if (artists.Length > config.MaximumArtistSeeds || tags.Length > config.MaximumTagSeeds)
                     throw new GenerationStoppedException("seed_limit");
+                inputs.Answers?.Validate();
+                int limit = config.Origin == EvidenceOrigin.Recorded ? config.DiscoveryLimit : config.Selection.AcquisitionLimit(inputs.Answers, config.DiscoveryLimit);
                 var seeds = new List<SeedTagSnapshot>();
                 foreach (var artist in artists)
                 {
@@ -83,8 +87,8 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                 }
                 var taste = TasteVectorMaterializer.Build(effective.PositiveSignals,
                     seeds.ToDictionary(s => s.ArtistName, s => s.Vector, StringComparer.Ordinal));
-                var byArtist = await source.GetCandidatesByArtistsAsync(artists, config.DiscoveryLimit, cancellationToken).ConfigureAwait(false);
-                var byTag = await source.GetCandidatesByTagsAsync(tags, config.DiscoveryLimit, cancellationToken).ConfigureAwait(false);
+                var byArtist = await source.GetCandidatesByArtistsAsync(artists, limit, cancellationToken).ConfigureAwait(false);
+                var byTag = await source.GetCandidatesByTagsAsync(tags, limit, cancellationToken).ConfigureAwait(false);
                 gaps.AddRange(byArtist.Gaps); gaps.AddRange(byTag.Gaps);
                 CheckOrigin(byArtist.Concat(byTag).SelectMany(c => c.Paths).SelectMany(p =>
                     (p.SimilarityResponse is null ? new[] { p.TrackResponse } : new[] { p.TrackResponse, p.SimilarityResponse }).Concat(p.SupportingResponses)), gaps);
@@ -102,13 +106,24 @@ public sealed class GenerateDigestCommandHandler(IDigestGenerationStore store, I
                         c.RawCandidate.Paths.Select(p => p.Store()).ToArray(), gaps.Concat(c.Gaps).Distinct().Select(g => g.Store()).ToArray(),
                         c.TagScope, c.PopularityMissingReason)
                     {
+                        SelectionPolicy = ConnectedSelection.Version,
+                        CreditedArtistIds = c.CreditedArtistIds,
                         TagNormalizationVersion = c.TagNormalizationVersion,
                         SupportingResponses = c.SupportingResponses.Select(r => r.Store()).ToArray()
                     })).ToArray();
-                picks = scorer.Rank(candidates, taste, effective.FamiliarArtists,
-                    effective.ExcludedAliases, request.Week, scoring, config.MaximumPicks);
+                var familiar = effective.FamiliarArtists.ToHashSet(StringComparer.Ordinal);
+                var familiarIds = seeds.Where(seed => seed.CanonicalArtistId.HasValue).Select(seed => seed.CanonicalArtistId!.Value).ToHashSet();
+                foreach (var candidate in hydrated.Where(c => c.CreditedArtistIds.Any(familiarIds.Contains))) familiar.Add(candidate.Track.NormalizedArtistName);
+                var scored = scorer.Score(candidates, taste, familiar, request.Week, scoring).ToArray();
+                var artistWeights = effective.PositiveSignals.Where(signal => signal.TargetType == TasteTargetType.Artist)
+                    .GroupBy(signal => signal.NormalizedTargetValue).ToDictionary(group => group.Key, group => group.Max(signal => signal.Weight));
+                double maximumArtistWeight = artistWeights.Values.DefaultIfEmpty(1).Max();
+                var interests = seeds.Select(seed => new SelectionInterest("artist:" + seed.ArtistName, seed.Vector,
+                    Math.Min(1, artistWeights.GetValueOrDefault(seed.ArtistName.Trim().ToLowerInvariant()) / maximumArtistWeight), seed.ArtistName)).ToArray();
+                (picks, _) = SelectDiscoveryResults.Apply(scored, hydrated.Items, interests, new HashSet<string>(), effective.ExcludedAliases,
+                    config.Selection, inputs.Answers, config.MaximumPicks, inputs.RecentArtists);
                 if (config.Origin == EvidenceOrigin.Live && picks.Count == 0)
-                    throw new GenerationStoppedException("provider_coverage_empty");
+                    throw new GenerationStoppedException(hydrated.Count == 0 ? "provider_coverage_empty" : "insufficient_relevance");
             }
             long bytes = 0;
             foreach (var pick in picks)

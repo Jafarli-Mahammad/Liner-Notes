@@ -1,7 +1,7 @@
 # Developer guide
 
 [Project overview](README.md) · [Progress](PROGRESS.md) ·
-[Product contracts](docs/renewal/contracts.md) · [Security policy](SECURITY.md)
+[Product contracts](docs/plans/contracts.md) · [Security policy](SECURITY.md)
 
 This guide is a map of the codebase: where to start, how its main layers fit
 together, and where common changes belong. For current implementation status and
@@ -164,7 +164,7 @@ This is a guide to the core relationships, not the full schema. Onsite guest
 discovery also stores `DiscoveryBatch` records and recommendation snapshots.
 
 The export and deletion paths cover user data across the application and
-Identity schema. Review the [privacy evidence](docs/renewal/phase-8a-evidence.md)
+Identity schema. Review the [privacy evidence](docs/plans/phase-8a-evidence.md)
 before changing persisted fields, export mappings or deletion behavior. Local
 verification is not a substitute for deployment-specific review.
 
@@ -218,7 +218,7 @@ npm run build:local
 This publishes the built frontend and license notices into the host's `wwwroot`.
 
 To run the actual site with live provider data, follow the
-[local website runbook](docs/renewal/local-live-run.md). It covers PostgreSQL,
+[local website runbook](docs/plans/local-live-run.md). It covers PostgreSQL,
 Presentation User Secrets, the persistent local database and the launcher. The
 short version, after setup, is:
 
@@ -257,7 +257,7 @@ database. Without one, database-backed checks may skip. The test projects are:
 The repository's offline evaluation and documentation checks are separate from
 the application test suite. Synthetic fixtures establish mechanics; they do
 not measure recommendation quality or provider catalog coverage. See the
-[phase evidence](docs/renewal/phase-6-evidence.md) for the scope of generation
+[phase evidence](docs/plans/phase-6-evidence.md) for the scope of generation
 verification.
 
 ## API entry points
@@ -305,7 +305,7 @@ remain outstanding.
 
 ## Before opening a change
 
-- Read [AGENTS.md](AGENTS.md) and the relevant [product contract](docs/renewal/contracts.md).
+- Read [AGENTS.md](AGENTS.md) and the relevant [product contract](docs/plans/contracts.md).
 - Keep provider rules in adapters and scoring policy in Domain.
 - Treat popularity neutrally. Do not claim ownership of upstream similarity data
   or a new recommendation algorithm.

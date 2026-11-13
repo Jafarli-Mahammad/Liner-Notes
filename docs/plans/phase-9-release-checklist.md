@@ -5,8 +5,7 @@ and [engineering evidence](../operations/production-beta-evidence.md). The table
 below records the earlier Phase 9 assessment. Mail delivery is excluded from
 this beta. Last.fm approval is conditional on enabling its adapter; the Live
 catalog uses ListenBrainz and MusicBrainz. Explicit bounded Production generation
-and locally rehearsed backup/recovery are now implemented. Automatic all-account
-weekly scheduling remains excluded. Actual VPS capacity, public TLS, off-host
+and locally rehearsed backup/recovery are now implemented. The original beta excluded automatic scheduling; the new [account mail workflow](../operations/account-email.md) adds bounded Production ticks after explicit activation. Actual VPS capacity, public TLS, off-host
 recovery, notification delivery and developer acceptance still need verification.
 
 **Public release is blocked.** Local container/test results do not supply
@@ -21,8 +20,8 @@ third-party permission, developer confirmation or production operations.
 | Last.fm other terms questions | Territorial/consent, retained data/publication and text-only email attribution questions remain unresolved; no universal numeric request allowance is asserted |
 | Recommendation quality | Not verified. Baseline A remains provisional; real evaluation/held-out results remain deferred |
 | Hosting and shared capacity | Not selected. The 1 GB guard remains a temporary placeholder, not an approved capacity plan |
-| External email provider/delivery | Not implemented or authorized by the local capture slice; SentAt remains null for local captures |
-| Production scheduling | Not implemented: current Worker is Development-only and explicitly bounded |
+| External email provider/delivery | Durable external dispatch is now implemented separately; real sender activation and delivery acceptance remain pending. SentAt remains null for local captures |
+| Production scheduling | Bounded Production scheduling/dispatch is implemented; install and verify the opt-in timer after activation |
 | Key custody and backups | PostgreSQL keys persist, but wrapping/access/backups and restore/deletion procedures require an operator design; local encryption does not settle those decisions |
 | Existing plaintext copies | Actual deployments/copies were not inventoried or converted; only fabricated legacy-conversion tests have evidence |
 | Public deployment and remote publication | Separate explicit approval required; no push, provisioning, purchase or deployment performed |

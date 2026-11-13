@@ -151,7 +151,7 @@ class Operations:
 
     def status(self,include_application=False):
         result = {}
-        for filename in ['maintenance.json','last-backup.json','last-attempt.json']:
+        for filename in ['maintenance.json','last-backup.json','last-attempt.json','last-mail.json']:
             path = self.state/filename
             result[filename.removesuffix('.json')] = json.loads(path.read_text()) if path.exists() else None
         if include_application:
@@ -181,6 +181,11 @@ class Operations:
             if queue.get('oldestCreatedAt') and (current-datetime.fromisoformat(queue['oldestCreatedAt'])).total_seconds()>900:
                 reasons.append('job_queue_aged')
             if result['application'].get('jobsEnabled') is False: reasons.append('background_jobs_paused')
+            mail=(result.get('application') or {}).get('mail')
+            if mail is not None:
+                last_mail=result.get('last-mail')
+                if not last_mail or (datetime.now(timezone.utc)-datetime.fromisoformat(last_mail['at'])).total_seconds()>900:
+                    reasons.append('mail_timer_missing_or_stale')
             backup=result['last-backup']
             if not backup or not backup.get('verified'): reasons.append('verified_backup_missing')
             elif (datetime.now(timezone.utc)-datetime.fromisoformat(backup['completedAt'])).total_seconds()>86400:
@@ -200,7 +205,14 @@ class Operations:
         raw = self.command(*args,'worker','--action',action,*acknowledgement,*extra,allowed_codes=(0,2))
         try: result = json.loads(raw)
         except (ValueError,UnicodeDecodeError): raise OperationStopped('operator_result_invalid') from None
-        if result.get('Status') not in ['verified','established','generated','existing','schema_verified','migration_status']:
+        accepted_statuses = {
+            'production-mail': {'completed'},
+            'reconcile-mail': {'reconciled'},
+        }
+        if result.get('Status') not in {
+            'verified','established','generated','existing','schema_verified','migration_status',
+            *accepted_statuses.get(action, set()),
+        }:
             reason=result.get('Reason','')
             raise OperationStopped(reason if re.fullmatch('[a-z_]{1,64}',reason) else 'storage_operator_refused')
         return result
@@ -375,6 +387,20 @@ class Operations:
         atomic_json(self.state/'last-attempt.json',{'at':now(),'action':'upgrade','status':'passed'})
         return {'status':'upgraded_verified','sourceTree':next(iter(trees))}
 
+    def mail(self):
+        if (self.state/'maintenance.json').exists():
+            raise OperationStopped('mail_blocked_by_maintenance')
+        result=self.worker('production-mail')
+        atomic_json(self.state/'last-mail.json',{'at':now(),'status':'passed','result':result})
+        return result
+
+    def reconcile_mail(self,message_id):
+        try:
+            if str(uuid.UUID(message_id))!=message_id: raise ValueError()
+        except (ValueError,AttributeError): raise OperationStopped('valid_message_id_required') from None
+        if (self.state/'maintenance.json').exists(): raise OperationStopped('mail_blocked_by_maintenance')
+        return self.worker('reconcile-mail',extra=('--message-id',message_id))
+
     def generate(self,user,week):
         try:
             parsed=uuid.UUID(user)
@@ -449,11 +475,12 @@ class Operations:
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--configuration',type=Path,required=True)
-    parser.add_argument('action',choices=['backup','restore','upgrade','generate','status','resume','init-repository'])
+    parser.add_argument('action',choices=['backup','restore','upgrade','generate','mail','reconcile-mail','status','resume','init-repository'])
     parser.add_argument('--snapshot')
     parser.add_argument('--images',type=Path,help='Private JSON map: web, worker, migrate, volume-init')
     parser.add_argument('--user')
     parser.add_argument('--week')
+    parser.add_argument('--message-id')
     args=parser.parse_args()
     try:
         if not args.configuration.is_absolute() or args.configuration.is_symlink() or args.configuration.stat().st_mode & 0o077:
@@ -470,6 +497,8 @@ def main():
                     raise OperationStopped('private_release_image_map_required')
                 result=operations.upgrade(json.loads(args.images.read_text()))
             elif args.action=='generate': result=operations.generate(args.user or '',args.week or '')
+            elif args.action=='mail': result=operations.mail()
+            elif args.action=='reconcile-mail': result=operations.reconcile_mail(args.message_id or '')
             elif args.action=='resume': operations.resume(); result={'status':'resumed'}
             else: operations.restic('init'); result={'status':'repository_initialized'}
         print(json.dumps(result)); return 0

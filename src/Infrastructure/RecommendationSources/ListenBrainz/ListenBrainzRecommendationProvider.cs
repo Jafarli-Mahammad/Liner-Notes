@@ -9,7 +9,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
 {
     public string SourceName => "ListenBrainz";
     private readonly Dictionary<string, ListenBrainzResponse> responses = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (RecordingMetadata Metadata, ResponseReference Response)> metadata = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (RecordingMetadata Metadata, ListenBrainzResponse Response)> metadata = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ListenBrainzResponse> artistTags = new(StringComparer.Ordinal);
 
     private async Task<ListenBrainzResponse> SendAsync(ListenBrainzRequest request, CancellationToken ct)
@@ -74,7 +74,7 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
                 position++;
                 var track = ListenBrainzEvidenceParser.Recording(detail, id);
                 if (track is null) { gaps.Add(new(id, detail.Reference.Method, "recording_metadata_missing", detail.Reference)); continue; }
-                metadata.TryAdd(id, (track, detail.Reference));
+                metadata.TryAdd(id, (track, detail));
                 var path = new DiscoveryPath(identity, ObservedValue<double>.Missing("not_supplied_by_endpoint"),
                     radio.Reference, detail.Reference, position, "https://musicbrainz.org/recording/" + id, null,
                     ObservedValue<long>.Missing("unique_listeners_not_supplied"))
@@ -113,7 +113,10 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
         var hydrated = new List<HydratedCandidateTrack>();
         var gaps = new List<CoverageGap>();
         if (rawCandidates.Select(c => c.Origin).Distinct().Count() > 1) throw new GenerationStoppedException("origin_mismatch");
-        var needed = rawCandidates.Where(c => c.Mbid is not null && metadata.ContainsKey(c.Mbid))
+        var directTags = rawCandidates.Where(c => c.Mbid is not null && metadata.ContainsKey(c.Mbid))
+            .DistinctBy(c => c.Mbid).ToDictionary(c => c.Mbid!, c =>
+                RecordingTags(metadata[c.Mbid!].Response, Guid.Parse(c.Mbid!), c.Title), StringComparer.Ordinal);
+        var needed = rawCandidates.Where(c => c.Mbid is not null && directTags.TryGetValue(c.Mbid, out var tags) && tags.Vector.IsEmpty)
             .SelectMany(c => metadata[c.Mbid!].Metadata.ArtistMbids).Distinct(StringComparer.Ordinal)
             .Where(id => !artistTags.ContainsKey(id)).Order(StringComparer.Ordinal).ToArray();
         foreach (var chunk in needed.Chunk(100))
@@ -126,31 +129,42 @@ public sealed partial class ListenBrainzRecommendationProvider(IListenBrainzApiC
             if (raw.Mbid is null || !metadata.TryGetValue(raw.Mbid, out var entry))
             { gaps.Add(new(raw.CandidateKey, "metadata.recording", "candidate_not_discovered_in_scope")); continue; }
             if (raw.Title != entry.Metadata.Title || raw.ArtistName != entry.Metadata.ArtistName)
-            { gaps.Add(new(raw.CandidateKey, "metadata.recording", "candidate_metadata_identity_changed", entry.Response)); continue; }
-            var tagInputs = new List<(string, ListenBrainzResponse)>();
-            foreach (string artist in entry.Metadata.ArtistMbids)
+            { gaps.Add(new(raw.CandidateKey, "metadata.recording", "candidate_metadata_identity_changed", entry.Response.Reference)); continue; }
+            if (entry.Response.Reference.Origin != raw.Origin) throw new GenerationStoppedException("origin_mismatch");
+            var tags = directTags[raw.Mbid];
+            bool direct = !tags.Vector.IsEmpty;
+            var supporting = new List<ResponseReference> { entry.Response.Reference };
+            if (!direct)
             {
-                var response = artistTags[artist];
-                if (response.Reference.Origin != raw.Origin) throw new GenerationStoppedException("origin_mismatch");
-                tagInputs.Add((artist, response));
+                var tagInputs = entry.Metadata.ArtistMbids.Select(id => (id, artistTags[id])).ToArray();
+                if (tagInputs.Any(t => t.Item2.Reference.Origin != raw.Origin)) throw new GenerationStoppedException("origin_mismatch");
+                var artist = ListenBrainzEvidenceParser.ArtistTags(tagInputs);
+                supporting.AddRange(tagInputs.Select(t => t.Item2.Reference));
+                tags = new(raw.Title, artist.Vector, artist.Tags, tagInputs[0].Item2.Reference, artist.MissingReason, artist.Gaps);
             }
-            var tags = ListenBrainzEvidenceParser.ArtistTags(tagInputs);
-            var recordingResponse = responses.Values.FirstOrDefault(r => r.Reference == entry.Response);
-            var directTags = recordingResponse is null ? null : RecordingTags(recordingResponse, Guid.Parse(raw.Mbid!), raw.Title);
-            bool direct = directTags is { Vector.IsEmpty: false };
-
-            gaps.AddRange(tags.Gaps);
-            if (!direct && tags.Vector.IsEmpty)
+            var candidateGaps = tags.Gaps.ToList();
+            string scope = direct ? "recording" : "artist";
+            if (tags.Vector.IsEmpty)
             {
-                gaps.Add(new(raw.CandidateKey, "metadata.artist", "no_valid_artist_tag_votes", entry.Response));
-                continue;
+                // A provider relationship remains evidence even when descriptive tags are absent.
+                if (!raw.Paths.Any(p => p.SimilarityResponse is { Provider: "ListenBrainz", Method: "similar-recordings" }))
+                {
+                    gaps.AddRange(candidateGaps);
+                    gaps.Add(new(raw.CandidateKey, "metadata.artist", "no_valid_artist_tag_votes", entry.Response.Reference));
+                    continue;
+                }
+                scope = "none";
+                tags = tags with { Response = entry.Response.Reference, MissingReason = "recording_relationship_without_tags" };
+                candidateGaps.Add(new(raw.CandidateKey, "metadata.recording", tags.MissingReason, entry.Response.Reference));
             }
-            hydrated.Add(new(Track.Create(raw.Title, raw.ArtistName, mbid: raw.Mbid), direct ? directTags!.Vector : tags.Vector, raw, direct ? directTags!.Tags : tags.Tags,
-                direct ? entry.Response : tagInputs[0].Item2.Reference, direct ? directTags!.MissingReason : tags.MissingReason, tags.Gaps)
+            gaps.AddRange(candidateGaps);
+            hydrated.Add(new(Track.Create(raw.Title, raw.ArtistName, mbid: raw.Mbid), tags.Vector, raw, tags.Tags,
+                tags.Response, tags.MissingReason, candidateGaps)
             {
-                TagScope = direct ? "recording" : "artist",
+                TagScope = scope,
+                CreditedArtistIds = entry.Metadata.ArtistMbids.Select(Guid.Parse).ToArray(),
                 TagNormalizationVersion = ListenBrainzEvidenceParser.NormalizationVersion,
-                SupportingResponses = tagInputs.Select(t => t.Item2.Reference).Append(entry.Response).Distinct().ToArray()
+                SupportingResponses = supporting.Distinct().ToArray()
             });
         }
         return new(hydrated, gaps);

@@ -7,7 +7,7 @@ using LinerNotes.Application.Common.Models.Recommendation;
 namespace LinerNotes.Infrastructure.RecommendationSources.ListenBrainz;
 
 public enum ListenBrainzClientMode { FixtureOnly, Recorded, LiveOnly }
-public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch, AlbumMetadata, RecordingSearch, SimilarRecordings, ArtworkMetadata }
+public enum ListenBrainzRequestKind { ArtistSearch, ArtistRadio, TagRadio, ArtistMetadata, RecordingMetadata, AlbumSearch, AlbumMetadata, RecordingSearch, SimilarRecordings, ArtworkMetadata, ArtistArtworkMetadata }
 
 public sealed class ListenBrainzOptions
 {
@@ -33,7 +33,7 @@ public sealed class ListenBrainzOptions
 
 public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Identity, int Limit = 10)
 {
-    public string Provider => Kind is ListenBrainzRequestKind.ArtistSearch or ListenBrainzRequestKind.AlbumSearch or ListenBrainzRequestKind.RecordingSearch ? "MusicBrainz" : "ListenBrainz";
+    public string Provider => Kind is ListenBrainzRequestKind.ArtistSearch or ListenBrainzRequestKind.AlbumSearch or ListenBrainzRequestKind.RecordingSearch or ListenBrainzRequestKind.ArtistArtworkMetadata ? "MusicBrainz" : "ListenBrainz";
     public string Method => Kind switch
     {
         ListenBrainzRequestKind.RecordingSearch => "recording.search",
@@ -46,24 +46,29 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         ListenBrainzRequestKind.AlbumMetadata => "metadata.release_group",
         ListenBrainzRequestKind.RecordingMetadata => "metadata.recording",
         ListenBrainzRequestKind.ArtworkMetadata => "metadata.artwork",
+        ListenBrainzRequestKind.ArtistArtworkMetadata => "artist.artwork",
         _ => throw new ArgumentException("listenbrainz_request_invalid")
     };
-    public string Key => $"{Kind}:{Limit}:{Identity}";
+    public string Key => $"{Kind}:{Limit}:{Identity}" + (Kind is ListenBrainzRequestKind.RecordingSearch or ListenBrainzRequestKind.AlbumSearch ? ":title-artist-v2" : "");
 
     public void Validate()
     {
         if (!Enum.IsDefined(Kind) || Limit is < 1 or > 100 || string.IsNullOrWhiteSpace(Identity) || Identity.Length > 4000 ||
             Identity.Any(char.IsControl) || Identity != Identity.Trim())
             throw new ArgumentException("listenbrainz_request_invalid");
-        if (Kind is ListenBrainzRequestKind.SimilarRecordings or ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata or ListenBrainzRequestKind.AlbumMetadata or ListenBrainzRequestKind.ArtworkMetadata)
+        if (Kind is ListenBrainzRequestKind.SimilarRecordings or ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistMetadata or ListenBrainzRequestKind.RecordingMetadata or ListenBrainzRequestKind.AlbumMetadata or ListenBrainzRequestKind.ArtworkMetadata or ListenBrainzRequestKind.ArtistArtworkMetadata)
         {
             var ids = Identity.Split(',');
-            if (ids.Length > 100 || (Kind == ListenBrainzRequestKind.ArtistRadio && ids.Length != 1) ||
+            if (ids.Length > 100 || (Kind is ListenBrainzRequestKind.ArtistRadio or ListenBrainzRequestKind.ArtistArtworkMetadata && ids.Length != 1) ||
                 ids.Any(id => !Guid.TryParseExact(id, "D", out var parsed) || parsed == Guid.Empty))
                 throw new ArgumentException("listenbrainz_identifier_invalid");
         }
         else if (Identity.Length > 200) throw new ArgumentException("listenbrainz_seed_limit");
     }
+
+    private string TitleArtistQuery(string field) => string.Join(" AND ", Identity.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+        .Select(term => { var literal = term.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+            return $"({field}:\"{literal}\" OR artist:\"{literal}\")"; }));
 
     public string RelativeUri()
     {
@@ -73,13 +78,14 @@ public sealed record ListenBrainzRequest(ListenBrainzRequestKind Kind, string Id
         // Full popularity range: no application popularity filter. Upstream sampling is retained as provenance.
         return Kind switch
         {
+            ListenBrainzRequestKind.ArtistArtworkMetadata => $"ws/2/artist/{id}?fmt=json&inc=url-rels",
             ListenBrainzRequestKind.SimilarRecordings => $"similar-recordings/json?recording_mbids={id}&algorithm=session_based_days_180_session_300_contribution_5_threshold_15_limit_50_skip_30",
             ListenBrainzRequestKind.RecordingSearch => "ws/2/recording/?fmt=json&limit=" + count + "&query=" +
-                Uri.EscapeDataString("recording:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
+                Uri.EscapeDataString(TitleArtistQuery("recording")),
             ListenBrainzRequestKind.ArtistSearch => "ws/2/artist/?fmt=json&limit=25&query=" +
                 Uri.EscapeDataString("artist:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
             ListenBrainzRequestKind.AlbumSearch => "ws/2/release-group/?fmt=json&limit=" + count + "&query=" +
-                Uri.EscapeDataString("releasegroup:\"" + Identity.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""),
+                Uri.EscapeDataString(TitleArtistQuery("releasegroup")),
             ListenBrainzRequestKind.ArtistRadio => $"1/lb-radio/artist/{id}?mode=medium&max_similar_artists={count}&max_recordings_per_artist=2&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.TagRadio => $"1/lb-radio/tags?tag={id}&operator=OR&count={count}&pop_begin=0&pop_end=100",
             ListenBrainzRequestKind.ArtistMetadata => $"1/metadata/artist/?artist_mbids={id}&inc=tag",

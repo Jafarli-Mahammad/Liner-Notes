@@ -1,5 +1,23 @@
 # Skill Observation Log
 
+### Observation: Match CI authentication to the actual account session
+**Status:** OPEN
+**Date:** 2026-11-10
+**Skill:** ponytail
+**Type:** open-source
+**Issue:** An API-key CI setup did not match the requested CLI's existing interactive login. A custom agent's empty tool list also did not remove tools advertised in its initialization stream.
+**Suggested improvement:** Verify the user's actual authentication method before selecting a runner. For saved local logins, preserve settings and run under the same operating-system/keyring session. Test tool restrictions live and distinguish requested policies, advertised tools, observed calls and enforced isolation.
+**Principle:** Successful authentication and declared restrictions each need evidence from the actual execution environment.
+
+### Observation: Verify packaged CLI entrypoints when configuring CI
+**Status:** OPEN
+**Date:** 2026-11-10
+**Skill:** ponytail
+**Type:** open-source
+**Issue:** The documented CLI command differed from the executable name inside its official release archive. Download and checksum verification alone would have left CI unable to find the command.
+**Suggested improvement:** Inspect the actual pinned archive, verify its digest, and validate extraction and executable naming before committing automation. Test push ranges independently of authenticated model access and report the latter as unverified until a live run.
+**Principle:** A verified download does not establish a runnable integration.
+
 ### Observation 038: Follow recovery past the first failure
 **Status:** OPEN
 **Date:** 2026-10-31
@@ -422,3 +440,111 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Type:** open-source
 **Issue:** Historical design captures can still be referenced by screenshot tests and one-off comparison scripts.
 **Suggested improvement:** Check both consumers and output producers before deleting artifacts; direct maintained tests to ignored output directories and remove completed comparison scripts with their inputs.
+
+### Observation 038: Distinguish discovery coverage from search and enrichment failures
+**Status:** OPEN
+**Date:** 2026-11-03
+**Skill:** ponytail, ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Provider evidence and bounded probes
+**Issue:** A title-only result window missed exact artist credits; an optional metadata endpoint could also be requested despite sufficient direct evidence. Counting either situation as absent source coverage would misdiagnose the pipeline.
+**Suggested improvement:** Record search resolution, acquisition yield, hydration loss and optional enrichment independently. Prefer existing direct evidence before issuing fallback calls, preserve missing-evidence markers, and test required-source failures at an endpoint still needed by the final code.
+**Principle:** Attribute missing results to the actual failing stage before adding integrations or claiming a coverage improvement.
+
+### Observation 039: Verify combined capacity and request scope before expanding receipts
+**Status:** OPEN
+**Date:** 2026-11-03
+**Skill:** ponytail, ai-slop-cleaner, performance-reviewer
+**Type:** open-source
+**Phase/Area:** Replay evidence and acquisition bounds
+**Issue:** Individually bounded favorite and candidate counts exceeded an existing receipt row cap when combined. Independent client scopes also reset an allowance intended to bound one preparation attempt.
+**Suggested improvement:** Test the cross-product of existing limits. Retain complete normalized decision inputs while reconstructing derivable outputs, verify codec backward readers and expansion limits, and measure the actual stored size. Enforce dispatch budgets across child scopes and state explicitly whether retries share the counter.
+**Principle:** Component limits do not establish a whole-operation storage or request bound.
+
+
+### Observation 040: Keep evaluation controls comparable and cleanup assertions strict
+**Status:** OPEN
+**Date:** 2026-11-04
+**Skill:** performance-reviewer, ai-slop-cleaner
+**Type:** open-source
+**Phase/Area:** Integrated recommendation evaluation
+**Issue:** Scoring timings with full provider evidence in one arm and empty evidence in the other do not isolate ranking cost. Disposable archive directories with shared permissions also cause truthful incomplete-cleanup responses.
+**Suggested improvement:** Match input preparation and evidence construction before comparing pure ranking measurements. Secure controlled storage roots and rerun deletion rather than accepting incomplete cleanup. Freeze policy and evaluation folds before reading held-out outcomes, and keep missing listening ratings explicit.
+**Principle:** Comparable measurements and complete cleanup require verified setup, not permissive assertions.
+
+
+### Observation 041: Separate browser setup and renderer differences from product failures
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Broad normal-user browser audit with two MCP browser services.
+**Skill:** New skill candidate: browser audit evidence
+**Type:** open-source
+**Phase/Area:** Browser setup, interaction waits, and reporting
+**Issue:** Default MCP services blocked local networks or assumed an unavailable browser. A lightweight renderer also produced different CSS output from Chromium. Short fixed feedback waits initially suggested a failed transition; waiting for save completion disproved it.
+**Suggested improvement:** Start temporary service instances with explicit local-network access and an installed browser, without changing persistent settings. Separate tool failures from app failures, use save confirmations, capture before/after reload evidence, and label renderer-specific observations. Exercise export, ownership, and cleanup with disposable accounts; exclude credentials and private exports from committed reports.
+**Principle:** Reproducible user-state evidence and a declared browser engine matter more than a long list of attempted clicks.
+
+
+### Observation 042: Reproduce stored feedback combinations and artwork expiry calculations
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Fixing findings from a normal-user browser audit.
+**Skill:** ponytail, ui-ux-pro-max
+**Type:** open-source
+**Phase/Area:** Root-cause debugging and shared lifecycle fixes
+**Issue:** A slower feedback retry without the original rating could not disprove a failed rated transition. The server correctly rejected a contradictory 8/10 and negative choice. Separately, artwork downloaded successfully but an Age subtraction from a local headerless-media lifetime made its expiry precede acquisition; the same arithmetic existed in both portrait and cover paths.
+**Suggested improvement:** Preserve rating/note state during reproduction; reconcile conflicting inputs according to the user's latest action and explain the change. Measure acquisition time and effective expiry, not just HTTP success. Share freshness arithmetic across artwork paths, cap retention after subtracting origin age, and test stale, headerless, shared-cache-precedence and remount/retry states. Verify decoded canonical images in the live browser.
+**Principle:** A changed reproduction state can hide a real bug, and successful transport does not establish usable retained data.
+
+### Observation 043: Correlate asynchronous failures to the affected account
+**Status:** OPEN
+**Date:** 2026-11-09
+**Session context:** Tracing a discovery failure reported by an existing user.
+**Issue:** Successful browser polling concealed a durable worker failure; a generic UI error did not identify the failed stage. An earlier matching log alone was insufficient until its job was correlated to the account and the same inputs reproduced it.
+**Suggested improvement:** Read account-scoped job state, identify the execution stage and test resumability from retained public evidence before changing acquisition limits. Keep account identifiers and taste contents out of committed reports.
+**Principle:** Diagnose the user's actual asynchronous operation and verify the recovery path, not merely the submission HTTP status.
+
+
+### Observation 044: Verify asynchronous work through persistence in the running host
+**Status:** OPEN
+**Date:** 2026-11-10
+**Session context:** Follow-up to a failed live discovery recovery.
+**Issue:** A direct preparation success did not exercise final transaction freshness checks, and a pre-fix local host kept serving old code. Full job submission exposed evidence expiry at completion after a request-budget retry.
+**Suggested improvement:** Confirm the running host loaded the changes, submit through normal admission, wait for the actual worker's terminal state, and verify persisted rows plus the read projection. Model final-save expiry in regression tests and keep strict freshness checks intact.
+**Principle:** Preparation success is insufficient evidence for a durable user operation.
+
+
+### Observation 045: Separate publication scope and verify lifecycle eligibility
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Reviewing publication readiness of a locally verified service.
+**Skill:** New skill candidate: publication readiness review
+**Type:** open-source
+**Phase/Area:** Release assessment and acceptance evidence
+**Issue:** Historical checklists can lag working deployment code. Conversely, scheduling logic can exist while ordinary signup cannot satisfy its confirmed-email eligibility condition. Passing tooling tests does not exercise public hosting, delivered mail or independent recovery.
+**Suggested improvement:** Separate source publication, hosted beta and full advertised service. Trace normal-user eligibility through each lifecycle gate. Distinguish missing implementation, operator setup and current acceptance; cite code and provide closure checks. Record unavailable test prerequisites separately from product defects.
+**Principle:** Assess the release offered against complete user and operator journeys at the exact revision.
+
+
+### Observation 046: Separate mail implementation from sender activation
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Designing account email and production delivery without an existing sender domain.
+**Skill:** brainstorming
+**Type:** open-source
+**Phase/Area:** Clarifying prerequisites
+**Issue:** Asking for a domain and mail account before explaining their purpose made an activation dependency look like an implementation prerequisite.
+**Suggested improvement:** State that code and provider-contract tests can proceed with configurable values and a local transport. Explain that real sending later needs a verified sender, canonical public link origin and operator contact. Request only information needed for the immediate design decision; never request secrets in chat.
+**Principle:** Distinguish what is required to build a capability from what is required to activate and prove it externally.
+
+
+### Observation 047: Prepare persistent key rings before account storage admission
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Adding durable account email alongside coordinated authentication and storage.
+**Skill:** efcore-patterns, New skill candidate: durable external delivery
+**Type:** open-source
+**Phase/Area:** Transaction boundaries and lifecycle verification
+**Issue:** Initializing a database-backed protection key inside account admission correctly failed with a key-rotation preparation error. Mock-only delivery would have hidden it. A full scheduled-delivery test also exposed local-only renderer validation and a legacy explicit-user selector in the new all-account path.
+**Suggested improvement:** Prepare key rings outside the outer transaction, then freeze/protect the message within admitted account writes. Exercise signup through persistence, two scheduled weeks, retry after restart and final delivery-state projection with real database accounting. Preserve separate local-capture concurrency contracts when adding network-send ownership.
+**Principle:** Reused components must be verified at their complete production lifecycle boundaries, not merely through transport mocks.

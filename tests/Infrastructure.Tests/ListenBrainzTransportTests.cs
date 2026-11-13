@@ -13,6 +13,37 @@ namespace LinerNotes.Infrastructure.Tests;
 public sealed class ListenBrainzTransportTests
 {
     [Fact]
+    public async Task GenerationRequestBudgetIsSharedAcrossParallelClientScopesAndResetsForTheNextJob()
+    {
+        var budget = new LinerNotes.Infrastructure.Discovery.DiscoveryRequestBudget();
+        int dispatched = 0;
+        using var http = new HttpClient(new Handler(_ =>
+        {
+            Interlocked.Increment(ref dispatched);
+            return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var options = new ListenBrainzOptions { Mode = ListenBrainzClientMode.LiveOnly, LiveUseApproved = true };
+        var clients = Enumerable.Range(0, 4).Select(_ => new ListenBrainzApiClient(http, options, new Gate(), cache, TimeProvider.System, budget: budget)).ToArray();
+        using (budget.Begin(3))
+        {
+            var outcomes = await Task.WhenAll(Enumerable.Range(0, 16).Select(async i =>
+            {
+                try { await clients[i % 4].SendAsync(new(ListenBrainzRequestKind.ArtistSearch, "fixture-budget-" + i)); return true; }
+                catch (LinerNotes.Application.Common.Interfaces.Recommendation.GenerationStoppedException ex)
+                { Assert.Equal("upstream_request_limit", ex.Message); return false; }
+            }));
+            Assert.Equal(3, outcomes.Count(p => p));
+            Assert.Equal(3, dispatched);
+        }
+        using (budget.Begin(1))
+        {
+            await clients[0].SendAsync(new(ListenBrainzRequestKind.ArtistSearch, "next-fixture-job"));
+            Assert.Equal(4, dispatched);
+        }
+    }
+
+    [Fact]
     public async Task RegisteredClientAllowsSlowRadioResponseWithoutRestartingAcquisition()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

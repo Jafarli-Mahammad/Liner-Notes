@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.DataProtection;
+using System.Security.Cryptography;
+using System.Text.Json;
 using LinerNotes.Application.Common.Interfaces.Discovery;
 using LinerNotes.Presentation.Discovery;
 using LinerNotes.Application.Common.Interfaces;
@@ -22,7 +25,10 @@ namespace LinerNotes.Presentation.Controllers;
 [ServiceFilter(typeof(LinerNotes.Presentation.Filters.DiscoveryWriteFilter))]
 public sealed class AuthController : ApiControllerBase
 {
+    private const string SessionCookie = "liner.session";
+    private readonly IDataProtector? _sessions;
     private readonly IAuthService _authService;
+    private readonly LinerNotes.Presentation.Services.AccountEmailService? _accountEmail;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly JwtOptions _jwtOptions;
@@ -35,9 +41,12 @@ public sealed class AuthController : ApiControllerBase
         IOptions<JwtOptions> jwtOptions,
         IUnitOfWork unitOfWork,
         IListenerContext? listener = null,
-        IDiscoveryWriteCoordinator? admission = null)
+        IDiscoveryWriteCoordinator? admission = null,
+        IDataProtectionProvider? protection = null, LinerNotes.Presentation.Services.AccountEmailService? accountEmail = null)
     {
         this._authService = _authService;
+        _accountEmail = accountEmail;
+        _sessions = protection?.CreateProtector("LinerNotes.BrowserSession.v1");
         _listener = listener;
         _admission = admission;
         _unitOfWork = unitOfWork;
@@ -93,6 +102,8 @@ public sealed class AuthController : ApiControllerBase
                 await Mediator.Send(seedCommand, cancellationToken);
             }
 
+            if (_accountEmail is not null) await _accountEmail.RequestAsync(request.Email, LinerNotes.Domain.Email.EmailPurpose.Confirmation, ct);
+
             // 4. Issue JWT access and refresh tokens
             var accessToken = _jwtService.GenerateAccessToken(subscriber.Id, request.UserName, subscriber.Email);
             var refreshToken = _jwtService.GenerateRefreshToken();
@@ -110,6 +121,7 @@ public sealed class AuthController : ApiControllerBase
             ? await (_admission ?? throw new InvalidOperationException("guest_handoff_unavailable"))
                 .ExecuteAsync(131_072, WriteAsync, cancellationToken)
             : await WriteAsync(cancellationToken);
+        if (result is CreatedAtActionResult { Value: AuthResponse session }) SaveSession(session);
         if (guestHash is not null) _listener!.RevokeCookie();
         return result;
     }
@@ -160,6 +172,7 @@ public sealed class AuthController : ApiControllerBase
             ExpiresIn: _jwtOptions.ExpiryMinutes * 60,
             User: subscriber);
 
+        SaveSession(response);
         return Ok(response);
     }
 
@@ -241,7 +254,79 @@ public sealed class AuthController : ApiControllerBase
             ExpiresIn: _jwtOptions.ExpiryMinutes * 60,
             User: subscriber);
 
+        SaveSession(response);
         return Ok(response);
+    }
+
+    // Cookie credentials are accepted only by these same-origin, non-simple POSTs.
+    // Normal API requests continue to require bearer tokens.
+    [HttpPost("session")]
+    [EnableRateLimiting("session")]
+    public async Task<IActionResult> RestoreSession(CancellationToken cancellationToken)
+    {
+        if (Request.Headers["X-Liner-Session"] != "1") return BadRequest();
+        var saved = ReadSession();
+        if (saved is null) { ClearSession(); return NoContent(); }
+        var result = await Refresh(saved, cancellationToken);
+        if (result is UnauthorizedObjectResult or UnauthorizedResult or BadRequestObjectResult)
+            ClearSession();
+        return result;
+    }
+
+    [HttpPost("logout")]
+    [EnableRateLimiting("session")]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        if (Request.Headers["X-Liner-Session"] != "1") return BadRequest();
+        var saved = ReadSession();
+        if (saved is not null)
+        {
+            var principal = _jwtService.GetPrincipalFromExpiredToken(saved.AccessToken);
+            var claim = principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? principal?.FindFirst("sub")?.Value;
+            if (Guid.TryParse(claim, out var userId))
+                // Replace only this session; a concurrent new login must survive stale logout.
+                await _authService.RotateRefreshTokenAsync(userId, saved.RefreshToken,
+                    _jwtService.GenerateRefreshToken(), cancellationToken);
+        }
+        ClearSession();
+        return NoContent();
+    }
+
+    private CookieOptions SessionOptions() => new()
+    {
+        HttpOnly = true,
+        Secure = Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api/auth",
+        IsEssential = true
+    };
+
+    private void SaveSession(AuthResponse response)
+    {
+        if (_sessions is null) return; // Direct controller tests do not install browser transport.
+        var options = SessionOptions();
+        options.Expires = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshExpiryDays);
+        Response.Cookies.Append(SessionCookie, _sessions.Protect(JsonSerializer.Serialize(
+            new RefreshTokenRequest(response.AccessToken, response.RefreshToken))), options);
+        var marker = SessionOptions();
+        marker.Path = "/"; marker.HttpOnly = false; marker.Expires = options.Expires;
+        Response.Cookies.Append("liner.signed-in", "1", marker);
+        Response.Headers.CacheControl = "no-store";
+    }
+
+    private void ClearSession()
+    {
+        Response.Cookies.Delete(SessionCookie, SessionOptions());
+        var marker = SessionOptions(); marker.Path = "/"; marker.HttpOnly = false;
+        Response.Cookies.Delete("liner.signed-in", marker);
+    }
+
+    private RefreshTokenRequest? ReadSession()
+    {
+        if (_sessions is null || !Request.Cookies.TryGetValue(SessionCookie, out var cookie)) return null;
+        try { return JsonSerializer.Deserialize<RefreshTokenRequest>(_sessions.Unprotect(cookie)); }
+        catch (Exception ex) when (ex is CryptographicException or JsonException) { return null; }
     }
 
     /// <summary>
@@ -249,6 +334,7 @@ public sealed class AuthController : ApiControllerBase
     /// </summary>
     [Authorize]
     [HttpGet("me")]
+    [EnableRateLimiting("session")]
     [ProducesResponseType(typeof(Application.DTOs.Subscribers.SubscriberDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

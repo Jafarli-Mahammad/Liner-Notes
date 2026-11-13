@@ -55,7 +55,8 @@ public sealed partial class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         Directory.CreateDirectory(_root);
         _storage = new()
         {
-            InventoryPath = Path.Combine(_root, "inventory.json"), LeasePath = Path.Combine(_root, "lease"),
+            InventoryPath = Path.Combine(_root, "inventory.json"),
+            LeasePath = Path.Combine(_root, "lease"),
             DatabaseOverheadBytesPerPick = 1_000_000,
             ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(category => category, category => new[] { Path.Combine(_root, category) })
         };
@@ -75,7 +76,8 @@ public sealed partial class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
             db.ApplicationUsers.Add(new ApplicationUser { Id = id, UserName = "fixture-" + id.ToString("N"), Email = "schedule@example.test", EmailConfirmed = true });
             var user = new User(id == _user ? "schedule@example.test" : "other@example.test", "Asia/Baku", (DigestDeliveryDay)_due.DayOfWeek, _due.Hour, id, weeklyEmailOptIn: true);
             user.SetNextDigestAt(_due); db.Users.Add(user);
-            db.TasteSignals.Add(TasteSignal.CreateSeedTag(id, "darkwave", 1, "synthetic schedule fixture"));
+            // Match the recording-level fixture tags so this lifecycle test has relevant picks.
+            db.TasteSignals.Add(TasteSignal.CreateSeedTag(id, "electronic", 1, "synthetic schedule fixture"));
             db.UserTokens.Add(new() { UserId = id, LoginProvider = "fixture", Name = "fixture", Value = "fixture-only-not-a-real-credential" });
         }
         await db.SaveChangesAsync();
@@ -385,7 +387,7 @@ public sealed partial class Phase8ScheduledWorkerPostgresTests : IAsyncLifetime
         await CaptureAfterExplicitReconciliationAsync();
         await using var scope = _services.CreateAsyncScope(); var sp = scope.ServiceProvider; var db = sp.GetRequiredService<DataContext>();
         var export = await sp.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(_user));
-        Assert.Equal("2.6", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
+        Assert.Equal("2.8", export.ExportVersion); Assert.Equal(_user, export.Account!.Id);
         Assert.Equal(_due.AddDays(7), export.Subscriber.NextDigestAt);
         var digest = Assert.Single(export.Digests); Assert.Equal(WeeklySchedulePolicy.Week(_due).Value, digest.Week);
         Assert.NotEmpty(digest.Recommendations); Assert.All(digest.Recommendations, pick => Assert.NotNull(pick.ScoreBreakdown.Snapshot));

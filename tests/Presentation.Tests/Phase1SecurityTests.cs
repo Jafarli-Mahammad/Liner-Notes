@@ -189,6 +189,24 @@ public sealed class Phase1SecurityTests : IAsyncLifetime
     }
 
     [PostgresFact]
+    public async Task SessionBootstrapDoesNotConsumePasswordAttemptPermits()
+    {
+        await using var app = App();
+        using var client = app.CreateClient();
+        for (var i = 0; i < 12; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/session");
+            request.Headers.Add("X-Liner-Session", "1");
+            Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(request)).StatusCode);
+        }
+        for (var i = 0; i < 10; i++)
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/auth/login",
+                new LoginRequest("missing@example.test", "wrong"))).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest("missing@example.test", "wrong"))).StatusCode);
+    }
+
+    [PostgresFact]
     public async Task Deletion_RemovesHiddenOwnedRows_PreservesCatalogAndOtherAccounts_RevokesAccess()
     {
         var id = await SeedUser("delete");

@@ -198,8 +198,8 @@ public sealed class GenerateDigestTests
         source.GetCandidatesByTagsAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new IngestionResult<RawCandidateTrack>([raw]));
         hydrator.HydrateCandidatesBatchAsync(Arg.Any<IReadOnlyList<RawCandidateTrack>>(), Arg.Any<CancellationToken>())
-            .Returns(new IngestionResult<HydratedCandidateTrack>([new(Track.Create(raw.Title, raw.ArtistName), WeightedTagVector.Empty,
-                raw, [], raw.Paths[0].TrackResponse, "no_tags")]));
+            .Returns(new IngestionResult<HydratedCandidateTrack>([new(Track.Create(raw.Title, raw.ArtistName), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["rock"] = 1 }),
+                raw, [], raw.Paths[0].TrackResponse, null)]));
         Assert.Equal("snapshot_limit", (await Handler.Handle(new(userId, new(2026, 41)), default)).Reason);
         await store.DidNotReceiveWithAnyArgs().PersistAsync(default, default!, default!, default!, default!, default);
         using var cts = new CancellationTokenSource(); cts.Cancel();

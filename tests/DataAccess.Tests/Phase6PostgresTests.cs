@@ -63,9 +63,13 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         storageOptions.DatabaseOverheadBytesPerPick = 1_000_000; // Test bound only; production remains unconfigured.
         storageOptions.ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(c => c, _ => Array.Empty<string>());
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-            { ["ConnectionStrings:DefaultConnection"] = connection, ["Generation:Origin"] = "Recorded", ["Generation:Provider"] = "lastfm",
+        {
+            ["ConnectionStrings:DefaultConnection"] = connection,
+            ["Generation:Origin"] = "Recorded",
+            ["Generation:Provider"] = "lastfm",
             ["Generation:RecordingExpiresAtUtc"] = DateTimeOffset.UtcNow.AddDays(1).ToString("O"),
-            ["Generation:ApprovedRecordingManifestSha256"] = new string('a', 64) }).Build();
+            ["Generation:ApprovedRecordingManifestSha256"] = new string('a', 64)
+        }).Build();
         var registrations = new ServiceCollection().AddLogging().AddApplication().AddDataAccess(config).AddInfrastructure(config);
         registrations.AddSingleton(storageOptions);
         foreach (var recording in Recordings()) registrations.AddSingleton(recording);
@@ -126,7 +130,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         var result = await GenerateAsync();
         Assert.Equal("generated", result.Status); Assert.Null(result.Reason);
         Assert.Equal(new DateTime(2026, 10, 5, 0, 0, 0, DateTimeKind.Utc), result.Digest!.WeekStartDate);
-        Assert.Equal(2, result.Digest.Recommendations.Count);
+        Assert.Single(result.Digest.Recommendations);
         Assert.Contains(result.Gaps, g => g.Reason == "no_valid_descriptive_tag_counts");
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -173,7 +177,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         var profile = await db.ListenerProfiles.SingleAsync(p => p.UserId == userId);
         var inputs = await scope.ServiceProvider.GetRequiredService<IDigestGenerationStore>().ReadInputsAsync(userId);
-        // Compatibility oracle: the original revision algorithm materialized these exact JSON bytes.
+        // Revision covers compact lifetime votes and bounded recent musical evidence, excluding note audit edits.
         var original = JsonSerializer.SerializeToUtf8Bytes(new
         {
             Exists = inputs.UserExists,
@@ -181,10 +185,18 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
             ProfileRevision = (long?)profile.Revision,
             Onboarding = profile.OnboardingJson,
             Signals = inputs.Signals.Select(s => new { s.Id, s.TargetType, s.TargetValue, s.Weight, s.Source, s.Context, s.LastModifiedAt }),
+            History = inputs.FeedbackHistory!.OrderBy(r => r.Id),
+            RecentArtists = inputs.RecentArtists,
             Feedback = inputs.Feedback.Select(r => new
             {
-                r.Id, r.Feedback, r.Rating, r.FeedbackGivenAt, r.LastModifiedAt,
-                r.Track.TrackKey, r.Track.NormalizedArtistName, r.Track.NormalizedTitle, r.ScoreBreakdown.MatchedTags
+                r.Id,
+                r.Feedback,
+                r.Rating,
+                r.FeedbackGivenAt,
+                r.Track.TrackKey,
+                r.Track.NormalizedArtistName,
+                r.Track.NormalizedTitle,
+                r.ScoreBreakdown.MatchedTags
             })
         });
         Assert.NotEmpty(inputs.Feedback);
@@ -333,7 +345,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         db.UserMusicConnections.Add(deletedConnection);
         await db.SaveChangesAsync();
         var export = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.6", export.ExportVersion);
+        Assert.Equal("2.8", export.ExportVersion);
         Assert.Equal(userId, export.Account!.Id);
         Assert.Equal(1005, export.Digests.Count);
         Assert.Equal(1005, export.Digests.Select(d => d.Id).Distinct().Count());
@@ -356,7 +368,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         Assert.Equal(0, await db.WeeklyDigests.IgnoreQueryFilters().CountAsync());
         Assert.Equal(0, await db.TasteSignals.IgnoreQueryFilters().CountAsync());
         Assert.Equal(0, await db.Users.IgnoreQueryFilters().CountAsync());
-        Assert.Equal(2, await db.Tracks.CountAsync());
+        Assert.Equal(1, await db.Tracks.CountAsync());
     }
 
     [LocalPostgresMigrationFact]

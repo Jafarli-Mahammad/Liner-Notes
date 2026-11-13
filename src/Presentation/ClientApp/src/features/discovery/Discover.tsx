@@ -8,6 +8,7 @@ import { Artwork } from '../../components/Artwork';
 import { FeedbackControls } from '../../components/FeedbackControls';
 import { Loading } from '../../components/Loading';
 import { MusicLinks } from '../../components/MusicLinks';
+import { SourceLinks } from '../information/Information';
 import { Notice } from '../../components/Notice';
 import { useRetryDelay } from '../../hooks/useRetryDelay';
 
@@ -20,7 +21,7 @@ function PickContent({ pick, featured, onSaved }: { pick: Pick; featured?: boole
     <p className="pick-explanation">{pick.explanation}</p>
     <MusicLinks pick={pick} compact={!featured} />
     {featured ? <FeedbackControls pick={pick} onSaved={onSaved} /> : <details className="compact-feedback"><summary>Give feedback</summary><FeedbackControls pick={pick} onSaved={onSaved} /></details>}
-    {!!pick.sources.length && <details className="source-note"><summary>Music evidence</summary><p>{pick.sources.join(', ')}</p></details>}
+    {!!pick.sources.length && <details className="source-note"><summary>Music evidence</summary><p><SourceLinks sources={pick.sources} /></p></details>}
   </article>;
 }
 
@@ -104,10 +105,11 @@ export default function Discover() {
         <p className="intro-copy">A few genuinely good finds, tuned to your taste — thoughtful connections between what you already love and sounds worth hearing next.</p>
         {hasTaste ? <button className="button button-primary discovery-cta" type="button" disabled={disabled} onClick={generate}>{personal.busy ? 'Requesting discoveries…' : active ? 'Finding your next favorites…' : next > now ? `Ready in ${Math.ceil((next - now) / 1000)}s` : 'Find my next favorites'}</button>
           : <Link className="button button-primary discovery-cta" to="/taste">Find my next favorites</Link>}
-        <div className="taste-summary"><span className="editorial-meta">Based on your taste</span>
+        <div className="taste-summary"><span className="editorial-meta">{batch ? 'Your taste for the next discovery' : 'Based on your taste'}</span>
           {hasTaste ? <div className="taste-strip">{page?.favorites.slice(0, 4).map(f => <span className="taste-chip" key={f.catalogRecordId ?? f.signalId}>{f.name}</span>)}{page?.tags.slice(0, 4).map(tag => <span className="taste-chip" key={tag}>{tag}</span>)}{page?.onboarding?.allStyles && <span className="taste-chip">All styles welcome</span>}</div>
             : <p className="field-help">Start with artists, albums, tracks or styles you love. Every preference is optional.</p>}
           <Link className="text-link" to="/taste">Tune your taste</Link>
+          {batch && <p className="field-help">These saved picks reflect your taste when they were requested. Taste changes apply to your next discovery.</p>}
         </div>
         {active && <Notice>{progress[job!.progressCode] ?? 'Finding music for your taste…'}</Notice>}
         {!!error && <Notice error={error} onRetry={refreshSaved} />}
@@ -120,10 +122,13 @@ export default function Discover() {
         {!hasTaste && <Link className="text-link" to="/">Explore recent recommendations</Link>}
       </div>}</div>
     </section>
+    {batch && typeof batch.coverage?.RequestedPicks === 'number' && batch.picks.length < batch.coverage.RequestedPicks &&
+      <Notice>Showing {batch.picks.length} of {batch.coverage.RequestedPicks} requested picks. The remaining candidates did not have enough supported connection or variety for this batch.</Notice>}
     {batch?.coverage?.Gaps?.length ? <Notice>Some selections had limited source evidence. Your saved explanations show the connections available.</Notice> : null}
     {!!batch && batch.picks.length > 1 && <section className="secondary-picks"><div className="more-heading"><h2>More finds for you</h2><span className="editorial-meta">{String(batch.picks.length - 1).padStart(2, '0')} more</span></div>
       <div className="personal-picks-grid">{batch.picks.slice(1).map(pick => <PickContent key={pick.id} pick={pick} onSaved={saved} />)}</div>
-      {!batchId && <div className="discover-more"><button className="button button-secondary" disabled={disabled} onClick={generate} type="button">Find more recommendations <span aria-hidden="true">↻</span></button><p className="field-help">New suggestions may take a moment to generate.</p></div>}
+
     </section>}
+      {!!batch && !batchId && <div className="discover-more"><button className="button button-secondary" disabled={disabled} onClick={generate} type="button">Find more recommendations <span aria-hidden="true">↻</span></button><p className="field-help">New suggestions may take a moment to generate.</p></div>}
   </main>;
 }

@@ -53,7 +53,7 @@ public sealed partial class CoordinatedAuthenticationPostgresTests
         string output = await stdout + await stderr;
         Assert.Equal(2, process.ExitCode);
         Assert.Contains("Managed storage startup stopped: " + reason, output);
-        Assert.Contains("docs/renewal/guest-discovery-storage.md", output);
+        Assert.Contains("docs/plans/guest-discovery-storage.md", output);
         Assert.DoesNotContain("Unhandled exception.", output);
         Assert.DoesNotContain("Now listening on", output);
     }

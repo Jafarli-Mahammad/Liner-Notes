@@ -20,7 +20,7 @@ public sealed class DiscoveryReader(DataContext db) : IDiscoveryReader
         var favorites = signals.Where(s => s.TargetType is TasteTargetType.Artist or TasteTargetType.Album or TasteTargetType.Track).Select(s =>
         {
             var selected = s.SelectionJson is null ? null : JsonSerializer.Deserialize<CatalogSelectionSnapshot>(s.SelectionJson);
-            return new DiscoveryFavorite(s.CatalogRecordId, s.TargetValue, selected?.Item.ArtistName, s.TargetType.ToString(), selected?.Item.Disambiguation, selected?.Item.Releases, s.Id);
+            return new DiscoveryFavorite(s.CatalogRecordId, s.TargetValue, selected?.Item.ArtistName, s.TargetType.ToString(), selected?.Item.Disambiguation, selected?.Item.Releases, s.Id, s.CanonicalEntityId);
         }).ToArray();
         var batches = await db.DiscoveryBatches.AsNoTracking().Where(b => b.ProfileId == profileId && b.CompletedAtUtc != null)
             .OrderByDescending(b => b.CreatedAtUtc).ThenByDescending(b => b.Id).Take(10)

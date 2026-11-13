@@ -10,6 +10,18 @@ namespace LinerNotes.Presentation.Tests;
 public sealed class ArtworkControllerTests
 {
     [Fact]
+    public void ArtistRetryUsesTheNegativeCacheWindow()
+    {
+        var artwork = Substitute.For<IArtistArtwork>();
+        var id = Guid.NewGuid();
+        artwork.Request(id).Returns(RecordingArtworkState.Pending);
+        artwork.RetryDelay(id).Returns(TimeSpan.FromSeconds(29.1));
+        var controller = new ArtistArtworkController(artwork) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
+        Assert.Equal(503, Assert.IsType<StatusCodeResult>(controller.Read(id)).StatusCode);
+        Assert.Equal("30", controller.Response.Headers.RetryAfter.ToString());
+    }
+
+    [Fact]
     public void KnownUnavailableCoverReturns404RatherThanASuccessfulPlaceholder()
     {
         var artwork = Substitute.For<IRecordingArtwork>();

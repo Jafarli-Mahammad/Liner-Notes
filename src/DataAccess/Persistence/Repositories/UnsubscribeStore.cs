@@ -7,10 +7,11 @@ using LinerNotes.Application.Features.Discovery;
 namespace LinerNotes.DataAccess.Persistence.Repositories;
 
 public sealed class UnsubscribeStore(DataContext db, IDiscoveryWriteCoordinator? admission = null,
-    DiscoveryRuntimeOptions? runtime = null) : IUnsubscribeStore
+    DiscoveryRuntimeOptions? runtime = null, IAccountEmailLease? ownership = null, EmailDeliveryOptions? delivery = null) : IUnsubscribeStore
 {
     public async Task UnsubscribeAsync(Guid userId, DateTime utcNow, CancellationToken ct)
     {
+        await using var lease = delivery?.Enabled == true && ownership is not null ? await ownership.AcquireAsync(userId, ct) : null;
         if (utcNow.Kind != DateTimeKind.Utc) throw new ArgumentException("UTC required.", nameof(utcNow));
         // Atomic row update coordinates with capture's final SELECT FOR UPDATE.
         Task<int> Update(CancellationToken token) => db.Users.Where(u => u.Id == userId && u.EmailUnsubscribedAtUtc == null)

@@ -11,6 +11,7 @@ public sealed class GenerationConfiguration
     public string ConfigurationVersion { get; set; } = "phase6-config-v1";
     public double TagWeight { get; set; } = 1;
     public double NoveltyWeight { get; set; } = 0.2;
+    public int MinimumNegativeFeedbackRecordings { get; set; } = 3;
     public double FeedbackTagWeight { get; set; } = 0.5;
     public double MinimumPositiveFeedbackWeight { get; set; } = 0.4;
     public int MaximumArtistSeeds { get; set; } = 20;
@@ -18,7 +19,12 @@ public sealed class GenerationConfiguration
     public int DiscoveryLimit { get; set; } = 10;
     public int MaximumCandidates { get; set; } = 400;
     public int MaximumSnapshotBytes { get; set; } = 100_000;
+    // Up to 40 pools need discovery, recording metadata and artist-tag metadata,
+    // in addition to materializing up to 20 favorite seeds. Keep this bounded
+    // budget large enough to finish that supported cold acquisition window.
+    public int MaximumUpstreamRequests { get; set; } = 200;
     public int MaximumPicks { get; set; } = 5;
+    public LinerNotes.Domain.Discovery.SelectionConfiguration Selection { get; set; } = new();
     public EvidenceOrigin Origin { get; set; } = EvidenceOrigin.Recorded;
     public bool LiveEnabled { get; set; }
     public DateTimeOffset? RecordingExpiresAtUtc { get; set; }
@@ -30,15 +36,22 @@ public sealed class GenerationConfiguration
             Provider.Any(c => !char.IsAsciiLetterLower(c) && !char.IsAsciiDigit(c) && c != '-') ||
             string.IsNullOrWhiteSpace(IngestionPolicyVersion) || IngestionPolicyVersion.Length > 128 ||
             MaximumArtistSeeds is < 1 or > 20 || MaximumTagSeeds is < 1 or > 20 || DiscoveryLimit is < 1 or > 10 ||
-            MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
+            MaximumUpstreamRequests is < 1 or > 200 || MaximumCandidates is < 1 or > 400 || MaximumSnapshotBytes is < 1 or > 100_000 || MaximumPicks is < 1 or > 5 ||
             (Origin is not (EvidenceOrigin.Recorded or EvidenceOrigin.Synthetic) &&
                 !(Origin == EvidenceOrigin.Live && LiveEnabled)) ||
-            !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
+            MinimumNegativeFeedbackRecordings < 2 || !double.IsFinite(FeedbackTagWeight) || FeedbackTagWeight < 0 ||
             !double.IsFinite(MinimumPositiveFeedbackWeight) || MinimumPositiveFeedbackWeight is < 0 or > 1)
             throw new ArgumentException("Invalid generation configuration, origin approval or mechanical limits.");
+        Selection.Validate();
         var policy = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             [nameof(Provider)] = Provider,
+            [nameof(MaximumUpstreamRequests)] = MaximumUpstreamRequests.ToString(CultureInfo.InvariantCulture),
+            ["SelectionConfiguration"] = System.Text.Json.JsonSerializer.Serialize(Selection),
+            ["SelectionPolicy"] = LinerNotes.Domain.Discovery.ConnectedSelection.Version,
+            ["FeedbackPolicy"] = LinerNotes.Domain.Taste.EffectiveTasteInputs.FeedbackPolicy,
+            [nameof(MinimumNegativeFeedbackRecordings)] = MinimumNegativeFeedbackRecordings.ToString(CultureInfo.InvariantCulture),
+            ["TastePreparation"] = LinerNotes.Application.Features.Discovery.MaterializeDiscoveryTaste.Version,
             [nameof(LiveEnabled)] = LiveEnabled.ToString(CultureInfo.InvariantCulture),
             ["IngestionPolicy"] = $"{Provider}-{IngestionPolicyVersion}",
             [nameof(MaximumArtistSeeds)] = MaximumArtistSeeds.ToString(CultureInfo.InvariantCulture),

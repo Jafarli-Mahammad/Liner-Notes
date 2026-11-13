@@ -12,6 +12,29 @@ namespace LinerNotes.Presentation.Tests;
 public sealed partial class CoordinatedAuthenticationPostgresTests
 {
     [PostgresFact]
+    public async Task NewLoginReplacesAnExistingRefreshCredentialUnderNoTrackingDefaults()
+    {
+        var id = await SeedAsync();
+        await using (var first = services.CreateAsyncScope())
+            await first.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(131_072, async ct =>
+            {
+                await first.ServiceProvider.GetRequiredService<IAuthService>().StoreRefreshTokenAsync(id, "old-fixture-refresh");
+                return true;
+            }, default);
+        await using (var second = services.CreateAsyncScope())
+            await second.ServiceProvider.GetRequiredService<IDiscoveryWriteCoordinator>().ExecuteAsync(131_072, async ct =>
+            {
+                await second.ServiceProvider.GetRequiredService<IAuthService>().StoreRefreshTokenAsync(id, "new-fixture-refresh");
+                return true;
+            }, default);
+        await using var verify = services.CreateAsyncScope();
+        var auth = verify.ServiceProvider.GetRequiredService<IAuthService>();
+        Assert.True(await auth.ValidateRefreshTokenAsync(id, "new-fixture-refresh"));
+        Assert.False(await auth.ValidateRefreshTokenAsync(id, "old-fixture-refresh"));
+        await verify.ServiceProvider.GetRequiredService<IManagedStorageIntegrity>().VerifyAsync(default);
+    }
+
+    [PostgresFact]
     public async Task ACorrectAttemptPreparedBeforeParallelFailuresCannotBypassTheResultingLockout()
     {
         var id = await SeedAsync();

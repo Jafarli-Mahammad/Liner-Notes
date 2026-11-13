@@ -68,8 +68,10 @@ ListenBrainz and MusicBrainz data after completing the private local setup.
 The `Worker` has manual operations for reconciliation, generation and capture,
 and the repository includes scheduled processing code. The production beta adds
 guarded configuration, container builds, storage verification, encrypted
-backup/recovery and operational health checks. Email delivery and automatic
-all-account scheduling are excluded from that beta. Per-user provider choice
+backup/recovery and operational health checks. The original beta excluded email delivery and automatic scheduling. The new
+opt-in account-mail workflow adds confirmation/recovery, durable delivery and
+bounded production scheduling; [activation requirements](docs/operations/account-email.md)
+remain before real sending. Per-user provider choice
 and listening-history import are not available.
 
 Local checks and browser runs show that individual flows work in this checkout.
@@ -128,8 +130,8 @@ explain its scope and limits.
 Useful project documents:
 
 - [Current progress and open work](PROGRESS.md)
-- [Product contracts](docs/renewal/contracts.md)
-- [Local configuration](docs/renewal/local-configuration.md)
+- [Product contracts](docs/plans/contracts.md)
+- [Local configuration](docs/plans/local-configuration.md)
 - [Production beta operation](docs/operations/production-beta.md)
 - [Production beta verification and remaining gates](docs/operations/production-beta-evidence.md)
 - [Changelog](CHANGELOG.md)

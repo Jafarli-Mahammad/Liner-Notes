@@ -6,6 +6,7 @@ import type { Answers, Favorite } from '../../api/models';
 import { usePersonal } from '../../app/Personal';
 import { Notice } from '../../components/Notice';
 import { Artwork } from '../../components/Artwork';
+import { ArtistArtwork } from '../../components/ArtistArtwork';
 import { CatalogPicker } from './CatalogPicker';
 import { TagPicker } from './TagPicker';
 import { useRetryDelay } from '../../hooks/useRetryDelay';
@@ -58,9 +59,9 @@ export default function Taste() {
       <section aria-labelledby="music-you-love"><div className="editor-section-heading"><h2 id="music-you-love">Music you love</h2><span className="editorial-meta">{favorites.length} selected</span></div>
         <CatalogPicker onChoose={add} />
         <div className="editor-panel favorite-list">{favorites.length ? favorites.map((favorite, index) => <div className="favorite-row" key={favorite.catalogRecordId ?? favorite.signalId ?? index}>
-          <div className="favorite-summary">{favorite.kind === 'Track' && favorite.canonicalId ? <div className="favorite-cover"><Artwork id={favorite.canonicalId} /></div> : <span className={`favorite-symbol favorite-${favorite.kind.toLowerCase()}`} aria-hidden="true" />}
+          <div className="favorite-summary">{favorite.kind === 'Track' && favorite.canonicalId ? <div className="favorite-cover"><Artwork id={favorite.canonicalId} /></div> : favorite.kind === 'Artist' ? <ArtistArtwork id={favorite.canonicalId} name={favorite.name} /> : <span className={`favorite-symbol favorite-${favorite.kind.toLowerCase()}`} aria-hidden="true" />}
             <div><p>{favorite.name}</p><span>{favorite.artistName ?? favorite.kind}{favorite.disambiguation ? ` · ${favorite.disambiguation}` : ''}</span>
-              {!!favorite.releases?.length && <small>{favorite.releases.slice(0, 2).map(r => r.title).join(' · ')}</small>}</div></div>
+              {!!favorite.releases?.length && <small>{[...new Set(favorite.releases.map(r => r.title.trim()).filter(Boolean))].slice(0, 2).join(' · ')}</small>}</div></div>
           <button type="button" className="remove-favorite" aria-label={`Remove ${favorite.name}`} onClick={() => setFavorites(values => values.filter((_, i) => i !== index))}>×</button>
         </div>) : <p className="field-help">Search for music you love, or start with styles below. Favorites are optional.</p>}</div>
       </section>

@@ -11,10 +11,11 @@ namespace LinerNotes.Presentation.Controllers;
 [AllowAnonymous]
 [Route("api/digests/unsubscribe")]
 public sealed class UnsubscribeController(IUnsubscribeTokens tokens, LocalEmailOptions options,
-    IWebHostEnvironment environment, ISender mediator) : ControllerBase
+    IWebHostEnvironment environment, ISender mediator, EmailDeliveryOptions? delivery = null) : ControllerBase
 {
     private bool Available()
     {
+        if (delivery?.Enabled == true) { try { delivery.Validate(); return true; } catch (InvalidOperationException) { return false; } }
         if (!environment.IsDevelopment() || !options.Enabled) return false;
         try { options.Origin(); return true; } catch (InvalidOperationException) { return false; }
     }
@@ -35,8 +36,9 @@ public sealed class UnsubscribeController(IUnsubscribeTokens tokens, LocalEmailO
     public async Task<IActionResult> Unsubscribe([FromForm] string? token, CancellationToken ct)
     {
         if (!Available()) return NotFound();
+        token ??= Request.Query["token"].FirstOrDefault();
         if (!tokens.TryRead(token, out var id)) return BadRequest("Invalid unsubscribe link.");
         await mediator.Send(new UnsubscribeUserCommand(id), ct);
-        return Content("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Unsubscribed · Liner Notes</title><main><h1>Unsubscribe confirmed</h1><p>This link no longer allows future weekly email capture for an active account.</p></main></html>", "text/html; charset=utf-8");
+        return Content("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Unsubscribed · Liner Notes</title><main><h1>Unsubscribe confirmed</h1><p>Future weekly emails are stopped. Your account and taste remain available. Messages already accepted for delivery cannot be recalled.</p></main></html>", "text/html; charset=utf-8");
     }
 }

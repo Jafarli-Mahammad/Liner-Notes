@@ -23,7 +23,7 @@ external message, push or deployment was created by this implementation.
   confirmed eligible accounts, public links and one-click unsubscribe. Security
   mail is dispatched before slower acquisition; weekly work retains a fair share.
 - New dispatch/suppression schema includes managed-storage accounting and
-  owner-scoped export 2.7/deletion. Maintenance bounds retained mail metadata.
+  owner-scoped export 2.8/deletion. Maintenance bounds retained mail metadata.
   Protected queued bodies and security tokens are excluded from readable exports.
 - Production operator commands and systemd service/timer, operational mail summary,
   migration and activation documentation. External mail defaults to disabled.

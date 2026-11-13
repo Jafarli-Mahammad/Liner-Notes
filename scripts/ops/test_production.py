@@ -135,4 +135,14 @@ class BackupManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ops.OperationStopped,'mail_blocked_by_maintenance'):
             operation.reconcile_mail('37e4414c-5e25-4dbc-a071-43552a4bd53b')
 
+    def test_mail_worker_success_statuses_are_recorded_by_real_result_parser(self):
+        operation=object.__new__(ops.Operations); operation.state=self.root
+        operation.private=self.root/'private'; operation.private.mkdir()
+        operation.command=lambda *a,**kw:json.dumps({'Status':'completed','Schedule':{},'Delivery':{}}).encode()
+        mail=operation.mail()
+        self.assertEqual('completed',mail['Status'])
+        self.assertEqual('passed',json.loads((self.root/'last-mail.json').read_text())['status'])
+        operation.command=lambda *a,**kw:json.dumps({'Status':'reconciled'}).encode()
+        self.assertEqual('reconciled',operation.reconcile_mail('37e4414c-5e25-4dbc-a071-43552a4bd53b')['Status'])
+
 if __name__ == '__main__': unittest.main()

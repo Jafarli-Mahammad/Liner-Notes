@@ -92,7 +92,7 @@ public sealed class MusicBrainzArtistArtwork(IListenBrainzApiClient metadata, IH
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd(options.UserAgent);
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        if ((int)response.StatusCode is 429 or 503)
+        if ((int)response.StatusCode == 429 || (int)response.StatusCode >= 500)
         {
             var delay = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(30);
             await gate.DeferAsync("Wikimedia", delay > TimeSpan.FromDays(1) ? TimeSpan.FromDays(1) : delay, ct);

@@ -15,6 +15,33 @@ namespace LinerNotes.Application.Tests.Features.Discovery;
 
 public sealed class PrepareDiscoveryBatchTests
 {
+[Fact]
+public async Task OversizedCollaborationIsRejectedWithoutLosingUsableCandidates()
+{
+    var configuration = new GenerationConfiguration { Origin = EvidenceOrigin.Synthetic };
+    var resolver = Substitute.For<IRecommendationProviderResolver>();
+    resolver.Resolve().Returns(new RecommendationProvider("listenbrainz", Substitute.For<IRecommendationSource>(),
+        Substitute.For<ICandidateHydrator>(), Substitute.For<ISeedTagSource>()));
+    var preparation = Substitute.For<IDiscoveryPreparation>();
+    var collaboration = Candidate("Collaboration", "Many artists", "collaboration",
+        creditedArtistIds: Enumerable.Range(0, 33).Select(_ => Guid.NewGuid()).ToArray());
+    var usable = Candidate("Usable", "One artist", "usable");
+    var now = DateTimeOffset.UtcNow;
+    preparation.GetAsync(new(null, "jazz", true, Limit: 6), false, Arg.Any<CancellationToken>())
+        .Returns(new PreparedDiscoveryPool(new string('a', 64), "listenbrainz", EvidenceOrigin.Synthetic, now, null,
+            CatalogText.Version, [collaboration, usable], [], 1000, new string('b', 64)));
+    var profile = ListenerProfile.Guest(now, TimeSpan.FromDays(7));
+    var signal = TasteSignal.ForProfile(profile.Id, null, TasteTargetType.Tag, "jazz", 1,
+        TasteSignalSource.InitialSeedManual, "Selected style.");
+    var runner = new PrepareDiscoveryBatch(new(resolver, configuration, new(), TimeProvider.System), preparation,
+        Substitute.For<IDiscoveryBatchStore>(), configuration, new());
+
+    var result = await runner.PrepareAsync(new(profile, [signal], []), Guid.NewGuid(), false, default);
+
+    Assert.Equal(usable.Track.TrackKey, Assert.Single(result.Picks).Track.TrackKey);
+    using var coverage = JsonDocument.Parse(result.CoverageJson);
+    Assert.Equal(1, coverage.RootElement.GetProperty("RejectedOversizedCollaborations").GetInt32());
+}
     [Fact]
     public async Task BoundedParallelAcquisitionPreservesEveryPickScoreAndEvidenceOrder()
     {
@@ -119,14 +146,15 @@ public sealed class PrepareDiscoveryBatchTests
         await preparation.DidNotReceiveWithAnyArgs().GetAsync(default!, default);
     }
 
-    private static HydratedCandidateTrack Candidate(string title, string artist, string seed, string? mbid = null, string scope = "artist")
+    private static HydratedCandidateTrack Candidate(string title, string artist, string seed, string? mbid = null,
+        string scope = "artist", IReadOnlyList<Guid>? creditedArtistIds = null)
     {
         var response = new ResponseReference("listenbrainz", "fixture", seed, EvidenceOrigin.Synthetic,
             new string('a', 64), DateTimeOffset.UnixEpoch);
         var path = new DiscoveryPath(seed, new(1, "1", null), null, response, 1, null, null, new(null, null, "not_supplied"));
         return new(new Track(title, artist, mbid: mbid), WeightedTagVector.FromDictionary(new Dictionary<string, double> { ["jazz"] = 1 }),
             new(title, artist, mbid, [path]), [], response, null)
-        { TagScope = scope };
+        { TagScope = scope, CreditedArtistIds = creditedArtistIds ?? [] };
     }
 
     [Theory]

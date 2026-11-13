@@ -27,7 +27,7 @@ public sealed record EmailSuppressionExport(Guid UserId, string RecipientHash, s
 public sealed record EmailDeliveryEvent(string MessageId, string Outcome, DateTimeOffset OccurredAt);
 public sealed record EmailDispatchExport(Guid Id, Guid UserId, Guid? DigestId, string Purpose, string RequestKey,
     string RecipientHash, string Fingerprint, string State, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt,
-    DateTimeOffset NextAttemptAt, DateTimeOffset? FirstAttemptAt, DateTimeOffset? LastAttemptAt, int Attempts,
+DateTimeOffset NextAttemptAt, DateTimeOffset? FirstAttemptAt, DateTimeOffset? LastAttemptAt, int Attempts, int AttemptsToday,
     string? ProviderMessageId, DateTimeOffset? AcceptedAt, DateTimeOffset? DeliveredAt, DateTimeOffset? OutcomeAt,
     string? Reason, EmailPayload? RetainedMessage);
 public interface IEmailLeaseGuard : IAsyncDisposable { CancellationToken Lost { get; } }

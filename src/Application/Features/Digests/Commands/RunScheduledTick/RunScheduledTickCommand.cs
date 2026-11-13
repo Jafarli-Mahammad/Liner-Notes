@@ -2,6 +2,7 @@ using LinerNotes.Application.Common.Interfaces;
 using LinerNotes.Application.Common.Interfaces.Recommendation;
 using LinerNotes.Application.Features.Digests.Commands.CaptureLocalDigest;
 using LinerNotes.Application.Features.Digests.Commands.GenerateDigest;
+using LinerNotes.Application.Services;
 using LinerNotes.Domain.Digest;
 using LinerNotes.Domain.Enums;
 using MediatR;
@@ -66,8 +67,19 @@ public sealed class RunScheduledTickCommandHandler(IWeeklyScheduleStore store, I
                 { results.Add(new(current.Id, due, week.Value, "stopped", generated.Reason ?? "generation_not_completed")); continue; }
                 if (request.Production)
                 {
-                    if (email is null || !await email.EnqueueAsync(current.Id, week, ct))
+if (email is null)
                     { results.Add(new(current.Id, due, week.Value, "stopped", "weekly_email_not_queued")); continue; }
+var queueResult = await email.EnqueueAsync(current.Id, week, ct).ConfigureAwait(false);
+if (queueResult == WeeklyEmailQueueResult.LocalCaptureSkipped)
+{
+    await lease.EnsureHeldAsync(ct).ConfigureAwait(false);
+    bool skipped = await store.AdvanceAsync(current, WeeklySchedulePolicy.Advance(due), now, ct).ConfigureAwait(false);
+    results.Add(new(current.Id, due, week.Value, skipped ? "skipped" : "stopped",
+        skipped ? "local_capture_not_eligible_for_production" : "schedule_changed_or_inactive"));
+    continue;
+}
+if (queueResult is not (WeeklyEmailQueueResult.Queued or WeeklyEmailQueueResult.AlreadySent))
+{ results.Add(new(current.Id, due, week.Value, "stopped", "weekly_email_not_queued")); continue; }
                     await lease.EnsureHeldAsync(ct).ConfigureAwait(false);
                     bool queuedSlotAdvanced = await store.AdvanceAsync(current, WeeklySchedulePolicy.Advance(due), now, ct).ConfigureAwait(false);
                     results.Add(new(current.Id, due, week.Value, queuedSlotAdvanced ? "queued" : "inactive_or_changed"));

@@ -345,7 +345,7 @@ public sealed partial class Phase6PostgresTests(ITestOutputHelper output) : IAsy
         db.UserMusicConnections.Add(deletedConnection);
         await db.SaveChangesAsync();
         var export = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetUserDataExportQuery(userId));
-        Assert.Equal("2.7", export.ExportVersion);
+        Assert.Equal("2.8", export.ExportVersion);
         Assert.Equal(userId, export.Account!.Id);
         Assert.Equal(1005, export.Digests.Count);
         Assert.Equal(1005, export.Digests.Select(d => d.Id).Distinct().Count());

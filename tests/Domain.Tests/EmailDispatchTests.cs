@@ -19,6 +19,18 @@ public sealed class EmailDispatchTests
     public void UnattemptedExpiredSecurityMessageIsCancelled()
     { var row = Create(); Assert.False(row.BeginAttempt(Now.AddDays(1))); Assert.Equal(EmailState.Cancelled, row.State); }
     [Fact]
+    public void DailyAttemptCountResetsAtUtcMidnightWithoutResettingLifetimeRetries()
+    {
+        var row = Create();
+        Assert.True(row.BeginAttempt(Now));
+        row.Retry(Now, Now.AddMinutes(1), "retry");
+        Assert.True(row.BeginAttempt(Now.AddMinutes(2)));
+        row.Retry(Now.AddMinutes(2), Now.AddDays(1), "retry");
+        Assert.True(row.BeginAttempt(Now.AddDays(1)));
+        Assert.Equal(3, row.Attempts);
+        Assert.Equal(1, row.AttemptsToday);
+    }
+    [Fact]
     public void AcceptanceIsNotDeliveryAndEventsCannotDowngradeComplaint()
     {
         var row = Create(); row.BeginAttempt(Now); row.Accept("fixture-message", Now);

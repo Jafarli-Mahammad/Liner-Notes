@@ -65,6 +65,9 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
         var hydrated = Merge(pools.SelectMany(p => p.Candidates));
         DiscoverySourceValidation.ThrowIfFailed(gaps.Concat(hydrated.SelectMany(candidate => candidate.Gaps)));
         if (hydrated.Count > configuration.MaximumCandidates) throw new GenerationStoppedException("candidate_limit");
+        int oversizedCollaborationCount = hydrated.Count(candidate => candidate.CreditedArtistIds.Distinct().Count() > 32);
+        if (oversizedCollaborationCount > 0)
+            hydrated = hydrated.Where(candidate => candidate.CreditedArtistIds.Distinct().Count() <= 32).ToArray();
         var aliases = hydrated.SelectMany(c => TrackIdentity.Aliases(c.Track)).Distinct(StringComparer.Ordinal).ToArray();
         var excluded = (await store.FindExcludedAsync(inputs.Profile.Id, aliases, ct)).Concat(effective.ExcludedAliases).ToHashSet(StringComparer.Ordinal);
         string inputHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(effective.PositiveSignals.OrderBy(s => s.NormalizedTargetValue, StringComparer.Ordinal).Select(s => new { s.TargetType, s.NormalizedTargetValue, s.Weight, s.CanonicalEntityId }))));
@@ -144,6 +147,7 @@ public sealed class PrepareDiscoveryBatch(MaterializeDiscoveryTaste materializer
             SupportedPicks = picks.Count,
             RequestedPicks = configuration.MaximumPicks,
             CandidateCount = hydrated.Count,
+            RejectedOversizedCollaborations = oversizedCollaborationCount,
             SuppressedCandidates = hydrated.Count(c => TrackIdentity.Aliases(c.Track).Any(excluded.Contains)),
             FeedbackConsidered = inputs.FeedbackHistory?.Count ?? inputs.Feedback.Count,
             FavoriteEvidence = taste.FavoriteEvidence,

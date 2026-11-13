@@ -72,7 +72,7 @@ public sealed class EmailDispatchStore(DataContext db, IUnitOfWork unit, IDiscov
     public async Task<int> AttemptedTodayAsync(DateTimeOffset now, CancellationToken ct)
     {
         var day = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
-        return await Rows.Where(x => x.LastAttemptAt >= day).SumAsync(x => (int?)x.Attempts, ct) ?? 0;
+        return await Rows.Where(x => x.LastAttemptAt >= day).SumAsync(x => (int?)x.AttemptsToday, ct) ?? 0;
     }
     public async Task<bool> EventAsync(EmailDeliveryEvent value, CancellationToken ct)
     {
@@ -129,7 +129,7 @@ public sealed class EmailDispatchStore(DataContext db, IUnitOfWork unit, IDiscov
         var rows = await Rows.Where(x => x.UserId == userId).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToArrayAsync(ct);
         return rows.Select(row => new EmailDispatchExport(row.Id, row.UserId, row.DigestId, row.Purpose.ToString(), row.RequestKey,
             row.RecipientHash, row.Fingerprint, row.State.ToString(), row.CreatedAt, row.ExpiresAt, row.NextAttemptAt,
-            row.FirstAttemptAt, row.LastAttemptAt, row.Attempts, row.ProviderMessageId, row.AcceptedAt, row.DeliveredAt,
+            row.FirstAttemptAt, row.LastAttemptAt, row.Attempts, row.AttemptsToday, row.ProviderMessageId, row.AcceptedAt, row.DeliveredAt,
             row.OutcomeAt, row.Reason, SafePayload(row.ProtectedPayload))).ToArray();
     }
     private EmailPayload? SafePayload(string? protectedPayload)

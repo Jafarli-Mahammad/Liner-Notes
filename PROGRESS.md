@@ -13,7 +13,7 @@ The approved design is implemented in the repository: public privacy/source/supp
 pages, operator/rights gates, Identity confirmation and password recovery,
 protected durable mail dispatch, a replaceable Resend adapter, authenticated
 delivery events, suppression, account preferences and bounded Production scheduling.
-Email metadata is covered by storage accounting, export 2.7 and account deletion.
+Email metadata is covered by storage accounting, export 2.8 and account deletion.
 External delivery is disabled by default. See [activation and operation](docs/operations/account-email.md)
 and [verification/limits](docs/operations/account-email-evidence-2026-11-13.md).
 

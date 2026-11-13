@@ -11,6 +11,15 @@ namespace LinerNotes.Infrastructure.Tests;
 
 public sealed class ArtistArtworkTests
 {
+    [Theory]
+    [InlineData("http-500")]
+    [InlineData("http-502")]
+    public async Task WikimediaServerErrorsStayRetryable(string mode)
+    {
+        var error = await Assert.ThrowsAsync<HttpRequestException>(() => AcquireAsync("CC0", [], mode: mode));
+        Assert.Equal("artist_artwork_temporarily_unavailable", error.Message);
+    }
+
     private static readonly Guid Artist = Guid.Parse("d67d5d3a-7b59-4460-b09f-49efe00937e7");
 
     [Theory]
@@ -131,7 +140,13 @@ public sealed class ArtistArtworkTests
         using var http = new HttpClient(new Handler(message =>
         {
             var url = message.RequestUri!.AbsoluteUri; calls.Add(url);
-            var response = new HttpResponseMessage(mode == "redirect" ? HttpStatusCode.Found : HttpStatusCode.OK);
+            var response = new HttpResponseMessage(url.Contains("commons.wikimedia.org", StringComparison.Ordinal) ? mode switch
+            {
+                "redirect" => HttpStatusCode.Found,
+                "http-500" => HttpStatusCode.InternalServerError,
+                "http-502" => HttpStatusCode.BadGateway,
+                _ => HttpStatusCode.OK
+            } : mode == "redirect" ? HttpStatusCode.Found : HttpStatusCode.OK);
             response.Headers.CacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromHours(1), Private = mode == "private" };
             if (mode == "stale-metadata") response.Headers.Age = TimeSpan.FromHours(2);
             if (url.Contains("wikidata.org")) response.Content = new StringContent(noPhoto ? "{\"entities\":{\"Q123\":{\"claims\":{}}}}" :

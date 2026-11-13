@@ -149,7 +149,8 @@ Expired payloads are cleared in bounded web maintenance and dispatch passes;
 maintenance must be running. Paused/offline maintenance delays physical cleanup,
 not token expiry. Terminal bodies are cleared, safe outcome metadata is kept for
 90 days, and suppression remains until account deletion or reviewed recovery.
-Export 2.7 includes all mail/suppression metadata and redacted retained messages;
+Export 2.8 includes all mail/suppression metadata and redacted retained messages;
+it includes the current UTC-day attempt count alongside lifetime attempts.
 capability links, credentials and security stamps are excluded. Account deletion
 cascades both new tables. Independent backups/provider copies have separate
 retention; do not promise their immediate erasure.

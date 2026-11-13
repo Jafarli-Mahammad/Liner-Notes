@@ -182,7 +182,8 @@ public sealed partial class CoordinatedAuthenticationPostgresTests
             if (iteration < 2)
             {
                 Assert.Single(result.Jobs); Assert.Equal("queued", result.Jobs[0].Status);
-                Assert.True(await weekly.EnqueueAsync(id, LinerNotes.Domain.Digest.IsoWeek.Parse(result.Jobs[0].Week!), default));
+                Assert.Equal(LinerNotes.Application.Services.WeeklyEmailQueueResult.AlreadySent,
+                    await weekly.EnqueueAsync(id, LinerNotes.Domain.Digest.IsoWeek.Parse(result.Jobs[0].Week!), default));
                 var dispatcher = new EmailDispatcher(sp.GetRequiredService<IEmailDispatchStore>(), sp.GetRequiredService<IEmailPayloadProtection>(), transport,
                     sp.GetRequiredService<IAccountEmailLease>(), services.GetRequiredService<EmailDeliveryOptions>(), clock);
                 Assert.Equal(1, (await dispatcher.RunAsync(10, default)).Accepted);

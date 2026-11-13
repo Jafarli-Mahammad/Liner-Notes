@@ -20,6 +20,7 @@ public sealed class EmailDispatch
     public DateTimeOffset? FirstAttemptAt { get; private set; }
     public DateTimeOffset? LastAttemptAt { get; private set; }
     public int Attempts { get; private set; }
+public int AttemptsToday { get; private set; }
     public string? ProviderMessageId { get; private set; }
     public DateTimeOffset? AcceptedAt { get; private set; }
     public DateTimeOffset? DeliveredAt { get; private set; }
@@ -47,7 +48,9 @@ public sealed class EmailDispatch
             return false;
         }
         if (NextAttemptAt > now) return false;
-        FirstAttemptAt ??= now; LastAttemptAt = now; Attempts++; State = EmailState.Attempting;
+FirstAttemptAt ??= now;
+if (LastAttemptAt?.UtcDateTime.Date != now.UtcDateTime.Date) AttemptsToday = 0;
+LastAttemptAt = now; Attempts++; AttemptsToday++; State = EmailState.Attempting;
         return true;
     }
     public void Retry(DateTimeOffset now, DateTimeOffset retryAt, string reason)

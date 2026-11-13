@@ -205,7 +205,14 @@ class Operations:
         raw = self.command(*args,'worker','--action',action,*acknowledgement,*extra,allowed_codes=(0,2))
         try: result = json.loads(raw)
         except (ValueError,UnicodeDecodeError): raise OperationStopped('operator_result_invalid') from None
-        if result.get('Status') not in ['verified','established','generated','existing','schema_verified','migration_status']:
+        accepted_statuses = {
+            'production-mail': {'completed'},
+            'reconcile-mail': {'reconciled'},
+        }
+        if result.get('Status') not in {
+            'verified','established','generated','existing','schema_verified','migration_status',
+            *accepted_statuses.get(action, set()),
+        }:
             reason=result.get('Reason','')
             raise OperationStopped(reason if re.fullmatch('[a-z_]{1,64}',reason) else 'storage_operator_refused')
         return result

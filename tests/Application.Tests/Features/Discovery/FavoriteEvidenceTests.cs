@@ -228,6 +228,9 @@ public sealed class FavoriteEvidenceTests(ITestOutputHelper output)
                 Assert.True(restored.Snapshot!.Evidence.Selection!.SelectedDecisionsOnly);
                 Assert.Equal(400, LinerNotes.Domain.Discovery.ConnectedSelection.Replay(restored.Snapshot.Evidence.Selection).Decisions.Count);
                 output.WriteLine($"ThousandFavoriteFourHundredCandidateStoredBytes={encoded.Length}");
+                int coverageBytes = System.Text.Encoding.UTF8.GetByteCount(result.CoverageJson);
+                output.WriteLine($"ThousandFavoriteFourHundredCandidateCoverageBytes={coverageBytes}");
+                Assert.InRange(coverageBytes, 1, LinerNotes.Domain.Discovery.DiscoveryBatch.MaximumCoverageBytes);
             }
             Assert.Equal(receipt.FinalScore, new BaselineAScorer().Replay(receipt.Snapshot).FinalScore, 12);
             Assert.Equal(20, receipt.Snapshot.Evidence.AcquisitionWindow.Count);

@@ -105,7 +105,9 @@ public sealed class DiscoveryOutputContractTests(ITestOutputHelper output)
         output.WriteLine("CONTRACT_SHA256=" + hash);
         // Phase 5 freezes relevance-filtered ordering and complete selection inputs.
         // Historical numerical replay is checked independently.
-        Assert.Equal("e02ca68de09fa3159896535b0ecd02a7d42a88c6cbf82eed667f2e4fcf393877", hash);
+        // Reviewed against d49c192: picks, ordering, scores and selection inputs are identical.
+        // Only the 80 -> 200 request budget/hash, coverage rejection count and byte reservation changed.
+        Assert.Equal("9cabd1e059775656865b59ad75d17577ee6df2265ca577fe4ad0b06fba3633e7", hash);
     }
 
     private static void SetId(LinerNotes.Domain.Common.BaseEntity entity, string key) =>

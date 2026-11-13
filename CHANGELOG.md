@@ -2,6 +2,8 @@
 
 ## Unreleased — renewal
 
+- Fix local push test failures: retain complete 1,000-favorite/400-candidate audits within a measured 512 KiB application/database bound and refresh the frozen output contract after verifying unchanged recommendations and scores.
+
 - Add public privacy, music-source and support pages, source/license links, and required operator/rights configuration for public operation. Public recording covers remain unavailable without a recorded use review.
 - Add email confirmation and password recovery, address-specific resend cooldowns, weekly opt-in/out controls, and session invalidation after recovery.
 - Add protected durable mail dispatch, a replaceable Resend adapter, signed delivery events, bounce/complaint suppression, bounded retry/reconciliation, and export/deletion coverage (JSON export 2.8).

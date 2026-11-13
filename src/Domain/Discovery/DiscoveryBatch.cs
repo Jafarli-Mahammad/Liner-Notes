@@ -7,7 +7,7 @@ public enum DiscoveryBatchKind { Initial, OnDemand, Weekly }
 /// <summary>One explicit recommendation request; independent of calendar delivery identity.</summary>
 public sealed class DiscoveryBatch : BaseEntity
 {
-    public const int MaximumCoverageBytes = 262_144;
+    public const int MaximumCoverageBytes = 524_288;
     public Guid ProfileId { get; private set; }
     public string RequestId { get; private set; } = "";
     public DiscoveryBatchKind Kind { get; private set; }

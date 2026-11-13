@@ -1025,7 +1025,7 @@ namespace LinerNotes.DataAccess.Persistence.Migrations
 
                     b.ToTable("DiscoveryBatches", null, t =>
                         {
-                            t.HasCheckConstraint("CK_DiscoveryBatches_Coverage", "\"CoverageJson\" IS NULL OR octet_length(\"CoverageJson\"::text)<=262144");
+                            t.HasCheckConstraint("CK_DiscoveryBatches_Coverage", "\"CoverageJson\" IS NULL OR octet_length(\"CoverageJson\"::text)<=524288");
                         });
                 });
 

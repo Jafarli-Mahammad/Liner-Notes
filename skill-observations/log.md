@@ -512,3 +512,15 @@ PostgreSQL microsecond precision. Keep these checks in migration/cache tests.
 **Issue:** A direct preparation success did not exercise final transaction freshness checks, and a pre-fix local host kept serving old code. Full job submission exposed evidence expiry at completion after a request-budget retry.
 **Suggested improvement:** Confirm the running host loaded the changes, submit through normal admission, wait for the actual worker's terminal state, and verify persisted rows plus the read projection. Model final-save expiry in regression tests and keep strict freshness checks intact.
 **Principle:** Preparation success is insufficient evidence for a durable user operation.
+
+
+### Observation 045: Separate publication scope and verify lifecycle eligibility
+**Status:** OPEN
+**Date:** 2026-11-13
+**Session context:** Reviewing publication readiness of a locally verified service.
+**Skill:** New skill candidate: publication readiness review
+**Type:** open-source
+**Phase/Area:** Release assessment and acceptance evidence
+**Issue:** Historical checklists can lag working deployment code. Conversely, scheduling logic can exist while ordinary signup cannot satisfy its confirmed-email eligibility condition. Passing tooling tests does not exercise public hosting, delivered mail or independent recovery.
+**Suggested improvement:** Separate source publication, hosted beta and full advertised service. Trace normal-user eligibility through each lifecycle gate. Distinguish missing implementation, operator setup and current acceptance; cite code and provide closure checks. Record unavailable test prerequisites separately from product defects.
+**Principle:** Assess the release offered against complete user and operator journeys at the exact revision.

@@ -32,4 +32,7 @@ recommendation behavior to meet a stale whole-result hash.
 
 The earlier daily-attempt test setup and privacy-inventory regressions were fixed
 in 26cf943. This repair does not change the secret-history rewrite or bypass the
-pre-push hook. Final verification is reported with the task result.
+pre-push hook. Verification: the full local solution test run passed 845 tests with zero failures;
+169 PostgreSQL-dependent tests were skipped without a configured database. A separate
+disposable PostgreSQL run passed both the real migration/inventory check and the
+coverage test, retaining a 442,000-byte audit body and rejecting oversized JSON.

@@ -16,12 +16,13 @@ public sealed partial class CatalogPostgresTests
         var profile = ListenerProfile.Guest(Acquired, TimeSpan.FromDays(7));
         db.ListenerProfiles.Add(profile);
         var batch = new DiscoveryBatch(profile.Id, "large-audit", DiscoveryBatchKind.OnDemand, 0, Acquired);
-        string coverage = "{\"details\":\"" + new string('x', 40_000) + "\"}";
+        // Exercise a complete audit above the former 256 KiB bound.
+        string coverage = "{\"details\":\"" + new string('x', 442_000) + "\"}";
         batch.RecordEvidence(null, "prepared-public-v1", coverage);
         db.DiscoveryBatches.Add(batch);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
-        Assert.Contains(new string('x', 40_000), (await db.DiscoveryBatches.SingleAsync(b => b.Id == batch.Id)).CoverageJson);
+        Assert.Contains(new string('x', 442_000), (await db.DiscoveryBatches.SingleAsync(b => b.Id == batch.Id)).CoverageJson);
         string oversized = "{\"details\":\"" + new string('x', DiscoveryBatch.MaximumCoverageBytes) + "\"}";
         var error = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync(
             $"UPDATE \"DiscoveryBatches\" SET \"CoverageJson\"=CAST({oversized} AS jsonb) WHERE \"Id\"={batch.Id}"));

@@ -32,14 +32,16 @@ public sealed class DiscoveryInventoryService(IServiceScopeFactory scopes, TimeP
                 await scope.ServiceProvider.GetRequiredService<MaintainDiscoveryStorage>().ExecuteAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<GuestLifecycle>().CleanupAsync(50, stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<CleanupPublicDiscovery>().ExecuteAsync(stoppingToken);
-                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Maintenance,true);
+                if (scope.ServiceProvider.GetService<LinerNotes.Application.Common.Interfaces.IEmailDispatchStore>() is { } mail)
+                    await mail.PruneAsync(clock.GetUtcNow(), stoppingToken);
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Maintenance, true);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
             catch (Exception)
             {
                 // Saved results stay readable; unknown baselines require explicit operator reconciliation.
                 logger.LogWarning("Discovery storage maintenance unavailable; writes may be stopped.");
-                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Maintenance,false,"maintenance_unavailable");
+                status?.Report(LinerNotes.Application.Common.Diagnostics.OperationalComponent.Maintenance, false, "maintenance_unavailable");
             }
             try { if (!await timer.WaitForNextTickAsync(stoppingToken)) return; }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }

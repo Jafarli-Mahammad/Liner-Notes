@@ -18,6 +18,7 @@ public interface IWeeklyScheduleStore
     /// <remarks>Selection orders by least recent audit activity, due slot, then user ID; recording selection activity rotates bounded ticks. Deleted subscribers, deleted or missing Identity accounts, and unsubscribed accounts are excluded.</remarks>
     Task<IReadOnlyList<ScheduledUser>> GetCandidatesAsync(IReadOnlyList<Guid> users, int limit, DateTime nowUtc, CancellationToken cancellationToken);
     /// <summary>Returns the stored schedule, or null if the subscriber is missing, deleted, or unsubscribed, or its Identity account is missing or deleted.</summary>
+    Task<IReadOnlyList<ScheduledUser>> GetProductionCandidatesAsync(int limit, DateTime nowUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
     Task<ScheduledUser?> GetAsync(Guid userId, CancellationToken cancellationToken);
     /// <summary>Sets a missing slot if the account remains eligible and its delivery preferences still match <paramref name="observed"/>.</summary>
     /// <returns>Whether one row was updated, including its modification timestamp using <paramref name="nowUtc"/>.</returns>

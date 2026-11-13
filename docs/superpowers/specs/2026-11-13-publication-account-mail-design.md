@@ -1,7 +1,7 @@
 # Publication rights, account email and weekly delivery
 
 **Date:** 2026-11-13
-**Status:** proposed design for developer review; implementation has not started.
+**Status:** approved by the developer on 2026-11-13; implemented with local verification and explicit external activation gates. See `docs/operations/account-email-evidence-2026-11-13.md`.
 **Request:** solve the provider rights/attribution/public privacy gaps and the missing email confirmation, password recovery, external delivery and production scheduling identified in the publication-readiness review.
 **Repository baseline:** `7b73e4c` on `Prism`.
 

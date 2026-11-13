@@ -13,214 +13,227 @@ using Microsoft.Extensions.Hosting;
 
 try
 {
-var builder = WebApplication.CreateBuilder(args);
-if (builder.Environment.IsProduction())
-{
-    if (builder.Configuration["Production:ConfigurationFile"] is { } configurationFile)
+    var builder = WebApplication.CreateBuilder(args);
+    if (builder.Environment.IsProduction())
     {
-        if (!Path.IsPathFullyQualified(configurationFile)) throw new InvalidOperationException("production_absolute_configuration_path_required");
-        builder.Configuration.AddJsonFile(configurationFile, optional: false, reloadOnChange: false);
-    }
-    LinerNotes.Presentation.Production.ProductionConfiguration.Validate(builder.Configuration);
-}
-
-if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
-{
-    var settingsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,
-        "..", "..", ".linernotes", "live", "settings.json"));
-    if (!File.Exists(settingsPath))
-        throw new InvalidOperationException("Local live settings are missing. Run bash scripts/run_live.sh once from the repository root.");
-    builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
-    if (builder.Configuration["Generation:Origin"] != "Live" ||
-        !builder.Configuration.GetValue<bool>("Generation:LiveEnabled") ||
-        builder.Configuration["ListenBrainz:Mode"] != "LiveOnly" ||
-        !builder.Configuration.GetValue<bool>("ListenBrainz:LiveUseApproved") ||
-        !builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled") ||
-        !builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
-        throw new InvalidOperationException("The local live profile requires live provider configuration.");
-}
-
-// Hosting logs run before middleware: omit query-bearing request start/finish messages.
-if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled") || builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
-    builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
-
-// Standard Kestrel configuration
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.AddServerHeader = false;
-    options.Limits.MaxRequestBodySize = 64 * 1024;
-});
-
-// Configure Onion Architecture layers
-builder.Services.AddApplication();
-builder.Services.AddDataAccess(builder.Configuration);
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
-builder.Services.AddPresentation(builder.Configuration);
-if (builder.Environment.IsProduction())
-    builder.Services.AddHostedService<LinerNotes.Presentation.Production.OperationalHealth>();
-// Installed only on the terminal public-static branch below, including HTTPS.
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
-    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
-    options.MimeTypes = ["text/css", "text/javascript", "application/javascript", "image/svg+xml"];
-});
-if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
-{
-    if (!builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
-        throw new InvalidOperationException("Discovery jobs require GuestDiscovery:Enabled.");
-    builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
-    builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
-    builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
-    builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtistArtworkService>();
-}
-
-// Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<ApiExceptionFilterAttribute>();
-})
-.AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-});
-
-// Same-origin by default; cross-origin clients must be explicitly configured.
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-if (allowedOrigins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
-    (uri.Scheme != "https" && !(builder.Environment.IsDevelopment() && uri.Scheme == "http")) ||
-    origin != uri.GetLeftPart(UriPartial.Authority)))
-    throw new InvalidOperationException("CORS origins must be explicit HTTPS origins (HTTP allowed in Development).");
-builder.Services.AddCors(options => options.AddPolicy("ConfiguredOrigins", policy =>
-    policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "DELETE")));
-builder.Services.AddHsts(options => { options.MaxAge = TimeSpan.FromDays(180); });
-builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
-var knownForwardedProxies = new List<IPAddress>();
-foreach (var configuredProxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
-{
-    if (!IPAddress.TryParse(configuredProxy, out var proxyAddress))
-        throw new InvalidOperationException($"ForwardedHeaders:KnownProxies contains an invalid IP address: '{configuredProxy}'.");
-    knownForwardedProxies.Add(proxyAddress);
-}
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.ForwardLimit = 1;
-    foreach (var proxyAddress in knownForwardedProxies)
-        if (!options.KnownProxies.Contains(proxyAddress)) options.KnownProxies.Add(proxyAddress);
-});
-
-var app = builder.Build();
-app.UseForwardedHeaders();
-
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.StartsWithSegments("/api/digests/unsubscribe") &&
-        (!app.Environment.IsDevelopment() || !app.Configuration.GetValue<bool>("LocalEmail:Enabled")))
-    {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        return;
+        if (builder.Configuration["Production:ConfigurationFile"] is { } configurationFile)
+        {
+            if (!Path.IsPathFullyQualified(configurationFile)) throw new InvalidOperationException("production_absolute_configuration_path_required");
+            builder.Configuration.AddJsonFile(configurationFile, optional: false, reloadOnChange: false);
+        }
+        LinerNotes.Presentation.Production.ProductionConfiguration.Validate(builder.Configuration);
     }
 
-    if (!app.Environment.IsDevelopment() &&
-        (context.Request.Path.StartsWithSegments("/manual-test") ||
-         context.Request.Path.StartsWithSegments("/api/dev/manual-test")))
+    if (builder.Configuration.GetValue<bool>("LocalLive:Enabled"))
     {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        return;
+        var settingsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,
+            "..", "..", ".linernotes", "live", "settings.json"));
+        if (!File.Exists(settingsPath))
+            throw new InvalidOperationException("Local live settings are missing. Run bash scripts/run_live.sh once from the repository root.");
+        builder.Configuration.AddJsonFile(settingsPath, optional: false, reloadOnChange: false);
+        if (builder.Configuration["Generation:Origin"] != "Live" ||
+            !builder.Configuration.GetValue<bool>("Generation:LiveEnabled") ||
+            builder.Configuration["ListenBrainz:Mode"] != "LiveOnly" ||
+            !builder.Configuration.GetValue<bool>("ListenBrainz:LiveUseApproved") ||
+            !builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled") ||
+            !builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+            throw new InvalidOperationException("The local live profile requires live provider configuration.");
     }
 
-    await next();
-});
+    // Hosting logs run before middleware: omit query-bearing request start/finish messages.
+    if (builder.Configuration.GetValue<bool>("LocalEmail:Enabled") || builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled") || builder.Configuration.GetValue<bool>("EmailDelivery:Enabled"))
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-    app.UseOpenApi(options => options.Path = "/swagger/{documentName}/swagger.json");
-    app.UseSwaggerUi(options =>
+    // Standard Kestrel configuration
+    builder.WebHost.ConfigureKestrel(options =>
     {
-        options.Path = "/swagger";
-        options.DocumentPath = "/swagger/{documentName}/swagger.json";
+        options.AddServerHeader = false;
+        options.Limits.MaxRequestBodySize = 64 * 1024;
     });
-}
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-    // Private health/diagnostic probes carry no credentials; the public proxy still serves HTTPS.
-    app.UseWhen(context => !context.Request.Path.StartsWithSegments("/health") &&
-        !context.Request.Path.StartsWithSegments("/ops"), branch => branch.UseHttpsRedirection());
-}
-
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-    if (!(app.Environment.IsDevelopment() && context.Request.Path.StartsWithSegments("/swagger")))
-        context.Response.Headers["Content-Security-Policy"] =
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-            "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
-    if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/ops") ||
-        context.Request.Path.StartsWithSegments("/health"))
-        context.Response.Headers.CacheControl = "no-store";
-    await next();
-});
-
-// Canonicalize only malformed root GETs, never API paths or mutation requests.
-app.Use(async (context, next) =>
-{
-    var path = context.Request.Path.Value;
-    if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
-        path is { Length: > 1 } && path.All(character => character == '/'))
+    // Configure Onion Architecture layers
+    builder.Services.AddApplication();
+    builder.Services.AddDataAccess(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Configuration["Environment"] = builder.Environment.EnvironmentName;
+    builder.Services.AddPresentation(builder.Configuration);
+    if (builder.Environment.IsProduction())
+        builder.Services.AddHostedService<LinerNotes.Presentation.Production.OperationalHealth>();
+    // Installed only on the terminal public-static branch below, including HTTPS.
+    builder.Services.AddResponseCompression(options =>
     {
-        context.Response.Redirect(context.Request.PathBase + "/" + context.Request.QueryString, permanent: false);
-        return;
+        options.EnableForHttps = true;
+        options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+        options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+        options.MimeTypes = ["text/css", "text/javascript", "application/javascript", "image/svg+xml"];
+    });
+    if (builder.Configuration.GetValue<bool>("DiscoveryRuntime:RunJobs"))
+    {
+        if (!builder.Configuration.GetValue<bool>("GuestDiscovery:Enabled"))
+            throw new InvalidOperationException("Discovery jobs require GuestDiscovery:Enabled.");
+        builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryInventoryService>();
+        builder.Services.AddHostedService<LinerNotes.Presentation.Background.DiscoveryJobService>();
+        builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtworkWarmupService>();
+        builder.Services.AddHostedService<LinerNotes.Presentation.Background.ArtistArtworkService>();
     }
-    await next();
-});
-app.UseDefaultFiles();
-var staticFileOptions = new StaticFileOptions
-{
-    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
-};
-// Terminal branch: API responses, authentication, errors and SPA HTML never enter compression.
-app.MapWhen(context => context.Request.Path.StartsWithSegments("/home-assets") ||
-    context.Request.Path.Value is "/app.js" or "/discovery.js" or "/styles.css", assets =>
-{
-    assets.UseResponseCompression();
-    assets.UseStaticFiles(staticFileOptions);
-    assets.Run(context => { context.Response.StatusCode = StatusCodes.Status404NotFound; return Task.CompletedTask; });
-});
-app.UseStaticFiles(staticFileOptions);
 
-app.UseRouting();
-app.UseCors("ConfiguredOrigins");
-app.UseRateLimiter();
+    // Add Controllers with RFC 7807 global exception filter and JSON string enum serialization
+    builder.Services.AddControllers(options =>
+    {
+        options.Filters.Add<ApiExceptionFilterAttribute>();
+    })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
-app.UseAuthentication();
-app.UseAuthorization();
+    // Same-origin by default; cross-origin clients must be explicitly configured.
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    if (allowedOrigins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+        (uri.Scheme != "https" && !(builder.Environment.IsDevelopment() && uri.Scheme == "http")) ||
+        origin != uri.GetLeftPart(UriPartial.Authority)))
+        throw new InvalidOperationException("CORS origins must be explicit HTTPS origins (HTTP allowed in Development).");
+    builder.Services.AddCors(options => options.AddPolicy("ConfiguredOrigins", policy =>
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "DELETE")));
+    builder.Services.AddHsts(options => { options.MaxAge = TimeSpan.FromDays(180); });
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
+    var knownForwardedProxies = new List<IPAddress>();
+    foreach (var configuredProxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+    {
+        if (!IPAddress.TryParse(configuredProxy, out var proxyAddress))
+            throw new InvalidOperationException($"ForwardedHeaders:KnownProxies contains an invalid IP address: '{configuredProxy}'.");
+        knownForwardedProxies.Add(proxyAddress);
+    }
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+        foreach (var proxyAddress in knownForwardedProxies)
+            if (!options.KnownProxies.Contains(proxyAddress)) options.KnownProxies.Add(proxyAddress);
+    });
 
-app.MapControllers();
-if (app.Environment.IsDevelopment())
-    app.MapManualTestEndpoints();
-app.MapHealthChecks("/health");
-app.MapGet("/health/live",()=>Results.Json(new { status="live" }));
-app.MapGet("/health/ready",(LinerNotes.Application.Common.Diagnostics.OperationalStatus status) =>
-    LinerNotes.Presentation.Production.OperationalHealth.Ready(status.Snapshot())
-        ? Results.Json(new { status="ready" }) : Results.Json(new { status="unavailable" },statusCode:503));
-app.MapGet("/ops/status",(HttpContext context,LinerNotes.Application.Common.Diagnostics.OperationalStatus status,IConfiguration configuration) =>
-    context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address)
-        ? Results.Json(new { components=status.Snapshot().ToDictionary(p=>p.Key.ToString(),p=>p.Value),queue=status.Queue,
-            jobsEnabled=configuration.GetValue<bool>("DiscoveryRuntime:RunJobs") }) : Results.NotFound());
+    var app = builder.Build();
+    app.UseForwardedHeaders();
+    // Cover provenance is not a blanket copyright permission for public redistribution.
+    if (app.Environment.IsProduction() && string.IsNullOrWhiteSpace(builder.Configuration["PublicService:CoverArtUseReference"]))
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api/artwork/recordings")) { context.Response.StatusCode = 404; return; }
+            await next();
+        });
 
-// Guest-first discovery SPA fallback
-app.MapFallbackToFile("index.html", staticFileOptions);
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api/digests/unsubscribe") &&
+            !app.Configuration.GetValue<bool>("EmailDelivery:Enabled") &&
+        (!app.Environment.IsDevelopment() || !app.Configuration.GetValue<bool>("LocalEmail:Enabled")))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
 
-app.Run();
+        if (!app.Environment.IsDevelopment() &&
+            (context.Request.Path.StartsWithSegments("/manual-test") ||
+             context.Request.Path.StartsWithSegments("/api/dev/manual-test")))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        await next();
+    });
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+        app.UseOpenApi(options => options.Path = "/swagger/{documentName}/swagger.json");
+        app.UseSwaggerUi(options =>
+        {
+            options.Path = "/swagger";
+            options.DocumentPath = "/swagger/{documentName}/swagger.json";
+        });
+    }
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts();
+        // Private health/diagnostic probes carry no credentials; the public proxy still serves HTTPS.
+        app.UseWhen(context => !context.Request.Path.StartsWithSegments("/health") &&
+            !context.Request.Path.StartsWithSegments("/ops"), branch => branch.UseHttpsRedirection());
+    }
+
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Response.Headers["X-Frame-Options"] = "DENY";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        if (!(app.Environment.IsDevelopment() && context.Request.Path.StartsWithSegments("/swagger")))
+            context.Response.Headers["Content-Security-Policy"] =
+                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+                "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+        if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/ops") ||
+            context.Request.Path.StartsWithSegments("/health"))
+            context.Response.Headers.CacheControl = "no-store";
+        await next();
+    });
+
+    // Canonicalize only malformed root GETs, never API paths or mutation requests.
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value;
+        if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
+            path is { Length: > 1 } && path.All(character => character == '/'))
+        {
+            context.Response.Redirect(context.Request.PathBase + "/" + context.Request.QueryString, permanent: false);
+            return;
+        }
+        await next();
+    });
+    app.UseDefaultFiles();
+    var staticFileOptions = new StaticFileOptions
+    {
+        OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
+    };
+    // Terminal branch: API responses, authentication, errors and SPA HTML never enter compression.
+    app.MapWhen(context => context.Request.Path.StartsWithSegments("/home-assets") ||
+        context.Request.Path.Value is "/app.js" or "/discovery.js" or "/styles.css", assets =>
+    {
+        assets.UseResponseCompression();
+        assets.UseStaticFiles(staticFileOptions);
+        assets.Run(context => { context.Response.StatusCode = StatusCodes.Status404NotFound; return Task.CompletedTask; });
+    });
+    app.UseStaticFiles(staticFileOptions);
+
+    app.UseRouting();
+    app.UseCors("ConfiguredOrigins");
+    app.UseRateLimiter();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+    if (app.Environment.IsDevelopment())
+        app.MapManualTestEndpoints();
+    app.MapHealthChecks("/health");
+    app.MapGet("/health/live", () => Results.Json(new { status = "live" }));
+    app.MapGet("/health/ready", (LinerNotes.Application.Common.Diagnostics.OperationalStatus status) =>
+        LinerNotes.Presentation.Production.OperationalHealth.Ready(status.Snapshot())
+            ? Results.Json(new { status = "ready" }) : Results.Json(new { status = "unavailable" }, statusCode: 503));
+    app.MapGet("/ops/status", (HttpContext context, LinerNotes.Application.Common.Diagnostics.OperationalStatus status, IConfiguration configuration) =>
+        context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address)
+            ? Results.Json(new
+            {
+                components = status.Snapshot().ToDictionary(p => p.Key.ToString(), p => p.Value),
+                queue = status.Queue,
+                mail = status.Mail,
+                jobsEnabled = configuration.GetValue<bool>("DiscoveryRuntime:RunJobs")
+            }) : Results.NotFound());
+
+    // Guest-first discovery SPA fallback
+    app.MapFallbackToFile("index.html", staticFileOptions);
+
+    app.Run();
 }
 catch (GenerationStoppedException error)
 {

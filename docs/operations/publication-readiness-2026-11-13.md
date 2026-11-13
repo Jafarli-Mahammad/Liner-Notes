@@ -6,6 +6,16 @@
 
 This report distinguishes **missing implementation**, **missing operational setup**, and **unverified acceptance**. An absent record is not proof that an operator has never completed something elsewhere. The developer must confirm acceptance; this review does not provide that confirmation.
 
+## Implementation follow-up
+
+The developer approved the account/mail/publication design. Repository changes
+and local verification are recorded in [the follow-up evidence](account-email-evidence-2026-11-13.md),
+with [activation instructions](account-email.md). The original findings below
+remain the review baseline. Public information and the missing account/mail/
+scheduling code now have implementations; real provider rights decisions,
+sender/domain activation, delivered mail and developer acceptance are not
+established by those changes.
+
 ## 1. Decide what is being published
 
 | Publication scope | What is needed |

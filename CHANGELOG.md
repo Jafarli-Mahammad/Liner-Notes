@@ -2,6 +2,12 @@
 
 ## Unreleased — renewal
 
+- Add public privacy, music-source and support pages, source/license links, and required operator/rights configuration for public operation. Public recording covers remain unavailable without a recorded use review.
+- Add email confirmation and password recovery, address-specific resend cooldowns, weekly opt-in/out controls, and session invalidation after recovery.
+- Add protected durable mail dispatch, a replaceable Resend adapter, signed delivery events, bounce/complaint suppression, bounded retry/reconciliation, and export/deletion coverage (JSON export 2.7).
+- Add bounded production weekly scheduling and dispatch through the existing operator lock and systemd timers. External delivery is disabled by default and still requires real sender/provider activation.
+
+
 - Review pushed changes locally for code quality, performance and security with Antigravity, using the existing login and Gemini 3.8 Flash with high thinking; save reports under `.linernotes/agy-reviews/`.
 
 - Fix discovery persistence for larger taste profiles: budget cold acquisition at up to 200 requests per attempt, retry expired public evidence, and retain full coverage audits within a 256 KB bound with matching storage reservations.

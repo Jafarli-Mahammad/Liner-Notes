@@ -38,6 +38,15 @@ public static class DependencyInjection
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<LocalEmailOptions>>().Value);
         services.AddSingleton<IUnsubscribeTokens, UnsubscribeTokenService>();
         services.AddScoped<IDigestEmailRenderer, DigestEmailRenderer>();
+        services.Configure<EmailDeliveryOptions>(configuration.GetSection("EmailDelivery"));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<EmailDeliveryOptions>>().Value);
+        services.AddScoped<IEmailPayloadProtection, EmailPayloadProtection>();
+        services.AddScoped<LinerNotes.Application.Services.EmailQueue>();
+        services.AddScoped<LinerNotes.Application.Services.WeeklyEmailQueue>();
+        services.AddScoped<LinerNotes.Application.Services.EmailDispatcher>();
+        services.AddSingleton<IEmailEventVerifier, ResendEventVerifier>();
+        services.AddHttpClient<IEmailTransport, ResendEmailTransport>(client => client.Timeout = TimeSpan.FromSeconds(30))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<LocalEmailMessageSerializer>();
         services.AddScoped<LocalEmailLegacyConversion>();
         services.AddScoped<ILocalEmailSink, LocalEmailSink>();

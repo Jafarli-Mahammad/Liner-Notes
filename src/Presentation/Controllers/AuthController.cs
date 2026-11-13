@@ -28,6 +28,7 @@ public sealed class AuthController : ApiControllerBase
     private const string SessionCookie = "liner.session";
     private readonly IDataProtector? _sessions;
     private readonly IAuthService _authService;
+    private readonly LinerNotes.Presentation.Services.AccountEmailService? _accountEmail;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
     private readonly JwtOptions _jwtOptions;
@@ -41,9 +42,10 @@ public sealed class AuthController : ApiControllerBase
         IUnitOfWork unitOfWork,
         IListenerContext? listener = null,
         IDiscoveryWriteCoordinator? admission = null,
-        IDataProtectionProvider? protection = null)
+        IDataProtectionProvider? protection = null, LinerNotes.Presentation.Services.AccountEmailService? accountEmail = null)
     {
         this._authService = _authService;
+        _accountEmail = accountEmail;
         _sessions = protection?.CreateProtector("LinerNotes.BrowserSession.v1");
         _listener = listener;
         _admission = admission;
@@ -99,6 +101,8 @@ public sealed class AuthController : ApiControllerBase
 
                 await Mediator.Send(seedCommand, cancellationToken);
             }
+
+            if (_accountEmail is not null) await _accountEmail.RequestAsync(request.Email, LinerNotes.Domain.Email.EmailPurpose.Confirmation, ct);
 
             // 4. Issue JWT access and refresh tokens
             var accessToken = _jwtService.GenerateAccessToken(subscriber.Id, request.UserName, subscriber.Email);
@@ -291,8 +295,11 @@ public sealed class AuthController : ApiControllerBase
 
     private CookieOptions SessionOptions() => new()
     {
-        HttpOnly = true, Secure = Request.IsHttps, SameSite = SameSiteMode.Strict,
-        Path = "/api/auth", IsEssential = true
+        HttpOnly = true,
+        Secure = Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api/auth",
+        IsEssential = true
     };
 
     private void SaveSession(AuthResponse response)

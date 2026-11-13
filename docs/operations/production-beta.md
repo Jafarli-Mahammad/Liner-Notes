@@ -1,7 +1,10 @@
 # Operating the v0.5.0 beta
 
 This is a single Linux host deployment: Caddy, the web host and PostgreSQL,
-with short stopped-writer maintenance windows. Mail delivery is excluded.
+with short stopped-writer maintenance windows. The original beta excluded mail;
+the separately activated [account email workflow](account-email.md) now supplies
+confirmation, recovery, durable delivery and bounded scheduling. New images also
+require explicit public operator/contact and source-rights configuration.
 Read [the evidence](production-beta-evidence.md) before treating a check as
 verified. The VPS, domain, off-host repository and alert destination still need
 to be selected. Nothing in this procedure publishes a release automatically.

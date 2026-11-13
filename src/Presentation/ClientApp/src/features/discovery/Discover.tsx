@@ -8,6 +8,7 @@ import { Artwork } from '../../components/Artwork';
 import { FeedbackControls } from '../../components/FeedbackControls';
 import { Loading } from '../../components/Loading';
 import { MusicLinks } from '../../components/MusicLinks';
+import { SourceLinks } from '../information/Information';
 import { Notice } from '../../components/Notice';
 import { useRetryDelay } from '../../hooks/useRetryDelay';
 
@@ -20,7 +21,7 @@ function PickContent({ pick, featured, onSaved }: { pick: Pick; featured?: boole
     <p className="pick-explanation">{pick.explanation}</p>
     <MusicLinks pick={pick} compact={!featured} />
     {featured ? <FeedbackControls pick={pick} onSaved={onSaved} /> : <details className="compact-feedback"><summary>Give feedback</summary><FeedbackControls pick={pick} onSaved={onSaved} /></details>}
-    {!!pick.sources.length && <details className="source-note"><summary>Music evidence</summary><p>{pick.sources.join(', ')}</p></details>}
+    {!!pick.sources.length && <details className="source-note"><summary>Music evidence</summary><p><SourceLinks sources={pick.sources} /></p></details>}
   </article>;
 }
 

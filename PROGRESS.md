@@ -7,6 +7,21 @@ recommendation history and feedback, data export and deletion, and a React UI.
 ListenBrainz is the default provider; Last.fm remains available through the
 provider abstraction. Recommendations persist deterministic score breakdowns.
 
+### Publication/account email — 2026-11-13
+
+The approved design is implemented in the repository: public privacy/source/support
+pages, operator/rights gates, Identity confirmation and password recovery,
+protected durable mail dispatch, a replaceable Resend adapter, authenticated
+delivery events, suppression, account preferences and bounded Production scheduling.
+Email metadata is covered by storage accounting, export 2.7 and account deletion.
+External delivery is disabled by default. See [activation and operation](docs/operations/account-email.md)
+and [verification/limits](docs/operations/account-email-evidence-2026-11-13.md).
+
+Actual operator/contact, domain, sender verification, provider account/credentials,
+tracking configuration, source-use decisions and real recipient-server delivery
+are still activation gates. No provider enquiry, purchase, external message or
+public deployment was performed. Developer acceptance remains pending.
+
 ### Production beta engineering — 2026-11-01
 
 The approved beta design is implemented: clean-tree React images, guarded

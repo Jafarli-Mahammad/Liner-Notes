@@ -63,7 +63,8 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         Directory.CreateDirectory(_root);
         _storage = new()
         {
-            InventoryPath = Path.Combine(_root, "inventory.json"), LeasePath = Path.Combine(_root, "lease"),
+            InventoryPath = Path.Combine(_root, "inventory.json"),
+            LeasePath = Path.Combine(_root, "lease"),
             DatabaseOverheadBytesPerPick = 1_000_000,
             ArtifactRoots = LocalGenerationStorage.Categories.ToDictionary(c => c, c => new[] { Path.Combine(_root, c) })
         };
@@ -75,8 +76,11 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         {
             ["ConnectionStrings:DefaultConnection"] = settings.ConnectionString,
             ["Jwt:SecretKey"] = "phase8-fixture-signing-key-only-not-a-deployment-secret",
-            ["Environment"] = "Development", ["LastFm:Mode"] = "FixtureOnly", ["Generation:Origin"] = "Synthetic",
-            ["LocalEmail:Enabled"] = "true", ["LocalEmail:ApplicationOrigin"] = _email.ApplicationOrigin
+            ["Environment"] = "Development",
+            ["LastFm:Mode"] = "FixtureOnly",
+            ["Generation:Origin"] = "Synthetic",
+            ["LocalEmail:Enabled"] = "true",
+            ["LocalEmail:ApplicationOrigin"] = _email.ApplicationOrigin
         }).Build();
         var registrations = new ServiceCollection().AddLogging().AddApplication().AddDataAccess(_configuration)
             .AddInfrastructure(_configuration).AddPresentation(_configuration);
@@ -98,12 +102,21 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<DataContext>();
         db.ApplicationUsers.Add(new ApplicationUser
         {
-            Id = id, UserName = "fixture-" + name, NormalizedUserName = "PROFILE_" + name,
-            Email = $"identity-{name}@example.test", NormalizedEmail = $"IDENTITY_{name}", EmailConfirmed = true,
-            PhoneNumber = name == "owner" ? "+0005550108" : null, PhoneNumberConfirmed = true,
-            PasswordHash = "credential-hash-sentinel-" + name, SecurityStamp = "credential-stamp-" + name,
-            ConcurrencyStamp = "concurrency-sentinel-" + name, AccessFailedCount = 2, LockoutEnabled = true,
-            LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(2), TwoFactorEnabled = true
+            Id = id,
+            UserName = "fixture-" + name,
+            NormalizedUserName = "PROFILE_" + name,
+            Email = $"identity-{name}@example.test",
+            NormalizedEmail = $"IDENTITY_{name}",
+            EmailConfirmed = true,
+            PhoneNumber = name == "owner" ? "+0005550108" : null,
+            PhoneNumberConfirmed = true,
+            PasswordHash = "credential-hash-sentinel-" + name,
+            SecurityStamp = "credential-stamp-" + name,
+            ConcurrencyStamp = "concurrency-sentinel-" + name,
+            AccessFailedCount = 2,
+            LockoutEnabled = true,
+            LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(2),
+            TwoFactorEnabled = true
         });
         var user = new User($"domain-{name}@example.test", "Asia/Baku", DigestDeliveryDay.Friday, 17, id);
         user.SetNextDigestAt(new(2026, 10, 16, 17, 0, 0, DateTimeKind.Utc));
@@ -145,19 +158,32 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
             [new StoredDiscoveryPath("Fixture seed", observation, response, response, 3, "https://example.test/track",
                 "https://example.test/artist", observation, "3", "Fixture discovery", 4) { UnknownFields = Future("futurePath") }],
             [new StoredGap("Fixture seed", "fixture.missing", "not_supplied", null) { UnknownFields = Future("futureGap") }],
-            "artist", "not_supplied") { UnknownFields = Future("futureEvidence") };
-        score = score with { Snapshot = new ScoreSnapshot
+            "artist", "not_supplied")
+        { UnknownFields = Future("futureEvidence") };
+        score = score with
         {
-            ConfigurationVersion = "phase8-fixture-v1", ConfigurationSha256 = new string('b', 64),
-            ConfigurationPolicy = new Dictionary<string, string> { ["scope"] = "synthetic" },
-            Weights = new(1, 0.2) { UnknownFields = Future("futureWeights") },
-            TrackKey = track.TrackKey, ArtistName = track.ArtistName, Title = track.Title, Week = _week.Value,
-            TasteWeights = new Dictionary<string, double> { ["rock"] = 0.73 }, CandidateWeights = new Dictionary<string, double> { ["rock"] = 0.9 },
-            TasteMagnitude = 0.73, CandidateMagnitude = 0.9, Familiarity = false,
-            Contributions = [new("rock", 0.9, 0.73, 1) { UnknownFields = Future("futureContribution") }],
-            Components = [new("tag", 0.61) { UnknownFields = Future("futureComponent") }],
-            MissingReasons = ["popularity_not_used"], Evidence = evidence, UnknownFields = Future("futureSnapshot")
-        } };
+            Snapshot = new ScoreSnapshot
+            {
+                ConfigurationVersion = "phase8-fixture-v1",
+                ConfigurationSha256 = new string('b', 64),
+                ConfigurationPolicy = new Dictionary<string, string> { ["scope"] = "synthetic" },
+                Weights = new(1, 0.2) { UnknownFields = Future("futureWeights") },
+                TrackKey = track.TrackKey,
+                ArtistName = track.ArtistName,
+                Title = track.Title,
+                Week = _week.Value,
+                TasteWeights = new Dictionary<string, double> { ["rock"] = 0.73 },
+                CandidateWeights = new Dictionary<string, double> { ["rock"] = 0.9 },
+                TasteMagnitude = 0.73,
+                CandidateMagnitude = 0.9,
+                Familiarity = false,
+                Contributions = [new("rock", 0.9, 0.73, 1) { UnknownFields = Future("futureContribution") }],
+                Components = [new("tag", 0.61) { UnknownFields = Future("futureComponent") }],
+                MissingReasons = ["popularity_not_used"],
+                Evidence = evidence,
+                UnknownFields = Future("futureSnapshot")
+            }
+        };
         var recommendation = digest.AddRecommendation(track, score, 1);
         recommendation.RecordFeedback(UserFeedback.AlreadyKnown, "Stored feedback " + name, 8);
         db.WeeklyDigests.Add(digest);
@@ -215,7 +241,7 @@ public sealed class Phase8PrivacyApiTests : IAsyncLifetime
         var text = await response.Content.ReadAsStringAsync();
         using var json = JsonDocument.Parse(text);
         var root = json.RootElement;
-        Assert.Equal("2.6", root.GetProperty("exportVersion").GetString());
+        Assert.Equal("2.7", root.GetProperty("exportVersion").GetString());
         Assert.Equal(_owner, root.GetProperty("account").GetProperty("id").GetGuid());
         foreach (var secret in new[] { "credential-hash-sentinel", "credential-stamp-", "concurrency-sentinel-", "provider-token-sentinel-", "claim-sentinel-", "login-sentinel-", "refresh-fixture-", "identity-other@", "Stored feedback other" })
             Assert.DoesNotContain(secret, text);

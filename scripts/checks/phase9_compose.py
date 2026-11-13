@@ -13,7 +13,7 @@ from urllib import error, parse, request
 import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED_EXPORT_VERSION = "2.6"
+EXPECTED_EXPORT_VERSION = "2.7"
 
 
 def field(obj, name):

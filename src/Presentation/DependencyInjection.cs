@@ -89,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<AccountEmailService>();
         services.AddScoped<ApiExceptionFilterAttribute>();
         services.AddScoped<DiscoveryWriteFilter>();
 
@@ -104,10 +105,14 @@ public static class DependencyInjection
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             options.User.RequireUniqueEmail = true;
+            options.Tokens.EmailConfirmationTokenProvider = "LinerNotesConfirmation";
+            options.Tokens.PasswordResetTokenProvider = "LinerNotesRecovery";
         })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<DataContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddTokenProvider<ConfirmationTokenProvider>("LinerNotesConfirmation")
+        .AddTokenProvider<RecoveryTokenProvider>("LinerNotesRecovery");
         services.AddScoped<PasswordHasher<ApplicationUser>>();
         services.AddScoped<PreparedPasswordHasher>();
         services.AddScoped<IPasswordHasher<ApplicationUser>>(sp => sp.GetRequiredService<PreparedPasswordHasher>());

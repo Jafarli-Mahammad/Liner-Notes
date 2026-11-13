@@ -7,11 +7,20 @@ namespace LinerNotes.Presentation.Filters;
 
 /// <summary>Admission for account mutations that share the discovery storage inventory.</summary>
 public sealed class DiscoveryWriteFilter(IDiscoveryWriteCoordinator writes, DiscoveryRuntimeOptions options,
-    LinerNotes.Presentation.Services.PasswordVerificationPreparation? passwords = null)
+    LinerNotes.Presentation.Services.PasswordVerificationPreparation? passwords = null,
+    LinerNotes.Application.Common.Interfaces.IEmailPayloadProtection? emailProtection = null,
+    LinerNotes.Application.Common.Interfaces.EmailDeliveryOptions? emailOptions = null,
+    Microsoft.AspNetCore.DataProtection.IDataProtectionProvider? keys = null)
     : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        // Key rotation is a separate managed write; never initialize its key ring inside account admission.
+        if (emailOptions?.Enabled == true && !HttpMethods.IsGet(context.HttpContext.Request.Method))
+        {
+            emailProtection?.Prepare();
+            if (keys is not null) Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Protect(keys.CreateProtector("LinerNotes.KeyPreparation"), "prepare");
+        }
         if (!options.ManagedWritesEnabled || HttpMethods.IsGet(context.HttpContext.Request.Method))
         {
             await next();
